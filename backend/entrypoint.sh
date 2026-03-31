@@ -7,10 +7,21 @@ npx prisma db push --schema=prisma/schema.prisma --accept-data-loss
 echo "🔄 Sincronizando schema Prisma (heart)..."
 npx prisma db push --schema=prisma/heart.schema.prisma --accept-data-loss
 
-echo "🌱 Populando dados iniciais (Seed)..."
-# Usamos npx ts-node aqui pois os seeds costumam ser .ts na raiz da src
-npx ts-node src/prisma/seed.ts
-npx ts-node src/prisma/seed-tenant.ts
+echo "🌱 Verificando se banco precisa de dados iniciais..."
+USER_COUNT=$(node -e "
+const { PrismaClient } = require('./node_modules/@prisma/client-heart');
+const p = new PrismaClient();
+p.user.count().then(c => { console.log(c); p.\$disconnect(); }).catch(() => { console.log(0); p.\$disconnect(); });
+")
 
-echo "✅ Schema sincronizado e dados carregados. Iniciando servidor..."
+if [ "$USER_COUNT" = "0" ]; then
+  echo "📦 Banco vazio! Rodando seed inicial..."
+  npx ts-node src/prisma/seed.ts
+  npx ts-node src/prisma/seed-tenant.ts
+  echo "✅ Seed concluído!"
+else
+  echo "✅ Banco já populado ($USER_COUNT usuários). Seed ignorado."
+fi
+
+echo "🚀 Iniciando servidor..."
 exec node dist/main
