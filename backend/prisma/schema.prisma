@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL_TENANT")
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("categories")
+}
+
+model Product {
+  id          String    @id @default(uuid())
+  name        String
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id])
+  priceCost   Float
+  priceSell   Float
+  stock       Int       @default(0)
+  barcode     String?   @unique
+  shortCode   String?   @unique
+  active      Boolean   @default(true)
+
+  // Campos Fiscais
+  ncm         String?
+  cfop        String?
+  cest        String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  saleItems     SaleItem[]
+  inventoryLogs InventoryLog[]
+
+  @@map("products")
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String   @unique
+  address   String?
+  reference String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  sales     Sale[]
+
+  @@map("customers")
+}
+
+model Sale {
+  id          String   @id @default(uuid())
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  total       Float
+  discount    Float    @default(0)
+  status      String   @default("completed") // completed, cancelled
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       SaleItem[]
+  payments    Payment[]
+
+  @@map("sales")
+}
+
+model SaleItem {
+  id         String   @id @default(uuid())
+  saleId     String
+  sale       Sale     @relation(fields: [saleId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  quantity   Int
+  priceUnit  Float
+  subtotal   Float
+  
+  @@map("sale_items")
+}
+
+model Payment {
+  id         String   @id @default(uuid())
+  saleId     String
+  sale       Sale     @relation(fields: [saleId], references: [id])
+  method     String   // pix, cash, credit, debit
+  value      Float
+
+  @@map("payments")
+}
+
+model CashRegister {
+  id           String    @id @default(uuid())
+  userId       String    // ID do operador vindo do heart
+  openingTime  DateTime  @default(now())
+  closingTime  DateTime?
+  openingValue Float     @default(0)
+  closingValue Float?
+  status       String    @default("open") // open, closed
+  
+  movements    CashMovement[]
+
+  @@map("cash_registers")
+}
+
+model CashMovement {
+  id             String       @id @default(uuid())
+  cashRegisterId String
+  cashRegister   CashRegister @relation(fields: [cashRegisterId], references: [id])
+  type           String       // 'IN' (suprimento) ou 'OUT' (sangria)
+  value          Float
+  reason         String?
+  createdAt      DateTime     @default(now())
+  
+  @@map("cash_movements")
+}
+
+model InventoryLog {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  type      String   // 'IN' (Compra/Entrada), 'OUT' (Ajuste para baixo), 'SALE' (Venda do PDV)
+  quantity  Int      // Quantidade da movimentação (positiva ou negativa)
+  costPrice Float?     // Preço pago naquele lote na hora da entrada
+  reason    String?  // Ex: "Compra Fornecedor X", "Ajuste de quebra", "Venda PDV"
+  createdAt DateTime @default(now())
+  
+  @@map("inventory_logs")
+}

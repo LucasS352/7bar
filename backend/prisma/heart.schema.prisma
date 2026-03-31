@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/client-heart"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL_HEART")
+}
+
+model Tenant {
+  id                String   @id @default(uuid())
+  name              String
+  database_name     String
+  database_url      String
+  status            String   @default("active")
+  
+  // Campos Fiscais
+  documentId        String?  // CNPJ
+  stateRegistration String?  // IE (Inscrição Estadual)
+  taxRegime         String?  // Regime Tributário
+  certificatePath   String?  // Caminho do certificado A1
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  users         User[]
+
+  @@map("tenants")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  role      String   @default("operator") // admin, operator
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}

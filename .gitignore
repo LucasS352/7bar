@@ -1,0 +1,13 @@
+# Env files (contém senhas - NÃO commitar)
+.env
+*.env.local
+
+# Node
+node_modules/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
