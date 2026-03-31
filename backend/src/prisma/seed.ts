@@ -10,7 +10,7 @@ async function main() {
     data: {
       name: '7bar',
       database_name: '7bar',
-      database_url: 'mysql://root:@localhost:3307/7bar',
+      database_url: `mysql://root:${process.env.MYSQL_ROOT_PASSWORD || '7bar@2025'}@mysql:3306/7bar`,
       status: 'active',
       users: {
         create: {

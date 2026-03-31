@@ -1,12 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: 'mysql://root:@localhost:3307/7bar'
-    }
-  }
-});
+const prisma = new PrismaClient();
 
 async function main() {
   // Limpar tabelas caso já exista dados (evita duplicação ao rodar o seed)
