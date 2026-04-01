@@ -6,11 +6,15 @@ const prisma = new PrismaClient();
 async function main() {
   const password = await bcrypt.hash('123456', 10);
   
+  // Limpar tabelas caso já tenham dados
+  await prisma.user.deleteMany();
+  await prisma.tenant.deleteMany();
+
   const tenant = await prisma.tenant.create({
     data: {
       name: '7bar',
       database_name: '7bar',
-      database_url: `mysql://root:${process.env.MYSQL_ROOT_PASSWORD || '7bar@2025'}@mysql:3306/7bar`,
+      database_url: process.env.DATABASE_URL_TENANT || `mysql://root:@localhost:3307/7bar`,
       status: 'active',
       users: {
         create: {

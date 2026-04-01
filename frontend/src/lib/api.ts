@@ -2,7 +2,8 @@ import axios from 'axios';
 import { useAuthStore } from '../store/auth';
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333',
+  // Atualizado para pegar a porta 3520 e permitir o IP da rede
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://192.168.1.6:3520',
 });
 
 api.interceptors.request.use((config) => {

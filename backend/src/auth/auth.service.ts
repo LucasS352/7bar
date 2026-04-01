@@ -17,6 +17,9 @@ export class AuthService {
     });
 
     if (user && await bcrypt.compare(pass, user.password)) {
+      if (!user.active) {
+        throw new UnauthorizedException('Sua conta foi inativada pelo administrador.');
+      }
       const { password, ...result } = user;
       return result;
     }

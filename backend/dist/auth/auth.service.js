@@ -60,6 +60,9 @@ let AuthService = class AuthService {
             include: { tenant: true },
         });
         if (user && await bcrypt.compare(pass, user.password)) {
+            if (!user.active) {
+                throw new common_1.UnauthorizedException('Sua conta foi inativada pelo administrador.');
+            }
             const { password, ...result } = user;
             return result;
         }

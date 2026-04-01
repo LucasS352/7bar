@@ -34,6 +34,7 @@ services:
       DATABASE_URL_HEART: mysql://root:${MYSQL_ROOT_PASSWORD:-7bar@2025}@mysql:3306/heart
       DATABASE_URL_TENANT: mysql://root:${MYSQL_ROOT_PASSWORD:-7bar@2025}@mysql:3306/7bar
       JWT_SECRET: ${JWT_SECRET:-7bar_jwt_super_secret_2025}
+      SETUP_PIN: ${SETUP_PIN:-teltech352}
     depends_on:
       mysql:
         condition: service_healthy

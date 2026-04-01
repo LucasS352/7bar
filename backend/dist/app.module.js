@@ -18,12 +18,13 @@ const customers_module_1 = require("./customers/customers.module");
 const tenants_module_1 = require("./tenants/tenants.module");
 const sales_module_1 = require("./sales/sales.module");
 const cash_registers_module_1 = require("./cash-registers/cash-registers.module");
+const users_module_1 = require("./users/users.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, auth_module_1.AuthModule, products_module_1.ProductsModule, categories_module_1.CategoriesModule, customers_module_1.CustomersModule, tenants_module_1.TenantsModule, sales_module_1.SalesModule, cash_registers_module_1.CashRegistersModule],
+        imports: [prisma_module_1.PrismaModule, auth_module_1.AuthModule, products_module_1.ProductsModule, categories_module_1.CategoriesModule, customers_module_1.CustomersModule, tenants_module_1.TenantsModule, sales_module_1.SalesModule, cash_registers_module_1.CashRegistersModule, users_module_1.UsersModule],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
     })

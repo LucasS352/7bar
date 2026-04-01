@@ -37,6 +37,7 @@ model User {
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
   role      String   @default("operator") // admin, operator
+  active    Boolean  @default(true) // Indica se o usuário possui acesso ativo
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

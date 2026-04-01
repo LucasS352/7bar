@@ -16,8 +16,8 @@ p.user.count().then(c => { console.log(c); p.\$disconnect(); }).catch(() => { co
 
 if [ "$USER_COUNT" = "0" ]; then
   echo "📦 Banco vazio! Rodando seed inicial..."
-  npx ts-node src/prisma/seed.ts
-  npx ts-node src/prisma/seed-tenant.ts
+  node dist/prisma/seed.js
+  node dist/prisma/seed-tenant.js
   echo "✅ Seed concluído!"
 else
   echo "✅ Banco já populado ($USER_COUNT usuários). Seed ignorado."

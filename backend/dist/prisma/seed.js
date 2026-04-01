@@ -38,11 +38,13 @@ const bcrypt = __importStar(require("bcrypt"));
 const prisma = new client_heart_1.PrismaClient();
 async function main() {
     const password = await bcrypt.hash('123456', 10);
+    await prisma.user.deleteMany();
+    await prisma.tenant.deleteMany();
     const tenant = await prisma.tenant.create({
         data: {
             name: '7bar',
             database_name: '7bar',
-            database_url: 'mysql://root:@localhost:3307/7bar',
+            database_url: process.env.DATABASE_URL_TENANT || `mysql://root:@localhost:3307/7bar`,
             status: 'active',
             users: {
                 create: {

@@ -1,17 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient({
-    datasources: {
-        db: {
-            url: 'mysql://root:@localhost:3307/7bar'
-        }
-    }
-});
+const prisma = new client_1.PrismaClient();
 async function main() {
     await prisma.saleItem.deleteMany();
     await prisma.payment.deleteMany();
     await prisma.sale.deleteMany();
+    await prisma.inventoryLog.deleteMany();
     await prisma.product.deleteMany();
     await prisma.category.deleteMany();
     const catCervejas = await prisma.category.create({ data: { name: 'Cervejas' } });
