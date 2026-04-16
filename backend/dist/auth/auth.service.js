@@ -86,6 +86,24 @@ let AuthService = class AuthService {
             }
         };
     }
+    async switchByPin(pin, tenantId) {
+        const users = await this.heartPrisma.user.findMany({
+            where: { tenantId, active: true, pin: { not: null } },
+            include: { tenant: true },
+        });
+        const matched = users.find(u => u.pin === pin);
+        if (!matched) {
+            throw new common_1.UnauthorizedException('PIN inválido ou usuário não encontrado.');
+        }
+        const { password, pin: _pin, ...result } = matched;
+        return this.login(result);
+    }
+    async setPin(userId, pin) {
+        await this.heartPrisma.user.update({
+            where: { id: userId },
+            data: { pin },
+        });
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([

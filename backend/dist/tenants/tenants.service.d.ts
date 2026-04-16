@@ -12,6 +12,7 @@ export declare class TenantsService {
             active: boolean;
             email: string;
             password: string;
+            pin: string | null;
             tenantId: string;
             role: string;
         }[];

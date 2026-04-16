@@ -25,6 +25,9 @@ export declare class SalesController {
         total: number;
         discount: number;
         status: string;
+        customerCpf: string | null;
+        customerName: string | null;
+        nfeStatus: string | null;
     }>;
     findAll(user: any): Promise<({
         customer: {
@@ -75,6 +78,9 @@ export declare class SalesController {
         total: number;
         discount: number;
         status: string;
+        customerCpf: string | null;
+        customerName: string | null;
+        nfeStatus: string | null;
     })[]>;
     getTodaySales(user: any): Promise<({
         customer: {
@@ -125,5 +131,8 @@ export declare class SalesController {
         total: number;
         discount: number;
         status: string;
+        customerCpf: string | null;
+        customerName: string | null;
+        nfeStatus: string | null;
     })[]>;
 }

@@ -95,6 +95,9 @@ export declare class CashRegistersController {
                 total: number;
                 discount: number;
                 status: string;
+                customerCpf: string | null;
+                customerName: string | null;
+                nfeStatus: string | null;
             })[];
             movements: any;
         };

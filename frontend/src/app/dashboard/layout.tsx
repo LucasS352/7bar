@@ -1,13 +1,21 @@
 "use client";
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Package, History, ArrowLeft, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const router = useRouter();
+
+  // Guard: Operadors não têm acesso ao dashboard
+  useEffect(() => {
+    if (user && user.role !== 'admin') {
+      router.replace('/');
+    }
+  }, [user, router]);
 
   const handleLogout = () => {
     logout();

@@ -25,6 +25,9 @@ export declare class SalesService {
         total: number;
         discount: number;
         status: string;
+        customerCpf: string | null;
+        customerName: string | null;
+        nfeStatus: string | null;
     }>;
     findAll(tenantId: string, databaseUrl: string): Promise<({
         customer: {
@@ -75,6 +78,9 @@ export declare class SalesService {
         total: number;
         discount: number;
         status: string;
+        customerCpf: string | null;
+        customerName: string | null;
+        nfeStatus: string | null;
     })[]>;
     getTodaySales(tenantId: string, databaseUrl: string): Promise<({
         customer: {
@@ -125,5 +131,8 @@ export declare class SalesService {
         total: number;
         discount: number;
         status: string;
+        customerCpf: string | null;
+        customerName: string | null;
+        nfeStatus: string | null;
     })[]>;
 }

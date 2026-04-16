@@ -32,6 +32,10 @@ export class SalesService {
           total: total - (data.discount || 0),
           discount: data.discount || 0,
           status: 'completed',
+          // Campos fiscais NFC-e (opcionais) — types regenerados após prisma db push
+          ...(data.customerCpf && { customerCpf: data.customerCpf }),
+          ...(data.customerName && { customerName: data.customerName }),
+          ...(data.nfeStatus && { nfeStatus: data.nfeStatus }),
           items: {
             create: data.items.map((item: any) => ({
               productId: item.productId,
@@ -46,7 +50,7 @@ export class SalesService {
               value: pay.value
             }))
           }
-        },
+        } as any,
         include: { items: true, payments: true }
       });
 

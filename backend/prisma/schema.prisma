@@ -58,14 +58,18 @@ model Customer {
 }
 
 model Sale {
-  id          String   @id @default(uuid())
-  customerId  String?
-  customer    Customer? @relation(fields: [customerId], references: [id])
-  total       Float
-  discount    Float    @default(0)
-  status      String   @default("completed") // completed, cancelled
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(uuid())
+  customerId   String?
+  customer     Customer? @relation(fields: [customerId], references: [id])
+  total        Float
+  discount     Float    @default(0)
+  status       String   @default("completed") // completed, cancelled
+  // Campos Fiscais NFC-e
+  customerCpf  String?  // CPF/CNPJ opcional do consumidor na nota
+  customerName String?  // Nome opcional do consumidor na nota
+  nfeStatus    String?  // null = sem nota, 'pending', 'issued', 'error'
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   items       SaleItem[]
   payments    Payment[]

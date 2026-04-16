@@ -14,4 +14,6 @@ export declare class AuthService {
             tenant: any;
         };
     }>;
+    switchByPin(pin: string, tenantId: string): Promise<any>;
+    setPin(userId: string, pin: string): Promise<void>;
 }

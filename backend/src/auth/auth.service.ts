@@ -13,7 +13,7 @@ export class AuthService {
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.heartPrisma.user.findUnique({
       where: { email },
-      include: { tenant: true }, // Inclui as conexões do tenant atual!
+      include: { tenant: true },
     });
 
     if (user && await bcrypt.compare(pass, user.password)) {
@@ -43,5 +43,32 @@ export class AuthService {
         tenant: user.tenant.name
       }
     };
+  }
+
+  /**
+   * Troca de usuário por PIN no PDV.
+   * Busca todos os usuários do mesmo tenant e compara o PIN digitado.
+   */
+  async switchByPin(pin: string, tenantId: string): Promise<any> {
+    const users = await this.heartPrisma.user.findMany({
+      where: { tenantId, active: true, pin: { not: null } },
+      include: { tenant: true },
+    });
+
+    const matched = users.find(u => u.pin === pin);
+
+    if (!matched) {
+      throw new UnauthorizedException('PIN inválido ou usuário não encontrado.');
+    }
+
+    const { password, pin: _pin, ...result } = matched;
+    return this.login(result);
+  }
+
+  async setPin(userId: string, pin: string): Promise<void> {
+    await this.heartPrisma.user.update({
+      where: { id: userId },
+      data: { pin },
+    });
   }
 }

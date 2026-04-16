@@ -4,11 +4,12 @@ import { useAuthStore } from '@/store/auth';
 import { useCartStore, Product } from '@/store/cart';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { Search, ShoppingCart, LogOut, PackageOpen, Minus, Plus, Trash2, LayoutDashboard, FileText, ArrowDownUp } from 'lucide-react';
+import { Search, ShoppingCart, LogOut, PackageOpen, Minus, Plus, Trash2, LayoutDashboard, FileText, ArrowDownUp, UserCheck } from 'lucide-react';
 import { PaymentModal } from '@/components/PaymentModal';
 import { CashRegisterModal } from '@/components/CashRegisterModal';
 import { CloseRegisterModal } from '@/components/CloseRegisterModal';
 import { CashMovementModal } from '@/components/CashMovementModal';
+import { SwitchUserModal } from '@/components/SwitchUserModal';
 
 export default function PosPage() {
   const router = useRouter();
@@ -20,8 +21,12 @@ export default function PosPage() {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isCloseRegisterOpen, setIsCloseRegisterOpen] = useState(false);
   const [isMovementOpen, setIsMovementOpen] = useState(false);
+  const [isSwitchOpen, setIsSwitchOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [register, setRegister] = useState<any>(undefined); // undefined = loading, null = closed, object = open
+
+  const isAdmin = user?.role === 'admin';
+  const roleLabel = (role?: string) => role === 'admin' ? 'Gerente' : 'Operador de Caixa';
 
   useEffect(() => {
     if (!token) {
@@ -96,7 +101,8 @@ export default function PosPage() {
             </h1>
             <p className="text-emerald-400 font-medium text-sm flex items-center gap-2 mt-1">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Operador: {user?.name} ({user?.tenant})
+              {roleLabel(user?.role)}: <span className="font-semibold text-white">{user?.name}</span>
+              <span className="text-zinc-500">({user?.tenant})</span>
               {register?.id && <span className="ml-2 text-xs bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 text-emerald-400 uppercase tracking-widest hidden sm:inline-block">Caixa Aberto</span>}
             </p>
           </div>
@@ -107,11 +113,21 @@ export default function PosPage() {
                 <ArrowDownUp size={18} /> Sangria / Reposição
               </button>
             )}
-            <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition font-semibold">
-              <LayoutDashboard size={18} /> Dashboard
-            </button>
-            <button onClick={() => setIsCloseRegisterOpen(true)} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-xl transition font-semibold text-sm whitespace-nowrap">
-              <FileText size={18} /> Relatório de Caixa
+            {/* Apenas Gerente vê o Dashboard */}
+            {isAdmin && (
+              <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition font-semibold">
+                <LayoutDashboard size={18} /> Dashboard
+              </button>
+            )}
+            {/* Apenas Gerente vê o Relatório de Caixa */}
+            {isAdmin && (
+              <button onClick={() => setIsCloseRegisterOpen(true)} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-xl transition font-semibold text-sm whitespace-nowrap">
+                <FileText size={18} /> Relatório de Caixa
+              </button>
+            )}
+            {/* Botão Trocar Usuário */}
+            <button onClick={() => setIsSwitchOpen(true)} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-xl transition font-semibold text-sm whitespace-nowrap">
+              <UserCheck size={18} /> Trocar Usuário
             </button>
             <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition font-semibold">
               <LogOut size={18} /> Sair
@@ -261,6 +277,7 @@ export default function PosPage() {
         }} 
       />
       <PaymentModal isOpen={isPaymentOpen} onClose={() => setIsPaymentOpen(false)} />
+      <SwitchUserModal isOpen={isSwitchOpen} onClose={() => setIsSwitchOpen(false)} />
       {register && (
         <CashMovementModal 
           isOpen={isMovementOpen}

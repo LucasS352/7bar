@@ -38,6 +38,9 @@ let SalesService = class SalesService {
                     total: total - (data.discount || 0),
                     discount: data.discount || 0,
                     status: 'completed',
+                    ...(data.customerCpf && { customerCpf: data.customerCpf }),
+                    ...(data.customerName && { customerName: data.customerName }),
+                    ...(data.nfeStatus && { nfeStatus: data.nfeStatus }),
                     items: {
                         create: data.items.map((item) => ({
                             productId: item.productId,

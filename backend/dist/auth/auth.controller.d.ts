@@ -11,4 +11,8 @@ export declare class AuthController {
             tenant: any;
         };
     }>;
+    switchByPin(body: any, req: any): Promise<any>;
+    setPin(body: any, req: any): Promise<{
+        message: string;
+    }>;
 }
