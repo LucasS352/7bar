@@ -48,9 +48,10 @@ const heart_prisma_service_1 = require("../prisma/heart-prisma.service");
 const client_1 = require("@prisma/client");
 const bcrypt = __importStar(require("bcrypt"));
 const child_process_1 = require("child_process");
+const util_1 = require("util");
 const path = __importStar(require("path"));
+const execAsync = (0, util_1.promisify)(child_process_1.exec);
 let TenantsService = class TenantsService {
-    heartPrisma;
     constructor(heartPrisma) {
         this.heartPrisma = heartPrisma;
     }
@@ -60,6 +61,56 @@ let TenantsService = class TenantsService {
     create(data) {
         return this.heartPrisma.tenant.create({ data });
     }
+    async findById(tenantId) {
+        const tenant = await this.heartPrisma.tenant.findUnique({
+            where: { id: tenantId },
+        });
+        if (!tenant)
+            throw new common_1.NotFoundException('Empresa não encontrada');
+        const { certPfx, ...safeTenant } = tenant;
+        return safeTenant;
+    }
+    async updateTenant(tenantId, data) {
+        const allowed = [
+            'razaoSocial', 'nomeFantasia', 'cnpj', 'ie', 'im', 'crt',
+            'logradouro', 'numero', 'complemento', 'bairro',
+            'municipio', 'codMunicipio', 'uf', 'cep', 'telefone',
+            'nfceAtivo', 'nfceSerie', 'nfceAmbiente', 'nfceCsc', 'nfceIdCsc',
+            'modulos', 'status'
+        ];
+        const safeData = Object.fromEntries(Object.entries(data).filter(([k]) => allowed.includes(k)));
+        return this.heartPrisma.tenant.update({
+            where: { id: tenantId },
+            data: safeData,
+        });
+    }
+    async uploadLogo(tenantId, file) {
+        const fs = require('fs');
+        const crypto = require('crypto');
+        const dir = path.join(process.cwd(), 'uploads', 'logos');
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        const ext = path.extname(file.originalname);
+        const filename = `${tenantId}_${crypto.randomBytes(4).toString('hex')}${ext}`;
+        const filePath = path.join(dir, filename);
+        fs.writeFileSync(filePath, file.buffer);
+        const logoUrl = `/api/tenants/uploads/logos/${filename}`;
+        return this.heartPrisma.tenant.update({
+            where: { id: tenantId },
+            data: { logoUrl },
+        }).then(() => ({ message: 'Logo atualizado com sucesso.', logoUrl }));
+    }
+    async uploadCertificado(tenantId, pfxBuffer, senha) {
+        return this.heartPrisma.tenant.update({
+            where: { id: tenantId },
+            data: {
+                certPfx: Buffer.from(pfxBuffer),
+                certSenha: senha,
+                certValidade: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+            },
+        }).then(() => ({ message: 'Certificado armazenado com sucesso.' }));
+    }
     async validatePin(pin) {
         const setupPin = process.env.SETUP_PIN;
         if (!setupPin)
@@ -67,7 +118,7 @@ let TenantsService = class TenantsService {
         return pin === setupPin;
     }
     async provisionTenant(dto) {
-        const { pin, tenantName, dbName, adminName, adminEmail, adminPassword } = dto;
+        const { pin, tenantName, dbName, adminName, adminEmail, adminPassword, seedProducts } = dto;
         const pinValid = await this.validatePin(pin);
         if (!pinValid) {
             throw new common_1.UnauthorizedException('PIN inválido. Acesso negado.');
@@ -83,7 +134,7 @@ let TenantsService = class TenantsService {
             throw new common_1.BadRequestException('Nome do banco inválido após sanitização.');
         }
         const existingTenant = await this.heartPrisma.tenant.findFirst({
-            where: { database_name: sanitizedDbName },
+            where: { databaseName: sanitizedDbName },
         });
         if (existingTenant) {
             throw new common_1.BadRequestException(`Já existe um tenant com o banco "${sanitizedDbName}".`);
@@ -99,25 +150,25 @@ let TenantsService = class TenantsService {
         const tenantDbUrl = baseUrl.replace(/\/[^/]+$/, `/${sanitizedDbName}`);
         try {
             const prismaSchemaPath = path.resolve(process.cwd(), 'prisma', 'schema.prisma');
-            (0, child_process_1.execSync)(`npx prisma migrate deploy --schema="${prismaSchemaPath}"`, {
+            await execAsync(`npx prisma db push --schema="${prismaSchemaPath}" --skip-generate --accept-data-loss`, {
                 env: {
                     ...process.env,
                     DATABASE_URL_TENANT: tenantDbUrl,
                 },
-                stdio: 'pipe',
                 timeout: 60000,
             });
         }
         catch (err) {
             await this.heartPrisma.$queryRawUnsafe(`DROP DATABASE IF EXISTS \`${sanitizedDbName}\``);
-            throw new common_1.BadRequestException('Erro ao rodar migrations no novo banco. Banco removido.');
+            console.error('Erro no db push:', err.stdout, err.stderr);
+            throw new common_1.BadRequestException('Erro ao criar tabelas no novo banco. Detalhe: ' + (err.stderr || err.message));
         }
         const hashedPassword = await bcrypt.hash(adminPassword, 10);
         const tenant = await this.heartPrisma.tenant.create({
             data: {
                 name: tenantName,
-                database_name: sanitizedDbName,
-                database_url: tenantDbUrl,
+                databaseName: sanitizedDbName,
+                databaseUrl: tenantDbUrl,
                 status: 'active',
                 users: {
                     create: {
@@ -130,18 +181,20 @@ let TenantsService = class TenantsService {
             },
             include: { users: true },
         });
-        try {
-            await this.seedTenantProducts(tenantDbUrl);
-        }
-        catch (err) {
-            console.warn('Aviso: seed de produtos falhou:', err.message);
+        if (seedProducts !== false) {
+            try {
+                await this.seedTenantProducts(tenantDbUrl);
+            }
+            catch (err) {
+                console.warn('Aviso: seed de produtos falhou:', err.message);
+            }
         }
         return {
             message: `Tenant "${tenantName}" provisionado com sucesso!`,
             tenant: {
                 id: tenant.id,
                 name: tenant.name,
-                database_name: tenant.database_name,
+                databaseName: tenant.databaseName,
                 admin: {
                     name: tenant.users[0]?.name,
                     email: tenant.users[0]?.email,

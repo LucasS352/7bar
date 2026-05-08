@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { DollarSign, TrendingUp, Package, Loader2 } from 'lucide-react';
+import { ExportXmlModal } from '@/components/ExportXmlModal';
+import { DollarSign, TrendingUp, Package, Loader2, CheckCircle2, XCircle, Clock, Receipt, Download } from 'lucide-react';
+import { toast } from 'sonner';
 
 type SaleItem = {
   id: string;
@@ -22,28 +24,51 @@ type Sale = {
   createdAt: string;
   items: SaleItem[];
   payments: Payment[];
+  emitirNfce: boolean;
+  nfceStatus: string | null;
+  nfceNumero: number | null;
 };
 
 export default function SalesDashboard() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
+  const [emittingId, setEmittingId] = useState<string | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  useEffect(() => {
+  const fetchSales = () => {
     api.get('/sales')
       .then(res => setSales(res.data))
       .catch(console.error)
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchSales();
   }, []);
+
+  const handleEmitNfce = async (saleId: string) => {
+    setEmittingId(saleId);
+    try {
+      await api.post(`/sales/${saleId}/emit-nfce`);
+      toast.success('Emissão solicitada com sucesso!');
+      fetchSales();
+    } catch (err: unknown) {
+      const msg = (err as any)?.response?.data?.message || 'Erro ao emitir NFC-e';
+      toast.error(msg);
+    } finally {
+      setEmittingId(null);
+    }
+  };
 
   if (loading) return <div className="flex h-full items-center justify-center"><Loader2 className="animate-spin text-blue-500" size={48} /></div>;
 
-  const totalRevenue = sales.reduce((acc, sale) => acc + sale.total, 0);
-  const totalItemsSold = sales.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0);
+  const totalRevenue = sales.reduce((acc, sale) => acc + Number(sale.total), 0);
+  const totalItemsSold = sales.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + Number(item.quantity), 0), 0);
 
-  const totalPix = sales.reduce((acc, sale) => acc + sale.payments.filter(p => p.method === 'pix').reduce((s, p) => s + p.value, 0), 0);
-  const totalDinheiro = sales.reduce((acc, sale) => acc + sale.payments.filter(p => p.method === 'dinheiro').reduce((s, p) => s + p.value, 0), 0);
-  const totalCredito = sales.reduce((acc, sale) => acc + sale.payments.filter(p => p.method === 'credito').reduce((s, p) => s + p.value, 0), 0);
-  const totalDebito = sales.reduce((acc, sale) => acc + sale.payments.filter(p => p.method === 'debito').reduce((s, p) => s + p.value, 0), 0);
+  const totalPix = sales.reduce((acc, sale) => acc + sale.payments.filter(p => p.method === 'pix').reduce((s, p) => s + Number(p.value), 0), 0);
+  const totalDinheiro = sales.reduce((acc, sale) => acc + sale.payments.filter(p => p.method === 'dinheiro').reduce((s, p) => s + Number(p.value), 0), 0);
+  const totalCredito = sales.reduce((acc, sale) => acc + sale.payments.filter(p => p.method === 'credito').reduce((s, p) => s + Number(p.value), 0), 0);
+  const totalDebito = sales.reduce((acc, sale) => acc + sale.payments.filter(p => p.method === 'debito').reduce((s, p) => s + Number(p.value), 0), 0);
 
   // Analytics
   const productsCount: Record<string, {name: string, qty: number, rev: number}> = {};
@@ -56,8 +81,8 @@ export default function SalesDashboard() {
     sale.items.forEach(item => {
       const pName = item.product?.name || 'Desconhecido';
       if (!productsCount[pName]) productsCount[pName] = { name: pName, qty: 0, rev: 0 };
-      productsCount[pName].qty += item.quantity;
-      productsCount[pName].rev += (item.quantity * item.priceUnit);
+      productsCount[pName].qty += Number(item.quantity);
+      productsCount[pName].rev += (Number(item.quantity) * Number(item.priceUnit));
     });
   });
 
@@ -66,7 +91,12 @@ export default function SalesDashboard() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <h1 className="text-3xl font-bold tracking-tight">Resumo de Vendas</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight">Resumo de Vendas</h1>
+        <button onClick={() => setIsExportModalOpen(true)} className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl transition-colors font-medium border border-zinc-700 hover:border-zinc-600">
+          <Download size={18} /> Exportar para Contador
+        </button>
+      </div>
       
       {/* Cards KPI */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -169,6 +199,7 @@ export default function SalesDashboard() {
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider">Data/Hora</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider">Itens do Pedido</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider">Método Pgto</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">NFC-e</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-right">Total</th>
               </tr>
             </thead>
@@ -186,7 +217,7 @@ export default function SalesDashboard() {
                             {i.quantity}x
                           </span> 
                           <span className="text-zinc-300">{i.product?.name || 'Desconhecido'}</span>
-                          <span className="text-zinc-500 text-xs">- R$ {(i.priceUnit * i.quantity).toFixed(2)}</span>
+                          <span className="text-zinc-500 text-xs">- R$ {(Number(i.priceUnit) * Number(i.quantity)).toFixed(2)}</span>
                         </li>
                       ))}
                     </ul>
@@ -198,14 +229,45 @@ export default function SalesDashboard() {
                       </span>
                     ))}
                   </td>
-                  <td className="px-6 py-5 font-black text-emerald-400 text-right text-lg">
-                    R$ {sale.total.toFixed(2)}
+                  <td className="px-6 py-5 align-middle text-center">
+                    {sale.emitirNfce ? (
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        {sale.nfceStatus === 'autorizada' ? (
+                          <span className="text-emerald-400 font-semibold text-xs flex items-center justify-center gap-1 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 whitespace-nowrap">
+                            <CheckCircle2 size={12}/> {sale.nfceNumero ? `Nº ${sale.nfceNumero}` : 'Autorizada'}
+                          </span>
+                        ) : sale.nfceStatus === 'rejeitada' ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-red-400 font-semibold text-xs flex items-center justify-center gap-1 bg-red-500/10 px-2 py-1 rounded border border-red-500/20 whitespace-nowrap">
+                              <XCircle size={12}/> Rejeitada
+                            </span>
+                            <button onClick={() => handleEmitNfce(sale.id)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 disabled:opacity-50" title="Tentar Novamente">
+                              {emittingId === sale.id ? <Loader2 size={14} className="animate-spin" /> : <Receipt size={14} />}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-amber-400 font-semibold text-xs flex items-center justify-center gap-1 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20 whitespace-nowrap">
+                            <Clock size={12}/> Pendente
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-zinc-600 font-medium text-xs">-</span>
+                        <button onClick={() => handleEmitNfce(sale.id)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 disabled:opacity-50">
+                          {emittingId === sale.id ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />} Gerar
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-5 text-right">
+                    <span className="text-emerald-400 font-black text-lg">R$ {Number(sale.total).toFixed(2)}</span>
                   </td>
                 </tr>
               ))}
               {sales.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-zinc-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-zinc-500">
                     Você ainda não efetuou nenhuma venda hoje. Vá ao PDV e teste!
                   </td>
                 </tr>
@@ -214,6 +276,8 @@ export default function SalesDashboard() {
           </table>
         </div>
       </div>
+
+      <ExportXmlModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
     </div>
   );
 }

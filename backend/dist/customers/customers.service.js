@@ -13,7 +13,6 @@ exports.CustomersService = void 0;
 const common_1 = require("@nestjs/common");
 const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
 let CustomersService = class CustomersService {
-    tenantManager;
     constructor(tenantManager) {
         this.tenantManager = tenantManager;
     }

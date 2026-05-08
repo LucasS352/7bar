@@ -18,7 +18,6 @@ const customers_service_1 = require("./customers.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const current_user_decorator_1 = require("../auth/current-user.decorator");
 let CustomersController = class CustomersController {
-    customersService;
     constructor(customersService) {
         this.customersService = customersService;
     }

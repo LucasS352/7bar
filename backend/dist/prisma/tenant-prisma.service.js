@@ -10,7 +10,9 @@ exports.TenantConnectionManager = void 0;
 const common_1 = require("@nestjs/common");
 const client_1 = require("@prisma/client");
 let TenantConnectionManager = class TenantConnectionManager {
-    clients = new Map();
+    constructor() {
+        this.clients = new Map();
+    }
     async getTenantClient(tenantId, databaseUrl) {
         if (this.clients.has(tenantId)) {
             return this.clients.get(tenantId);

@@ -31,7 +31,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       tenantId: user.tenant.id,
-      databaseUrl: user.tenant.database_url,
+      databaseUrl: user.tenant.databaseUrl,   // camelCase — via @map("database_url")
       role: user.role
     };
     return {

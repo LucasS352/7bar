@@ -1,148 +1,372 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+
+// ── DTOs internos (evitar `any`) ─────────────────────────────────────────────
+
+interface ProductCreateDto {
+  name: string;
+  shortCode?: string | null;
+  barcode?: string | null;
+  unit?: string;
+  priceCost?: number;
+  priceSell: number;
+  stock?: number;
+  categoryId: string;
+  grupoTributacaoId?: string | null;
+  ncm?: string | null;
+  cest?: string | null;
+  origem?: number;
+}
+
+interface ProductUpdateDto {
+  name?: string;
+  shortCode?: string | null;
+  barcode?: string | null;
+  unit?: string;
+  priceCost?: number;
+  priceSell?: number;
+  stock?: number;
+  categoryId?: string;
+  grupoTributacaoId?: string | null;
+  ncm?: string | null;
+  cest?: string | null;
+  origem?: number;
+  active?: boolean;
+}
+
+interface BulkItem {
+  name: string;
+  shortCode?: string | null;
+  barcode?: string | null;
+  priceCost?: number;
+  priceSell?: number;
+  stockToAdd?: number;
+  categoryId?: string;
+  grupoTributacaoId?: string | null;
+  ncm?: string | null;
+  cest?: string | null;
+  origem?: number;
+}
+
+// Exported so the controller can reference the return type without TS4053
+export interface TenantSettingsDto {
+  allowNegativeStock: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Injectable()
 export class ProductsService {
   constructor(private tenantManager: TenantConnectionManager) {}
 
+  // ── Utilitários Internos ──────────────────────────────────────────────────
+
+  /** Gera o próximo shortCode de forma atômica via MAX() no banco — sem race condition */
+  private async nextShortCode(prisma: Awaited<ReturnType<TenantConnectionManager['getTenantClient']>>): Promise<string> {
+    const result = await prisma.$queryRaw<[{ maxCode: string | null }]>`
+      SELECT MAX(CAST(shortCode AS UNSIGNED)) AS maxCode
+      FROM products
+      WHERE shortCode REGEXP '^[0-9]+$'
+    `;
+    const max = parseInt(result[0]?.maxCode ?? '0') || 0;
+    return (max + 1).toString();
+  }
+
+  /** Sanitiza campos opcionais para null quando vazios */
+  private sanitize<T extends ProductCreateDto | ProductUpdateDto>(data: T): T {
+    if ('shortCode' in data && data.shortCode === '') data.shortCode = null;
+    if ('barcode' in data && data.barcode === '') data.barcode = null;
+    if ('grupoTributacaoId' in data && data.grupoTributacaoId === '') data.grupoTributacaoId = null;
+    if ('ncm' in data && data.ncm === '') data.ncm = null;
+    if ('cest' in data && data.cest === '') data.cest = null;
+    if (data.origem !== undefined) data.origem = parseInt(String(data.origem)) || 0;
+    return data;
+  }
+
+  // ── CRUD Padrão ───────────────────────────────────────────────────────────
+
   async findAll(tenantId: string, databaseUrl: string) {
     const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
     return prisma.product.findMany({
-      include: { category: true }
+      include: { category: true, grupoTributacao: true },
+      orderBy: { name: 'asc' },
+      take: 2000, // guard de segurança contra catálogos gigantes sem paginação
     });
   }
 
-  async create(tenantId: string, databaseUrl: string, data: any) {
+  async create(tenantId: string, databaseUrl: string, data: ProductCreateDto) {
     const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    const sanitized = this.sanitize(data);
 
-    if (!data.shortCode) {
-      const allProducts = await prisma.product.findMany({ select: { shortCode: true } });
-      let maxNum = 0;
-      allProducts.forEach(p => {
-        const num = parseInt(p.shortCode || '0', 10);
-        if (!isNaN(num) && num > maxNum) maxNum = num;
-      });
-      data.shortCode = (maxNum + 1).toString();
+    // ── Validação de input (A-2) ───────────────────────────────────────────
+    if (!sanitized.name?.trim()) {
+      throw new BadRequestException('Nome da Mercadoria é obrigatório.');
+    }
+    if (!sanitized.categoryId) {
+      throw new BadRequestException('Categoria é obrigatória.');
+    }
+    if (sanitized.priceSell === undefined || sanitized.priceSell < 0) {
+      throw new BadRequestException('Preço de Venda inválido.');
+    }
+    if (sanitized.priceCost !== undefined && sanitized.priceCost < 0) {
+      throw new BadRequestException('Preço de Custo não pode ser negativo.');
+    }
+    if (sanitized.stock !== undefined && sanitized.stock < 0) {
+      throw new BadRequestException('Estoque inicial não pode ser negativo.');
+    }
+    // ──────────────────────────────────────────────────────
+
+    // MySQL é case-insensitive por padrão — não precisa de mode:'insensitive' (PostgreSQL-only)
+    const existing = await prisma.product.findFirst({ where: { name: sanitized.name } });
+    if (existing) {
+      throw new ConflictException(`Já existe um produto com o nome "${sanitized.name}". Verifique o catálogo.`);
     }
 
-    if (!data.barcode) data.barcode = null;
-    
-    const product = await prisma.product.create({ data });
+    if (!sanitized.shortCode) {
+      sanitized.shortCode = await this.nextShortCode(prisma);
+    }
 
-    if (data.stock && data.stock > 0) {
-      // Cast para bypassar lock de tipagem no SO durante hot-reload
-      await (prisma as any).inventoryLog.create({
+    // Garante unidade padrão
+    if (!sanitized.unit) sanitized.unit = 'UN';
+
+    const product = await prisma.product.create({ data: sanitized as any });
+
+    if (sanitized.stock && Number(sanitized.stock) > 0) {
+      await prisma.inventoryLog.create({
         data: {
           productId: product.id,
           type: 'IN',
-          quantity: data.stock,
-          costPrice: data.priceCost,
-          reason: 'Estoque Inicial Cadastro Manual'
-        }
+          quantity: Number(sanitized.stock),
+          costPrice: sanitized.priceCost ?? 0,
+          reason: 'Estoque Inicial — Cadastro Manual',
+        },
       });
     }
 
     return product;
   }
 
-  async update(tenantId: string, databaseUrl: string, id: string, data: any) {
-    if (data.shortCode === '') data.shortCode = null;
-    if (data.barcode === '') data.barcode = null;
-
+  async update(tenantId: string, databaseUrl: string, id: string, data: ProductUpdateDto) {
+    const sanitized = this.sanitize(data);
     const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+
     const oldProduct = await prisma.product.findUnique({ where: { id } });
-    const product = await prisma.product.update({ where: { id }, data });
+    if (!oldProduct) throw new NotFoundException('Produto não encontrado.');
 
-    if (data.stock !== undefined && oldProduct && data.stock !== oldProduct.stock) {
-        const diff = data.stock - oldProduct.stock;
-        await (prisma as any).inventoryLog.create({
+    // shortCode é auto-gerado e imutável — nunca deve ser enviado no UPDATE
+    const { shortCode: _ignored, ...updateData } = sanitized as Record<string, unknown>;
+    void _ignored;
+
+    // $transaction garante atomicidade: update + log juntos ou nenhum
+    return prisma.$transaction(async (tx) => {
+      const product = await tx.product.update({ where: { id }, data: updateData as any });
+
+      if (sanitized.stock !== undefined && Number(sanitized.stock) !== Number(oldProduct.stock)) {
+        const diff = Number(sanitized.stock) - Number(oldProduct.stock);
+        await tx.inventoryLog.create({
           data: {
-             productId: product.id,
-             type: diff > 0 ? 'IN' : 'OUT',
-             quantity: Math.abs(diff),
-             reason: diff > 0 ? 'Ajuste Manual Positivo' : 'Ajuste Manual (Quebra/Perda)'
-          }
+            productId: product.id,
+            type: diff > 0 ? 'IN' : 'OUT',
+            quantity: Math.abs(diff),
+            reason: diff > 0 ? 'Ajuste Manual Positivo' : 'Ajuste Manual (Quebra/Perda)',
+          },
         });
-    }
+      }
 
-    return product;
+      return product;
+    });
   }
+
 
   async remove(tenantId: string, databaseUrl: string, id: string) {
     const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
-    // Limpar logs por restrição de FK
-    await (prisma as any).inventoryLog.deleteMany({ where: { productId: id } });
+
+    // A-6: Produtos com histórico (vendas ou movimentações) não devem ser deletados fisicamente.
+    // Soft delete preserva integridade do histórico fiscal e de estoque.
+    const [saleCount, logCount] = await Promise.all([
+      prisma.saleItem.count({ where: { productId: id } }),
+      prisma.inventoryLog.count({ where: { productId: id } }),
+    ]);
+
+    if (saleCount > 0 || logCount > 0) {
+      // Soft delete — inativa o produto sem remover dados históricos
+      return prisma.product.update({
+        where: { id },
+        data: { active: false },
+      });
+    }
+
+    // Sem histórico: pode deletar fisicamente
+    await prisma.inventoryLog.deleteMany({ where: { productId: id } });
     return prisma.product.delete({ where: { id } });
   }
 
-  async bulkEntry(tenantId: string, databaseUrl: string, items: any[]) {
+  // ── Entrada de Estoque Incremental ────────────────────────────────────────
+
+  /**
+   * Adiciona quantidade ao estoque de forma segura usando Prisma increment.
+   * Executado dentro de uma transaction para evitar condições de corrida.
+   */
+  async addStock(tenantId: string, databaseUrl: string, productId: string, quantity: number, reason?: string) {
+    if (quantity <= 0) {
+      throw new BadRequestException('A quantidade de entrada deve ser maior que zero.');
+    }
+
     const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
-    let importedCount = 0;
-    
+
+    return prisma.$transaction(async (tx) => {
+      const product = await tx.product.findUnique({ where: { id: productId } });
+      if (!product) throw new NotFoundException('Produto não encontrado.');
+
+      // Usa increment nativo do Prisma — atômico, sem condição de corrida
+      const updated = await tx.product.update({
+        where: { id: productId },
+        data: { stock: { increment: quantity } },
+      });
+
+      await tx.inventoryLog.create({
+        data: {
+          productId,
+          type: 'IN',
+          quantity,
+          reason: reason || 'Entrada de Estoque — Reposição',
+        },
+      });
+
+      return { product: updated, quantityAdded: quantity };
+    });
+  }
+
+  // ── Importação em Lote (Fast Grid) ────────────────────────────────────────
+
+  async bulkEntry(tenantId: string, databaseUrl: string, items: BulkItem[]) {
+    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+
+    // Categoria fallback
     let fallbackCategory = await prisma.category.findFirst();
     if (!fallbackCategory) {
       fallbackCategory = await prisma.category.create({ data: { name: 'Geral' } });
     }
 
-    for (const item of items) {
-      if (!item.name) continue; 
+    // ── Carrega TODOS os produtos em 1 query (elimina N+1) ────────────────
+    const allProducts = await prisma.product.findMany({
+      select: { id: true, name: true, shortCode: true, barcode: true, priceCost: true, priceSell: true, stock: true },
+    });
+    const byShortCode = new Map(allProducts.filter(p => p.shortCode).map(p => [p.shortCode!, p]));
+    const byBarcode   = new Map(allProducts.filter(p => p.barcode).map(p => [p.barcode!, p]));
+    const byName      = new Map(allProducts.map(p => [p.name.toLowerCase(), p]));
 
-      let existing = null;
-      if (item.shortCode) existing = await prisma.product.findUnique({ where: { shortCode: item.shortCode } });
-      if (!existing && item.barcode) existing = await prisma.product.findUnique({ where: { barcode: item.barcode } });
+    const duplicateNames: string[] = [];
+    let importedCount = 0;
 
-      const safeShortCode = item.shortCode || null;
-      const safeBarcode = item.barcode || null;
-      const stockToAdd = parseInt(item.stockToAdd) || 0;
+    // ── Processa em batches de 50 dentro de transactions ─────────────────
+    const BATCH = 50;
+    for (let b = 0; b < items.length; b += BATCH) {
+      const batch = items.slice(b, b + BATCH);
 
-      if (existing) {
-         const updated = await prisma.product.update({ 
-           where: { id: existing.id }, 
-           data: { 
-             priceCost: item.priceCost ?? existing.priceCost, 
-             priceSell: item.priceSell ?? existing.priceSell,
-             stock: existing.stock + stockToAdd
-           } 
-         });
-         
-         if (stockToAdd > 0) {
-           await (prisma as any).inventoryLog.create({
-             data: { productId: existing.id, type: 'IN', quantity: stockToAdd, costPrice: item.priceCost, reason: 'Entrada Lote/Fornecedor' }
-           });
-         }
-         importedCount++;
-      } else {
-         let finalShortCode = safeShortCode;
-         if (!finalShortCode) {
-            const allProducts = await prisma.product.findMany({ select: { shortCode: true } });
-            let maxNum = 0;
-            allProducts.forEach(p => {
-               const num = parseInt(p.shortCode || '0', 10);
-               if (!isNaN(num) && num > maxNum) maxNum = num;
+      await prisma.$transaction(async (tx) => {
+        for (const item of batch) {
+          if (!item.name?.trim()) continue;
+
+          const existing =
+            (item.shortCode ? byShortCode.get(item.shortCode) : undefined) ??
+            (item.barcode   ? byBarcode.get(item.barcode)     : undefined) ??
+            null;
+
+          const stockToAdd = parseInt(String(item.stockToAdd ?? 0)) || 0;
+
+          if (existing) {
+            // Produto já existe — atualiza preços e soma estoque
+            await tx.product.update({
+              where: { id: existing.id },
+              data: {
+                priceCost:        item.priceCost        ?? existing.priceCost,
+                priceSell:        item.priceSell        ?? existing.priceSell,
+                stock:            { increment: stockToAdd },
+                ...(item.categoryId        && { categoryId: item.categoryId }),
+                ...(item.grupoTributacaoId && { grupoTributacaoId: item.grupoTributacaoId }),
+                ...(item.ncm               && { ncm: item.ncm }),
+                ...(item.cest              && { cest: item.cest }),
+                ...(item.origem !== undefined && { origem: parseInt(String(item.origem)) || 0 }),
+              },
             });
-            finalShortCode = (maxNum + 1).toString();
-         }
 
-         const created = await prisma.product.create({
-           data: {
-             name: item.name,
-             shortCode: finalShortCode,
-             barcode: safeBarcode,
-             priceCost: item.priceCost || 0,
-             priceSell: item.priceSell || 0,
-             stock: stockToAdd,
-             categoryId: item.categoryId || fallbackCategory.id
-           }
-         });
-         
-         if (stockToAdd > 0) {
-            await (prisma as any).inventoryLog.create({
-              data: { productId: created.id, type: 'IN', quantity: stockToAdd, costPrice: item.priceCost, reason: 'Cadastro e Entrada Lote Inicial' }
+            if (stockToAdd > 0) {
+              await tx.inventoryLog.create({
+                data: { productId: existing.id, type: 'IN', quantity: stockToAdd, costPrice: item.priceCost, reason: 'Entrada Lote/Fornecedor' },
+              });
+            }
+            importedCount++;
+          } else {
+            // Verifica conflito de nome usando Map em memória (sem query extra)
+            if (byName.has(item.name.trim().toLowerCase())) {
+              duplicateNames.push(item.name);
+              continue;
+            }
+
+            const finalShortCode = item.shortCode || await this.nextShortCode(tx as any);
+
+            const created = await tx.product.create({
+              data: {
+                name:              item.name.trim(),
+                shortCode:         finalShortCode,
+                barcode:           item.barcode           || null,
+                priceCost:         item.priceCost         || 0,
+                priceSell:         item.priceSell         || 0,
+                stock:             stockToAdd,
+                unit:              'UN',
+                categoryId:        item.categoryId        || fallbackCategory!.id,
+                grupoTributacaoId: item.grupoTributacaoId || null,
+                ncm:               item.ncm               || null,
+                cest:              item.cest              || null,
+                origem:            item.origem !== undefined ? parseInt(String(item.origem)) || 0 : 0,
+              },
             });
-         }
-         importedCount++;
-      }
+
+            // Atualiza Map em memória para evitar conflitos dentro do mesmo lote
+            byName.set(item.name.trim().toLowerCase(), created as any);
+            if (created.shortCode) byShortCode.set(created.shortCode, created as any);
+
+            if (stockToAdd > 0) {
+              await tx.inventoryLog.create({
+                data: { productId: created.id, type: 'IN', quantity: stockToAdd, costPrice: item.priceCost, reason: 'Cadastro e Entrada Lote Inicial' },
+              });
+            }
+            importedCount++;
+          }
+        }
+      });
     }
-    return { success: true, processed: importedCount };
+
+    return {
+      success: true,
+      processed: importedCount,
+      duplicates: duplicateNames,
+      hasDuplicates: duplicateNames.length > 0,
+    };
+  }
+
+  // ── Configurações do Tenant ───────────────────────────────────────────────
+
+  /** Lê configurações globais do tenant (singleton via upsert) */
+  async getSettings(tenantId: string, databaseUrl: string): Promise<TenantSettingsDto> {
+    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    const settings = await prisma.tenantSettings.upsert({
+      where:  { id: 'singleton' },
+      update: {},
+      create: { id: 'singleton', allowNegativeStock: false },
+    });
+    return { allowNegativeStock: settings.allowNegativeStock };
+  }
+
+  /** Atualiza configurações globais do tenant */
+  async saveSettings(tenantId: string, databaseUrl: string, data: TenantSettingsDto): Promise<TenantSettingsDto> {
+    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    const settings = await prisma.tenantSettings.upsert({
+      where:  { id: 'singleton' },
+      update: { allowNegativeStock: data.allowNegativeStock },
+      create: { id: 'singleton', allowNegativeStock: data.allowNegativeStock },
+    });
+    return { allowNegativeStock: settings.allowNegativeStock };
   }
 }

@@ -10,7 +10,7 @@ export class CashRegistersController {
 
   @Post('open')
   open(@CurrentUser() user: any, @Body('openingValue') openingValue: number) {
-    return this.cashRegistersService.openRegister(user.tenantId, user.databaseUrl, user.userId, openingValue || 0);
+    return this.cashRegistersService.openRegister(user.tenantId, user.databaseUrl, user.sub, openingValue || 0);
   }
 
   @Get()
@@ -35,6 +35,6 @@ export class CashRegistersController {
 
   @Get('current')
   getCurrent(@CurrentUser() user: any) {
-    return this.cashRegistersService.getCurrentRegister(user.tenantId, user.databaseUrl, user.userId);
+    return this.cashRegistersService.getCurrentRegister(user.tenantId, user.databaseUrl, user.sub);
   }
 }

@@ -82,10 +82,10 @@ export default function CashRegistersHistoryPage() {
                     {reg.closingTime ? new Date(reg.closingTime).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' }).replace(',', ' -') : '--'}
                   </td>
                   <td className="px-6 py-5 text-right font-bold text-blue-400">
-                    R$ {reg.openingValue.toFixed(2)}
+                    R$ {Number(reg.openingValue || 0).toFixed(2)}
                   </td>
                   <td className="px-6 py-5 text-right font-bold text-zinc-400">
-                    {typeof reg.closingValue === 'number' ? `R$ ${reg.closingValue.toFixed(2)}` : '--'}
+                    {reg.closingValue !== undefined && reg.closingValue !== null ? `R$ ${Number(reg.closingValue).toFixed(2)}` : '--'}
                   </td>
                   <td className="px-6 py-5 text-center">
                     <button 

@@ -18,12 +18,11 @@ const cash_registers_service_1 = require("./cash-registers.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const current_user_decorator_1 = require("../auth/current-user.decorator");
 let CashRegistersController = class CashRegistersController {
-    cashRegistersService;
     constructor(cashRegistersService) {
         this.cashRegistersService = cashRegistersService;
     }
     open(user, openingValue) {
-        return this.cashRegistersService.openRegister(user.tenantId, user.databaseUrl, user.userId, openingValue || 0);
+        return this.cashRegistersService.openRegister(user.tenantId, user.databaseUrl, user.sub, openingValue || 0);
     }
     findAll(user) {
         return this.cashRegistersService.findAll(user.tenantId, user.databaseUrl);
@@ -38,7 +37,7 @@ let CashRegistersController = class CashRegistersController {
         return this.cashRegistersService.getReport(user.tenantId, user.databaseUrl, id);
     }
     getCurrent(user) {
-        return this.cashRegistersService.getCurrentRegister(user.tenantId, user.databaseUrl, user.userId);
+        return this.cashRegistersService.getCurrentRegister(user.tenantId, user.databaseUrl, user.sub);
     }
 };
 exports.CashRegistersController = CashRegistersController;

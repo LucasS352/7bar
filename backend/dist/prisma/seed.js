@@ -33,9 +33,9 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_heart_1 = require("../../node_modules/@prisma/client-heart");
+const heart_client_1 = require("../../prisma/generated/heart-client");
 const bcrypt = __importStar(require("bcrypt"));
-const prisma = new client_heart_1.PrismaClient();
+const prisma = new heart_client_1.PrismaClient();
 async function main() {
     const password = await bcrypt.hash('123456', 10);
     await prisma.user.deleteMany();
@@ -43,8 +43,8 @@ async function main() {
     const tenant = await prisma.tenant.create({
         data: {
             name: '7bar',
-            database_name: '7bar',
-            database_url: process.env.DATABASE_URL_TENANT || `mysql://root:@localhost:3307/7bar`,
+            databaseName: '7bar',
+            databaseUrl: process.env.DATABASE_URL_TENANT || `mysql://root:@localhost:3307/7bar`,
             status: 'active',
             users: {
                 create: {

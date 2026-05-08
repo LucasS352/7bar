@@ -14,4 +14,16 @@ export declare class CategoriesController {
         createdAt: Date;
         updatedAt: Date;
     }>;
+    update(user: any, id: string, body: any): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    remove(user: any, id: string): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
 }

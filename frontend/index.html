@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Theme color (barra do navegador no mobile) -->
+    <meta name="theme-color" content="#0a0a0a" />
+
+    <!-- Apple PWA (iOS) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="7bar POS" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+
+    <!-- SEO -->
+    <title>7bar — Ponto de Venda</title>
+    <meta name="description" content="PDV para Adegas e Distribuidoras. Suporte offline para vendas sem internet." />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- Entry point do Vite (substitui _document.tsx do Next.js) -->
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

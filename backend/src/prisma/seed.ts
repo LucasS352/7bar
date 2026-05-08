@@ -1,4 +1,4 @@
-import { PrismaClient } from '../../node_modules/@prisma/client-heart';
+import { PrismaClient } from '../../prisma/generated/heart-client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -13,8 +13,8 @@ async function main() {
   const tenant = await prisma.tenant.create({
     data: {
       name: '7bar',
-      database_name: '7bar',
-      database_url: process.env.DATABASE_URL_TENANT || `mysql://root:@localhost:3307/7bar`,
+      databaseName: '7bar',
+      databaseUrl: process.env.DATABASE_URL_TENANT || `mysql://root:@localhost:3307/7bar`,
       status: 'active',
       users: {
         create: {

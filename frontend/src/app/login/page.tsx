@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { Wine, Lock, Mail, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuthStore();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +20,7 @@ export default function LoginPage() {
       const { data } = await api.post('/auth/login', { email, password });
       login(data.access_token, data.user);
       toast.success(`Bem vindo ao ${data.user.tenant}, ${data.user.name}!`);
-      router.push('/');
+      navigate('/');
     } catch (err) {
       toast.error('Credenciais inválidas. Tente novamente.');
     } finally {

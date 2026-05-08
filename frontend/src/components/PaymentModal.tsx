@@ -1,223 +1,447 @@
-import { useState, useEffect } from 'react';
+'use client';
+import { useState, useEffect, useCallback } from 'react';
 import { useCartStore } from '@/store/cart';
+import { useAuthStore } from '@/store/auth';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { CreditCard, Banknote, QrCode, X, Loader2, Plus, Trash2 } from 'lucide-react';
+import { saveOfflineSale } from '@/lib/db';
+import type { OfflineSaleItemSnapshot, OfflineSalePayment } from '@/lib/db';
+import {
+  CreditCard, Banknote, QrCode, X, Loader2, Plus, Trash2,
+  ShoppingBag, Receipt, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, User, WifiOff,
+} from 'lucide-react';
 
-export function PaymentModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+type PayMode = 'simple' | 'nfce';
+type NfceStatus = 'pendente' | 'autorizada' | 'rejeitada' | 'nao_emitida' | null;
+
+const METHOD_CONFIG = [
+  { id: 'dinheiro', icon: Banknote,   label: 'Dinheiro', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 ring-emerald-500 hover:border-emerald-500' },
+  { id: 'pix',     icon: QrCode,     label: 'Pix',      color: 'bg-teal-500/10 text-teal-400 border-teal-500/20 ring-teal-500 hover:border-teal-500' },
+  { id: 'credito', icon: CreditCard, label: 'Crédito',  color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 ring-indigo-500 hover:border-indigo-500' },
+  { id: 'debito',  icon: CreditCard, label: 'Débito',   color: 'bg-sky-500/10 text-sky-400 border-sky-500/20 ring-sky-500 hover:border-sky-500' },
+];
+
+const METHOD_NAMES: Record<string, string> = { dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito' };
+
+const TPAG_MAP: Record<string, string> = { dinheiro: '01', credito: '03', debito: '04', pix: '17', outros: '99' };
+
+interface PaymentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  isOnline: boolean;
+  onPendingCountChange?: () => void;
+}
+
+export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }: PaymentModalProps) {
   const { total, items, clearCart } = useCartStore();
-  
-  const [payments, setPayments] = useState<{ id: string, method: string, value: number, given: number }[]>([]);
-  const [method, setMethod] = useState<'dinheiro' | 'pix' | 'credito' | 'debito'>('dinheiro');
-  const [inputValue, setInputValue] = useState<string>('');
-  const [loading, setLoading] = useState(false);
+  const { user } = useAuthStore();
 
-  // Cálculos dinâmicos da conta
+  const [payments, setPayments] = useState<{ id: string; method: string; value: number; given: number }[]>([]);
+  const [method, setMethod] = useState<'dinheiro' | 'pix' | 'credito' | 'debito'>('dinheiro');
+  const [inputValue, setInputValue] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [payMode, setPayMode] = useState<PayMode>('simple');
+  const [showConsumerForm, setShowConsumerForm] = useState(false);
+  const [customerCpf, setCustomerCpf] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [saleResult, setSaleResult] = useState<Record<string, unknown> | null>(null);
+  const [nfcePolling, setNfcePolling] = useState(false);
+  const [savedOffline, setSavedOffline] = useState(false);
+
   const totalPaid = payments.reduce((acc, p) => acc + p.value, 0);
   const remaining = Math.max(0, Math.round((total - totalPaid) * 100) / 100);
+  const change = payments.filter(p => p.method === 'dinheiro').reduce((acc, p) => acc + (p.given - p.value), 0);
+
+  const [autoNfce, setAutoNfce] = useState(() => localStorage.getItem('7bar_auto_nfce') === 'true');
 
   useEffect(() => {
     if (isOpen) {
-      setPayments([]);
-      setMethod('dinheiro');
-      setInputValue(total.toFixed(2));
+      setPayments([]); setMethod('dinheiro'); setInputValue(total.toFixed(2));
+      setPayMode('simple'); setShowConsumerForm(false); setCustomerCpf(''); setCustomerName('');
+      setSaleResult(null); setNfcePolling(false); setSavedOffline(false);
     }
-  }, [isOpen, total]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+  useEffect(() => { setInputValue(remaining > 0 ? remaining.toFixed(2) : ''); }, [remaining]);
 
   useEffect(() => {
-    if (remaining > 0) {
-      setInputValue(remaining.toFixed(2));
-    } else {
-      setInputValue('');
+    if (isOpen && (saleResult || savedOffline) && !nfcePolling) {
+      const handler = (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          onClose();
+        }
+      };
+      window.addEventListener('keydown', handler);
+      return () => window.removeEventListener('keydown', handler);
     }
-  }, [remaining]);
+  }, [isOpen, saleResult, savedOffline, nfcePolling, onClose]);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (!isOpen || saleResult || savedOffline) return;
+    const handler = (e: KeyboardEvent) => {
+      const activeIsInput = document.activeElement?.tagName.toLowerCase() === 'input';
+      
+      if (!activeIsInput) {
+        if (e.key === '1') { e.preventDefault(); setMethod('dinheiro'); document.getElementById('value-input')?.focus(); }
+        if (e.key === '2') { e.preventDefault(); setMethod('pix'); document.getElementById('value-input')?.focus(); }
+        if (e.key === '3') { e.preventDefault(); setMethod('credito'); document.getElementById('value-input')?.focus(); }
+        if (e.key === '4') { e.preventDefault(); setMethod('debito'); document.getElementById('value-input')?.focus(); }
+      }
+
+      if (e.key === 'Enter' && remaining <= 0) {
+        e.preventDefault();
+        if (isOnline) handleConfirm(autoNfce ? 'nfce' : 'simple');
+        else handleSaveOffline();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, remaining, saleResult, savedOffline, isOnline, autoNfce]);
+
+  useEffect(() => {
+    if (!nfcePolling || !saleResult?.id) return;
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await api.get(`/sales/${saleResult.id}/nfce-status`);
+        const status: NfceStatus = res.data.nfceStatus as NfceStatus;
+        setSaleResult(prev => ({ ...prev, ...res.data }));
+        if (status === 'autorizada' || status === 'rejeitada' || status === 'nao_emitida' || attempts >= 15) {
+          clearInterval(interval); setNfcePolling(false);
+        }
+      } catch { /* continua */ }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [nfcePolling, saleResult?.id]);
 
   const handleAddPayment = () => {
     const val = parseFloat(inputValue);
-    if (isNaN(val) || val <= 0) {
-      toast.error('Digite um valor numérico válido.');
-      return;
-    }
-
-    if (remaining <= 0) {
-      toast.error('O valor total já foi atingido.');
-      return;
-    }
-
-    let actualValue = val;
-    let given = val;
-
-    // Tratativa de troco: Se der mais dinheiro que o necessário, a "venda" registra só o que faltava
-    if (method !== 'dinheiro' && val > remaining) {
-       toast.error('No cartão/Pix o valor não pode ser maior que o saldo devedor.');
-       return;
-    }
-
-    if (method === 'dinheiro' && val > remaining) {
-       actualValue = remaining;
-    }
-
-    setPayments([...payments, { id: Math.random().toString(), method, value: actualValue, given }]);
+    if (isNaN(val) || val <= 0) { toast.error('Digite um valor válido.'); return; }
+    if (remaining <= 0) { toast.error('Total já atingido.'); return; }
+    if (method !== 'dinheiro' && val > remaining) { toast.error('Cartão/Pix: valor não pode exceder o saldo devedor.'); return; }
+    const actualValue = method === 'dinheiro' && val > remaining ? remaining : val;
+    setPayments([...payments, { id: crypto.randomUUID(), method, value: actualValue, given: val }]);
   };
 
-  const handleRemovePayment = (id: string) => {
-    setPayments(payments.filter(p => p.id !== id));
-  };
-
-  const handleConfirm = async () => {
-    if (remaining > 0) {
-      toast.error(`Ainda falta pagar R$ ${remaining.toFixed(2)}`);
-      return;
-    }
-
+  // ── Salva venda offline no IndexedDB (OFFLINE_CONTINGENCY) ──────────────
+  const handleSaveOffline = async () => {
+    if (remaining > 0) { toast.error(`Falta R$ ${remaining.toFixed(2)} para finalizar.`); return; }
     setLoading(true);
     try {
-      await api.post('/sales/checkout', {
-        items: items.map(i => ({ productId: i.id, quantity: i.quantity, priceUnit: i.priceSell })),
-        payments: payments.map(p => ({ method: p.method, value: p.value }))
+      // Monta snapshot fiscal dos itens a partir do carrinho
+      // (dados fiscais completos viriam do cache — aqui usamos defaults seguros)
+      const saleItems: OfflineSaleItemSnapshot[] = items.map(item => ({
+        productId:   item.id,
+        productName: item.name,
+        unit:        'UN',
+        quantity:    item.quantity,
+        priceUnit:   Number(item.priceSell),
+        discount:    0,
+        subtotal:    item.subtotal,
+        // Snapshot fiscal — será completado pelo backend no sync
+        ncm: null, cest: null, cfop: '5102', origem: 0,
+        csosn: null, cstIcms: null,
+        aliqIcms: 0, valorIcms: 0,
+        cstPis: '99', aliqPis: 0, valorPis: 0,
+        cstCofins: '99', aliqCofins: 0, valorCofins: 0,
+      }));
+
+      const salePayments: OfflineSalePayment[] = payments.map(p => ({
+        method: p.method as OfflineSalePayment['method'],
+        tPag:   TPAG_MAP[p.method] ?? '99',
+        value:  p.value,
+        troco:  Math.max(0, p.given - p.value),
+      }));
+
+      const subtotal = items.reduce((acc, i) => acc + i.subtotal, 0);
+      const discount = 0;
+
+      await saveOfflineSale({
+        localId:     crypto.randomUUID(),
+        createdAt:   new Date().toISOString(),
+        operatorId:  user?.id ?? 'unknown',
+        tenantId:    user?.tenant ?? 'unknown',
+        subtotal,
+        discount,
+        total,
+        items:       saleItems,
+        payments:    salePayments,
+        customerCpf:  customerCpf || undefined,
+        customerName: customerName || undefined,
+        emitirNfce:  false,
+        syncStatus:  'PENDING',
       });
-      toast.success('Compra Paga! Venda finalizada com sucesso!');
+
       clearCart();
-      onClose();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erro de conexão.');
+      setSavedOffline(true);
+      toast.success('Venda salva localmente! Será sincronizada ao reconectar.', { duration: 5000 });
+      onPendingCountChange?.();
+    } catch (err) {
+      toast.error('Erro ao salvar venda offline.');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Cálculo visual do troco apenas para repassar o valor em mãos (usando o given vs o valor real abatido)
-  const change = payments.filter(p => p.method === 'dinheiro').reduce((acc, p) => acc + (p.given - p.value), 0);
+  const handleConfirm = async (mode: PayMode) => {
+    if (remaining > 0) { toast.error(`Falta R$ ${remaining.toFixed(2)} para finalizar.`); return; }
+    setLoading(true); setPayMode(mode);
+    try {
+      const body = {
+        items: items.map(i => ({ productId: i.id, quantity: i.quantity, priceUnit: i.priceSell })),
+        payments: payments.map(p => ({ method: p.method, value: p.value, troco: Math.max(0, p.given - p.value) })),
+        emitirNfce: mode === 'nfce',
+        ...(mode === 'nfce' ? { customerCpf: customerCpf || undefined, customerName: customerName || undefined } : {}),
+      };
+      const res = await api.post('/sales/checkout', body);
+      setSaleResult(res.data); clearCart();
+      if (mode === 'nfce') { toast.info('NFC-e em processamento...', { duration: 3000 }); setNfcePolling(true); }
+      else toast.success('Venda finalizada!');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erro ao finalizar venda.';
+      toast.error(msg);
+    } finally { setLoading(false); }
+  };
 
-  const methodNames: Record<string, string> = { dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito' };
+  if (!isOpen) return null;
 
+  // ── Tela: Venda salva offline ────────────────────────────────────────────
+  if (savedOffline) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+          <div className="p-8 text-center space-y-4">
+            <div className="w-20 h-20 rounded-full bg-orange-500/10 border-2 border-orange-500/30 flex items-center justify-center mx-auto">
+              <WifiOff className="text-orange-400" size={36} />
+            </div>
+            <h3 className="text-2xl font-bold text-white">Venda em Contingência!</h3>
+            <p className="text-zinc-400 text-sm">Salva localmente. Será sincronizada automaticamente quando a conexão retornar.</p>
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
+              <p className="text-orange-400 font-bold text-xl">R$ {total.toFixed(2)}</p>
+              <p className="text-orange-400/70 text-xs mt-1">OFFLINE_CONTINGENCY</p>
+            </div>
+          </div>
+          <div className="p-6 border-t border-zinc-800">
+            <button onClick={onClose} className="w-full py-3.5 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 text-white transition active:scale-95 relative">
+              Nova Venda
+              <span className="absolute top-1/2 -translate-y-1/2 right-4 text-[10px] font-mono bg-black/20 text-blue-200 px-1.5 py-0.5 rounded">Enter</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Tela: Resultado online ───────────────────────────────────────────────
+  if (saleResult) {
+    const status = saleResult.nfceStatus as NfceStatus;
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="p-8 text-center">
+            {saleResult.emitirNfce ? (
+              <>
+                {status === 'pendente' && (
+                  <div className="space-y-4">
+                    <div className="w-20 h-20 rounded-full bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center mx-auto"><Clock className="text-amber-400 animate-pulse" size={36} /></div>
+                    <h3 className="text-2xl font-bold text-white">Aguardando SEFAZ...</h3>
+                    <div className="flex gap-1 justify-center">{[0,1,2].map(i => <div key={i} className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />)}</div>
+                  </div>
+                )}
+                {status === 'autorizada' && (
+                  <div className="space-y-4">
+                    <div className="w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center mx-auto"><CheckCircle2 className="text-emerald-400" size={40} /></div>
+                    <h3 className="text-2xl font-bold text-emerald-400">NFC-e Autorizada! ✓</h3>
+                    <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-left space-y-2">
+                      <p className="text-xs text-zinc-500 font-mono break-all"><span className="text-zinc-400 font-semibold">Chave: </span>{saleResult.nfceChave as string}</p>
+                      <p className="text-xs text-zinc-500 font-mono"><span className="text-zinc-400 font-semibold">Protocolo: </span>{saleResult.nfceProtocolo as string}</p>
+                    </div>
+                  </div>
+                )}
+                {status === 'rejeitada' && (
+                  <div className="space-y-4">
+                    <div className="w-20 h-20 rounded-full bg-red-500/10 border-2 border-red-500/30 flex items-center justify-center mx-auto"><XCircle className="text-red-400" size={40} /></div>
+                    <h3 className="text-2xl font-bold text-red-400">NFC-e Rejeitada</h3>
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4"><p className="text-red-400 font-mono text-sm">{saleResult.nfceMotivoRejeicao as string}</p></div>
+                  </div>
+                )}
+                {status === 'nao_emitida' && (
+                  <div className="space-y-4">
+                    <div className="w-20 h-20 rounded-full bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center mx-auto"><Receipt className="text-zinc-400" size={36} /></div>
+                    <h3 className="text-2xl font-bold text-zinc-300">NFC-e não emitida</h3>
+                    <p className="text-zinc-400 text-sm">Configure o certificado em Configurações → Empresa.</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-4">
+                <div className="w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center mx-auto"><CheckCircle2 className="text-emerald-400" size={40} /></div>
+                <h3 className="text-2xl font-bold text-white">Venda Finalizada!</h3>
+                <p className="text-zinc-400">Total cobrado: <span className="text-white font-bold">R$ {Number(saleResult.total).toFixed(2)}</span></p>
+                {change > 0 && <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4"><p className="text-emerald-400 font-bold text-xl">Troco: R$ {change.toFixed(2)}</p></div>}
+              </div>
+            )}
+          </div>
+          <div className="p-6 border-t border-zinc-800 bg-zinc-900/50">
+            <button onClick={onClose} disabled={nfcePolling} className="w-full py-3.5 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white transition active:scale-95 flex items-center justify-center gap-2 relative">
+              {nfcePolling ? <><Loader2 className="animate-spin" size={18} /> Aguardando...</> : (
+                <>
+                  Nova Venda
+                  <span className="absolute top-1/2 -translate-y-1/2 right-4 text-[10px] font-mono bg-black/20 text-blue-200 px-1.5 py-0.5 rounded">Enter</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Tela principal ───────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
       <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="flex justify-between items-center p-6 border-b border-zinc-800 bg-zinc-900/50">
-          <h2 className="text-2xl font-bold text-white tracking-tight">Finalizar Pagamento</h2>
-          <button onClick={onClose} className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full transition-colors text-zinc-400 hover:text-white">
-            <X size={20} />
-          </button>
+          <div>
+            <h2 className="text-2xl font-bold text-white tracking-tight">Finalizar Pagamento</h2>
+            {!isOnline && (
+              <p className="text-orange-400 text-xs font-semibold flex items-center gap-1 mt-1">
+                <WifiOff size={12} /> Modo offline — venda será salva localmente
+              </p>
+            )}
+          </div>
+          <button onClick={onClose} className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full transition text-zinc-400 hover:text-white"><X size={20} /></button>
         </div>
 
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-          
-          {/* Painel Esquerdo: Seleção e Add */}
-          <div className="space-y-6">
+          {/* Painel Esquerdo */}
+          <div className="space-y-5">
             <div>
-              <span className="text-zinc-400 font-medium block mb-3">Selecione o Método</span>
+              <span className="text-zinc-400 font-medium block mb-3 text-sm">Selecione o Método</span>
               <div className="grid grid-cols-2 gap-2">
-                {[ 
-                  { id: 'dinheiro', icon: Banknote, label: 'Dinheiro', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:border-emerald-500 ring-emerald-500' },
-                  { id: 'pix', icon: QrCode, label: 'Pix', color: 'bg-teal-500/10 text-teal-400 border-teal-500/20 hover:border-teal-500 ring-teal-500' },
-                  { id: 'credito', icon: CreditCard, label: 'Crédito', color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:border-indigo-500 ring-indigo-500' },
-                  { id: 'debito', icon: CreditCard, label: 'Débito', color: 'bg-sky-500/10 text-sky-400 border-sky-500/20 hover:border-sky-500 ring-sky-500' },
-                ].map(m => (
-                  <button
-                    key={m.id}
-                    onClick={() => setMethod(m.id as any)}
-                    className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
-                      method === m.id 
-                      ? `${m.color} ring-2 ring-offset-2 ring-offset-zinc-900`
-                      : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:bg-zinc-800'
-                    }`}
-                  >
-                    <m.icon size={20} />
-                    <span className="font-semibold text-sm">{m.label}</span>
+                {METHOD_CONFIG.map((m, index) => (
+                  <button key={m.id} onClick={() => { setMethod(m.id as typeof method); document.getElementById('value-input')?.focus(); }}
+                    className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-sm relative overflow-hidden ${method === m.id ? `${m.color} ring-2 ring-offset-2 ring-offset-zinc-900` : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}`}>
+                    <div className="absolute top-0 right-0 bg-zinc-800/50 px-1.5 py-0.5 rounded-bl-lg text-[10px] font-bold text-zinc-500">{index + 1}</div>
+                    <m.icon size={18} /><span className="font-semibold">{m.label}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="pt-2">
+            <div>
               <label className="text-zinc-400 text-sm font-medium mb-2 block">Deseja passar qual valor?</label>
               <div className="flex items-center gap-3">
                 <div className="relative flex-1">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">R$</span>
-                  <input 
-                    type="number" 
+                  <input type="number" id="value-input"
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-xl font-bold text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    placeholder="0.00"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddPayment()}
-                    disabled={remaining <= 0}
+                    placeholder="0.00" value={inputValue} onChange={e => setInputValue(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAddPayment()} disabled={remaining <= 0}
                   />
                 </div>
-                <button 
-                  onClick={handleAddPayment}
-                  disabled={remaining <= 0}
-                  className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white p-3.5 rounded-xl transition flex items-center justify-center flex-shrink-0"
-                >
-                  <Plus size={22} />
-                </button>
+                <button onClick={handleAddPayment} disabled={remaining <= 0} className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white p-3.5 rounded-xl transition flex-shrink-0"><Plus size={22} /></button>
               </div>
               {method === 'dinheiro' && parseFloat(inputValue) > remaining && remaining > 0 && (
-                <p className="text-emerald-400/80 text-xs mt-2 italic">A quantia excede a conta. O sistema repassará {((parseFloat(inputValue)||0) - remaining).toFixed(2)} de troco.</p>
+                <p className="text-emerald-400/80 text-xs mt-2 italic">Troco a devolver: R$ {(parseFloat(inputValue) - remaining).toFixed(2)}</p>
+              )}
+            </div>
+
+            <div className="border-t border-zinc-800 pt-4">
+              <button onClick={() => setShowConsumerForm(!showConsumerForm)}
+                className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 text-sm font-medium transition w-full">
+                <User size={15} /><span>Identificar consumidor (CPF/Nome)</span>
+                {showConsumerForm ? <ChevronUp size={14} className="ml-auto" /> : <ChevronDown size={14} className="ml-auto" />}
+              </button>
+              {showConsumerForm && (
+                <div className="mt-3 space-y-3">
+                  <input className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-blue-500" placeholder="CPF (opcional)" value={customerCpf} onChange={e => setCustomerCpf(e.target.value)} maxLength={14} />
+                  <input className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500" placeholder="Nome do consumidor (opcional)" value={customerName} onChange={e => setCustomerName(e.target.value)} />
+                </div>
               )}
             </div>
           </div>
 
           {/* Painel Direito: Resumo */}
           <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
-            
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
             <div>
               <div className="flex justify-between items-center mb-4">
                 <span className="text-zinc-400 font-medium">Total da Venda</span>
                 <span className="text-2xl font-black text-white">R$ {total.toFixed(2)}</span>
               </div>
-
-              <div className="space-y-2 mb-4">
+              <div className="space-y-2 mb-4 max-h-40 overflow-y-auto custom-scrollbar">
                 {payments.length === 0 && <p className="text-zinc-600 text-sm text-center py-4 border border-dashed border-zinc-800 rounded-lg">Nenhum pagamento lançado</p>}
                 {payments.map(p => (
                   <div key={p.id} className="flex justify-between items-center p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm group">
                     <span className="font-semibold text-zinc-300 flex items-center gap-2">
-                       {p.method === 'dinheiro' ? <Banknote size={14} className="text-emerald-500"/> : <CreditCard size={14} className="text-blue-500"/>}
-                       {methodNames[p.method]}
+                      {p.method === 'dinheiro' ? <Banknote size={14} className="text-emerald-500" /> : <CreditCard size={14} className="text-blue-500" />}
+                      {METHOD_NAMES[p.method]}
                     </span>
                     <div className="flex items-center gap-3">
                       <span className="font-bold">R$ {p.value.toFixed(2)}</span>
-                      <button onClick={() => handleRemovePayment(p.id)} className="text-zinc-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100">
-                        <Trash2 size={14}/>
-                      </button>
+                      <button onClick={() => setPayments(payments.filter(x => x.id !== p.id))} className="text-zinc-500 hover:text-red-400 transition opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-
-            <div className="space-y-4 pt-4 border-t border-zinc-800">
+            <div className="space-y-3 pt-4 border-t border-zinc-800">
               {change > 0 && (
                 <div className="flex justify-between items-center bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20">
-                  <span className="text-emerald-400 font-medium text-sm border border-emerald-500/30 px-2 py-0.5 rounded-md bg-emerald-500/10">Repassar Troco</span>
+                  <span className="text-emerald-400 font-medium text-sm">Troco</span>
                   <span className="text-xl font-black text-emerald-400">R$ {change.toFixed(2)}</span>
                 </div>
               )}
-
               <div className="flex justify-between items-end">
                 <span className="text-zinc-400 text-sm font-bold uppercase tracking-wider">Falta Pagar</span>
                 <span className={`text-4xl font-black ${remaining > 0 ? 'text-amber-400' : 'text-zinc-600'}`}>R$ {remaining.toFixed(2)}</span>
               </div>
             </div>
-            
           </div>
         </div>
-        
-        {/* Rodapé Confirmar */}
-        <div className="p-6 border-t border-zinc-800 bg-zinc-900/50">
-          <button 
-            onClick={handleConfirm}
-            disabled={loading || remaining > 0}
-            className="w-full py-4 rounded-xl font-bold text-lg bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white transition-colors active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_40px_rgba(37,99,235,0.3)] disabled:shadow-none"
-          >
-            {loading ? <Loader2 className="animate-spin" /> : 'Emitir Cupom e Finalizar'}
-          </button>
-        </div>
 
+        {/* Footer */}
+        <div className="p-6 border-t border-zinc-800 bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex-1 flex items-center gap-3">
+             <label className={`flex items-center gap-2 font-medium transition ${isOnline ? 'cursor-pointer text-zinc-300 hover:text-white' : 'cursor-not-allowed text-zinc-600'}`}>
+                <input 
+                  type="checkbox" 
+                  className="w-5 h-5 rounded border-zinc-700 bg-zinc-950 text-blue-500 focus:ring-blue-500 accent-blue-600 disabled:opacity-50" 
+                  checked={autoNfce} 
+                  onChange={(e) => {
+                     setAutoNfce(e.target.checked);
+                     localStorage.setItem('7bar_auto_nfce', String(e.target.checked));
+                  }} 
+                  disabled={!isOnline}
+                />
+                Emitir NFC-e automaticamente
+             </label>
+             {!isOnline && <span className="text-xs text-orange-400 font-bold bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded-lg">Indisponível Offline</span>}
+          </div>
+          
+          <div className="w-full sm:w-auto">
+            {isOnline ? (
+              <button onClick={() => handleConfirm(autoNfce ? 'nfce' : 'simple')} disabled={loading || remaining > 0}
+                className="w-full sm:w-64 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(37,99,235,0.2)] disabled:shadow-none relative">
+                {loading ? <Loader2 className="animate-spin" size={20} /> : <ShoppingBag size={20} />}
+                Finalizar Venda
+                <span className="absolute top-1.5 right-2 text-[10px] font-mono bg-black/20 text-blue-200 px-1.5 py-0.5 rounded">Enter</span>
+              </button>
+            ) : (
+              <button onClick={handleSaveOffline} disabled={loading || remaining > 0}
+                className="w-full sm:w-64 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(234,88,12,0.2)] disabled:shadow-none relative">
+                {loading ? <Loader2 className="animate-spin" size={20} /> : <ShoppingBag size={20} />}
+                Salvar Offline
+                <span className="absolute top-1.5 right-2 text-[10px] font-mono bg-black/20 text-orange-200 px-1.5 py-0.5 rounded">Enter</span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

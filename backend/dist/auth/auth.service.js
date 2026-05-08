@@ -48,8 +48,6 @@ const heart_prisma_service_1 = require("../prisma/heart-prisma.service");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
 let AuthService = class AuthService {
-    heartPrisma;
-    jwtService;
     constructor(heartPrisma, jwtService) {
         this.heartPrisma = heartPrisma;
         this.jwtService = jwtService;
@@ -73,7 +71,7 @@ let AuthService = class AuthService {
             sub: user.id,
             email: user.email,
             tenantId: user.tenant.id,
-            databaseUrl: user.tenant.database_url,
+            databaseUrl: user.tenant.databaseUrl,
             role: user.role
         };
         return {

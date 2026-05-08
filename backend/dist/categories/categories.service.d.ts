@@ -14,4 +14,16 @@ export declare class CategoriesService {
         createdAt: Date;
         updatedAt: Date;
     }>;
+    update(tenantId: string, databaseUrl: string, id: string, data: any): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    remove(tenantId: string, databaseUrl: string, id: string): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
 }

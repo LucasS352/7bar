@@ -5,4 +5,5 @@ export declare class ProvisionTenantDto {
     adminName: string;
     adminEmail: string;
     adminPassword: string;
+    seedProducts?: boolean;
 }

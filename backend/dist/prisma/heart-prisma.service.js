@@ -8,8 +8,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HeartPrismaService = void 0;
 const common_1 = require("@nestjs/common");
-const client_heart_1 = require("../../node_modules/@prisma/client-heart");
-let HeartPrismaService = class HeartPrismaService extends client_heart_1.PrismaClient {
+const heart_client_1 = require("../generated/heart-client");
+let HeartPrismaService = class HeartPrismaService extends heart_client_1.PrismaClient {
     async onModuleInit() {
         await this.$connect();
     }

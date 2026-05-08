@@ -21,10 +21,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_PUBLIC_API_URL=http://179.127.59.225:3520
 
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
+RUN npm install -g serve
+
+COPY --from=builder /app/dist ./dist
 
 EXPOSE 3521
 
-CMD ["node", "server.js"]
+CMD ["serve", "-s", "dist", "-l", "3521"]

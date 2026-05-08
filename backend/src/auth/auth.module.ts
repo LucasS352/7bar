@@ -10,7 +10,7 @@ import { JwtStrategy, jwtConstants } from './jwt.strategy';
     PassportModule,
     JwtModule.register({
       secret: jwtConstants.secret,
-      signOptions: { expiresIn: '12h' }, // Turno inteiro de um operador de adega
+      signOptions: { expiresIn: '12h' },
     }),
   ],
   providers: [AuthService, JwtStrategy],

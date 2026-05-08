@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '../../node_modules/@prisma/client-heart';
+import { PrismaClient } from '../generated/heart-client';
 
 @Injectable()
 export class HeartPrismaService

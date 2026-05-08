@@ -1,9 +1,12 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { execSync } from 'child_process';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import * as path from 'path';
+
+const execAsync = promisify(exec);
 
 import { ProvisionTenantDto } from './provision-tenant.dto';
 
@@ -19,6 +22,71 @@ export class TenantsService {
     return this.heartPrisma.tenant.create({ data });
   }
 
+  async findById(tenantId: string) {
+    const tenant = await this.heartPrisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
+    if (!tenant) throw new NotFoundException('Empresa não encontrada');
+    
+    // Remover o certificado (blob) por segurança
+    const { certPfx, ...safeTenant } = tenant as any;
+    return safeTenant;
+  }
+
+  async updateTenant(tenantId: string, data: any) {
+    // Campos permitidos (whitelist — nunca atualizar certPfx por aqui)
+    const allowed = [
+      'razaoSocial', 'nomeFantasia', 'cnpj', 'ie', 'im', 'crt',
+      'logradouro', 'numero', 'complemento', 'bairro',
+      'municipio', 'codMunicipio', 'uf', 'cep', 'telefone',
+      'nfceAtivo', 'nfceSerie', 'nfceAmbiente', 'nfceCsc', 'nfceIdCsc',
+      'modulos', 'status'
+    ];
+    const safeData = Object.fromEntries(
+      Object.entries(data).filter(([k]) => allowed.includes(k))
+    );
+    return this.heartPrisma.tenant.update({
+      where: { id: tenantId },
+      data: safeData,
+    });
+  }
+
+  async uploadLogo(tenantId: string, file: Express.Multer.File) {
+    const fs = require('fs');
+    const crypto = require('crypto');
+    
+    const dir = path.join(process.cwd(), 'uploads', 'logos');
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    const ext = path.extname(file.originalname);
+    const filename = `${tenantId}_${crypto.randomBytes(4).toString('hex')}${ext}`;
+    const filePath = path.join(dir, filename);
+    
+    fs.writeFileSync(filePath, file.buffer);
+    
+    const logoUrl = `/api/tenants/uploads/logos/${filename}`;
+    
+    return this.heartPrisma.tenant.update({
+      where: { id: tenantId },
+      data: { logoUrl },
+    }).then(() => ({ message: 'Logo atualizado com sucesso.', logoUrl }));
+  }
+
+  async uploadCertificado(tenantId: string, pfxBuffer: Buffer, senha: string) {
+    // Extrair validade do certificado via parsing básico (DER)
+    // Por ora, armazenamos sem validar — o PHP valida ao emitir
+    return this.heartPrisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        certPfx: Buffer.from(pfxBuffer),
+        certSenha: senha,
+        certValidade: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), // Validade provisória para o painel reconhecer
+      },
+    }).then(() => ({ message: 'Certificado armazenado com sucesso.' }));
+  }
+
   async validatePin(pin: string): Promise<boolean> {
     const setupPin = process.env.SETUP_PIN;
     if (!setupPin) throw new BadRequestException('SETUP_PIN não configurado no servidor.');
@@ -26,7 +94,7 @@ export class TenantsService {
   }
 
   async provisionTenant(dto: ProvisionTenantDto) {
-    const { pin, tenantName, dbName, adminName, adminEmail, adminPassword } = dto;
+    const { pin, tenantName, dbName, adminName, adminEmail, adminPassword, seedProducts } = dto;
 
     // 1. Validar PIN
     const pinValid = await this.validatePin(pin);
@@ -49,7 +117,7 @@ export class TenantsService {
 
     // 3. Verificar se tenant já existe
     const existingTenant = await this.heartPrisma.tenant.findFirst({
-      where: { database_name: sanitizedDbName },
+      where: { databaseName: sanitizedDbName },
     });
     if (existingTenant) {
       throw new BadRequestException(`Já existe um tenant com o banco "${sanitizedDbName}".`);
@@ -76,18 +144,18 @@ export class TenantsService {
     // 7. Rodar migrations Prisma no novo banco
     try {
       const prismaSchemaPath = path.resolve(process.cwd(), 'prisma', 'schema.prisma');
-      execSync(`npx prisma migrate deploy --schema="${prismaSchemaPath}"`, {
+      await execAsync(`npx prisma db push --schema="${prismaSchemaPath}" --skip-generate --accept-data-loss`, {
         env: {
           ...process.env,
           DATABASE_URL_TENANT: tenantDbUrl,
         },
-        stdio: 'pipe',
         timeout: 60000,
       });
-    } catch (err) {
+    } catch (err: any) {
       // Tentar limpar banco criado se migrate falhar
       await this.heartPrisma.$queryRawUnsafe(`DROP DATABASE IF EXISTS \`${sanitizedDbName}\``);
-      throw new BadRequestException('Erro ao rodar migrations no novo banco. Banco removido.');
+      console.error('Erro no db push:', err.stdout, err.stderr);
+      throw new BadRequestException('Erro ao criar tabelas no novo banco. Detalhe: ' + (err.stderr || err.message));
     }
 
     // 8. Criar tenant + admin no banco heart (dentro de uma transaction)
@@ -96,8 +164,8 @@ export class TenantsService {
     const tenant = await this.heartPrisma.tenant.create({
       data: {
         name: tenantName,
-        database_name: sanitizedDbName,
-        database_url: tenantDbUrl,
+        databaseName: sanitizedDbName,
+        databaseUrl: tenantDbUrl,
         status: 'active',
         users: {
           create: {
@@ -111,12 +179,14 @@ export class TenantsService {
       include: { users: true },
     });
 
-    // 9. Popular produtos base no novo banco do tenant
-    try {
-      await this.seedTenantProducts(tenantDbUrl);
-    } catch (err) {
-      // Seed falhou mas não desfaz — o sistema funciona sem produtos, admins podem cadastrar manualmente
-      console.warn('Aviso: seed de produtos falhou:', err.message);
+    // 9. Popular produtos base no novo banco do tenant (se solicitado)
+    if (seedProducts !== false) {
+      try {
+        await this.seedTenantProducts(tenantDbUrl);
+      } catch (err) {
+        // Seed falhou mas não desfaz — o sistema funciona sem produtos, admins podem cadastrar manualmente
+        console.warn('Aviso: seed de produtos falhou:', err.message);
+      }
     }
 
     return {
@@ -124,7 +194,7 @@ export class TenantsService {
       tenant: {
         id: tenant.id,
         name: tenant.name,
-        database_name: tenant.database_name,
+        databaseName: tenant.databaseName,
         admin: {
           name: tenant.users[0]?.name,
           email: tenant.users[0]?.email,

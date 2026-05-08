@@ -60,19 +60,19 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                 <div className="space-y-3">
                   <div className="flex justify-between p-4 bg-zinc-950 rounded-2xl border border-zinc-800/80">
                     <span className="text-zinc-400">Fundo de Troco (Inicial)</span>
-                    <span className="font-bold text-white">R$ {data.register.openingValue.toFixed(2)}</span>
+                    <span className="font-bold text-white">R$ {Number(data.register.openingValue).toFixed(2)}</span>
                   </div>
                   
                   <div className="flex justify-between p-4 bg-emerald-500/5 text-emerald-400 rounded-2xl border border-emerald-500/10">
                     <span>(+) Recebimentos em Dinheiro Físico</span>
-                    <span className="font-bold text-lg">+ R$ {data.report.totalDinheiro.toFixed(2)}</span>
+                    <span className="font-bold text-lg">+ R$ {Number(data.report.totalDinheiro).toFixed(2)}</span>
                   </div>
                   
                   {data.report.totalSuprimentos > 0 && (
                     <div className="flex flex-col p-4 bg-blue-500/5 text-blue-400 rounded-2xl border border-blue-500/10">
                       <div className="flex justify-between items-center w-full border-b border-blue-500/10 pb-2 mb-2">
                         <span>(+) Suprimentos Injetados (Reforço)</span>
-                        <span className="font-bold text-lg">+ R$ {data.report.totalSuprimentos.toFixed(2)}</span>
+                        <span className="font-bold text-lg">+ R$ {Number(data.report.totalSuprimentos).toFixed(2)}</span>
                       </div>
                       <div className="space-y-1.5 mt-1">
                         {data.report.movements.filter((m: any) => m.type === 'IN').map((m: any) => (
@@ -81,7 +81,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                                <span className="bg-blue-500/10 px-1.5 py-0.5 rounded font-mono border border-blue-500/20">{new Date(m.createdAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</span>
                                <span className="line-clamp-1">{m.reason || 'Sem descrição informada'}</span>
                              </div>
-                             <span className="font-bold whitespace-nowrap">R$ {m.value.toFixed(2)}</span>
+                             <span className="font-bold whitespace-nowrap">R$ {Number(m.value).toFixed(2)}</span>
                            </div>
                         ))}
                       </div>
@@ -92,7 +92,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                     <div className="flex flex-col p-4 bg-red-500/5 text-red-500 rounded-2xl border border-red-500/10">
                       <div className="flex justify-between items-center w-full border-b border-red-500/10 pb-2 mb-2">
                         <span>(-) Sangrias Transferidas (Vales, etc)</span>
-                        <span className="font-bold text-lg">- R$ {data.report.totalSangrias.toFixed(2)}</span>
+                        <span className="font-bold text-lg">- R$ {Number(data.report.totalSangrias).toFixed(2)}</span>
                       </div>
                       <div className="space-y-1.5 mt-1">
                         {data.report.movements.filter((m: any) => m.type === 'OUT').map((m: any) => (
@@ -101,7 +101,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                                <span className="bg-red-500/10 px-1.5 py-0.5 rounded font-mono border border-red-500/20">{new Date(m.createdAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</span>
                                <span className="line-clamp-1">{m.reason || 'Sem descrição informada'}</span>
                              </div>
-                             <span className="font-bold whitespace-nowrap">R$ {m.value.toFixed(2)}</span>
+                             <span className="font-bold whitespace-nowrap">R$ {Number(m.value).toFixed(2)}</span>
                            </div>
                         ))}
                       </div>
@@ -112,38 +112,38 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                     <p className="text-zinc-500 font-bold uppercase text-[10px] tracking-widest mb-3">Recebimentos Digitais (Em Conta)</p>
                     <div className="flex justify-between text-indigo-400">
                       <span>Cartão de Crédito</span>
-                      <span className="font-bold">R$ {data.report.totalCredito?.toFixed(2) || '0.00'}</span>
+                      <span className="font-bold">R$ {Number(data.report.totalCredito || 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sky-400">
                       <span>Cartão de Débito</span>
-                      <span className="font-bold">R$ {data.report.totalDebito?.toFixed(2) || '0.00'}</span>
+                      <span className="font-bold">R$ {Number(data.report.totalDebito || 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-teal-400">
                       <span>Transferências (Pix)</span>
-                      <span className="font-bold">R$ {data.report.totalPix?.toFixed(2) || '0.00'}</span>
+                      <span className="font-bold">R$ {Number(data.report.totalPix || 0).toFixed(2)}</span>
                     </div>
                   </div>
 
                   <div className="flex justify-between p-4 bg-zinc-800/20 text-white rounded-2xl border border-zinc-700/50 mt-4">
                     <span className="text-zinc-300">Faturamento Bruto <span className="text-xs text-zinc-500 block">Todas transações da sessão</span></span>
-                    <span className="font-black text-xl self-center">R$ {data.report.totalVendas?.toFixed(2)}</span>
+                    <span className="font-black text-xl self-center">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
                   </div>
                 </div>
 
                 <div className="p-5 border-l-4 border-l-red-500 bg-red-500/10 rounded-r-2xl border border-red-500/20">
                   <p className="text-xs text-red-500 font-extrabold uppercase tracking-widest mb-2">Total Esperado na Gaveta</p>
-                  <p className="text-4xl font-black text-red-400 drop-shadow-sm">R$ {data.report.expectedDinheiro.toFixed(2)}</p>
+                  <p className="text-4xl font-black text-red-400 drop-shadow-sm">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</p>
                 </div>
 
                 {data.register.status === 'closed' ? (
                   <div className="pt-4 text-center bg-zinc-950 rounded-[2rem] p-6 border border-zinc-800 shadow-inner">
                      <p className="text-zinc-500 text-sm">Este caixa já foi auditado e encerrado formalmente.</p>
                      <p className="text-emerald-400 font-black text-2xl mt-4 flex justify-center gap-2 items-center">
-                       Declarado: R$ {typeof data.register.closingValue === 'number' ? data.register.closingValue.toFixed(2) : '--'}
+                       Declarado: R$ {data.register.closingValue != null ? Number(data.register.closingValue).toFixed(2) : '--'}
                      </p>
-                     {data.register.closingValue !== data.report.expectedDinheiro && (
+                     {Number(data.register.closingValue) !== Number(data.report.expectedDinheiro) && (
                         <p className="text-red-400 text-sm mt-4 border border-red-500/30 bg-red-500/10 inline-block px-4 py-2 rounded-full font-bold">
-                          <AlertOctagon size={16} className="inline mr-1 -mt-0.5"/> Diferença Constatada (Quebra): R$ {(data.register.closingValue - data.report.expectedDinheiro).toFixed(2)}
+                          <AlertOctagon size={16} className="inline mr-1 -mt-0.5"/> Diferença Constatada (Quebra): R$ {(Number(data.register.closingValue) - Number(data.report.expectedDinheiro)).toFixed(2)}
                         </p>
                      )}
                   </div>
@@ -159,10 +159,10 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                         className="w-full bg-zinc-950 border-2 border-zinc-800 rounded-2xl py-5 pl-16 pr-5 text-3xl font-black text-white focus:outline-none focus:border-red-500 transition-colors shadow-inner"
                       />
                     </div>
-                    {closingValue !== data.report.expectedDinheiro && (
+                    {closingValue !== Number(data.report.expectedDinheiro) && (
                       <div className="mt-4 p-3 bg-red-500/10 rounded-xl border border-red-500/20 text-red-400 text-sm flex items-start gap-3">
                         <AlertOctagon size={24} className="shrink-0 mt-0.5"/> 
-                        <p><strong>Atenção:</strong> O valor informado difere matematicamente do esperado pelo sistema. Uma quebra de <strong>R$ {(closingValue - data.report.expectedDinheiro).toFixed(2)}</strong> será registrada no histórico de auditoria.</p>
+                        <p><strong>Atenção:</strong> O valor informado difere matematicamente do esperado pelo sistema. Uma quebra de <strong>R$ {(closingValue - Number(data.report.expectedDinheiro)).toFixed(2)}</strong> será registrada no histórico de auditoria.</p>
                       </div>
                     )}
                   </div>
@@ -212,7 +212,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                           </span>
                           <span className="text-zinc-600 text-xs font-mono bg-zinc-950 px-2 py-1 rounded">ID: {s.id.split('-')[0]}</span>
                         </div>
-                        <span className="text-emerald-400 font-extrabold text-xl">R$ {s.total.toFixed(2)}</span>
+                        <span className="text-emerald-400 font-extrabold text-xl">R$ {Number(s.total).toFixed(2)}</span>
                       </div>
                       
                       <ul className="text-zinc-400 text-sm space-y-2 mb-5 ml-1">
@@ -220,7 +220,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                           <li key={i.id} className="flex items-center gap-3 p-2 hover:bg-zinc-800/40 rounded-lg transition-colors">
                              <span className="text-white font-bold bg-zinc-800 px-2 py-0.5 rounded text-xs">{i.quantity}x</span> 
                              <span className="flex-1 font-medium">{i.product?.name || 'Item Removido/Desconhecido'}</span>
-                             <span className="text-zinc-500 font-mono text-xs">R$ {(i.priceUnit * i.quantity).toFixed(2)}</span>
+                             <span className="text-zinc-500 font-mono text-xs">R$ {(Number(i.priceUnit) * Number(i.quantity)).toFixed(2)}</span>
                           </li>
                         ))}
                       </ul>
@@ -228,7 +228,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                       <div className="flex flex-wrap gap-2 pt-4 border-t border-zinc-800/50">
                         {s.payments.map((p: any, idx: number) => (
                           <span key={idx} className="bg-blue-500/10 text-blue-400 text-[10px] uppercase font-bold px-3 py-1.5 rounded-lg border border-blue-500/20 tracking-wider">
-                            {p.method} (R$ {p.value.toFixed(2)})
+                            {p.method} (R$ {Number(p.value).toFixed(2)})
                           </span>
                         ))}
                       </div>

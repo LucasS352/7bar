@@ -3,7 +3,7 @@ import { ProvisionTenantDto } from './provision-tenant.dto';
 export declare class TenantsService {
     private heartPrisma;
     constructor(heartPrisma: HeartPrismaService);
-    findAll(): import("@prisma/client-heart/client").Prisma.PrismaPromise<({
+    findAll(): import("src/generated/heart-client").Prisma.PrismaPromise<({
         users: {
             name: string;
             id: string;
@@ -11,9 +11,10 @@ export declare class TenantsService {
             updatedAt: Date;
             active: boolean;
             email: string;
-            password: string;
             tenantId: string;
+            password: string;
             role: string;
+            pin: string | null;
         }[];
     } & {
         name: string;
@@ -21,33 +22,117 @@ export declare class TenantsService {
         createdAt: Date;
         updatedAt: Date;
         status: string;
-        database_name: string;
-        database_url: string;
-        documentId: string | null;
-        stateRegistration: string | null;
-        taxRegime: string | null;
-        certificatePath: string | null;
+        nfceSerie: number;
+        databaseUrl: string;
+        databaseName: string;
+        logoUrl: string | null;
+        modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
+        razaoSocial: string | null;
+        nomeFantasia: string | null;
+        cnpj: string | null;
+        ie: string | null;
+        im: string | null;
+        crt: number;
+        logradouro: string | null;
+        numero: string | null;
+        complemento: string | null;
+        bairro: string | null;
+        municipio: string | null;
+        codMunicipio: string | null;
+        uf: string | null;
+        cep: string | null;
+        telefone: string | null;
+        nfceAtivo: boolean;
+        nfceAmbiente: number;
+        nfceCsc: string | null;
+        nfceIdCsc: string | null;
+        certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
+        certSenha: string | null;
+        certValidade: Date | null;
     })[]>;
-    create(data: any): import("@prisma/client-heart/client").Prisma.Prisma__TenantClient<{
+    create(data: any): import("src/generated/heart-client").Prisma.Prisma__TenantClient<{
         name: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
         status: string;
-        database_name: string;
-        database_url: string;
-        documentId: string | null;
-        stateRegistration: string | null;
-        taxRegime: string | null;
-        certificatePath: string | null;
-    }, never, import("@prisma/client-heart/runtime/library").DefaultArgs, import("@prisma/client-heart/client").Prisma.PrismaClientOptions>;
+        nfceSerie: number;
+        databaseUrl: string;
+        databaseName: string;
+        logoUrl: string | null;
+        modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
+        razaoSocial: string | null;
+        nomeFantasia: string | null;
+        cnpj: string | null;
+        ie: string | null;
+        im: string | null;
+        crt: number;
+        logradouro: string | null;
+        numero: string | null;
+        complemento: string | null;
+        bairro: string | null;
+        municipio: string | null;
+        codMunicipio: string | null;
+        uf: string | null;
+        cep: string | null;
+        telefone: string | null;
+        nfceAtivo: boolean;
+        nfceAmbiente: number;
+        nfceCsc: string | null;
+        nfceIdCsc: string | null;
+        certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
+        certSenha: string | null;
+        certValidade: Date | null;
+    }, never, import("src/generated/heart-client/runtime/library").DefaultArgs, import("src/generated/heart-client").Prisma.PrismaClientOptions>;
+    findById(tenantId: string): Promise<any>;
+    updateTenant(tenantId: string, data: any): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: string;
+        nfceSerie: number;
+        databaseUrl: string;
+        databaseName: string;
+        logoUrl: string | null;
+        modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
+        razaoSocial: string | null;
+        nomeFantasia: string | null;
+        cnpj: string | null;
+        ie: string | null;
+        im: string | null;
+        crt: number;
+        logradouro: string | null;
+        numero: string | null;
+        complemento: string | null;
+        bairro: string | null;
+        municipio: string | null;
+        codMunicipio: string | null;
+        uf: string | null;
+        cep: string | null;
+        telefone: string | null;
+        nfceAtivo: boolean;
+        nfceAmbiente: number;
+        nfceCsc: string | null;
+        nfceIdCsc: string | null;
+        certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
+        certSenha: string | null;
+        certValidade: Date | null;
+    }>;
+    uploadLogo(tenantId: string, file: Express.Multer.File): Promise<{
+        message: string;
+        logoUrl: string;
+    }>;
+    uploadCertificado(tenantId: string, pfxBuffer: Buffer, senha: string): Promise<{
+        message: string;
+    }>;
     validatePin(pin: string): Promise<boolean>;
     provisionTenant(dto: ProvisionTenantDto): Promise<{
         message: string;
         tenant: {
             id: string;
             name: string;
-            database_name: string;
+            databaseName: string;
             admin: {
                 name: string;
                 email: string;

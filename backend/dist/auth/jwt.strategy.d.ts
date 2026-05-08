@@ -1,4 +1,11 @@
 import { Strategy } from 'passport-jwt';
+export interface JwtPayload {
+    sub: string;
+    email: string;
+    tenantId: string;
+    databaseUrl: string;
+    role: string;
+}
 export declare const jwtConstants: {
     secret: string;
 };
@@ -7,12 +14,6 @@ declare const JwtStrategy_base: new (...args: [opt: import("passport-jwt").Strat
 };
 export declare class JwtStrategy extends JwtStrategy_base {
     constructor();
-    validate(payload: any): Promise<{
-        userId: any;
-        email: any;
-        tenantId: any;
-        databaseUrl: any;
-        role: any;
-    }>;
+    validate(payload: JwtPayload): Promise<JwtPayload>;
 }
 export {};

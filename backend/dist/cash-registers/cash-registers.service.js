@@ -13,21 +13,20 @@ exports.CashRegistersService = void 0;
 const common_1 = require("@nestjs/common");
 const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
 let CashRegistersService = class CashRegistersService {
-    tenantManager;
     constructor(tenantManager) {
         this.tenantManager = tenantManager;
     }
-    async openRegister(tenantId, databaseUrl, userId, openingValue) {
+    async openRegister(tenantId, databaseUrl, operatorId, openingValue) {
         const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
         const existing = await prisma.cashRegister.findFirst({
-            where: { userId, status: 'open' }
+            where: { operatorId, status: 'open' }
         });
         if (existing) {
             throw new common_1.BadRequestException('Você já possui um caixa aberto.');
         }
         return prisma.cashRegister.create({
             data: {
-                userId,
+                operatorId,
                 openingValue,
                 status: 'open'
             }
@@ -37,23 +36,20 @@ let CashRegistersService = class CashRegistersService {
         const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
         return prisma.cashRegister.update({
             where: { id },
-            data: {
-                closingValue,
-                closingTime: new Date(),
-                status: 'closed'
-            }
+            data: { closingValue, closingTime: new Date(), status: 'closed' }
         });
     }
-    async getCurrentRegister(tenantId, databaseUrl, userId) {
+    async getCurrentRegister(tenantId, databaseUrl, operatorId) {
         const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
         const current = await prisma.cashRegister.findFirst({
-            where: { userId, status: 'open' }
+            where: { operatorId, status: 'open' }
         });
         if (current) {
             const today = new Date();
-            if (current.openingTime.getDate() !== today.getDate() ||
-                current.openingTime.getMonth() !== today.getMonth() ||
-                current.openingTime.getFullYear() !== today.getFullYear()) {
+            const sameDay = current.openingTime.getDate() === today.getDate() &&
+                current.openingTime.getMonth() === today.getMonth() &&
+                current.openingTime.getFullYear() === today.getFullYear();
+            if (!sameDay) {
                 await prisma.cashRegister.update({
                     where: { id: current.id },
                     data: { status: 'closed', closingTime: new Date() }
@@ -70,19 +66,12 @@ let CashRegistersService = class CashRegistersService {
         if (!register || register.status !== 'open')
             throw new common_1.BadRequestException('Caixa fechado ou inexistente');
         return prisma.cashMovement.create({
-            data: {
-                cashRegisterId: registerId,
-                type,
-                value,
-                reason
-            }
+            data: { cashRegisterId: registerId, type, value, reason }
         });
     }
     async findAll(tenantId, databaseUrl) {
         const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
-        return prisma.cashRegister.findMany({
-            orderBy: { openingTime: 'desc' }
-        });
+        return prisma.cashRegister.findMany({ orderBy: { openingTime: 'desc' } });
     }
     async getReport(tenantId, databaseUrl, id) {
         const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
@@ -90,26 +79,22 @@ let CashRegistersService = class CashRegistersService {
         if (!register)
             throw new common_1.BadRequestException('Caixa não encontrado');
         const sales = await prisma.sale.findMany({
-            where: {
-                createdAt: { gte: register.openingTime, lte: register.closingTime || new Date() }
-            },
-            include: {
-                payments: true,
-                items: { include: { product: true } }
-            },
+            where: { createdAt: { gte: register.openingTime, lte: register.closingTime || new Date() } },
+            include: { payments: true, items: { include: { product: true } } },
             orderBy: { createdAt: 'desc' }
         });
         let totalDinheiro = 0, totalPix = 0, totalCredito = 0, totalDebito = 0;
         sales.forEach(sale => {
             sale.payments.forEach(p => {
+                const v = Number(p.value);
                 if (p.method === 'dinheiro')
-                    totalDinheiro += p.value;
+                    totalDinheiro += v;
                 else if (p.method === 'pix')
-                    totalPix += p.value;
+                    totalPix += v;
                 else if (p.method === 'credito')
-                    totalCredito += p.value;
+                    totalCredito += v;
                 else if (p.method === 'debito')
-                    totalDebito += p.value;
+                    totalDebito += v;
             });
         });
         const movements = await prisma.cashMovement.findMany({
@@ -119,10 +104,11 @@ let CashRegistersService = class CashRegistersService {
         let totalSuprimentos = 0, totalSangrias = 0;
         movements.forEach((m) => {
             if (m.type === 'IN')
-                totalSuprimentos += m.value;
+                totalSuprimentos += Number(m.value);
             if (m.type === 'OUT')
-                totalSangrias += m.value;
+                totalSangrias += Number(m.value);
         });
+        const openingValue = Number(register.openingValue);
         return {
             register,
             report: {
@@ -135,7 +121,7 @@ let CashRegistersService = class CashRegistersService {
                 totalSuprimentos,
                 totalSangrias,
                 countSales: sales.length,
-                expectedDinheiro: register.openingValue + totalDinheiro + totalSuprimentos - totalSangrias,
+                expectedDinheiro: openingValue + totalDinheiro + totalSuprimentos - totalSangrias,
                 salesDetails: sales,
                 movements
             }

@@ -1,3 +1,8 @@
+// ============================================================
+//  TENANT SCHEMA — Banco por empresa (multi-tenant)
+//  Cada tenant tem seu próprio banco com esta estrutura
+// ============================================================
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,35 +12,92 @@ datasource db {
   url      = env("DATABASE_URL_TENANT")
 }
 
+// ------------------------------------------------------------
+//  GrupoTributacao — regras fiscais por grupo de produtos
+//  Baseado na estrutura GRUPO_TRIBUTACAO + TRIBUTACAO do Packon
+// ------------------------------------------------------------
+model GrupoTributacao {
+  id    String @id @default(uuid())
+  nome  String // ex: "TRIBUTADOS - Consumidor Final SP"
+  ativo Boolean @default(true)
+
+  // ICMS — Simples Nacional
+  csosn     String? // 102=SN s/ crédito, 400=Isento ST, 500=ST recolhido
+  // ICMS — Regime Normal
+  cstIcms   String? // 00=Tributado, 10=Com ST, 20=Red BC, 60=ST retido...
+  cfop      String  // 5102=Venda interna, 6108=Venda outra UF
+  aliqIcms  Decimal @default(0) @db.Decimal(5, 2)
+
+  // Redução de base de cálculo ICMS (quando aplicável)
+  redBcIcms Decimal @default(0) @db.Decimal(5, 2)
+
+  // PIS
+  cstPis    String  @default("99") // 99=SN, 01=Tributado, 07=Isento...
+  aliqPis   Decimal @default(0)    @db.Decimal(5, 2)
+
+  // COFINS
+  cstCofins String  @default("99")
+  aliqCofins Decimal @default(0)   @db.Decimal(5, 2)
+
+  // IPI (opcional — bebidas podem ter)
+  cstIpi    String?
+  aliqIpi   Decimal @default(0) @db.Decimal(5, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products  Product[]
+
+  @@map("grupo_tributacao")
+}
+
+// ------------------------------------------------------------
+//  Category — categorias de produto
+// ------------------------------------------------------------
 model Category {
   id        String    @id @default(uuid())
-  name      String
-  products  Product[]
+  name      String    @unique
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  products  Product[]
 
   @@map("categories")
 }
 
+// ------------------------------------------------------------
+//  Product — cadastro completo com campos fiscais
+//  Espelhado nos campos PRO_* do Packon identificados no Firebird
+// ------------------------------------------------------------
 model Product {
-  id          String    @id @default(uuid())
-  name        String
-  categoryId  String
-  category    Category  @relation(fields: [categoryId], references: [id])
-  priceCost   Float
-  priceSell   Float
-  stock       Int       @default(0)
-  barcode     String?   @unique
-  shortCode   String?   @unique
-  active      Boolean   @default(true)
+  id                  String           @id @default(uuid())
+  categoryId          String
+  category            Category         @relation(fields: [categoryId], references: [id])
+  grupoTributacaoId   String?
+  grupoTributacao     GrupoTributacao? @relation(fields: [grupoTributacaoId], references: [id])
 
-  // Campos Fiscais
-  ncm         String?
-  cfop        String?
-  cest        String?
+  // Dados básicos
+  name      String
+  shortCode String?  @unique // código interno curto
+  barcode   String?  @unique // EAN-13 / GTIN
+  unit      String   @default("UN") // UN, KG, LT, CX, DZ, PCT...
+  active    Boolean  @default(true)
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  // Preços
+  priceCost Decimal  @db.Decimal(10, 4) // custo
+  priceSell Decimal  @db.Decimal(10, 4) // preço de venda
+
+  // Estoque
+  stock     Decimal  @default(0) @db.Decimal(10, 3) // Decimal para fracionados
+
+  // Campos Fiscais (NCM, CEST vindos do Packon PRO_NCM / PRO_CEST)
+  ncm     String? // 8 dígitos — obrigatório para NFC-e
+  cest    String? // 7 dígitos — quando há ST
+  origem  Int     @default(0)
+  // 0=Nacional, 1=Estrangeiro import direta, 2=Estrangeiro adquirido no mercado interno
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   saleItems     SaleItem[]
   inventoryLogs InventoryLog[]
@@ -43,94 +105,209 @@ model Product {
   @@map("products")
 }
 
+// ------------------------------------------------------------
+//  Customer — consumidor (destinatário da NFC-e)
+// ------------------------------------------------------------
 model Customer {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   name      String
-  phone     String   @unique
+  phone     String  @unique
+  cpfCnpj   String? // CPF ou CNPJ (identificação na NFC-e)
   address   String?
   reference String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
-  sales     Sale[]
+
+  sales Sale[]
 
   @@map("customers")
 }
 
+// ------------------------------------------------------------
+//  Sale — cabeçalho da venda + dados NFC-e
+// ------------------------------------------------------------
 model Sale {
-  id          String   @id @default(uuid())
-  customerId  String?
-  customer    Customer? @relation(fields: [customerId], references: [id])
-  total       Float
-  discount    Float    @default(0)
-  status      String   @default("completed") // completed, cancelled
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String    @id @default(uuid())
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  operatorId String?   // ID do usuário operador (vindo do heart)
 
-  items       SaleItem[]
-  payments    Payment[]
+  // Valores
+  subtotal Decimal @default(0) @db.Decimal(10, 2)
+  discount Decimal @default(0) @db.Decimal(10, 2)
+  total    Decimal @db.Decimal(10, 2)
+
+  // Status da venda
+  status String @default("completed") // completed, cancelled
+
+  // NFC-e — dados de emissão
+  emitirNfce Boolean @default(false)  // o operador escolheu emitir?
+  nfceStatus String? // pendente, autorizada, rejeitada, cancelada, nao_emitida
+
+  // Dados retornados pelo microsserviço PHP após autorização
+  nfceNumero      Int?    // número sequencial da nota
+  nfceSerie       Int?    // série
+  nfceChave       String? @unique // chave de acesso 44 dígitos
+  nfceProtocolo   String? // número do protocolo SEFAZ
+  nfceAutorizadaEm DateTime?
+
+  // Armazenamento do resultado
+  nfceXml    String? @db.LongText // XML completo autorizado
+  nfceQrcode String? @db.Text     // URL do QR Code
+
+  // Erro (quando rejeitada)
+  nfceCodRejeicao  String?
+  nfceMotivoRejeicao String?
+
+  // CPF do consumidor informado na emissão (opcional)
+  consumidorCpf  String?
+  consumidorNome String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items    SaleItem[]
+  payments Payment[]
 
   @@map("sales")
 }
 
+// ------------------------------------------------------------
+//  SaleItem — itens da venda com SNAPSHOT fiscal imutável
+//  Os tributos são congelados no momento da venda
+//  (conformidade fiscal — nota não pode ser recalculada)
+// ------------------------------------------------------------
 model SaleItem {
-  id         String   @id @default(uuid())
-  saleId     String
-  sale       Sale     @relation(fields: [saleId], references: [id])
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id])
-  quantity   Int
-  priceUnit  Float
-  subtotal   Float
-  
+  id        String  @id @default(uuid())
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  // Snapshot do produto no momento da venda
+  productName String  @default("") // nome no momento da venda
+  unit        String  @default("UN")
+  quantity    Decimal @db.Decimal(10, 3)
+  priceUnit   Decimal @db.Decimal(10, 4)
+  discount    Decimal @default(0) @db.Decimal(10, 2)
+  subtotal    Decimal @db.Decimal(10, 2)
+
+  // Snapshot fiscal (congelado — NÃO alterar após criação)
+  ncm        String? // NCM do produto na hora da venda
+  cest       String? // CEST
+  cfop       String? // CFOP aplicado
+  origem     Int     @default(0)
+
+  // ICMS (Simples Nacional ou Regime Normal — apenas um será preenchido)
+  csosn      String? // Simples Nacional: 102, 400, 500...
+  cstIcms    String? // Regime Normal: 00, 10, 20, 60...
+  aliqIcms   Decimal @default(0) @db.Decimal(5, 2)
+  valorIcms  Decimal @default(0) @db.Decimal(10, 2)
+
+  // PIS
+  cstPis     String  @default("99")
+  aliqPis    Decimal @default(0) @db.Decimal(5, 2)
+  valorPis   Decimal @default(0) @db.Decimal(10, 2)
+
+  // COFINS
+  cstCofins  String  @default("99")
+  aliqCofins Decimal @default(0) @db.Decimal(5, 2)
+  valorCofins Decimal @default(0) @db.Decimal(10, 2)
+
   @@map("sale_items")
 }
 
+// ------------------------------------------------------------
+//  Payment — formas de pagamento com código tPag SEFAZ
+// ------------------------------------------------------------
 model Payment {
-  id         String   @id @default(uuid())
-  saleId     String
-  sale       Sale     @relation(fields: [saleId], references: [id])
-  method     String   // pix, cash, credit, debit
-  value      Float
+  id     String @id @default(uuid())
+  saleId String
+  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  // tPag — código oficial SEFAZ (Tab. 5.4)
+  // 01=Dinheiro, 03=Cartão Crédito, 04=Cartão Débito, 17=PIX, 99=Outros
+  tPag   String  @default("99")
+  method String // label amigável: cash, credit, debit, pix, other
+  value  Decimal @db.Decimal(10, 2)
+  troco  Decimal @default(0) @db.Decimal(10, 2)
 
   @@map("payments")
 }
 
+// ------------------------------------------------------------
+//  CashRegister — abertura e fechamento de caixa
+// ------------------------------------------------------------
 model CashRegister {
   id           String    @id @default(uuid())
-  userId       String    // ID do operador vindo do heart
+  operatorId   String?   // ID do operador (vindo do heart DB) — nullable para compat. com registros antigos
   openingTime  DateTime  @default(now())
   closingTime  DateTime?
-  openingValue Float     @default(0)
-  closingValue Float?
+  openingValue Decimal   @default(0) @db.Decimal(10, 2)
+  closingValue Decimal?  @db.Decimal(10, 2)
   status       String    @default("open") // open, closed
-  
-  movements    CashMovement[]
+
+  movements CashMovement[]
 
   @@map("cash_registers")
 }
 
+// ------------------------------------------------------------
+//  CashMovement — suprimento e sangria
+// ------------------------------------------------------------
 model CashMovement {
   id             String       @id @default(uuid())
   cashRegisterId String
   cashRegister   CashRegister @relation(fields: [cashRegisterId], references: [id])
-  type           String       // 'IN' (suprimento) ou 'OUT' (sangria)
-  value          Float
-  reason         String?
-  createdAt      DateTime     @default(now())
-  
+
+  type      String  // IN=suprimento, OUT=sangria
+  value     Decimal @db.Decimal(10, 2)
+  reason    String?
+  createdAt DateTime @default(now())
+
   @@map("cash_movements")
 }
 
+// ------------------------------------------------------------
+//  InventoryLog — histórico de movimentações de estoque
+// ------------------------------------------------------------
 model InventoryLog {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  type      String   // 'IN' (Compra/Entrada), 'OUT' (Ajuste para baixo), 'SALE' (Venda do PDV)
-  quantity  Int      // Quantidade da movimentação (positiva ou negativa)
-  costPrice Float?     // Preço pago naquele lote na hora da entrada
-  reason    String?  // Ex: "Compra Fornecedor X", "Ajuste de quebra", "Venda PDV"
+  product   Product @relation(fields: [productId], references: [id])
+
+  type      String  // IN=entrada, OUT=ajuste saída, SALE=venda PDV
+  quantity  Decimal @db.Decimal(10, 3)
+  costPrice Decimal? @db.Decimal(10, 4)
+  reason    String?
+
   createdAt DateTime @default(now())
-  
+
   @@map("inventory_logs")
+}
+
+// ------------------------------------------------------------
+//  NumeracaoNfce — controle sequencial de numeração por série
+//  Garante sequência sem gaps (exigência SEFAZ)
+// ------------------------------------------------------------
+model NumeracaoNfce {
+  id     String  @id @default(uuid())
+  serie  Int
+  ultimo Int     @default(0) // último número emitido
+
+  @@unique([serie])
+  @@map("numeracao_nfce")
+}
+
+// ------------------------------------------------------------
+//  TenantSettings — configurações globais do tenant
+//  Tabela de linha única (singleton), gerenciada via upsert
+// ------------------------------------------------------------
+model TenantSettings {
+  id                 String  @id @default("singleton")
+  /// Permite que o PDV finalize vendas mesmo com estoque zerado ou negativo
+  allowNegativeStock Boolean @default(false)
+
+  @@map("tenant_settings")
 }

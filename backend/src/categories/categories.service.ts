@@ -14,4 +14,19 @@ export class CategoriesService {
     const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
     return prisma.category.create({ data });
   }
+
+  async update(tenantId: string, databaseUrl: string, id: string, data: any) {
+    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    return prisma.category.update({ where: { id }, data });
+  }
+
+  async remove(tenantId: string, databaseUrl: string, id: string) {
+    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    // Check if category has products
+    const products = await prisma.product.findFirst({ where: { categoryId: id } });
+    if (products) {
+      throw new Error('Não é possível excluir uma categoria que possui produtos vinculados.');
+    }
+    return prisma.category.delete({ where: { id } });
+  }
 }

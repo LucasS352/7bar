@@ -14,7 +14,7 @@ const common_1 = require("@nestjs/common");
 const passport_1 = require("@nestjs/passport");
 const passport_jwt_1 = require("passport-jwt");
 exports.jwtConstants = {
-    secret: '7bar-super-secret-key-321',
+    secret: process.env.JWT_SECRET || '7bar-super-secret-key-321',
 };
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     constructor() {
@@ -26,11 +26,11 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
     }
     async validate(payload) {
         return {
-            userId: payload.sub,
+            sub: payload.sub,
             email: payload.email,
             tenantId: payload.tenantId,
             databaseUrl: payload.databaseUrl,
-            role: payload.role
+            role: payload.role,
         };
     }
 };

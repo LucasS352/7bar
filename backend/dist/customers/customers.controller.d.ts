@@ -8,6 +8,7 @@ export declare class CustomersController {
         createdAt: Date;
         updatedAt: Date;
         phone: string;
+        cpfCnpj: string | null;
         address: string | null;
         reference: string | null;
     }[]>;
@@ -17,6 +18,7 @@ export declare class CustomersController {
         createdAt: Date;
         updatedAt: Date;
         phone: string;
+        cpfCnpj: string | null;
         address: string | null;
         reference: string | null;
     } | null>;
@@ -26,6 +28,7 @@ export declare class CustomersController {
         createdAt: Date;
         updatedAt: Date;
         phone: string;
+        cpfCnpj: string | null;
         address: string | null;
         reference: string | null;
     }>;

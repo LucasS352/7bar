@@ -18,7 +18,6 @@ const products_service_1 = require("./products.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const current_user_decorator_1 = require("../auth/current-user.decorator");
 let ProductsController = class ProductsController {
-    productsService;
     constructor(productsService) {
         this.productsService = productsService;
     }
@@ -30,6 +29,15 @@ let ProductsController = class ProductsController {
     }
     bulkEntry(user, items) {
         return this.productsService.bulkEntry(user.tenantId, user.databaseUrl, items);
+    }
+    addStock(user, id, quantity, reason) {
+        return this.productsService.addStock(user.tenantId, user.databaseUrl, id, Number(quantity), reason);
+    }
+    getSettings(user) {
+        return this.productsService.getSettings(user.tenantId, user.databaseUrl);
+    }
+    saveSettings(user, body) {
+        return this.productsService.saveSettings(user.tenantId, user.databaseUrl, body);
     }
     update(user, id, body) {
         return this.productsService.update(user.tenantId, user.databaseUrl, id, body);
@@ -62,6 +70,31 @@ __decorate([
     __metadata("design:paramtypes", [Object, Array]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "bulkEntry", null);
+__decorate([
+    (0, common_1.Post)('add-stock/:id'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)('quantity')),
+    __param(3, (0, common_1.Body)('reason')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Number, String]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "addStock", null);
+__decorate([
+    (0, common_1.Get)('settings'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], ProductsController.prototype, "getSettings", null);
+__decorate([
+    (0, common_1.Patch)('settings'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], ProductsController.prototype, "saveSettings", null);
 __decorate([
     (0, common_1.Patch)(':id'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),

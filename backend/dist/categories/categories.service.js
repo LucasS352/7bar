@@ -13,7 +13,6 @@ exports.CategoriesService = void 0;
 const common_1 = require("@nestjs/common");
 const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
 let CategoriesService = class CategoriesService {
-    tenantManager;
     constructor(tenantManager) {
         this.tenantManager = tenantManager;
     }
@@ -24,6 +23,18 @@ let CategoriesService = class CategoriesService {
     async create(tenantId, databaseUrl, data) {
         const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
         return prisma.category.create({ data });
+    }
+    async update(tenantId, databaseUrl, id, data) {
+        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+        return prisma.category.update({ where: { id }, data });
+    }
+    async remove(tenantId, databaseUrl, id) {
+        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+        const products = await prisma.product.findFirst({ where: { categoryId: id } });
+        if (products) {
+            throw new Error('Não é possível excluir uma categoria que possui produtos vinculados.');
+        }
+        return prisma.category.delete({ where: { id } });
     }
 };
 exports.CategoriesService = CategoriesService;
