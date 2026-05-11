@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Patch, Body, UseGuards, Param, Res,
   UnauthorizedException, Request, UseInterceptors,
-  UploadedFile, BadRequestException,
+  UploadedFile, BadRequestException, NotFoundException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { createReadStream, existsSync, mkdirSync } from 'fs';
@@ -126,6 +126,32 @@ export class TenantsController {
   async validatePin(@Body() body: { pin: string }) {
     const valid = await this.tenantsService.validatePin(body.pin);
     if (!valid) throw new UnauthorizedException('PIN inválido.');
+    return { valid: true };
+  }
+
+  /**
+   * Define ou atualiza o PIN de desconto do PDV (apenas admins)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('me/discount-pin')
+  async setDiscountPin(@Request() req: any, @Body() body: { pin: string }) {
+    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+      throw new UnauthorizedException('Apenas admins podem configurar o PIN de desconto.');
+    }
+    if (!body.pin || body.pin.length < 4) {
+      throw new BadRequestException('O PIN deve ter no mínimo 4 caracteres.');
+    }
+    return this.tenantsService.setDiscountPin(req.user.tenantId, req.user.databaseUrl, body.pin);
+  }
+
+  /**
+   * Verifica se o PIN de desconto informado é válido (usado pelo PDV)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('me/verify-discount-pin')
+  async verifyDiscountPin(@Request() req: any, @Body() body: { pin: string }) {
+    const valid = await this.tenantsService.verifyDiscountPin(req.user.tenantId, req.user.databaseUrl, body.pin);
+    if (!valid) throw new UnauthorizedException('PIN de desconto inválido.');
     return { valid: true };
   }
 }

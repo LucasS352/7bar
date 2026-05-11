@@ -12,56 +12,60 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CashRegistersService = void 0;
 const common_1 = require("@nestjs/common");
 const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
+const tenant_context_service_1 = require("../prisma/tenant-context.service");
 let CashRegistersService = class CashRegistersService {
-    constructor(tenantManager) {
+    constructor(tenantManager, tenantContext) {
         this.tenantManager = tenantManager;
+        this.tenantContext = tenantContext;
     }
-    async openRegister(tenantId, databaseUrl, operatorId, openingValue) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
-        const existing = await prisma.cashRegister.findFirst({
-            where: { operatorId, status: 'open' }
-        });
-        if (existing) {
-            throw new common_1.BadRequestException('Você já possui um caixa aberto.');
-        }
-        return prisma.cashRegister.create({
-            data: {
-                operatorId,
-                openingValue,
-                status: 'open'
+    async getPrisma() {
+        const { tenantId, databaseUrl } = this.tenantContext.get();
+        return this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    }
+    async openRegister(openingValue, operatorId) {
+        try {
+            const { userId } = this.tenantContext.get();
+            const prisma = await this.getPrisma();
+            const currentOpId = operatorId || userId;
+            const existing = await prisma.cashRegister.findFirst({
+                where: { status: 'open' }
+            });
+            if (existing) {
+                throw new common_1.BadRequestException(`Já existe um caixa aberto (${existing.operatorId === currentOpId ? 'por você' : 'por outro operador'}). Feche-o antes de abrir um novo.`);
             }
-        });
+            return await prisma.cashRegister.create({
+                data: {
+                    operatorId: currentOpId,
+                    openingValue,
+                    status: 'open'
+                }
+            });
+        }
+        catch (error) {
+            if (error instanceof common_1.BadRequestException)
+                throw error;
+            throw new common_1.BadRequestException(`Erro no banco: ${error.message}`);
+        }
     }
-    async closeRegister(tenantId, databaseUrl, id, closingValue) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async closeRegister(id, closingValue) {
+        const prisma = await this.getPrisma();
         return prisma.cashRegister.update({
             where: { id },
             data: { closingValue, closingTime: new Date(), status: 'closed' }
         });
     }
-    async getCurrentRegister(tenantId, databaseUrl, operatorId) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async getCurrentRegister() {
+        const prisma = await this.getPrisma();
         const current = await prisma.cashRegister.findFirst({
-            where: { operatorId, status: 'open' }
+            where: { status: 'open' }
         });
         if (current) {
-            const today = new Date();
-            const sameDay = current.openingTime.getDate() === today.getDate() &&
-                current.openingTime.getMonth() === today.getMonth() &&
-                current.openingTime.getFullYear() === today.getFullYear();
-            if (!sameDay) {
-                await prisma.cashRegister.update({
-                    where: { id: current.id },
-                    data: { status: 'closed', closingTime: new Date() }
-                });
-                return null;
-            }
             return current;
         }
         return null;
     }
-    async addMovement(tenantId, databaseUrl, registerId, type, value, reason) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async addMovement(registerId, type, value, reason) {
+        const prisma = await this.getPrisma();
         const register = await prisma.cashRegister.findUnique({ where: { id: registerId } });
         if (!register || register.status !== 'open')
             throw new common_1.BadRequestException('Caixa fechado ou inexistente');
@@ -69,17 +73,17 @@ let CashRegistersService = class CashRegistersService {
             data: { cashRegisterId: registerId, type, value, reason }
         });
     }
-    async findAll(tenantId, databaseUrl) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async findAll() {
+        const prisma = await this.getPrisma();
         return prisma.cashRegister.findMany({ orderBy: { openingTime: 'desc' } });
     }
-    async getReport(tenantId, databaseUrl, id) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async getReport(id) {
+        const prisma = await this.getPrisma();
         const register = await prisma.cashRegister.findUnique({ where: { id } });
         if (!register)
             throw new common_1.BadRequestException('Caixa não encontrado');
         const sales = await prisma.sale.findMany({
-            where: { createdAt: { gte: register.openingTime, lte: register.closingTime || new Date() } },
+            where: { cashRegisterId: id },
             include: { payments: true, items: { include: { product: true } } },
             orderBy: { createdAt: 'desc' }
         });
@@ -131,6 +135,7 @@ let CashRegistersService = class CashRegistersService {
 exports.CashRegistersService = CashRegistersService;
 exports.CashRegistersService = CashRegistersService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [tenant_prisma_service_1.TenantConnectionManager])
+    __metadata("design:paramtypes", [tenant_prisma_service_1.TenantConnectionManager,
+        tenant_context_service_1.TenantContextService])
 ], CashRegistersService);
 //# sourceMappingURL=cash-registers.service.js.map

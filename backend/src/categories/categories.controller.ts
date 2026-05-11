@@ -9,22 +9,22 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get()
-  findAll(@CurrentUser() user: any) {
-    return this.categoriesService.findAll(user.tenantId, user.databaseUrl);
+  findAll() {
+    return this.categoriesService.findAll();
   }
 
   @Post()
-  create(@CurrentUser() user: any, @Body() body: any) {
-    return this.categoriesService.create(user.tenantId, user.databaseUrl, body);
+  create(@Body() body: any) {
+    return this.categoriesService.create(body);
   }
 
   @Patch(':id')
-  update(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
-    return this.categoriesService.update(user.tenantId, user.databaseUrl, id, body);
+  update(@Param('id') id: string, @Body() body: any) {
+    return this.categoriesService.update(id, body);
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: any, @Param('id') id: string) {
-    return this.categoriesService.remove(user.tenantId, user.databaseUrl, id);
+  remove(@Param('id') id: string) {
+    return this.categoriesService.remove(id);
   }
 }

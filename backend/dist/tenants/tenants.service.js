@@ -41,19 +41,23 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var TenantsService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TenantsService = void 0;
 const common_1 = require("@nestjs/common");
 const heart_prisma_service_1 = require("../prisma/heart-prisma.service");
+const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
 const client_1 = require("@prisma/client");
 const bcrypt = __importStar(require("bcrypt"));
 const child_process_1 = require("child_process");
 const util_1 = require("util");
 const path = __importStar(require("path"));
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
-let TenantsService = class TenantsService {
-    constructor(heartPrisma) {
+let TenantsService = TenantsService_1 = class TenantsService {
+    constructor(heartPrisma, tenantManager) {
         this.heartPrisma = heartPrisma;
+        this.tenantManager = tenantManager;
+        this.logger = new common_1.Logger(TenantsService_1.name);
     }
     findAll() {
         return this.heartPrisma.tenant.findMany({ include: { users: true } });
@@ -160,7 +164,7 @@ let TenantsService = class TenantsService {
         }
         catch (err) {
             await this.heartPrisma.$queryRawUnsafe(`DROP DATABASE IF EXISTS \`${sanitizedDbName}\``);
-            console.error('Erro no db push:', err.stdout, err.stderr);
+            this.logger.error(`Erro no provisionamento (db push) do tenant ${tenantName}: ${err.stdout} ${err.stderr}`);
             throw new common_1.BadRequestException('Erro ao criar tabelas no novo banco. Detalhe: ' + (err.stderr || err.message));
         }
         const hashedPassword = await bcrypt.hash(adminPassword, 10);
@@ -186,7 +190,7 @@ let TenantsService = class TenantsService {
                 await this.seedTenantProducts(tenantDbUrl);
             }
             catch (err) {
-                console.warn('Aviso: seed de produtos falhou:', err.message);
+                this.logger.warn(`Aviso: seed de produtos para ${tenantName} falhou: ${err.message}`);
             }
         }
         return {
@@ -213,7 +217,7 @@ let TenantsService = class TenantsService {
                 data: [
                     { name: 'Cervejas' },
                     { name: 'Destilados' },
-                    { name: 'Conveniência' },
+                    { name: 'Convenência' },
                     { name: 'Energéticos' },
                     { name: 'Refrigerantes e Sucos' },
                     { name: 'Salgadinhos e Petiscos' },
@@ -252,8 +256,8 @@ let TenantsService = class TenantsService {
                     { name: 'Água Mineral s/ Gás 500ml', priceSell: 2.00, priceCost: 0.80, stock: 120, categoryId: cat('Refrigerantes e Sucos').id },
                     { name: 'Ruffles Original 76g', priceSell: 8.50, priceCost: 5.50, stock: 30, categoryId: cat('Salgadinhos e Petiscos').id },
                     { name: 'Doritos Queijo Nacho 76g', priceSell: 8.50, priceCost: 5.50, stock: 35, categoryId: cat('Salgadinhos e Petiscos').id },
-                    { name: 'Gelo Escama 5kg', priceSell: 12.00, priceCost: 6.00, stock: 30, categoryId: cat('Conveniência').id },
-                    { name: 'Copo Descartável 400ml (50 un)', priceSell: 10.00, priceCost: 6.00, stock: 25, categoryId: cat('Conveniência').id },
+                    { name: 'Gelo Escama 5kg', priceSell: 12.00, priceCost: 6.00, stock: 30, categoryId: cat('Convenência').id },
+                    { name: 'Copo Descartável 400ml (50 un)', priceSell: 10.00, priceCost: 6.00, stock: 25, categoryId: cat('Convenência').id },
                     { name: 'Combo: Vodka Smirnoff + Baly 2L + Gelo', priceSell: 68.00, priceCost: 48.00, stock: 50, categoryId: cat('Copão / Combos').id },
                     { name: 'Copão: Vodka e Energético 500ml', priceSell: 15.00, priceCost: 7.00, stock: 200, categoryId: cat('Copão / Combos').id },
                     { name: 'Cigarro Marlboro Vermelho', priceSell: 12.50, priceCost: 10.00, stock: 50, categoryId: cat('Tabacaria').id },
@@ -261,16 +265,34 @@ let TenantsService = class TenantsService {
                 ],
                 skipDuplicates: true,
             });
-            console.log(`✅ Produtos base populados no banco: ${databaseUrl}`);
+            this.logger.log(`✅ Produtos base populados no banco: ${databaseUrl}`);
         }
         finally {
             await client.$disconnect();
         }
     }
+    async setDiscountPin(tenantId, databaseUrl, pin) {
+        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+        const hashed = await bcrypt.hash(pin, 10);
+        await prisma.tenantSettings.upsert({
+            where: { id: 'singleton' },
+            update: { discountPin: hashed },
+            create: { id: 'singleton', discountPin: hashed },
+        });
+        return { message: 'PIN de desconto configurado com sucesso.' };
+    }
+    async verifyDiscountPin(tenantId, databaseUrl, pin) {
+        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+        const settings = await prisma.tenantSettings.findUnique({ where: { id: 'singleton' } });
+        if (!settings?.discountPin)
+            return false;
+        return bcrypt.compare(pin, settings.discountPin);
+    }
 };
 exports.TenantsService = TenantsService;
-exports.TenantsService = TenantsService = __decorate([
+exports.TenantsService = TenantsService = TenantsService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [heart_prisma_service_1.HeartPrismaService])
+    __metadata("design:paramtypes", [heart_prisma_service_1.HeartPrismaService,
+        tenant_prisma_service_1.TenantConnectionManager])
 ], TenantsService);
 //# sourceMappingURL=tenants.service.js.map

@@ -24,7 +24,7 @@ export default function MassEntryPage() {
       api.get('/categories'),
       api.get('/tributacao')
     ]).then(([prodRes, catRes, grupRes]) => {
-      setProducts(prodRes.data);
+      setProducts(prodRes.data.data || []);
       setCategories(catRes.data);
       setGrupos(grupRes.data);
       

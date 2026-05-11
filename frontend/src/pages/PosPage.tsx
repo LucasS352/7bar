@@ -7,15 +7,17 @@ import { updateProductsCache, getCachedProducts } from '@/lib/db';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
 import { PaymentModal } from '@/components/PaymentModal';
-import { CashRegisterModal } from '@/components/CashRegisterModal';
+import { OperatorLoginModal } from '@/components/OperatorLoginModal';
+import { OpenShiftModal } from '@/components/OpenShiftModal';
 import { CloseRegisterModal } from '@/components/CloseRegisterModal';
 import { CashMovementModal } from '@/components/CashMovementModal';
+import { ShiftProvider, useShift } from '@/contexts/ShiftContext';
 import {
   Search, ShoppingCart, LogOut, PackageOpen, Minus, Plus, Trash2,
   LayoutDashboard, FileText, ArrowDownUp, Database,
 } from 'lucide-react';
 
-export function PosPage() {
+function PosPageContent() {
   const navigate = useNavigate();
   const { token, user, logout } = useAuthStore();
   const { items, total, addItem, updateQuantity, removeItem } = useCartStore();
@@ -29,8 +31,8 @@ export function PosPage() {
   const [isMovementOpen,     setIsMovementOpen]     = useState(false);
   const [isLoading,          setIsLoading]          = useState(true);
   const [isOfflineCatalog,   setIsOfflineCatalog]   = useState(false);
-  const [register,           setRegister]           = useState<Record<string, unknown> | null | undefined>(undefined);
   const [tenantConfig,       setTenantConfig]       = useState<any>(null);
+  const { operator, cashRegister, isLoading: isShiftLoading, logoutOperator, refreshShift } = useShift();
 
   useEffect(() => {
     if (token) {
@@ -41,36 +43,16 @@ export function PosPage() {
   useEffect(() => {
     if (!token) { navigate('/login'); return; }
 
-    api.get('/cash-registers/current')
-      .then(res => {
-        setRegister(res.data || null);
-        if (res.data) {
-          localStorage.setItem('7bar_cached_register', JSON.stringify(res.data));
-        } else {
-          localStorage.removeItem('7bar_cached_register');
-        }
-      })
-      .catch(() => {
-        // Se estiver offline e a API falhar, resgata o caixa do cache local
-        const cached = localStorage.getItem('7bar_cached_register');
-        if (cached) {
-          try { setRegister(JSON.parse(cached)); } catch { setRegister({ id: 'offline-fallback' }); }
-        } else {
-          // Fallback final: permite vender offline mesmo sem cache de caixa
-          setRegister({ id: 'offline-fallback' });
-        }
-      });
-
     setIsLoading(true);
 
     if (syncState.isOnline) {
       // Online: busca da API e atualiza cache local
-      api.get<Product[]>('/products')
+      api.get('/products')
         .then(async res => {
-          const data = res.data;
+          const data = (res.data as any).data || [];
           setProducts(data);
           // Persiste no IndexedDB para uso offline futuro
-          await updateProductsCache(data.map(p => ({
+          await updateProductsCache(data.map((p: any) => ({
             id:         p.id,
             name:       p.name,
             shortCode:  p.shortCode,
@@ -114,7 +96,11 @@ export function PosPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [items]);
 
-  const handleLogout = () => { logout(); navigate('/login'); };
+  const handleLogout = () => {
+    logoutOperator();
+    logout();
+    navigate('/login');
+  };
 
   const filtered = products.filter(p =>
     p.active !== false && (
@@ -154,8 +140,8 @@ export function PosPage() {
             )}
             <p className="text-emerald-400 font-medium text-sm flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Operador: {user?.name} <span className="text-zinc-500">({user?.tenant})</span>
-              {register && typeof register === 'object' && 'id' in register && (
+              Operador: {operator?.name || user?.name} <span className="text-zinc-500">({user?.tenant})</span>
+              {cashRegister?.id && (
                 <span className="ml-2 text-xs bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 text-emerald-400 uppercase tracking-widest hidden sm:inline-block">
                   Caixa Aberto
                 </span>
@@ -175,7 +161,7 @@ export function PosPage() {
               </div>
             )}
 
-            {register && typeof register === 'object' && 'id' in register && (
+            {cashRegister?.id && (
               <button onClick={() => setIsMovementOpen(true)} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition font-semibold text-sm whitespace-nowrap">
                 <ArrowDownUp size={18} /> Sangria / Reposição
               </button>
@@ -304,26 +290,50 @@ export function PosPage() {
         </div>
       </div>
 
-      {/* Modais */}
-      {register === null && <CashRegisterModal onOpen={setRegister} />}
-      <CloseRegisterModal
-        isOpen={isCloseRegisterOpen}
-        registerId={register && typeof register === 'object' && 'id' in register ? String(register.id) : undefined}
-        onClose={(closed) => { setIsCloseRegisterOpen(false); if (closed) setRegister(null); }}
-      />
+      {/* Modais de Operador e Turno */}
+      {!isShiftLoading && !operator && (
+        <OperatorLoginModal onSuccess={() => {}} />
+      )}
+      
+      {!isShiftLoading && operator && !cashRegister && (
+        <OpenShiftModal onSuccess={() => {}} />
+      )}
+
+      {/* Modais Secundários */}
+      {isCloseRegisterOpen && (
+        <CloseRegisterModal
+          isOpen={isCloseRegisterOpen}
+          registerId={cashRegister?.id}
+          onClose={async (closed) => { 
+            setIsCloseRegisterOpen(false); 
+            if (closed) {
+              await refreshShift();
+              logoutOperator();
+            }
+          }}
+        />
+      )}
       <PaymentModal
         isOpen={isPaymentOpen}
         onClose={() => setIsPaymentOpen(false)}
         isOnline={syncState.isOnline}
         onPendingCountChange={syncState.syncNow}
       />
-      {register && typeof register === 'object' && 'id' in register && (
+      {cashRegister?.id && (
         <CashMovementModal
           isOpen={isMovementOpen}
-          registerId={String(register.id)}
+          registerId={cashRegister.id}
           onClose={() => setIsMovementOpen(false)}
         />
       )}
     </div>
+  );
+}
+
+export function PosPage() {
+  return (
+    <ShiftProvider>
+      <PosPageContent />
+    </ShiftProvider>
   );
 }

@@ -1,27 +1,36 @@
 import { Injectable } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private tenantManager: TenantConnectionManager) {}
+  constructor(
+    private tenantManager: TenantConnectionManager,
+    private tenantContext: TenantContextService
+  ) {}
 
-  async findAll(tenantId: string, databaseUrl: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  private async getPrisma() {
+    const { tenantId, databaseUrl } = this.tenantContext.get();
+    return this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  }
+
+  async findAll() {
+    const prisma = await this.getPrisma();
     return prisma.category.findMany();
   }
 
-  async create(tenantId: string, databaseUrl: string, data: any) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async create(data: any) {
+    const prisma = await this.getPrisma();
     return prisma.category.create({ data });
   }
 
-  async update(tenantId: string, databaseUrl: string, id: string, data: any) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async update(id: string, data: any) {
+    const prisma = await this.getPrisma();
     return prisma.category.update({ where: { id }, data });
   }
 
-  async remove(tenantId: string, databaseUrl: string, id: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async remove(id: string) {
+    const prisma = await this.getPrisma();
     // Check if category has products
     const products = await prisma.product.findFirst({ where: { categoryId: id } });
     if (products) {

@@ -3,12 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 async function main() {
-    await prisma.saleItem.deleteMany();
-    await prisma.payment.deleteMany();
-    await prisma.sale.deleteMany();
-    await prisma.inventoryLog.deleteMany();
-    await prisma.product.deleteMany();
-    await prisma.category.deleteMany();
     const catCervejas = await prisma.category.create({ data: { name: 'Cervejas' } });
     const catDestilados = await prisma.category.create({ data: { name: 'Destilados' } });
     const catConveniencia = await prisma.category.create({ data: { name: 'Conveniência' } });

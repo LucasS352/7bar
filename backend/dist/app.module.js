@@ -20,6 +20,10 @@ const cash_registers_module_1 = require("./cash-registers/cash-registers.module"
 const users_module_1 = require("./users/users.module");
 const tributacao_module_1 = require("./tributacao/tributacao.module");
 const nfce_module_1 = require("./nfce/nfce.module");
+const operators_module_1 = require("./operators/operators.module");
+const dashboard_module_1 = require("./dashboard/dashboard.module");
+const core_1 = require("@nestjs/core");
+const tenant_context_service_1 = require("./prisma/tenant-context.service");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -37,9 +41,16 @@ exports.AppModule = AppModule = __decorate([
             users_module_1.UsersModule,
             tributacao_module_1.TributacaoModule,
             nfce_module_1.NfceModule,
+            operators_module_1.OperatorsModule,
+            dashboard_module_1.DashboardModule,
         ],
         controllers: [app_controller_1.AppController],
-        providers: [],
+        providers: [
+            {
+                provide: core_1.APP_INTERCEPTOR,
+                useClass: tenant_context_service_1.TenantInterceptor,
+            },
+        ],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

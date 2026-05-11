@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
-import { Wine, Lock, Mail, Loader2 } from 'lucide-react';
+import { ShoppingCart, Lock, Mail, Loader2 } from 'lucide-react';
 
 export function LoginPage() {
   const [email,    setEmail]    = useState('');
@@ -41,10 +41,10 @@ export function LoginPage() {
       <div className="w-full max-w-md z-10 p-8 rounded-3xl bg-zinc-900/60 backdrop-blur-xl border border-zinc-800 shadow-2xl">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/30">
-            <Wine size={32} className="text-white" />
+            <ShoppingCart size={32} className="text-white" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">7bar POS</h1>
-          <p className="text-zinc-400 mt-2 text-sm">Acesse o seu Ponto de Venda</p>
+          <h1 className="text-3xl font-bold tracking-tight">PDV Pro</h1>
+          <p className="text-zinc-400 mt-2 text-sm">Sistema de Ponto de Venda</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
@@ -57,7 +57,7 @@ export function LoginPage() {
               <input
                 type="email" required value={email} onChange={e => setEmail(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-zinc-950/50 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-white placeholder-zinc-600"
-                placeholder="admin@7bar.com.br"
+                placeholder="seu@email.com.br"
               />
             </div>
           </div>

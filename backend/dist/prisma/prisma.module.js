@@ -10,14 +10,15 @@ exports.PrismaModule = void 0;
 const common_1 = require("@nestjs/common");
 const heart_prisma_service_1 = require("./heart-prisma.service");
 const tenant_prisma_service_1 = require("./tenant-prisma.service");
+const tenant_context_service_1 = require("./tenant-context.service");
 let PrismaModule = class PrismaModule {
 };
 exports.PrismaModule = PrismaModule;
 exports.PrismaModule = PrismaModule = __decorate([
     (0, common_1.Global)(),
     (0, common_1.Module)({
-        providers: [heart_prisma_service_1.HeartPrismaService, tenant_prisma_service_1.TenantConnectionManager],
-        exports: [heart_prisma_service_1.HeartPrismaService, tenant_prisma_service_1.TenantConnectionManager],
+        providers: [heart_prisma_service_1.HeartPrismaService, tenant_prisma_service_1.TenantConnectionManager, tenant_context_service_1.TenantContextService],
+        exports: [heart_prisma_service_1.HeartPrismaService, tenant_prisma_service_1.TenantConnectionManager, tenant_context_service_1.TenantContextService],
     })
 ], PrismaModule);
 //# sourceMappingURL=prisma.module.js.map

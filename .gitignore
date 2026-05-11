@@ -11,3 +11,20 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Scripts de debug/teste (não vão para produção)
+backend/check_tenants.js
+backend/clear-operator-id.js
+backend/dump.js
+backend/test-open.js
+backend/test-tenants.js
+backend/test_push.js
+backend/update-all-tenants.js
+frontend/count-divs.js
+frontend/create-icons.js
+
+# Build artifacts
+backend/dist/
+frontend/dist/
+frontend/dev-dist/
+frontend/.next/

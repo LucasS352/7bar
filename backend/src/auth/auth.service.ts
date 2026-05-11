@@ -2,12 +2,14 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private heartPrisma: HeartPrismaService,
     private jwtService: JwtService,
+    private tenantManager: TenantConnectionManager,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -24,6 +26,22 @@ export class AuthService {
       return result;
     }
     return null;
+  }
+
+  async validateOperatorPin(tenantId: string, databaseUrl: string, operatorId: string, pin: string): Promise<any> {
+    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    const operator = await prisma.operator.findFirst({
+      where: { id: operatorId, active: true },
+    });
+
+    if (!operator || !operator.pin) {
+      throw new UnauthorizedException('Operador inválido ou PIN não configurado.');
+    }
+
+    if (await bcrypt.compare(pin, operator.pin)) {
+      return { id: operator.id, name: operator.name, role: 'operator' };
+    }
+    throw new UnauthorizedException('PIN incorreto.');
   }
 
   async login(user: any) {

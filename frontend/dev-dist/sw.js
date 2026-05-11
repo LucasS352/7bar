@@ -78,7 +78,7 @@ define(['./workbox-13942bd7'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "index.html",
-    "revision": "0.e767vudolj"
+    "revision": "0.ou33ctlm4d"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
@@ -87,7 +87,7 @@ define(['./workbox-13942bd7'], (function (workbox) { 'use strict';
   workbox.registerRoute(({
     url
   }) => url.pathname.startsWith("/api/products") || url.pathname.startsWith("/api/cash-registers"), new workbox.NetworkFirst({
-    "cacheName": "7bar-api-critical",
+    "cacheName": "pdvpro-api-critical",
     "networkTimeoutSeconds": 5,
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 50,
@@ -99,7 +99,7 @@ define(['./workbox-13942bd7'], (function (workbox) { 'use strict';
   workbox.registerRoute(({
     request
   }) => request.destination === "style" || request.destination === "script" || request.destination === "worker", new workbox.StaleWhileRevalidate({
-    "cacheName": "7bar-static-assets",
+    "cacheName": "pdvpro-static-assets",
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 100,
       maxAgeSeconds: 2592000
@@ -108,7 +108,7 @@ define(['./workbox-13942bd7'], (function (workbox) { 'use strict';
   workbox.registerRoute(({
     request
   }) => request.destination === "image" || request.destination === "font", new workbox.CacheFirst({
-    "cacheName": "7bar-assets",
+    "cacheName": "pdvpro-assets",
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 60,
       maxAgeSeconds: 2592000

@@ -38,8 +38,6 @@ const bcrypt = __importStar(require("bcrypt"));
 const prisma = new heart_client_1.PrismaClient();
 async function main() {
     const password = await bcrypt.hash('123456', 10);
-    await prisma.user.deleteMany();
-    await prisma.tenant.deleteMany();
     const tenant = await prisma.tenant.create({
         data: {
             name: '7bar',

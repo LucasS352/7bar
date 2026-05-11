@@ -12,9 +12,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProductsService = void 0;
 const common_1 = require("@nestjs/common");
 const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
+const tenant_context_service_1 = require("../prisma/tenant-context.service");
 let ProductsService = class ProductsService {
-    constructor(tenantManager) {
+    constructor(tenantManager, tenantContext) {
         this.tenantManager = tenantManager;
+        this.tenantContext = tenantContext;
+    }
+    async getPrisma() {
+        const { tenantId, databaseUrl } = this.tenantContext.get();
+        return this.tenantManager.getTenantClient(tenantId, databaseUrl);
     }
     async nextShortCode(prisma) {
         const result = await prisma.$queryRaw `
@@ -40,16 +46,30 @@ let ProductsService = class ProductsService {
             data.origem = parseInt(String(data.origem)) || 0;
         return data;
     }
-    async findAll(tenantId, databaseUrl) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
-        return prisma.product.findMany({
-            include: { category: true, grupoTributacao: true },
-            orderBy: { name: 'asc' },
-            take: 2000,
-        });
+    async findAll(page = 1, limit = 50) {
+        const prisma = await this.getPrisma();
+        const skip = (page - 1) * limit;
+        const [total, data] = await Promise.all([
+            prisma.product.count({ where: { active: true } }),
+            prisma.product.findMany({
+                where: { active: true },
+                include: { category: true, grupoTributacao: true },
+                orderBy: { name: 'asc' },
+                skip,
+                take: limit,
+            }),
+        ]);
+        return {
+            data,
+            meta: {
+                total,
+                page,
+                lastPage: Math.ceil(total / limit),
+            },
+        };
     }
-    async create(tenantId, databaseUrl, data) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async create(data) {
+        const prisma = await this.getPrisma();
         const sanitized = this.sanitize(data);
         if (!sanitized.name?.trim()) {
             throw new common_1.BadRequestException('Nome da Mercadoria é obrigatório.');
@@ -89,9 +109,9 @@ let ProductsService = class ProductsService {
         }
         return product;
     }
-    async update(tenantId, databaseUrl, id, data) {
+    async update(id, data) {
         const sanitized = this.sanitize(data);
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+        const prisma = await this.getPrisma();
         const oldProduct = await prisma.product.findUnique({ where: { id } });
         if (!oldProduct)
             throw new common_1.NotFoundException('Produto não encontrado.');
@@ -113,8 +133,8 @@ let ProductsService = class ProductsService {
             return product;
         });
     }
-    async remove(tenantId, databaseUrl, id) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async remove(id) {
+        const prisma = await this.getPrisma();
         const [saleCount, logCount] = await Promise.all([
             prisma.saleItem.count({ where: { productId: id } }),
             prisma.inventoryLog.count({ where: { productId: id } }),
@@ -128,11 +148,11 @@ let ProductsService = class ProductsService {
         await prisma.inventoryLog.deleteMany({ where: { productId: id } });
         return prisma.product.delete({ where: { id } });
     }
-    async addStock(tenantId, databaseUrl, productId, quantity, reason) {
+    async addStock(productId, quantity, reason) {
         if (quantity <= 0) {
             throw new common_1.BadRequestException('A quantidade de entrada deve ser maior que zero.');
         }
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+        const prisma = await this.getPrisma();
         return prisma.$transaction(async (tx) => {
             const product = await tx.product.findUnique({ where: { id: productId } });
             if (!product)
@@ -152,8 +172,8 @@ let ProductsService = class ProductsService {
             return { product: updated, quantityAdded: quantity };
         });
     }
-    async bulkEntry(tenantId, databaseUrl, items) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async bulkEntry(items) {
+        const prisma = await this.getPrisma();
         let fallbackCategory = await prisma.category.findFirst();
         if (!fallbackCategory) {
             fallbackCategory = await prisma.category.create({ data: { name: 'Geral' } });
@@ -240,8 +260,8 @@ let ProductsService = class ProductsService {
             hasDuplicates: duplicateNames.length > 0,
         };
     }
-    async getSettings(tenantId, databaseUrl) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async getSettings() {
+        const prisma = await this.getPrisma();
         const settings = await prisma.tenantSettings.upsert({
             where: { id: 'singleton' },
             update: {},
@@ -249,8 +269,8 @@ let ProductsService = class ProductsService {
         });
         return { allowNegativeStock: settings.allowNegativeStock };
     }
-    async saveSettings(tenantId, databaseUrl, data) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async saveSettings(data) {
+        const prisma = await this.getPrisma();
         const settings = await prisma.tenantSettings.upsert({
             where: { id: 'singleton' },
             update: { allowNegativeStock: data.allowNegativeStock },
@@ -262,6 +282,7 @@ let ProductsService = class ProductsService {
 exports.ProductsService = ProductsService;
 exports.ProductsService = ProductsService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [tenant_prisma_service_1.TenantConnectionManager])
+    __metadata("design:paramtypes", [tenant_prisma_service_1.TenantConnectionManager,
+        tenant_context_service_1.TenantContextService])
 ], ProductsService);
 //# sourceMappingURL=products.service.js.map

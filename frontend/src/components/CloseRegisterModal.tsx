@@ -3,7 +3,7 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { FileText, Loader2, X, AlertOctagon, Receipt } from 'lucide-react';
 
-export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: boolean, onClose: (closed: boolean) => void, registerId: string }) {
+export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: boolean, onClose: (closed: boolean) => void, registerId: string | undefined }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [closingValue, setClosingValue] = useState<number>(0);
@@ -12,16 +12,29 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
   useEffect(() => {
     if (!isOpen || !registerId) return;
     setLoading(true);
+    setData(null);
     api.get(`/cash-registers/${registerId}/report`)
       .then(res => {
         setData(res.data);
         setClosingValue(res.data.report.expectedDinheiro);
       })
-      .catch((err) => toast.error('Falha ao gerar relatório detalhado'))
+      .catch(() => toast.error('Falha ao gerar relatório detalhado'))
       .finally(() => setLoading(false));
   }, [isOpen, registerId]);
 
   if (!isOpen) return null;
+
+  // Sem caixa aberto: mostra aviso em vez de travar
+  if (!registerId) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+        <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-md p-8 text-center shadow-2xl">
+          <p className="text-zinc-400 text-lg">Nenhum caixa aberto no momento.</p>
+          <button onClick={() => onClose(false)} className="mt-6 px-6 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold transition">Fechar</button>
+        </div>
+      </div>
+    );
+  }
 
   const handleClose = async () => {
     setSubmitting(true);

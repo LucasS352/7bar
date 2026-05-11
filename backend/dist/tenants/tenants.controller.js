@@ -87,6 +87,21 @@ let TenantsController = class TenantsController {
             throw new common_1.UnauthorizedException('PIN inválido.');
         return { valid: true };
     }
+    async setDiscountPin(req, body) {
+        if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+            throw new common_1.UnauthorizedException('Apenas admins podem configurar o PIN de desconto.');
+        }
+        if (!body.pin || body.pin.length < 4) {
+            throw new common_1.BadRequestException('O PIN deve ter no mínimo 4 caracteres.');
+        }
+        return this.tenantsService.setDiscountPin(req.user.tenantId, req.user.databaseUrl, body.pin);
+    }
+    async verifyDiscountPin(req, body) {
+        const valid = await this.tenantsService.verifyDiscountPin(req.user.tenantId, req.user.databaseUrl, body.pin);
+        if (!valid)
+            throw new common_1.UnauthorizedException('PIN de desconto inválido.');
+        return { valid: true };
+    }
 };
 exports.TenantsController = TenantsController;
 __decorate([
@@ -177,6 +192,24 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], TenantsController.prototype, "validatePin", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('me/discount-pin'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], TenantsController.prototype, "setDiscountPin", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('me/verify-discount-pin'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], TenantsController.prototype, "verifyDiscountPin", null);
 exports.TenantsController = TenantsController = __decorate([
     (0, common_1.Controller)('tenants'),
     __metadata("design:paramtypes", [tenants_service_1.TenantsService])

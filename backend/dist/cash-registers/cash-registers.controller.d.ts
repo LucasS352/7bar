@@ -2,7 +2,10 @@ import { CashRegistersService } from './cash-registers.service';
 export declare class CashRegistersController {
     private readonly cashRegistersService;
     constructor(cashRegistersService: CashRegistersService);
-    open(user: any, openingValue: number): Promise<{
+    open(body: {
+        openingValue: number;
+        operatorId?: string;
+    }): Promise<{
         id: string;
         operatorId: string | null;
         status: string;
@@ -11,7 +14,7 @@ export declare class CashRegistersController {
         openingValue: import("@prisma/client/runtime/library").Decimal;
         closingValue: import("@prisma/client/runtime/library").Decimal | null;
     }>;
-    findAll(user: any): Promise<{
+    findAll(): Promise<{
         id: string;
         operatorId: string | null;
         status: string;
@@ -20,7 +23,7 @@ export declare class CashRegistersController {
         openingValue: import("@prisma/client/runtime/library").Decimal;
         closingValue: import("@prisma/client/runtime/library").Decimal | null;
     }[]>;
-    close(user: any, id: string, closingValue: number): Promise<{
+    close(id: string, closingValue: number): Promise<{
         id: string;
         operatorId: string | null;
         status: string;
@@ -29,7 +32,7 @@ export declare class CashRegistersController {
         openingValue: import("@prisma/client/runtime/library").Decimal;
         closingValue: import("@prisma/client/runtime/library").Decimal | null;
     }>;
-    addMovement(user: any, id: string, body: {
+    addMovement(id: string, body: {
         type: 'IN' | 'OUT';
         value: number;
         reason: string;
@@ -38,10 +41,10 @@ export declare class CashRegistersController {
         createdAt: Date;
         type: string;
         reason: string | null;
-        value: import("@prisma/client/runtime/library").Decimal;
         cashRegisterId: string;
+        value: import("@prisma/client/runtime/library").Decimal;
     }>;
-    getReport(user: any, id: string): Promise<{
+    getReport(id: string): Promise<{
         register: {
             id: string;
             operatorId: string | null;
@@ -123,6 +126,7 @@ export declare class CashRegistersController {
                 subtotal: import("@prisma/client/runtime/library").Decimal;
                 customerId: string | null;
                 operatorId: string | null;
+                cashRegisterId: string | null;
                 total: import("@prisma/client/runtime/library").Decimal;
                 status: string;
                 emitirNfce: boolean;
@@ -144,12 +148,12 @@ export declare class CashRegistersController {
                 createdAt: Date;
                 type: string;
                 reason: string | null;
-                value: import("@prisma/client/runtime/library").Decimal;
                 cashRegisterId: string;
+                value: import("@prisma/client/runtime/library").Decimal;
             }[];
         };
     }>;
-    getCurrent(user: any): Promise<{
+    getCurrent(): Promise<{
         id: string;
         operatorId: string | null;
         status: string;

@@ -17,6 +17,13 @@ export declare class UsersController {
         email: string;
         role: string;
     }>;
+    update(user: any, id: string, body: any): Promise<{
+        name: string;
+        id: string;
+        active: boolean;
+        email: string;
+        role: string;
+    }>;
     toggleStatus(user: any, id: string): Promise<{
         id: string;
         active: boolean;

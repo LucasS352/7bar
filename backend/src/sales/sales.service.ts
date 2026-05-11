@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, Logger, NotFoundException, StreamableFile } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { NfceService } from '../nfce/nfce.service';
 import archiver = require('archiver');
@@ -21,16 +22,36 @@ export class SalesService {
     private tenantManager: TenantConnectionManager,
     private heartPrisma: HeartPrismaService,
     private nfceService: NfceService,
+    private tenantContext: TenantContextService
   ) {}
 
-  async checkout(tenantId: string, databaseUrl: string, operatorId: string, data: any) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  private async getPrisma() {
+    const { tenantId, databaseUrl } = this.tenantContext.get();
+    return this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  }
+
+  async checkout(data: any) {
+    const { userId } = this.tenantContext.get();
+    const operatorId = data.operatorId || userId;
+    const prisma = await this.getPrisma();
 
     return prisma.$transaction(async (tx: any) => {
       let subtotal = 0;
       const saleItemsData: any[] = [];
 
-      // ─── 0. Ler configurações do tenant ────────────────────────────────────
+      // ─── 0. Ler configurações do tenant e validar caixa ────────────────────
+      if (!data.cashRegisterId) {
+        throw new BadRequestException('Não é possível realizar venda: Caixa não informado.');
+      }
+
+      const cashRegister = await tx.cashRegister.findUnique({
+        where: { id: data.cashRegisterId }
+      });
+
+      if (!cashRegister || cashRegister.status !== 'open') {
+        throw new BadRequestException('O caixa selecionado está fechado ou é inválido. Abra o caixa primeiro.');
+      }
+
       const tenantSettings = await tx.tenantSettings.findUnique({ where: { id: 'singleton' } });
       const allowNegativeStock = tenantSettings?.allowNegativeStock ?? false;
 
@@ -132,6 +153,7 @@ export class SalesService {
         data: {
           customerId:     data.customerId || null,
           operatorId,
+          cashRegisterId: data.cashRegisterId,
           subtotal,
           discount,
           total,
@@ -157,7 +179,7 @@ export class SalesService {
       // ─── 5. Disparar emissão NFC-e (se solicitada) — fora da transação principal ──
       // A emissão é feita após o commit para não bloquear a transação se o PHP demorar
       if (emitirNfce) {
-        setImmediate(() => this.dispararNfce(sale, tenantId, databaseUrl));
+        setImmediate(() => this.dispararNfce(sale));
       }
 
       return sale;
@@ -168,7 +190,8 @@ export class SalesService {
    * Dispara a emissão NFC-e de forma assíncrona após a venda ser salva.
    * Atualiza o registro da venda com o resultado.
    */
-  private async dispararNfce(sale: any, tenantId: string, databaseUrl: string) {
+  private async dispararNfce(sale: any) {
+    const { tenantId, databaseUrl } = this.tenantContext.get();
     try {
       // Buscar dados do tenant (emitente) e certificado
       const tenant = await this.heartPrisma.tenant.findUnique({
@@ -287,20 +310,36 @@ export class SalesService {
     await prisma.sale.update({ where: { id: saleId }, data });
   }
 
-  async findAll(tenantId: string, databaseUrl: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
-    return prisma.sale.findMany({
-      include: {
-        payments: true,
-        items: { include: { product: true } },
-        customer: true,
+  async findAll(page = 1, limit = 50) {
+    const prisma = await this.getPrisma();
+    const skip = (page - 1) * limit;
+
+    const [total, data] = await Promise.all([
+      prisma.sale.count(),
+      prisma.sale.findMany({
+        include: {
+          payments: true,
+          items: { include: { product: true } },
+          customer: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        lastPage: Math.ceil(total / limit),
       },
-      orderBy: { createdAt: 'desc' },
-    });
+    };
   }
 
-  async getTodaySales(tenantId: string, databaseUrl: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async getTodaySales() {
+    const prisma = await this.getPrisma();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return prisma.sale.findMany({
@@ -315,8 +354,8 @@ export class SalesService {
   }
 
   /** Retorna apenas os campos de status NFC-e — usado pelo polling do frontend */
-  async getNfceStatus(tenantId: string, databaseUrl: string, saleId: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async getNfceStatus(saleId: string) {
+    const prisma = await this.getPrisma();
     return prisma.sale.findUnique({
       where: { id: saleId },
       select: {
@@ -335,8 +374,8 @@ export class SalesService {
   }
 
   /** Emissão manual / Reemissão de NFC-e para vendas já salvas */
-  async emitNfce(tenantId: string, databaseUrl: string, saleId: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async emitNfce(saleId: string) {
+    const prisma = await this.getPrisma();
     
     const sale = await prisma.sale.findUnique({
       where: { id: saleId },
@@ -367,14 +406,14 @@ export class SalesService {
     sale.nfceNumero = nfceNumero;
     sale.nfceSerie = nfceSerie;
 
-    setImmediate(() => this.dispararNfce(sale, tenantId, databaseUrl));
+    setImmediate(() => this.dispararNfce(sale));
 
     return { message: 'Emissão de NFC-e solicitada com sucesso', status: 'pendente' };
   }
 
   /** Exportar XMLs das vendas do mês no formato ZIP */
-  async exportNfceXmls(tenantId: string, databaseUrl: string, startDate: string, endDate: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async exportNfceXmls(startDate: string, endDate: string) {
+    const prisma = await this.getPrisma();
 
     const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
     const start = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);

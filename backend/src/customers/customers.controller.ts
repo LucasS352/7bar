@@ -9,17 +9,17 @@ export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
   @Get()
-  findAll(@CurrentUser() user: any) {
-    return this.customersService.findAll(user.tenantId, user.databaseUrl);
+  findAll() {
+    return this.customersService.findAll();
   }
 
   @Get('phone/:phone')
-  findByPhone(@CurrentUser() user: any, @Param('phone') phone: string) {
-    return this.customersService.findByPhone(user.tenantId, user.databaseUrl, phone);
+  findByPhone(@Param('phone') phone: string) {
+    return this.customersService.findByPhone(phone);
   }
 
   @Post()
-  create(@CurrentUser() user: any, @Body() body: any) {
-    return this.customersService.create(user.tenantId, user.databaseUrl, body);
+  create(@Body() body: any) {
+    return this.customersService.create(body);
   }
 }

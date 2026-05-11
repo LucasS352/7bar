@@ -1,4 +1,5 @@
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 interface ProductCreateDto {
     name: string;
     shortCode?: string | null;
@@ -46,112 +47,44 @@ export interface TenantSettingsDto {
 }
 export declare class ProductsService {
     private tenantManager;
-    constructor(tenantManager: TenantConnectionManager);
+    private tenantContext;
+    constructor(tenantManager: TenantConnectionManager, tenantContext: TenantContextService);
+    private getPrisma;
     private nextShortCode;
     private sanitize;
-    findAll(tenantId: string, databaseUrl: string): Promise<({
-        category: {
-            id: string;
+    findAll(page?: number, limit?: number): Promise<{
+        data: ({
+            grupoTributacao: {
+                id: string;
+                nome: string;
+                ativo: boolean;
+                csosn: string | null;
+                cstIcms: string | null;
+                cfop: string;
+                aliqIcms: import("@prisma/client/runtime/library").Decimal;
+                redBcIcms: import("@prisma/client/runtime/library").Decimal;
+                cstPis: string;
+                aliqPis: import("@prisma/client/runtime/library").Decimal;
+                cstCofins: string;
+                aliqCofins: import("@prisma/client/runtime/library").Decimal;
+                cstIpi: string | null;
+                aliqIpi: import("@prisma/client/runtime/library").Decimal;
+                createdAt: Date;
+                updatedAt: Date;
+            } | null;
+            category: {
+                name: string;
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+            };
+        } & {
             name: string;
-            createdAt: Date;
-            updatedAt: Date;
-        };
-        grupoTributacao: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            nome: string;
-            ativo: boolean;
-            csosn: string | null;
-            cstIcms: string | null;
-            cfop: string;
-            aliqIcms: import("@prisma/client/runtime/library").Decimal;
-            redBcIcms: import("@prisma/client/runtime/library").Decimal;
-            cstPis: string;
-            aliqPis: import("@prisma/client/runtime/library").Decimal;
-            cstCofins: string;
-            aliqCofins: import("@prisma/client/runtime/library").Decimal;
-            cstIpi: string | null;
-            aliqIpi: import("@prisma/client/runtime/library").Decimal;
-        } | null;
-    } & {
-        id: string;
-        categoryId: string;
-        grupoTributacaoId: string | null;
-        name: string;
-        shortCode: string | null;
-        barcode: string | null;
-        unit: string;
-        active: boolean;
-        priceCost: import("@prisma/client/runtime/library").Decimal;
-        priceSell: import("@prisma/client/runtime/library").Decimal;
-        stock: import("@prisma/client/runtime/library").Decimal;
-        ncm: string | null;
-        cest: string | null;
-        origem: number;
-        createdAt: Date;
-        updatedAt: Date;
-    })[]>;
-    create(tenantId: string, databaseUrl: string, data: ProductCreateDto): Promise<{
-        id: string;
-        categoryId: string;
-        grupoTributacaoId: string | null;
-        name: string;
-        shortCode: string | null;
-        barcode: string | null;
-        unit: string;
-        active: boolean;
-        priceCost: import("@prisma/client/runtime/library").Decimal;
-        priceSell: import("@prisma/client/runtime/library").Decimal;
-        stock: import("@prisma/client/runtime/library").Decimal;
-        ncm: string | null;
-        cest: string | null;
-        origem: number;
-        createdAt: Date;
-        updatedAt: Date;
-    }>;
-    update(tenantId: string, databaseUrl: string, id: string, data: ProductUpdateDto): Promise<{
-        id: string;
-        categoryId: string;
-        grupoTributacaoId: string | null;
-        name: string;
-        shortCode: string | null;
-        barcode: string | null;
-        unit: string;
-        active: boolean;
-        priceCost: import("@prisma/client/runtime/library").Decimal;
-        priceSell: import("@prisma/client/runtime/library").Decimal;
-        stock: import("@prisma/client/runtime/library").Decimal;
-        ncm: string | null;
-        cest: string | null;
-        origem: number;
-        createdAt: Date;
-        updatedAt: Date;
-    }>;
-    remove(tenantId: string, databaseUrl: string, id: string): Promise<{
-        id: string;
-        categoryId: string;
-        grupoTributacaoId: string | null;
-        name: string;
-        shortCode: string | null;
-        barcode: string | null;
-        unit: string;
-        active: boolean;
-        priceCost: import("@prisma/client/runtime/library").Decimal;
-        priceSell: import("@prisma/client/runtime/library").Decimal;
-        stock: import("@prisma/client/runtime/library").Decimal;
-        ncm: string | null;
-        cest: string | null;
-        origem: number;
-        createdAt: Date;
-        updatedAt: Date;
-    }>;
-    addStock(tenantId: string, databaseUrl: string, productId: string, quantity: number, reason?: string): Promise<{
-        product: {
-            id: string;
             categoryId: string;
             grupoTributacaoId: string | null;
-            name: string;
             shortCode: string | null;
             barcode: string | null;
             unit: string;
@@ -162,18 +95,95 @@ export declare class ProductsService {
             ncm: string | null;
             cest: string | null;
             origem: number;
+        })[];
+        meta: {
+            total: number;
+            page: number;
+            lastPage: number;
+        };
+    }>;
+    create(data: ProductCreateDto): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        categoryId: string;
+        grupoTributacaoId: string | null;
+        shortCode: string | null;
+        barcode: string | null;
+        unit: string;
+        active: boolean;
+        priceCost: import("@prisma/client/runtime/library").Decimal;
+        priceSell: import("@prisma/client/runtime/library").Decimal;
+        stock: import("@prisma/client/runtime/library").Decimal;
+        ncm: string | null;
+        cest: string | null;
+        origem: number;
+    }>;
+    update(id: string, data: ProductUpdateDto): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        categoryId: string;
+        grupoTributacaoId: string | null;
+        shortCode: string | null;
+        barcode: string | null;
+        unit: string;
+        active: boolean;
+        priceCost: import("@prisma/client/runtime/library").Decimal;
+        priceSell: import("@prisma/client/runtime/library").Decimal;
+        stock: import("@prisma/client/runtime/library").Decimal;
+        ncm: string | null;
+        cest: string | null;
+        origem: number;
+    }>;
+    remove(id: string): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        categoryId: string;
+        grupoTributacaoId: string | null;
+        shortCode: string | null;
+        barcode: string | null;
+        unit: string;
+        active: boolean;
+        priceCost: import("@prisma/client/runtime/library").Decimal;
+        priceSell: import("@prisma/client/runtime/library").Decimal;
+        stock: import("@prisma/client/runtime/library").Decimal;
+        ncm: string | null;
+        cest: string | null;
+        origem: number;
+    }>;
+    addStock(productId: string, quantity: number, reason?: string): Promise<{
+        product: {
+            name: string;
+            id: string;
             createdAt: Date;
             updatedAt: Date;
+            categoryId: string;
+            grupoTributacaoId: string | null;
+            shortCode: string | null;
+            barcode: string | null;
+            unit: string;
+            active: boolean;
+            priceCost: import("@prisma/client/runtime/library").Decimal;
+            priceSell: import("@prisma/client/runtime/library").Decimal;
+            stock: import("@prisma/client/runtime/library").Decimal;
+            ncm: string | null;
+            cest: string | null;
+            origem: number;
         };
         quantityAdded: number;
     }>;
-    bulkEntry(tenantId: string, databaseUrl: string, items: BulkItem[]): Promise<{
+    bulkEntry(items: BulkItem[]): Promise<{
         success: boolean;
         processed: number;
         duplicates: string[];
         hasDuplicates: boolean;
     }>;
-    getSettings(tenantId: string, databaseUrl: string): Promise<TenantSettingsDto>;
-    saveSettings(tenantId: string, databaseUrl: string, data: TenantSettingsDto): Promise<TenantSettingsDto>;
+    getSettings(): Promise<TenantSettingsDto>;
+    saveSettings(data: TenantSettingsDto): Promise<TenantSettingsDto>;
 }
 export {};

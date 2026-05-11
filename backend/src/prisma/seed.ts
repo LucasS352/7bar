@@ -7,8 +7,8 @@ async function main() {
   const password = await bcrypt.hash('123456', 10);
   
   // Limpar tabelas caso já tenham dados
-  await prisma.user.deleteMany();
-  await prisma.tenant.deleteMany();
+  // await prisma.user.deleteMany();
+  // await prisma.tenant.deleteMany();
 
   const tenant = await prisma.tenant.create({
     data: {

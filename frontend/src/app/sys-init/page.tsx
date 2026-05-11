@@ -69,6 +69,7 @@ export default function SysInitPage() {
     }
   }, [user, navigate]);
 
+
   const loadTenants = async () => {
     setLoadingTenants(true);
     try {
@@ -299,6 +300,7 @@ export default function SysInitPage() {
                 <h1 className="text-3xl font-black bg-gradient-to-r from-violet-400 to-indigo-500 bg-clip-text text-transparent">Gestão de Tenants</h1>
                 <p className="text-zinc-400 mt-1">Gerencie os clientes SaaS, módulos e identidades visuais.</p>
               </div>
+              
               <button onClick={() => setStep("create")} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
                 <Building2 size={18} /> Novo Tenant
               </button>

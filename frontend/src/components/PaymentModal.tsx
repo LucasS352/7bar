@@ -2,13 +2,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
+import { useShift } from '@/contexts/ShiftContext';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { saveOfflineSale } from '@/lib/db';
 import type { OfflineSaleItemSnapshot, OfflineSalePayment } from '@/lib/db';
 import {
   CreditCard, Banknote, QrCode, X, Loader2, Plus, Trash2,
-  ShoppingBag, Receipt, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, User, WifiOff,
+  ShoppingBag, Receipt, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, User, WifiOff, Tag, Lock,
 } from 'lucide-react';
 
 type PayMode = 'simple' | 'nfce';
@@ -35,6 +36,7 @@ interface PaymentModalProps {
 export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }: PaymentModalProps) {
   const { total, items, clearCart } = useCartStore();
   const { user } = useAuthStore();
+  const { cashRegister, operator } = useShift();
 
   const [payments, setPayments] = useState<{ id: string; method: string; value: number; given: number }[]>([]);
   const [method, setMethod] = useState<'dinheiro' | 'pix' | 'credito' | 'debito'>('dinheiro');
@@ -48,17 +50,38 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
   const [nfcePolling, setNfcePolling] = useState(false);
   const [savedOffline, setSavedOffline] = useState(false);
 
+  // --- Desconto via PIN ---
+  const [discountModalOpen, setDiscountModalOpen] = useState(false);
+  const [discountPinInput, setDiscountPinInput] = useState('');
+  const [discountValue, setDiscountValue] = useState(0); // valor de desconto em R$
+  const [verifyingPin, setVerifyingPin] = useState(false);
+  const [pinVerified, setPinVerified] = useState(false);
+  const [pendingDiscountStr, setPendingDiscountStr] = useState('');
+
   const totalPaid = payments.reduce((acc, p) => acc + p.value, 0);
-  const remaining = Math.max(0, Math.round((total - totalPaid) * 100) / 100);
+  const effectiveTotal = Math.max(0, total - discountValue);
+  const remaining = Math.max(0, Math.round((effectiveTotal - totalPaid) * 100) / 100);
   const change = payments.filter(p => p.method === 'dinheiro').reduce((acc, p) => acc + (p.given - p.value), 0);
 
-  const [autoNfce, setAutoNfce] = useState(() => localStorage.getItem('7bar_auto_nfce') === 'true');
+  const [autoNfce, setAutoNfce] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('7bar_auto_nfce') === 'true';
+    return false;
+  });
+
+
 
   useEffect(() => {
     if (isOpen) {
-      setPayments([]); setMethod('dinheiro'); setInputValue(total.toFixed(2));
+      setPayments([]); setMethod('dinheiro'); setInputValue(effectiveTotal.toFixed(2));
       setPayMode('simple'); setShowConsumerForm(false); setCustomerCpf(''); setCustomerName('');
       setSaleResult(null); setNfcePolling(false); setSavedOffline(false);
+      setDiscountValue(0); setDiscountPinInput(''); setPinVerified(false); setPendingDiscountStr('');
+      // Remove focus from the background search bar to prevent accidental typing
+      setTimeout(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }, 10);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -162,8 +185,9 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
       await saveOfflineSale({
         localId:     crypto.randomUUID(),
         createdAt:   new Date().toISOString(),
-        operatorId:  user?.id ?? 'unknown',
+        operatorId:  operator?.id ?? user?.id ?? 'unknown',
         tenantId:    user?.tenant ?? 'unknown',
+        cashRegisterId: cashRegister?.id,
         subtotal,
         discount,
         total,
@@ -187,6 +211,34 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
     }
   };
 
+  const handleVerifyDiscountPin = async () => {
+    if (!discountPinInput) { toast.error('Digite o PIN.'); return; }
+    setVerifyingPin(true);
+    try {
+      await api.post('/tenants/me/verify-discount-pin', { pin: discountPinInput });
+      setPinVerified(true);
+      setDiscountPinInput('');
+    } catch {
+      toast.error('PIN incorreto. Tente novamente.');
+      setDiscountPinInput('');
+    } finally {
+      setVerifyingPin(false);
+    }
+  };
+
+  const handleApplyDiscount = () => {
+    const val = parseFloat(pendingDiscountStr);
+    if (isNaN(val) || val < 0) { toast.error('Valor inválido.'); return; }
+    if (val >= total) { toast.error('Desconto não pode ser igual ou maior que o total.'); return; }
+    setDiscountValue(val);
+    setPayments([]);
+    setInputValue((total - val).toFixed(2));
+    setDiscountModalOpen(false);
+    setPinVerified(false);
+    setPendingDiscountStr('');
+    toast.success(`Desconto de R$ ${val.toFixed(2)} aplicado!`);
+  };
+
   const handleConfirm = async (mode: PayMode) => {
     if (remaining > 0) { toast.error(`Falta R$ ${remaining.toFixed(2)} para finalizar.`); return; }
     setLoading(true); setPayMode(mode);
@@ -194,6 +246,9 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
       const body = {
         items: items.map(i => ({ productId: i.id, quantity: i.quantity, priceUnit: i.priceSell })),
         payments: payments.map(p => ({ method: p.method, value: p.value, troco: Math.max(0, p.given - p.value) })),
+        discount: discountValue,
+        cashRegisterId: cashRegister?.id,
+        operatorId: operator?.id ?? user?.id,
         emitirNfce: mode === 'nfce',
         ...(mode === 'nfce' ? { customerCpf: customerCpf || undefined, customerName: customerName || undefined } : {}),
       };
@@ -208,6 +263,79 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
   };
 
   if (!isOpen) return null;
+
+  // ── Modal de desconto via PIN ────────────────────────────────────────────
+  const DiscountModal = discountModalOpen ? (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-xs shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="p-5 border-b border-zinc-800 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center">
+            <Tag size={18} className="text-amber-400" />
+          </div>
+          <div>
+            <h4 className="font-bold text-white">Aplicar Desconto</h4>
+            <p className="text-xs text-zinc-500">{pinVerified ? 'Digite o valor do desconto' : 'Digite o PIN de autorização'}</p>
+          </div>
+          <button onClick={() => setDiscountModalOpen(false)} className="ml-auto text-zinc-500 hover:text-zinc-300">
+            <X size={18} />
+          </button>
+        </div>
+
+        {!pinVerified ? (
+          <div className="p-5 space-y-4">
+            <div className="flex items-center gap-2 justify-center text-zinc-400 text-sm">
+              <Lock size={14} /> PIN do Gerente necessário
+            </div>
+            <input
+              type="password"
+              value={discountPinInput}
+              onChange={e => setDiscountPinInput(e.target.value.replace(/\D/g, '').slice(0, 8))}
+              onKeyDown={e => e.key === 'Enter' && handleVerifyDiscountPin()}
+              placeholder="••••"
+              autoFocus
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white text-center text-2xl font-mono tracking-[0.5em] focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+              maxLength={8}
+            />
+            <button
+              onClick={handleVerifyDiscountPin}
+              disabled={verifyingPin || !discountPinInput}
+              className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-bold transition active:scale-95"
+            >
+              {verifyingPin ? <Loader2 size={18} className="animate-spin mx-auto" /> : 'Confirmar PIN'}
+            </button>
+          </div>
+        ) : (
+          <div className="p-5 space-y-4">
+            <div className="flex items-center gap-2 justify-center text-emerald-400 text-sm font-semibold">
+              <CheckCircle2 size={14} /> PIN correto! Autorizado.
+            </div>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">R$</span>
+              <input
+                type="number"
+                value={pendingDiscountStr}
+                onChange={e => setPendingDiscountStr(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleApplyDiscount()}
+                placeholder="0,00"
+                autoFocus
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-xl font-bold text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
+            <p className="text-xs text-zinc-500 text-center">
+              Total atual: <strong className="text-white">R$ {total.toFixed(2)}</strong>
+            </p>
+            <button
+              onClick={handleApplyDiscount}
+              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition active:scale-95"
+            >
+              Aplicar Desconto
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  ) : null;
+
 
   // ── Tela: Venda salva offline ────────────────────────────────────────────
   if (savedOffline) {
@@ -235,6 +363,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
       </div>
     );
   }
+
 
   // ── Tela: Resultado online ───────────────────────────────────────────────
   if (saleResult) {
@@ -304,6 +433,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
   // ── Tela principal ───────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+
       <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="flex justify-between items-center p-6 border-b border-zinc-800 bg-zinc-900/50">
           <div>
@@ -345,6 +475,13 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
                   />
                 </div>
                 <button onClick={handleAddPayment} disabled={remaining <= 0} className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white p-3.5 rounded-xl transition flex-shrink-0"><Plus size={22} /></button>
+                <button
+                  onClick={() => { setDiscountModalOpen(true); setPinVerified(false); setDiscountPinInput(''); }}
+                  className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-500/40 text-amber-400 p-3.5 rounded-xl transition flex-shrink-0"
+                  title="Aplicar desconto (requer PIN)"
+                >
+                  <Tag size={20} />
+                </button>
               </div>
               {method === 'dinheiro' && parseFloat(inputValue) > remaining && remaining > 0 && (
                 <p className="text-emerald-400/80 text-xs mt-2 italic">Troco a devolver: R$ {(parseFloat(inputValue) - remaining).toFixed(2)}</p>
@@ -371,8 +508,18 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
             <div>
               <div className="flex justify-between items-center mb-4">
-                <span className="text-zinc-400 font-medium">Total da Venda</span>
-                <span className="text-2xl font-black text-white">R$ {total.toFixed(2)}</span>
+                <div>
+                  <span className="text-zinc-400 font-medium">Total da Venda</span>
+                  {discountValue > 0 && (
+                    <p className="text-xs text-zinc-500 line-through">R$ {total.toFixed(2)}</p>
+                  )}
+                </div>
+                <div className="text-right">
+                  {discountValue > 0 && (
+                    <span className="text-xs text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded mr-2">-R$ {discountValue.toFixed(2)}</span>
+                  )}
+                  <span className="text-2xl font-black text-white">R$ {effectiveTotal.toFixed(2)}</span>
+                </div>
               </div>
               <div className="space-y-2 mb-4 max-h-40 overflow-y-auto custom-scrollbar">
                 {payments.length === 0 && <p className="text-zinc-600 text-sm text-center py-4 border border-dashed border-zinc-800 rounded-lg">Nenhum pagamento lançado</p>}
@@ -443,6 +590,9 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
           </div>
         </div>
       </div>
+      {DiscountModal}
     </div>
   );
 }
+
+

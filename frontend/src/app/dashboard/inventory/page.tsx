@@ -42,8 +42,11 @@ export default function InventoryDashboard() {
 
   const fetchProducts = useCallback(() => {
     setLoading(true);
-    api.get<Product[]>('/products')
-      .then(res => setProducts(res.data))
+    api.get('/products')
+      .then(res => {
+        const data = Array.isArray(res.data) ? res.data : (res.data as any).data;
+        setProducts(data || []);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);

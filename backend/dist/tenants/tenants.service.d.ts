@@ -1,8 +1,11 @@
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
+import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { ProvisionTenantDto } from './provision-tenant.dto';
 export declare class TenantsService {
     private heartPrisma;
-    constructor(heartPrisma: HeartPrismaService);
+    private tenantManager;
+    private readonly logger;
+    constructor(heartPrisma: HeartPrismaService, tenantManager: TenantConnectionManager);
     findAll(): import("src/generated/heart-client").Prisma.PrismaPromise<({
         users: {
             name: string;
@@ -10,11 +13,11 @@ export declare class TenantsService {
             createdAt: Date;
             updatedAt: Date;
             active: boolean;
+            pin: string | null;
             email: string;
             tenantId: string;
             password: string;
             role: string;
-            pin: string | null;
         }[];
     } & {
         name: string;
@@ -141,4 +144,8 @@ export declare class TenantsService {
         };
     }>;
     private seedTenantProducts;
+    setDiscountPin(tenantId: string, databaseUrl: string, pin: string): Promise<{
+        message: string;
+    }>;
+    verifyDiscountPin(tenantId: string, databaseUrl: string, pin: string): Promise<boolean>;
 }

@@ -1,65 +1,70 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 
 @Injectable()
 export class CashRegistersService {
-  constructor(private tenantManager: TenantConnectionManager) {}
+  constructor(
+    private tenantManager: TenantConnectionManager,
+    private tenantContext: TenantContextService
+  ) {}
 
-  async openRegister(tenantId: string, databaseUrl: string, operatorId: string, openingValue: number) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
-
-    const existing = await prisma.cashRegister.findFirst({
-      where: { operatorId, status: 'open' }
-    });
-
-    if (existing) {
-      throw new BadRequestException('Você já possui um caixa aberto.');
-    }
-
-    return prisma.cashRegister.create({
-      data: {
-        operatorId,
-        openingValue,
-        status: 'open'
-      }
-    });
+  private async getPrisma() {
+    const { tenantId, databaseUrl } = this.tenantContext.get();
+    return this.tenantManager.getTenantClient(tenantId, databaseUrl);
   }
 
-  async closeRegister(tenantId: string, databaseUrl: string, id: string, closingValue: number) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async openRegister(openingValue: number, operatorId?: string) {
+    try {
+      const { userId } = this.tenantContext.get();
+      const prisma = await this.getPrisma();
+
+      // Se não vier operatorId do frontend, tenta usar o userId do token (fallback)
+      const currentOpId = operatorId || userId;
+
+      const existing = await prisma.cashRegister.findFirst({
+        where: { status: 'open' }
+      });
+
+      if (existing) {
+        throw new BadRequestException(`Já existe um caixa aberto (${existing.operatorId === currentOpId ? 'por você' : 'por outro operador'}). Feche-o antes de abrir um novo.`);
+      }
+
+      return await prisma.cashRegister.create({
+        data: {
+          operatorId: currentOpId,
+          openingValue,
+          status: 'open'
+        }
+      });
+    } catch (error: any) {
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException(`Erro no banco: ${error.message}`);
+    }
+  }
+
+  async closeRegister(id: string, closingValue: number) {
+    const prisma = await this.getPrisma();
     return prisma.cashRegister.update({
       where: { id },
       data: { closingValue, closingTime: new Date(), status: 'closed' }
     });
   }
 
-  async getCurrentRegister(tenantId: string, databaseUrl: string, operatorId: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async getCurrentRegister() {
+    const prisma = await this.getPrisma();
     const current = await prisma.cashRegister.findFirst({
-      where: { operatorId, status: 'open' }
+      where: { status: 'open' }
     });
 
     if (current) {
-      const today = new Date();
-      const sameDay =
-        current.openingTime.getDate() === today.getDate() &&
-        current.openingTime.getMonth() === today.getMonth() &&
-        current.openingTime.getFullYear() === today.getFullYear();
-
-      if (!sameDay) {
-        await prisma.cashRegister.update({
-          where: { id: current.id },
-          data: { status: 'closed', closingTime: new Date() }
-        });
-        return null;
-      }
       return current;
     }
     return null;
   }
 
-  async addMovement(tenantId: string, databaseUrl: string, registerId: string, type: 'IN' | 'OUT', value: number, reason?: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async addMovement(registerId: string, type: 'IN' | 'OUT', value: number, reason?: string) {
+    const prisma = await this.getPrisma();
     const register = await prisma.cashRegister.findUnique({ where: { id: registerId } });
     if (!register || register.status !== 'open') throw new BadRequestException('Caixa fechado ou inexistente');
 
@@ -68,18 +73,18 @@ export class CashRegistersService {
     });
   }
 
-  async findAll(tenantId: string, databaseUrl: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async findAll() {
+    const prisma = await this.getPrisma();
     return prisma.cashRegister.findMany({ orderBy: { openingTime: 'desc' } });
   }
 
-  async getReport(tenantId: string, databaseUrl: string, id: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async getReport(id: string) {
+    const prisma = await this.getPrisma();
     const register = await prisma.cashRegister.findUnique({ where: { id } });
     if (!register) throw new BadRequestException('Caixa não encontrado');
 
     const sales = await prisma.sale.findMany({
-      where: { createdAt: { gte: register.openingTime, lte: register.closingTime || new Date() } },
+      where: { cashRegisterId: id },
       include: { payments: true, items: { include: { product: true } } },
       orderBy: { createdAt: 'desc' }
     });

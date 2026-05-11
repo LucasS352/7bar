@@ -4,12 +4,12 @@ const prisma = new PrismaClient();
 
 async function main() {
   // Limpar tabelas caso já exista dados (evita duplicação ao rodar o seed)
-  await prisma.saleItem.deleteMany();
-  await prisma.payment.deleteMany();
-  await prisma.sale.deleteMany();
-  await prisma.inventoryLog.deleteMany();
-  await prisma.product.deleteMany();
-  await prisma.category.deleteMany();
+  // await prisma.saleItem.deleteMany();
+  // await prisma.payment.deleteMany();
+  // await prisma.sale.deleteMany();
+  // await prisma.inventoryLog.deleteMany();
+  // await prisma.product.deleteMany();
+  // await prisma.category.deleteMany();
 
   const catCervejas = await prisma.category.create({ data: { name: 'Cervejas' } });
   const catDestilados = await prisma.category.create({ data: { name: 'Destilados' } });

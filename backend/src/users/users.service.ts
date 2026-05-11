@@ -55,6 +55,7 @@ export class UsersService {
         email: data.email,
         password: hashedPassword,
         role: data.role || 'operator',
+        pin: data.pin ? await bcrypt.hash(data.pin, 10) : null,
         tenantId
       },
       select: {
@@ -79,6 +80,40 @@ export class UsersService {
       where: { id },
       data: { active: !user.active },
       select: { id: true, active: true }
+    });
+  }
+
+  async update(tenantId: string, id: string, data: any) {
+    const user = await this.heartPrisma.user.findFirst({
+      where: { id, tenantId }
+    });
+
+    if (!user) throw new NotFoundException('Usuário não encontrado.');
+
+    const updateData: any = {
+      name: data.name,
+      email: data.email,
+      role: data.role,
+    };
+
+    if (data.password) {
+      updateData.password = await bcrypt.hash(data.password, 10);
+    }
+    
+    if (data.pin) {
+      updateData.pin = await bcrypt.hash(data.pin, 10);
+    }
+
+    return this.heartPrisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+      }
     });
   }
 }

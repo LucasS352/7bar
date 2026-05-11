@@ -10,7 +10,7 @@ async function bootstrap() {
     app.setGlobalPrefix('api');
     const port = process.env.PORT ?? 3520;
     await app.listen(port, '0.0.0.0');
-    logger.log(`🚀 PDV 7Bar rodando em: http://localhost:${port}/api`);
+    logger.log(`🚀 PDV Pro rodando em: http://localhost:${port}/api`);
 }
 bootstrap();
 //# sourceMappingURL=main.js.map

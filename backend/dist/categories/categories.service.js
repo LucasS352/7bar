@@ -12,24 +12,30 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CategoriesService = void 0;
 const common_1 = require("@nestjs/common");
 const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
+const tenant_context_service_1 = require("../prisma/tenant-context.service");
 let CategoriesService = class CategoriesService {
-    constructor(tenantManager) {
+    constructor(tenantManager, tenantContext) {
         this.tenantManager = tenantManager;
+        this.tenantContext = tenantContext;
     }
-    async findAll(tenantId, databaseUrl) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async getPrisma() {
+        const { tenantId, databaseUrl } = this.tenantContext.get();
+        return this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    }
+    async findAll() {
+        const prisma = await this.getPrisma();
         return prisma.category.findMany();
     }
-    async create(tenantId, databaseUrl, data) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async create(data) {
+        const prisma = await this.getPrisma();
         return prisma.category.create({ data });
     }
-    async update(tenantId, databaseUrl, id, data) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async update(id, data) {
+        const prisma = await this.getPrisma();
         return prisma.category.update({ where: { id }, data });
     }
-    async remove(tenantId, databaseUrl, id) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async remove(id) {
+        const prisma = await this.getPrisma();
         const products = await prisma.product.findFirst({ where: { categoryId: id } });
         if (products) {
             throw new Error('Não é possível excluir uma categoria que possui produtos vinculados.');
@@ -40,6 +46,7 @@ let CategoriesService = class CategoriesService {
 exports.CategoriesService = CategoriesService;
 exports.CategoriesService = CategoriesService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [tenant_prisma_service_1.TenantConnectionManager])
+    __metadata("design:paramtypes", [tenant_prisma_service_1.TenantConnectionManager,
+        tenant_context_service_1.TenantContextService])
 ], CategoriesService);
 //# sourceMappingURL=categories.service.js.map

@@ -11,11 +11,11 @@ export declare class TenantsController {
             createdAt: Date;
             updatedAt: Date;
             active: boolean;
+            pin: string | null;
             email: string;
             tenantId: string;
             password: string;
             role: string;
-            pin: string | null;
         }[];
     } & {
         name: string;
@@ -176,6 +176,16 @@ export declare class TenantsController {
         };
     }>;
     validatePin(body: {
+        pin: string;
+    }): Promise<{
+        valid: boolean;
+    }>;
+    setDiscountPin(req: any, body: {
+        pin: string;
+    }): Promise<{
+        message: string;
+    }>;
+    verifyDiscountPin(req: any, body: {
         pin: string;
     }): Promise<{
         valid: boolean;

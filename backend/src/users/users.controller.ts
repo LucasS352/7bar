@@ -24,6 +24,14 @@ export class UsersController {
     return this.usersService.create(user.tenantId, body);
   }
 
+  @Patch(':id')
+  update(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
+    if (user.role !== 'admin') {
+      throw new UnauthorizedException('Somente administradores podem gerenciar a equipe.');
+    }
+    return this.usersService.update(user.tenantId, id, body);
+  }
+
   @Patch(':id/toggle-status')
   toggleStatus(@CurrentUser() user: any, @Param('id') id: string) {
     if (user.role !== 'admin') {

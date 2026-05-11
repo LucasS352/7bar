@@ -33,6 +33,12 @@ let UsersController = class UsersController {
         }
         return this.usersService.create(user.tenantId, body);
     }
+    update(user, id, body) {
+        if (user.role !== 'admin') {
+            throw new common_1.UnauthorizedException('Somente administradores podem gerenciar a equipe.');
+        }
+        return this.usersService.update(user.tenantId, id, body);
+    }
     toggleStatus(user, id) {
         if (user.role !== 'admin') {
             throw new common_1.UnauthorizedException('Somente administradores podem gerenciar a equipe.');
@@ -56,6 +62,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "create", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "update", null);
 __decorate([
     (0, common_1.Patch)(':id/toggle-status'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),

@@ -1,0 +1,184 @@
+import { Injectable } from '@nestjs/common';
+import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+
+@Injectable()
+export class DashboardService {
+  constructor(private tenantManager: TenantConnectionManager) {}
+
+  async getSummary(
+    tenantId: string,
+    databaseUrl: string,
+    startDate: string,
+    endDate: string,
+  ) {
+    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+
+    // ── Definir janelas de tempo ────────────────────────────────────────────
+    const now = new Date();
+
+    const nowBr = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const todayStr = nowBr.toLocaleDateString('en-CA'); // YYYY-MM-DD
+    const todayStart = new Date(`${todayStr}T00:00:00-03:00`);
+    const todayEnd   = new Date(`${todayStr}T23:59:59-03:00`);
+
+    // Início da semana (segunda-feira)
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
+    weekStart.setHours(0, 0, 0, 0);
+
+    // Semana anterior
+    const prevWeekStart = new Date(weekStart);
+    prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+    const prevWeekEnd = new Date(weekStart);
+    prevWeekEnd.setMilliseconds(-1);
+
+    // Início do mês
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // ── Janela de período customizado do filtro (Ajustado para fuso -03:00) ──
+    const periodStart = new Date(`${startDate}T00:00:00-03:00`);
+    const periodEnd   = new Date(`${endDate}T23:59:59-03:00`);
+
+    // ── 1. Caixa atual aberto ──────────────────────────────────────────────
+    const openRegister = await prisma.cashRegister.findFirst({
+      where: { status: 'open' },
+      include: { operator: { select: { name: true } } },
+      orderBy: { openingTime: 'desc' },
+    });
+
+    let currentRegisterRevenue = 0;
+    if (openRegister) {
+      const regSales = await prisma.sale.aggregate({
+        where: { cashRegisterId: openRegister.id },
+        _sum: { total: true },
+      });
+      currentRegisterRevenue = Number(regSales._sum.total ?? 0);
+    }
+
+    // ── 2. Faturamento de Hoje ─────────────────────────────────────────────
+    const todayAgg = await prisma.sale.aggregate({
+      where: { createdAt: { gte: todayStart, lte: todayEnd } },
+      _sum: { total: true },
+      _count: { id: true },
+    });
+
+    // ── 3. Faturamento da Semana ───────────────────────────────────────────
+    const weekAgg = await prisma.sale.aggregate({
+      where: { createdAt: { gte: weekStart, lte: todayEnd } },
+      _sum: { total: true },
+    });
+
+    const prevWeekAgg = await prisma.sale.aggregate({
+      where: { createdAt: { gte: prevWeekStart, lte: prevWeekEnd } },
+      _sum: { total: true },
+    });
+
+    const weekRevenue = Number(weekAgg._sum.total ?? 0);
+    const prevWeekRevenue = Number(prevWeekAgg._sum.total ?? 0);
+    const vsLastWeek = prevWeekRevenue > 0
+      ? ((weekRevenue - prevWeekRevenue) / prevWeekRevenue) * 100
+      : null;
+
+    // ── 4. Faturamento do Mês ──────────────────────────────────────────────
+    const monthAgg = await prisma.sale.aggregate({
+      where: { createdAt: { gte: monthStart, lte: todayEnd } },
+      _sum: { total: true },
+    });
+
+    // ── 5. Dados do período filtrado ──────────────────────────────────────
+    const periodSales = await prisma.sale.findMany({
+      where: { createdAt: { gte: periodStart, lte: periodEnd } },
+      include: {
+        payments: { select: { method: true, value: true } },
+        items: {
+          select: {
+            quantity: true,
+            priceUnit: true,
+            subtotal: true,
+            productName: true,
+            productId: true,
+          },
+        },
+      },
+    });
+
+    // Agrega pagamentos por método
+    const byPaymentMethod: Record<string, number> = {
+      dinheiro: 0, pix: 0, credito: 0, debito: 0,
+    };
+    periodSales.forEach(sale => {
+      sale.payments.forEach(p => {
+        const method = p.method as string;
+        byPaymentMethod[method] = (byPaymentMethod[method] ?? 0) + Number(p.value);
+      });
+    });
+
+    // Agrega vendas por hora
+    const byHour: Record<number, number> = {};
+    for (let h = 0; h < 24; h++) byHour[h] = 0;
+    periodSales.forEach(sale => {
+      // Ajusta para o fuso horário de Brasília (-3) para o gráfico de horas
+      const saleDate = new Date((sale as any).createdAt);
+      const brHour = new Date(saleDate.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getHours();
+      byHour[brHour] = (byHour[brHour] ?? 0) + Number((sale as any).total);
+    });
+
+    // Top 8 produtos
+    const productMap: Record<string, { name: string; qty: number; revenue: number }> = {};
+    periodSales.forEach(sale => {
+      sale.items.forEach(item => {
+        const key = item.productId as string;
+        const name = (item.productName as string) || 'Desconhecido';
+        if (!productMap[key]) productMap[key] = { name, qty: 0, revenue: 0 };
+        productMap[key].qty += Number(item.quantity);
+        productMap[key].revenue += Number(item.subtotal);
+      });
+    });
+
+    const periodRevenue = periodSales.reduce((acc, s) => acc + Number((s as any).total), 0);
+
+    const topProducts = Object.values(productMap)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 8)
+      .map(p => ({
+        name: p.name,
+        qty: p.qty,
+        revenue: p.revenue,
+        pct: periodRevenue > 0 ? (p.revenue / periodRevenue) * 100 : 0,
+      }));
+
+    const avgTicket = periodSales.length > 0
+      ? periodRevenue / periodSales.length
+      : 0;
+
+    return {
+      currentRegister: openRegister
+        ? {
+            total: currentRegisterRevenue,
+            operatorName: (openRegister as any).operator?.name ?? 'Operador',
+            cashRegisterId: openRegister.id,
+            openedAt: (openRegister as any).openingTime,
+          }
+        : null,
+      today: {
+        revenue: Number(todayAgg._sum.total ?? 0),
+        transactions: Number(todayAgg._count.id ?? 0),
+      },
+      week: {
+        revenue: weekRevenue,
+        vsLastWeek,
+      },
+      month: {
+        revenue: Number(monthAgg._sum.total ?? 0),
+      },
+      period: {
+        revenue: periodRevenue,
+        transactions: periodSales.length,
+        avgTicket,
+        byPaymentMethod,
+        byHour,
+        topProducts,
+      },
+    };
+  }
+}

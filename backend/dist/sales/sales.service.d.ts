@@ -1,17 +1,115 @@
 import { StreamableFile } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { NfceService } from '../nfce/nfce.service';
 export declare class SalesService {
     private tenantManager;
     private heartPrisma;
     private nfceService;
+    private tenantContext;
     private readonly logger;
-    constructor(tenantManager: TenantConnectionManager, heartPrisma: HeartPrismaService, nfceService: NfceService);
-    checkout(tenantId: string, databaseUrl: string, operatorId: string, data: any): Promise<any>;
+    constructor(tenantManager: TenantConnectionManager, heartPrisma: HeartPrismaService, nfceService: NfceService, tenantContext: TenantContextService);
+    private getPrisma;
+    checkout(data: any): Promise<any>;
     private dispararNfce;
     private atualizarStatusNfce;
-    findAll(tenantId: string, databaseUrl: string): Promise<({
+    findAll(page?: number, limit?: number): Promise<{
+        data: ({
+            customer: {
+                name: string;
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                phone: string;
+                cpfCnpj: string | null;
+                address: string | null;
+                reference: string | null;
+            } | null;
+            items: ({
+                product: {
+                    name: string;
+                    id: string;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    categoryId: string;
+                    grupoTributacaoId: string | null;
+                    shortCode: string | null;
+                    barcode: string | null;
+                    unit: string;
+                    active: boolean;
+                    priceCost: import("@prisma/client/runtime/library").Decimal;
+                    priceSell: import("@prisma/client/runtime/library").Decimal;
+                    stock: import("@prisma/client/runtime/library").Decimal;
+                    ncm: string | null;
+                    cest: string | null;
+                    origem: number;
+                };
+            } & {
+                id: string;
+                csosn: string | null;
+                cstIcms: string | null;
+                cfop: string | null;
+                aliqIcms: import("@prisma/client/runtime/library").Decimal;
+                cstPis: string;
+                aliqPis: import("@prisma/client/runtime/library").Decimal;
+                cstCofins: string;
+                aliqCofins: import("@prisma/client/runtime/library").Decimal;
+                unit: string;
+                ncm: string | null;
+                cest: string | null;
+                origem: number;
+                saleId: string;
+                productId: string;
+                productName: string;
+                quantity: import("@prisma/client/runtime/library").Decimal;
+                priceUnit: import("@prisma/client/runtime/library").Decimal;
+                discount: import("@prisma/client/runtime/library").Decimal;
+                subtotal: import("@prisma/client/runtime/library").Decimal;
+                valorIcms: import("@prisma/client/runtime/library").Decimal;
+                valorPis: import("@prisma/client/runtime/library").Decimal;
+                valorCofins: import("@prisma/client/runtime/library").Decimal;
+            })[];
+            payments: {
+                id: string;
+                saleId: string;
+                tPag: string;
+                method: string;
+                value: import("@prisma/client/runtime/library").Decimal;
+                troco: import("@prisma/client/runtime/library").Decimal;
+            }[];
+        } & {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            discount: import("@prisma/client/runtime/library").Decimal;
+            subtotal: import("@prisma/client/runtime/library").Decimal;
+            customerId: string | null;
+            operatorId: string | null;
+            cashRegisterId: string | null;
+            total: import("@prisma/client/runtime/library").Decimal;
+            status: string;
+            emitirNfce: boolean;
+            nfceStatus: string | null;
+            nfceNumero: number | null;
+            nfceSerie: number | null;
+            nfceChave: string | null;
+            nfceProtocolo: string | null;
+            nfceAutorizadaEm: Date | null;
+            nfceXml: string | null;
+            nfceQrcode: string | null;
+            nfceCodRejeicao: string | null;
+            nfceMotivoRejeicao: string | null;
+            consumidorCpf: string | null;
+            consumidorNome: string | null;
+        })[];
+        meta: {
+            total: number;
+            page: number;
+            lastPage: number;
+        };
+    }>;
+    getTodaySales(): Promise<({
         customer: {
             name: string;
             id: string;
@@ -82,6 +180,7 @@ export declare class SalesService {
         subtotal: import("@prisma/client/runtime/library").Decimal;
         customerId: string | null;
         operatorId: string | null;
+        cashRegisterId: string | null;
         total: import("@prisma/client/runtime/library").Decimal;
         status: string;
         emitirNfce: boolean;
@@ -98,94 +197,7 @@ export declare class SalesService {
         consumidorCpf: string | null;
         consumidorNome: string | null;
     })[]>;
-    getTodaySales(tenantId: string, databaseUrl: string): Promise<({
-        customer: {
-            name: string;
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            phone: string;
-            cpfCnpj: string | null;
-            address: string | null;
-            reference: string | null;
-        } | null;
-        items: ({
-            product: {
-                name: string;
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-                categoryId: string;
-                grupoTributacaoId: string | null;
-                shortCode: string | null;
-                barcode: string | null;
-                unit: string;
-                active: boolean;
-                priceCost: import("@prisma/client/runtime/library").Decimal;
-                priceSell: import("@prisma/client/runtime/library").Decimal;
-                stock: import("@prisma/client/runtime/library").Decimal;
-                ncm: string | null;
-                cest: string | null;
-                origem: number;
-            };
-        } & {
-            id: string;
-            csosn: string | null;
-            cstIcms: string | null;
-            cfop: string | null;
-            aliqIcms: import("@prisma/client/runtime/library").Decimal;
-            cstPis: string;
-            aliqPis: import("@prisma/client/runtime/library").Decimal;
-            cstCofins: string;
-            aliqCofins: import("@prisma/client/runtime/library").Decimal;
-            unit: string;
-            ncm: string | null;
-            cest: string | null;
-            origem: number;
-            saleId: string;
-            productId: string;
-            productName: string;
-            quantity: import("@prisma/client/runtime/library").Decimal;
-            priceUnit: import("@prisma/client/runtime/library").Decimal;
-            discount: import("@prisma/client/runtime/library").Decimal;
-            subtotal: import("@prisma/client/runtime/library").Decimal;
-            valorIcms: import("@prisma/client/runtime/library").Decimal;
-            valorPis: import("@prisma/client/runtime/library").Decimal;
-            valorCofins: import("@prisma/client/runtime/library").Decimal;
-        })[];
-        payments: {
-            id: string;
-            saleId: string;
-            tPag: string;
-            method: string;
-            value: import("@prisma/client/runtime/library").Decimal;
-            troco: import("@prisma/client/runtime/library").Decimal;
-        }[];
-    } & {
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        discount: import("@prisma/client/runtime/library").Decimal;
-        subtotal: import("@prisma/client/runtime/library").Decimal;
-        customerId: string | null;
-        operatorId: string | null;
-        total: import("@prisma/client/runtime/library").Decimal;
-        status: string;
-        emitirNfce: boolean;
-        nfceStatus: string | null;
-        nfceNumero: number | null;
-        nfceSerie: number | null;
-        nfceChave: string | null;
-        nfceProtocolo: string | null;
-        nfceAutorizadaEm: Date | null;
-        nfceXml: string | null;
-        nfceQrcode: string | null;
-        nfceCodRejeicao: string | null;
-        nfceMotivoRejeicao: string | null;
-        consumidorCpf: string | null;
-        consumidorNome: string | null;
-    })[]>;
-    getNfceStatus(tenantId: string, databaseUrl: string, saleId: string): Promise<{
+    getNfceStatus(saleId: string): Promise<{
         id: string;
         nfceStatus: string | null;
         nfceNumero: number | null;
@@ -197,9 +209,9 @@ export declare class SalesService {
         nfceCodRejeicao: string | null;
         nfceMotivoRejeicao: string | null;
     } | null>;
-    emitNfce(tenantId: string, databaseUrl: string, saleId: string): Promise<{
+    emitNfce(saleId: string): Promise<{
         message: string;
         status: string;
     }>;
-    exportNfceXmls(tenantId: string, databaseUrl: string, startDate: string, endDate: string): Promise<StreamableFile>;
+    exportNfceXmls(startDate: string, endDate: string): Promise<StreamableFile>;
 }

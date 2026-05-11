@@ -20,26 +20,26 @@ let SalesController = class SalesController {
     constructor(salesService) {
         this.salesService = salesService;
     }
-    checkout(req, body) {
-        return this.salesService.checkout(req.user.tenantId, req.user.databaseUrl, req.user.sub, body);
+    checkout(body) {
+        return this.salesService.checkout(body);
     }
-    findAll(req) {
-        return this.salesService.findAll(req.user.tenantId, req.user.databaseUrl);
+    findAll(page, limit) {
+        return this.salesService.findAll(Number(page || 1), Number(limit || 50));
     }
-    getTodaySales(req) {
-        return this.salesService.getTodaySales(req.user.tenantId, req.user.databaseUrl);
+    getTodaySales() {
+        return this.salesService.getTodaySales();
     }
-    getNfceStatus(req, id) {
-        return this.salesService.getNfceStatus(req.user.tenantId, req.user.databaseUrl, id);
+    getNfceStatus(id) {
+        return this.salesService.getNfceStatus(id);
     }
-    emitNfce(req, id) {
-        return this.salesService.emitNfce(req.user.tenantId, req.user.databaseUrl, id);
+    emitNfce(id) {
+        return this.salesService.emitNfce(id);
     }
-    async exportXmls(req, startDate, endDate, res) {
+    async exportXmls(startDate, endDate, res) {
         if (!startDate || !endDate) {
             throw new common_1.BadRequestException('As datas inicial e final são obrigatórias.');
         }
-        const stream = await this.salesService.exportNfceXmls(req.user.tenantId, req.user.databaseUrl, startDate, endDate);
+        const stream = await this.salesService.exportNfceXmls(startDate, endDate);
         res.set({
             'Content-Type': 'application/zip',
             'Content-Disposition': `attachment; filename="xmls_${startDate}_a_${endDate}.zip"`,
@@ -50,50 +50,46 @@ let SalesController = class SalesController {
 exports.SalesController = SalesController;
 __decorate([
     (0, common_1.Post)('checkout'),
-    __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Body)()),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], SalesController.prototype, "checkout", null);
 __decorate([
     (0, common_1.Get)(),
-    __param(0, (0, common_1.Request)()),
+    __param(0, (0, common_1.Query)('page')),
+    __param(1, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Number, Number]),
     __metadata("design:returntype", void 0)
 ], SalesController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)('today'),
-    __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], SalesController.prototype, "getTodaySales", null);
 __decorate([
     (0, common_1.Get)(':id/nfce-status'),
-    __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Param)('id')),
+    __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], SalesController.prototype, "getNfceStatus", null);
 __decorate([
     (0, common_1.Post)(':id/emit-nfce'),
-    __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Param)('id')),
+    __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], SalesController.prototype, "emitNfce", null);
 __decorate([
     (0, common_1.Get)('export/xmls'),
-    __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Query)('startDate')),
-    __param(2, (0, common_1.Query)('endDate')),
-    __param(3, (0, common_1.Res)()),
+    __param(0, (0, common_1.Query)('startDate')),
+    __param(1, (0, common_1.Query)('endDate')),
+    __param(2, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, String, Object]),
+    __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", Promise)
 ], SalesController.prototype, "exportXmls", null);
 exports.SalesController = SalesController = __decorate([

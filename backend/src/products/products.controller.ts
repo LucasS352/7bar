@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards, Patch, Query } from '@nestjs/common';
 import { ProductsService, TenantSettingsDto } from './products.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -16,50 +16,55 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
-  findAll(@CurrentUser() user: AuthUser) {
-    return this.productsService.findAll(user.tenantId, user.databaseUrl);
+  findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number
+  ) {
+    return this.productsService.findAll(
+      Number(page || 1), 
+      Number(limit || 50)
+    );
   }
 
   @Post()
-  create(@CurrentUser() user: AuthUser, @Body() body: any) {
-    return this.productsService.create(user.tenantId, user.databaseUrl, body);
+  create(@Body() body: any) {
+    return this.productsService.create(body);
   }
 
   @Post('bulk')
-  bulkEntry(@CurrentUser() user: AuthUser, @Body('items') items: any[]) {
-    return this.productsService.bulkEntry(user.tenantId, user.databaseUrl, items);
+  bulkEntry(@Body('items') items: any[]) {
+    return this.productsService.bulkEntry(items);
   }
 
   /** Entrada de estoque incremental — usa Prisma increment (sem condição de corrida) */
   @Post('add-stock/:id')
   addStock(
-    @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body('quantity') quantity: number,
     @Body('reason') reason?: string,
   ) {
-    return this.productsService.addStock(user.tenantId, user.databaseUrl, id, Number(quantity), reason);
+    return this.productsService.addStock(id, Number(quantity), reason);
   }
 
   /** Lê configurações globais do tenant (ex: allowNegativeStock) */
   @Get('settings')
-  getSettings(@CurrentUser() user: AuthUser): Promise<TenantSettingsDto> {
-    return this.productsService.getSettings(user.tenantId, user.databaseUrl);
+  getSettings(): Promise<TenantSettingsDto> {
+    return this.productsService.getSettings();
   }
 
   /** Salva configurações globais do tenant */
   @Patch('settings')
-  saveSettings(@CurrentUser() user: AuthUser, @Body() body: { allowNegativeStock: boolean }): Promise<TenantSettingsDto> {
-    return this.productsService.saveSettings(user.tenantId, user.databaseUrl, body);
+  saveSettings(@Body() body: { allowNegativeStock: boolean }): Promise<TenantSettingsDto> {
+    return this.productsService.saveSettings(body);
   }
 
   @Patch(':id')
-  update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() body: any) {
-    return this.productsService.update(user.tenantId, user.databaseUrl, id, body);
+  update(@Param('id') id: string, @Body() body: any) {
+    return this.productsService.update(id, body);
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return this.productsService.remove(user.tenantId, user.databaseUrl, id);
+  remove(@Param('id') id: string) {
+    return this.productsService.remove(id);
   }
 }

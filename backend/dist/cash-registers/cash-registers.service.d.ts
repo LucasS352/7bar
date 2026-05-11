@@ -1,8 +1,11 @@
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 export declare class CashRegistersService {
     private tenantManager;
-    constructor(tenantManager: TenantConnectionManager);
-    openRegister(tenantId: string, databaseUrl: string, operatorId: string, openingValue: number): Promise<{
+    private tenantContext;
+    constructor(tenantManager: TenantConnectionManager, tenantContext: TenantContextService);
+    private getPrisma;
+    openRegister(openingValue: number, operatorId?: string): Promise<{
         id: string;
         operatorId: string | null;
         status: string;
@@ -11,7 +14,7 @@ export declare class CashRegistersService {
         openingValue: import("@prisma/client/runtime/library").Decimal;
         closingValue: import("@prisma/client/runtime/library").Decimal | null;
     }>;
-    closeRegister(tenantId: string, databaseUrl: string, id: string, closingValue: number): Promise<{
+    closeRegister(id: string, closingValue: number): Promise<{
         id: string;
         operatorId: string | null;
         status: string;
@@ -20,7 +23,7 @@ export declare class CashRegistersService {
         openingValue: import("@prisma/client/runtime/library").Decimal;
         closingValue: import("@prisma/client/runtime/library").Decimal | null;
     }>;
-    getCurrentRegister(tenantId: string, databaseUrl: string, operatorId: string): Promise<{
+    getCurrentRegister(): Promise<{
         id: string;
         operatorId: string | null;
         status: string;
@@ -29,15 +32,15 @@ export declare class CashRegistersService {
         openingValue: import("@prisma/client/runtime/library").Decimal;
         closingValue: import("@prisma/client/runtime/library").Decimal | null;
     } | null>;
-    addMovement(tenantId: string, databaseUrl: string, registerId: string, type: 'IN' | 'OUT', value: number, reason?: string): Promise<{
+    addMovement(registerId: string, type: 'IN' | 'OUT', value: number, reason?: string): Promise<{
         id: string;
         createdAt: Date;
         type: string;
         reason: string | null;
-        value: import("@prisma/client/runtime/library").Decimal;
         cashRegisterId: string;
+        value: import("@prisma/client/runtime/library").Decimal;
     }>;
-    findAll(tenantId: string, databaseUrl: string): Promise<{
+    findAll(): Promise<{
         id: string;
         operatorId: string | null;
         status: string;
@@ -46,7 +49,7 @@ export declare class CashRegistersService {
         openingValue: import("@prisma/client/runtime/library").Decimal;
         closingValue: import("@prisma/client/runtime/library").Decimal | null;
     }[]>;
-    getReport(tenantId: string, databaseUrl: string, id: string): Promise<{
+    getReport(id: string): Promise<{
         register: {
             id: string;
             operatorId: string | null;
@@ -128,6 +131,7 @@ export declare class CashRegistersService {
                 subtotal: import("@prisma/client/runtime/library").Decimal;
                 customerId: string | null;
                 operatorId: string | null;
+                cashRegisterId: string | null;
                 total: import("@prisma/client/runtime/library").Decimal;
                 status: string;
                 emitirNfce: boolean;
@@ -149,8 +153,8 @@ export declare class CashRegistersService {
                 createdAt: Date;
                 type: string;
                 reason: string | null;
-                value: import("@prisma/client/runtime/library").Decimal;
                 cashRegisterId: string;
+                value: import("@prisma/client/runtime/library").Decimal;
             }[];
         };
     }>;

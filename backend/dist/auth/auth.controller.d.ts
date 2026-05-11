@@ -11,4 +11,8 @@ export declare class AuthController {
             tenant: any;
         };
     }>;
+    operatorLogin(user: any, body: {
+        operatorId: string;
+        pin: string;
+    }): Promise<any>;
 }

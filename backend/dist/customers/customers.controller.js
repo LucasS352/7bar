@@ -16,43 +16,39 @@ exports.CustomersController = void 0;
 const common_1 = require("@nestjs/common");
 const customers_service_1 = require("./customers.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
-const current_user_decorator_1 = require("../auth/current-user.decorator");
 let CustomersController = class CustomersController {
     constructor(customersService) {
         this.customersService = customersService;
     }
-    findAll(user) {
-        return this.customersService.findAll(user.tenantId, user.databaseUrl);
+    findAll() {
+        return this.customersService.findAll();
     }
-    findByPhone(user, phone) {
-        return this.customersService.findByPhone(user.tenantId, user.databaseUrl, phone);
+    findByPhone(phone) {
+        return this.customersService.findByPhone(phone);
     }
-    create(user, body) {
-        return this.customersService.create(user.tenantId, user.databaseUrl, body);
+    create(body) {
+        return this.customersService.create(body);
     }
 };
 exports.CustomersController = CustomersController;
 __decorate([
     (0, common_1.Get)(),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], CustomersController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)('phone/:phone'),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Param)('phone')),
+    __param(0, (0, common_1.Param)('phone')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], CustomersController.prototype, "findByPhone", null);
 __decorate([
     (0, common_1.Post)(),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Body)()),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], CustomersController.prototype, "create", null);
 exports.CustomersController = CustomersController = __decorate([

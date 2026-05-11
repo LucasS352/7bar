@@ -85,6 +85,7 @@ export interface OfflineSale {
   createdAt:  string;     // ISO 8601 — momento exato da venda
   operatorId: string;     // ID do usuário operador
   tenantId:   string;     // ID do tenant (Adega)
+  cashRegisterId?: string; // ID do caixa aberto no momento (se houver)
 
   // Valores financeiros
   subtotal: number;

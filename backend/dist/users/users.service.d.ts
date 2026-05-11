@@ -21,4 +21,11 @@ export declare class UsersService {
         id: string;
         active: boolean;
     }>;
+    update(tenantId: string, id: string, data: any): Promise<{
+        name: string;
+        id: string;
+        active: boolean;
+        email: string;
+        role: string;
+    }>;
 }

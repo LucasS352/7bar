@@ -1,16 +1,18 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '@/store/auth';
 import { useCartStore, Product } from '@/store/cart';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { Search, ShoppingCart, LogOut, PackageOpen, Minus, Plus, Trash2, LayoutDashboard, FileText, ArrowDownUp } from 'lucide-react';
 import { PaymentModal } from '@/components/PaymentModal';
-import { CashRegisterModal } from '@/components/CashRegisterModal';
 import { CloseRegisterModal } from '@/components/CloseRegisterModal';
 import { CashMovementModal } from '@/components/CashMovementModal';
+import { OperatorLoginModal } from '@/components/OperatorLoginModal';
+import { OpenShiftModal } from '@/components/OpenShiftModal';
+import { ShiftProvider, useShift } from '@/contexts/ShiftContext';
 
-export default function PosPage() {
+function PosPageContent() {
   const navigate = useNavigate();
   const { token, user, logout } = useAuthStore();
   const { items, total, addItem, updateQuantity, removeItem } = useCartStore();
@@ -21,22 +23,19 @@ export default function PosPage() {
   const [isCloseRegisterOpen, setIsCloseRegisterOpen] = useState(false);
   const [isMovementOpen, setIsMovementOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [register, setRegister] = useState<any>(undefined); // undefined = loading, null = closed, object = open
+
+  // Shift Management
+  const { operator, cashRegister, isLoading: isShiftLoading, logoutOperator } = useShift();
 
   useEffect(() => {
     if (!token) {
       navigate('/login');
       return;
     }
-    
-    // Check if Cash Register is open
-    api.get('/cash-registers/current')
-      .then(res => setRegister(res.data || null))
-      .catch(console.error);
 
     setIsLoading(true);
-    api.get('/products')
-      .then(res => setProducts(res.data))
+    api.get('/products?limit=1000') // PDV carrega mais itens para busca local fluida
+      .then(res => setProducts(res.data.data || []))
       .catch(err => console.error(err))
       .finally(() => setIsLoading(false));
   }, [token, navigate]);
@@ -56,7 +55,8 @@ export default function PosPage() {
   }, [items]);
 
   const handleLogout = () => {
-    logout();
+    logoutOperator(); // Clear operator shift session
+    logout(); // Clear main tenant session
     navigate('/login');
   };
 
@@ -73,13 +73,18 @@ export default function PosPage() {
     }
   };
 
-  const filtered = products.filter(p => 
-    p.active !== false && (
-      p.name.toLowerCase().includes(search.toLowerCase()) || 
-      p.barcode?.includes(search) || 
-      p.shortCode?.toLowerCase().includes(search.toLowerCase())
-    )
-  );
+  const filtered = useMemo(() => {
+    const s = search.toLowerCase().trim();
+    if (!s) return products.filter(p => p.active !== false);
+    
+    return products.filter(p => 
+      p.active !== false && (
+        p.name.toLowerCase().includes(s) || 
+        p.barcode?.includes(s) || 
+        p.shortCode?.toLowerCase().includes(s)
+      )
+    );
+  }, [products, search]);
 
   if (!token) return null; // Wait for redirect
 
@@ -96,26 +101,31 @@ export default function PosPage() {
             </h1>
             <p className="text-emerald-400 font-medium text-sm flex items-center gap-2 mt-1">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Operador: {user?.name} ({user?.tenant})
-              {register?.id && <span className="ml-2 text-xs bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 text-emerald-400 uppercase tracking-widest hidden sm:inline-block">Caixa Aberto</span>}
+              Operador: {operator?.name || user?.name} ({user?.tenant})
+              {cashRegister?.id && <span className="ml-2 text-xs bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 text-emerald-400 uppercase tracking-widest hidden sm:inline-block">Caixa Aberto</span>}
             </p>
           </div>
           
           <div className="flex items-center gap-2">
-            {register?.id && (
-              <button onClick={() => setIsMovementOpen(true)} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition font-semibold text-sm whitespace-nowrap">
-                <ArrowDownUp size={18} /> Sangria / Reposição
-              </button>
+            {cashRegister?.id ? (
+              <>
+                <button onClick={() => setIsMovementOpen(true)} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition font-semibold text-sm whitespace-nowrap">
+                  <ArrowDownUp size={18} /> Sangria / Reposição
+                </button>
+                <button onClick={() => setIsCloseRegisterOpen(true)} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-xl transition font-semibold text-sm whitespace-nowrap">
+                  <FileText size={18} /> Fechar Caixa
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => { logoutOperator(); navigate('/dashboard'); }} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition font-semibold">
+                  <LayoutDashboard size={18} /> Dashboard
+                </button>
+                <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition font-semibold">
+                  <LogOut size={18} /> Sair
+                </button>
+              </>
             )}
-            <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition font-semibold">
-              <LayoutDashboard size={18} /> Dashboard
-            </button>
-            <button onClick={() => setIsCloseRegisterOpen(true)} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-xl transition font-semibold text-sm whitespace-nowrap">
-              <FileText size={18} /> Relatório de Caixa
-            </button>
-            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition font-semibold">
-              <LogOut size={18} /> Sair
-            </button>
           </div>
         </div>
         
@@ -251,23 +261,44 @@ export default function PosPage() {
         </div>
       </div>
 
-      {register === null && <CashRegisterModal onOpen={setRegister} />}
+      {/* ─── MODAIS DE GESTÃO DE OPERADOR E TURNO ─── */}
+      {!isShiftLoading && !operator && (
+        <OperatorLoginModal onSuccess={() => {}} />
+      )}
+      
+      {!isShiftLoading && operator && !cashRegister && (
+        <OpenShiftModal onSuccess={() => {}} />
+      )}
+
+      {/* ─── MODAIS SECUNDÁRES ─── */}
       <CloseRegisterModal 
         isOpen={isCloseRegisterOpen} 
-        registerId={register?.id} 
-        onClose={(closed) => {
+        registerId={cashRegister?.id} 
+        onClose={async (closed) => {
+          const salesRes = await api.get('/sales?limit=50'); 
+          setSales(salesRes.data.data || []);
           setIsCloseRegisterOpen(false);
-          if (closed) setRegister(null); // Forces the open modal to show again or logout
+          if (closed) {
+            logoutOperator(); // Quando fecha o caixa, precisa sair do operador atual
+          }
         }} 
       />
-      <PaymentModal isOpen={isPaymentOpen} onClose={() => setIsPaymentOpen(false)} />
-      {register && (
+      <PaymentModal isOpen={isPaymentOpen} onClose={() => setIsPaymentOpen(false)} isOnline={true} />
+      {cashRegister && (
         <CashMovementModal 
           isOpen={isMovementOpen}
-          registerId={register.id}
+          registerId={cashRegister.id}
           onClose={() => setIsMovementOpen(false)}
         />
       )}
     </div>
+  );
+}
+
+export default function PosPage() {
+  return (
+    <ShiftProvider>
+      <PosPageContent />
+    </ShiftProvider>
   );
 }

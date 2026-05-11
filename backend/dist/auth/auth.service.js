@@ -47,10 +47,12 @@ const common_1 = require("@nestjs/common");
 const heart_prisma_service_1 = require("../prisma/heart-prisma.service");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
+const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
 let AuthService = class AuthService {
-    constructor(heartPrisma, jwtService) {
+    constructor(heartPrisma, jwtService, tenantManager) {
         this.heartPrisma = heartPrisma;
         this.jwtService = jwtService;
+        this.tenantManager = tenantManager;
     }
     async validateUser(email, pass) {
         const user = await this.heartPrisma.user.findUnique({
@@ -65,6 +67,19 @@ let AuthService = class AuthService {
             return result;
         }
         return null;
+    }
+    async validateOperatorPin(tenantId, databaseUrl, operatorId, pin) {
+        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+        const operator = await prisma.operator.findFirst({
+            where: { id: operatorId, active: true },
+        });
+        if (!operator || !operator.pin) {
+            throw new common_1.UnauthorizedException('Operador inválido ou PIN não configurado.');
+        }
+        if (await bcrypt.compare(pin, operator.pin)) {
+            return { id: operator.id, name: operator.name, role: 'operator' };
+        }
+        throw new common_1.UnauthorizedException('PIN incorreto.');
     }
     async login(user) {
         const payload = {
@@ -89,6 +104,7 @@ exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [heart_prisma_service_1.HeartPrismaService,
-        jwt_1.JwtService])
+        jwt_1.JwtService,
+        tenant_prisma_service_1.TenantConnectionManager])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

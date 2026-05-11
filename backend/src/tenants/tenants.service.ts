@@ -1,5 +1,6 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
+import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { exec } from 'child_process';
@@ -12,7 +13,12 @@ import { ProvisionTenantDto } from './provision-tenant.dto';
 
 @Injectable()
 export class TenantsService {
-  constructor(private heartPrisma: HeartPrismaService) {}
+  private readonly logger = new Logger(TenantsService.name);
+
+  constructor(
+    private heartPrisma: HeartPrismaService,
+    private tenantManager: TenantConnectionManager,
+  ) {}
 
   findAll() {
     return this.heartPrisma.tenant.findMany({ include: { users: true } });
@@ -154,7 +160,7 @@ export class TenantsService {
     } catch (err: any) {
       // Tentar limpar banco criado se migrate falhar
       await this.heartPrisma.$queryRawUnsafe(`DROP DATABASE IF EXISTS \`${sanitizedDbName}\``);
-      console.error('Erro no db push:', err.stdout, err.stderr);
+      this.logger.error(`Erro no provisionamento (db push) do tenant ${tenantName}: ${err.stdout} ${err.stderr}`);
       throw new BadRequestException('Erro ao criar tabelas no novo banco. Detalhe: ' + (err.stderr || err.message));
     }
 
@@ -185,7 +191,7 @@ export class TenantsService {
         await this.seedTenantProducts(tenantDbUrl);
       } catch (err) {
         // Seed falhou mas não desfaz — o sistema funciona sem produtos, admins podem cadastrar manualmente
-        console.warn('Aviso: seed de produtos falhou:', err.message);
+        this.logger.warn(`Aviso: seed de produtos para ${tenantName} falhou: ${err.message}`);
       }
     }
 
@@ -216,7 +222,7 @@ export class TenantsService {
         data: [
           { name: 'Cervejas' },
           { name: 'Destilados' },
-          { name: 'Conveniência' },
+          { name: 'Convenência' },
           { name: 'Energéticos' },
           { name: 'Refrigerantes e Sucos' },
           { name: 'Salgadinhos e Petiscos' },
@@ -232,7 +238,6 @@ export class TenantsService {
 
       await client.product.createMany({
         data: [
-          // CERVEJAS
           { name: 'Heineken Long Neck 330ml', priceSell: 6.90, priceCost: 4.80, stock: 120, categoryId: cat('Cervejas').id },
           { name: 'Heineken Latão 473ml', priceSell: 7.50, priceCost: 5.50, stock: 100, categoryId: cat('Cervejas').id },
           { name: 'Brahma Duplo Malte Latão 473ml', priceSell: 4.90, priceCost: 3.20, stock: 300, categoryId: cat('Cervejas').id },
@@ -242,7 +247,6 @@ export class TenantsService {
           { name: 'Stella Artois Long Neck 330ml', priceSell: 7.50, priceCost: 5.50, stock: 40, categoryId: cat('Cervejas').id },
           { name: 'Corona Long Neck 330ml', priceSell: 6.90, priceCost: 4.90, stock: 60, categoryId: cat('Cervejas').id },
           { name: 'Skol Lata 350ml', priceSell: 3.20, priceCost: 2.00, stock: 250, categoryId: cat('Cervejas').id },
-          // DESTILADOS
           { name: 'Absolut Vodka 1L', priceSell: 95.00, priceCost: 65.00, stock: 15, categoryId: cat('Destilados').id },
           { name: 'Smirnoff Vodka 998ml', priceSell: 49.90, priceCost: 35.00, stock: 30, categoryId: cat('Destilados').id },
           { name: 'Johnnie Walker Red Label 1L', priceSell: 109.90, priceCost: 80.00, stock: 20, categoryId: cat('Destilados').id },
@@ -250,34 +254,48 @@ export class TenantsService {
           { name: 'Gin Tanqueray 750ml', priceSell: 139.90, priceCost: 95.00, stock: 12, categoryId: cat('Destilados').id },
           { name: 'Cachaça 51 965ml', priceSell: 14.00, priceCost: 8.50, stock: 40, categoryId: cat('Destilados').id },
           { name: 'Tequila Jose Cuervo 750ml', priceSell: 129.90, priceCost: 90.00, stock: 15, categoryId: cat('Destilados').id },
-          // ENERGÉTICOS
           { name: 'Red Bull Lata 250ml', priceSell: 9.90, priceCost: 6.90, stock: 80, categoryId: cat('Energéticos').id },
           { name: 'Monster Energy 473ml', priceSell: 11.90, priceCost: 8.50, stock: 50, categoryId: cat('Energéticos').id },
           { name: 'Baly Tradicional 2L', priceSell: 15.00, priceCost: 10.00, stock: 40, categoryId: cat('Energéticos').id },
-          // REFRIS
           { name: 'Coca-Cola 2L', priceSell: 11.00, priceCost: 7.50, stock: 60, categoryId: cat('Refrigerantes e Sucos').id },
           { name: 'Guaraná Antarctica 2L', priceSell: 8.50, priceCost: 5.50, stock: 70, categoryId: cat('Refrigerantes e Sucos').id },
           { name: 'Coca-Cola Lata 350ml', priceSell: 5.00, priceCost: 3.20, stock: 120, categoryId: cat('Refrigerantes e Sucos').id },
           { name: 'Água Mineral s/ Gás 500ml', priceSell: 2.00, priceCost: 0.80, stock: 120, categoryId: cat('Refrigerantes e Sucos').id },
-          // SALGADINHOS
           { name: 'Ruffles Original 76g', priceSell: 8.50, priceCost: 5.50, stock: 30, categoryId: cat('Salgadinhos e Petiscos').id },
           { name: 'Doritos Queijo Nacho 76g', priceSell: 8.50, priceCost: 5.50, stock: 35, categoryId: cat('Salgadinhos e Petiscos').id },
-          // CONVENIÊNCIA
-          { name: 'Gelo Escama 5kg', priceSell: 12.00, priceCost: 6.00, stock: 30, categoryId: cat('Conveniência').id },
-          { name: 'Copo Descartável 400ml (50 un)', priceSell: 10.00, priceCost: 6.00, stock: 25, categoryId: cat('Conveniência').id },
-          // COMBOS
+          { name: 'Gelo Escama 5kg', priceSell: 12.00, priceCost: 6.00, stock: 30, categoryId: cat('Convenência').id },
+          { name: 'Copo Descartável 400ml (50 un)', priceSell: 10.00, priceCost: 6.00, stock: 25, categoryId: cat('Convenência').id },
           { name: 'Combo: Vodka Smirnoff + Baly 2L + Gelo', priceSell: 68.00, priceCost: 48.00, stock: 50, categoryId: cat('Copão / Combos').id },
           { name: 'Copão: Vodka e Energético 500ml', priceSell: 15.00, priceCost: 7.00, stock: 200, categoryId: cat('Copão / Combos').id },
-          // TABACARIA
           { name: 'Cigarro Marlboro Vermelho', priceSell: 12.50, priceCost: 10.00, stock: 50, categoryId: cat('Tabacaria').id },
           { name: 'Isqueiro Bic', priceSell: 6.00, priceCost: 3.50, stock: 80, categoryId: cat('Tabacaria').id },
         ],
         skipDuplicates: true,
       });
 
-      console.log(`✅ Produtos base populados no banco: ${databaseUrl}`);
+      this.logger.log(`✅ Produtos base populados no banco: ${databaseUrl}`);
     } finally {
       await client.$disconnect();
     }
+  }
+
+  /** Define/atualiza o PIN de desconto do PDV (armazenado na tabela tenant_settings do banco do tenant) */
+  async setDiscountPin(tenantId: string, databaseUrl: string, pin: string) {
+    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    const hashed = await bcrypt.hash(pin, 10);
+    await prisma.tenantSettings.upsert({
+      where: { id: 'singleton' },
+      update: { discountPin: hashed },
+      create: { id: 'singleton', discountPin: hashed },
+    });
+    return { message: 'PIN de desconto configurado com sucesso.' };
+  }
+
+  /** Verifica se o PIN de desconto é válido */
+  async verifyDiscountPin(tenantId: string, databaseUrl: string, pin: string): Promise<boolean> {
+    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    const settings = await prisma.tenantSettings.findUnique({ where: { id: 'singleton' } });
+    if (!settings?.discountPin) return false;
+    return bcrypt.compare(pin, settings.discountPin);
   }
 }

@@ -4,9 +4,11 @@ import { AuthController } from './auth.controller';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy, jwtConstants } from './jwt.strategy';
+import { TenantsModule } from '../tenants/tenants.module';
 
 @Module({
   imports: [
+    TenantsModule,
     PassportModule,
     JwtModule.register({
       secret: jwtConstants.secret,

@@ -16,100 +16,93 @@ exports.ProductsController = void 0;
 const common_1 = require("@nestjs/common");
 const products_service_1 = require("./products.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
-const current_user_decorator_1 = require("../auth/current-user.decorator");
 let ProductsController = class ProductsController {
     constructor(productsService) {
         this.productsService = productsService;
     }
-    findAll(user) {
-        return this.productsService.findAll(user.tenantId, user.databaseUrl);
+    findAll(page, limit) {
+        return this.productsService.findAll(Number(page || 1), Number(limit || 50));
     }
-    create(user, body) {
-        return this.productsService.create(user.tenantId, user.databaseUrl, body);
+    create(body) {
+        return this.productsService.create(body);
     }
-    bulkEntry(user, items) {
-        return this.productsService.bulkEntry(user.tenantId, user.databaseUrl, items);
+    bulkEntry(items) {
+        return this.productsService.bulkEntry(items);
     }
-    addStock(user, id, quantity, reason) {
-        return this.productsService.addStock(user.tenantId, user.databaseUrl, id, Number(quantity), reason);
+    addStock(id, quantity, reason) {
+        return this.productsService.addStock(id, Number(quantity), reason);
     }
-    getSettings(user) {
-        return this.productsService.getSettings(user.tenantId, user.databaseUrl);
+    getSettings() {
+        return this.productsService.getSettings();
     }
-    saveSettings(user, body) {
-        return this.productsService.saveSettings(user.tenantId, user.databaseUrl, body);
+    saveSettings(body) {
+        return this.productsService.saveSettings(body);
     }
-    update(user, id, body) {
-        return this.productsService.update(user.tenantId, user.databaseUrl, id, body);
+    update(id, body) {
+        return this.productsService.update(id, body);
     }
-    remove(user, id) {
-        return this.productsService.remove(user.tenantId, user.databaseUrl, id);
+    remove(id) {
+        return this.productsService.remove(id);
     }
 };
 exports.ProductsController = ProductsController;
 __decorate([
     (0, common_1.Get)(),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(0, (0, common_1.Query)('page')),
+    __param(1, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Number, Number]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Post)(),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Body)()),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "create", null);
 __decorate([
     (0, common_1.Post)('bulk'),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Body)('items')),
+    __param(0, (0, common_1.Body)('items')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Array]),
+    __metadata("design:paramtypes", [Array]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "bulkEntry", null);
 __decorate([
     (0, common_1.Post)('add-stock/:id'),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Param)('id')),
-    __param(2, (0, common_1.Body)('quantity')),
-    __param(3, (0, common_1.Body)('reason')),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)('quantity')),
+    __param(2, (0, common_1.Body)('reason')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, Number, String]),
+    __metadata("design:paramtypes", [String, Number, String]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "addStock", null);
 __decorate([
     (0, common_1.Get)('settings'),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], ProductsController.prototype, "getSettings", null);
 __decorate([
     (0, common_1.Patch)('settings'),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Body)()),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ProductsController.prototype, "saveSettings", null);
 __decorate([
     (0, common_1.Patch)(':id'),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Param)('id')),
-    __param(2, (0, common_1.Body)()),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Param)('id')),
+    __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "remove", null);
 exports.ProductsController = ProductsController = __decorate([

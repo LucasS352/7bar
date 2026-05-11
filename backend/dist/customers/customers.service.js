@@ -12,26 +12,33 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CustomersService = void 0;
 const common_1 = require("@nestjs/common");
 const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
+const tenant_context_service_1 = require("../prisma/tenant-context.service");
 let CustomersService = class CustomersService {
-    constructor(tenantManager) {
+    constructor(tenantManager, tenantContext) {
         this.tenantManager = tenantManager;
+        this.tenantContext = tenantContext;
     }
-    async findAll(tenantId, databaseUrl) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async getPrisma() {
+        const { tenantId, databaseUrl } = this.tenantContext.get();
+        return this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    }
+    async findAll() {
+        const prisma = await this.getPrisma();
         return prisma.customer.findMany();
     }
-    async findByPhone(tenantId, databaseUrl, phone) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async findByPhone(phone) {
+        const prisma = await this.getPrisma();
         return prisma.customer.findUnique({ where: { phone } });
     }
-    async create(tenantId, databaseUrl, data) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async create(data) {
+        const prisma = await this.getPrisma();
         return prisma.customer.create({ data });
     }
 };
 exports.CustomersService = CustomersService;
 exports.CustomersService = CustomersService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [tenant_prisma_service_1.TenantConnectionManager])
+    __metadata("design:paramtypes", [tenant_prisma_service_1.TenantConnectionManager,
+        tenant_context_service_1.TenantContextService])
 ], CustomersService);
 //# sourceMappingURL=customers.service.js.map

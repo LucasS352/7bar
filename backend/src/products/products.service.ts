@@ -1,5 +1,7 @@
 import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
+import { PrismaClient } from '@prisma/client';
 
 // ── DTOs internos (evitar `any`) ─────────────────────────────────────────────
 
@@ -57,7 +59,16 @@ export interface TenantSettingsDto {
 
 @Injectable()
 export class ProductsService {
-  constructor(private tenantManager: TenantConnectionManager) {}
+  constructor(
+    private tenantManager: TenantConnectionManager,
+    private tenantContext: TenantContextService
+  ) {}
+
+  /** Atalho para pegar o cliente prisma do contexto atual */
+  private async getPrisma() {
+    const { tenantId, databaseUrl } = this.tenantContext.get();
+    return this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  }
 
   // ── Utilitários Internos ──────────────────────────────────────────────────
 
@@ -85,17 +96,33 @@ export class ProductsService {
 
   // ── CRUD Padrão ───────────────────────────────────────────────────────────
 
-  async findAll(tenantId: string, databaseUrl: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
-    return prisma.product.findMany({
-      include: { category: true, grupoTributacao: true },
-      orderBy: { name: 'asc' },
-      take: 2000, // guard de segurança contra catálogos gigantes sem paginação
-    });
+  async findAll(page = 1, limit = 50) {
+    const prisma = await this.getPrisma();
+    const skip = (page - 1) * limit;
+
+    const [total, data] = await Promise.all([
+      prisma.product.count({ where: { active: true } }),
+      prisma.product.findMany({
+        where: { active: true },
+        include: { category: true, grupoTributacao: true },
+        orderBy: { name: 'asc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        lastPage: Math.ceil(total / limit),
+      },
+    };
   }
 
-  async create(tenantId: string, databaseUrl: string, data: ProductCreateDto) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async create(data: ProductCreateDto) {
+    const prisma = await this.getPrisma();
     const sanitized = this.sanitize(data);
 
     // ── Validação de input (A-2) ───────────────────────────────────────────
@@ -146,9 +173,9 @@ export class ProductsService {
     return product;
   }
 
-  async update(tenantId: string, databaseUrl: string, id: string, data: ProductUpdateDto) {
+  async update(id: string, data: ProductUpdateDto) {
     const sanitized = this.sanitize(data);
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    const prisma = await this.getPrisma();
 
     const oldProduct = await prisma.product.findUnique({ where: { id } });
     if (!oldProduct) throw new NotFoundException('Produto não encontrado.');
@@ -178,8 +205,8 @@ export class ProductsService {
   }
 
 
-  async remove(tenantId: string, databaseUrl: string, id: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async remove(id: string) {
+    const prisma = await this.getPrisma();
 
     // A-6: Produtos com histórico (vendas ou movimentações) não devem ser deletados fisicamente.
     // Soft delete preserva integridade do histórico fiscal e de estoque.
@@ -207,12 +234,12 @@ export class ProductsService {
    * Adiciona quantidade ao estoque de forma segura usando Prisma increment.
    * Executado dentro de uma transaction para evitar condições de corrida.
    */
-  async addStock(tenantId: string, databaseUrl: string, productId: string, quantity: number, reason?: string) {
+  async addStock(productId: string, quantity: number, reason?: string) {
     if (quantity <= 0) {
       throw new BadRequestException('A quantidade de entrada deve ser maior que zero.');
     }
 
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    const prisma = await this.getPrisma();
 
     return prisma.$transaction(async (tx) => {
       const product = await tx.product.findUnique({ where: { id: productId } });
@@ -239,8 +266,8 @@ export class ProductsService {
 
   // ── Importação em Lote (Fast Grid) ────────────────────────────────────────
 
-  async bulkEntry(tenantId: string, databaseUrl: string, items: BulkItem[]) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async bulkEntry(items: BulkItem[]) {
+    const prisma = await this.getPrisma();
 
     // Categoria fallback
     let fallbackCategory = await prisma.category.findFirst();
@@ -349,8 +376,8 @@ export class ProductsService {
   // ── Configurações do Tenant ───────────────────────────────────────────────
 
   /** Lê configurações globais do tenant (singleton via upsert) */
-  async getSettings(tenantId: string, databaseUrl: string): Promise<TenantSettingsDto> {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async getSettings(): Promise<TenantSettingsDto> {
+    const prisma = await this.getPrisma();
     const settings = await prisma.tenantSettings.upsert({
       where:  { id: 'singleton' },
       update: {},
@@ -360,8 +387,8 @@ export class ProductsService {
   }
 
   /** Atualiza configurações globais do tenant */
-  async saveSettings(tenantId: string, databaseUrl: string, data: TenantSettingsDto): Promise<TenantSettingsDto> {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async saveSettings(data: TenantSettingsDto): Promise<TenantSettingsDto> {
+    const prisma = await this.getPrisma();
     const settings = await prisma.tenantSettings.upsert({
       where:  { id: 'singleton' },
       update: { allowNegativeStock: data.allowNegativeStock },

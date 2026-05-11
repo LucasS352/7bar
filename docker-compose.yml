@@ -36,26 +36,27 @@ services:
       JWT_SECRET: ${JWT_SECRET:-7bar_jwt_super_secret_2025}
       SETUP_PIN: ${SETUP_PIN:-teltech352}
       NFCE_SERVICE_URL: http://nfce-service:80
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       mysql:
         condition: service_healthy
     networks:
       - 7bar_network
 
-  # ─── Frontend (Next.js) ────────────────────────────────────────────────────
+  # ─── Frontend (Vite/React PWA) ─────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://${SERVER_IP:-179.127.59.225}:3520
+        VITE_API_URL: http://${SERVER_IP:-179.127.59.225}:3520
     container_name: 7bar_frontend
     restart: unless-stopped
     ports:
       - "3521:3521"
     environment:
       PORT: 3521
-      NEXT_PUBLIC_API_URL: http://${SERVER_IP:-179.127.59.225}:3520
     depends_on:
       - backend
     networks:
@@ -84,6 +85,8 @@ services:
 volumes:
   mysql_data:
     name: 7bar_mysql_data
+  uploads_data:
+    name: 7bar_uploads_data
 
 networks:
   7bar_network:

@@ -105,6 +105,9 @@ export function useOfflineSync(): OfflineSyncState {
     offlineCreatedAt:   sale.createdAt,
     localId:            sale.localId,
 
+    operatorId:     sale.operatorId,
+    cashRegisterId: sale.cashRegisterId,
+
     customerCpf:  sale.customerCpf,
     customerName: sale.customerName,
   });

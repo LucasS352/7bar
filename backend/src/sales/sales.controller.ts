@@ -9,44 +9,45 @@ export class SalesController {
   constructor(private readonly salesService: SalesService) {}
 
   @Post('checkout')
-  checkout(@Request() req: any, @Body() body: any) {
-    return this.salesService.checkout(
-      req.user.tenantId,
-      req.user.databaseUrl,
-      req.user.sub, // operatorId vem do JWT
-      body,
-    );
+  checkout(@Body() body: any) {
+    return this.salesService.checkout(body);
   }
 
   @Get()
-  findAll(@Request() req: any) {
-    return this.salesService.findAll(req.user.tenantId, req.user.databaseUrl);
+  findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number
+  ) {
+    return this.salesService.findAll(
+      Number(page || 1), 
+      Number(limit || 50)
+    );
   }
 
   @Get('today')
-  getTodaySales(@Request() req: any) {
-    return this.salesService.getTodaySales(req.user.tenantId, req.user.databaseUrl);
+  getTodaySales() {
+    return this.salesService.getTodaySales();
   }
 
   /** Polling de status NFC-e — chamado pelo frontend a cada 2s */
   @Get(':id/nfce-status')
-  getNfceStatus(@Request() req: any, @Param('id') id: string) {
-    return this.salesService.getNfceStatus(req.user.tenantId, req.user.databaseUrl, id);
+  getNfceStatus(@Param('id') id: string) {
+    return this.salesService.getNfceStatus(id);
   }
 
   /** Solicitar emissão manual de NFC-e para uma venda já existente */
   @Post(':id/emit-nfce')
-  emitNfce(@Request() req: any, @Param('id') id: string) {
-    return this.salesService.emitNfce(req.user.tenantId, req.user.databaseUrl, id);
+  emitNfce(@Param('id') id: string) {
+    return this.salesService.emitNfce(id);
   }
 
   /** Exportar XMLs em lote para contabilidade */
   @Get('export/xmls')
-  async exportXmls(@Request() req: any, @Query('startDate') startDate: string, @Query('endDate') endDate: string, @Res() res: Response) {
+  async exportXmls(@Query('startDate') startDate: string, @Query('endDate') endDate: string, @Res() res: Response) {
     if (!startDate || !endDate) {
       throw new BadRequestException('As datas inicial e final são obrigatórias.');
     }
-    const stream = await this.salesService.exportNfceXmls(req.user.tenantId, req.user.databaseUrl, startDate, endDate);
+    const stream = await this.salesService.exportNfceXmls(startDate, endDate);
     res.set({
       'Content-Type': 'application/zip',
       'Content-Disposition': `attachment; filename="xmls_${startDate}_a_${endDate}.zip"`,

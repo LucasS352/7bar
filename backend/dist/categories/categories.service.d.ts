@@ -1,26 +1,29 @@
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 export declare class CategoriesService {
     private tenantManager;
-    constructor(tenantManager: TenantConnectionManager);
-    findAll(tenantId: string, databaseUrl: string): Promise<{
+    private tenantContext;
+    constructor(tenantManager: TenantConnectionManager, tenantContext: TenantContextService);
+    private getPrisma;
+    findAll(): Promise<{
         name: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
     }[]>;
-    create(tenantId: string, databaseUrl: string, data: any): Promise<{
+    create(data: any): Promise<{
         name: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
     }>;
-    update(tenantId: string, databaseUrl: string, id: string, data: any): Promise<{
+    update(id: string, data: any): Promise<{
         name: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
     }>;
-    remove(tenantId: string, databaseUrl: string, id: string): Promise<{
+    remove(id: string): Promise<{
         name: string;
         id: string;
         createdAt: Date;

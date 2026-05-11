@@ -125,13 +125,33 @@ model Customer {
 }
 
 // ------------------------------------------------------------
+//  Operator — colaboradores da empresa
+// ------------------------------------------------------------
+model Operator {
+  id        String   @id @default(uuid())
+  name      String
+  pin       String   // PIN hasheado do operador (ex: Julio)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sales         Sale[]
+  cashRegisters CashRegister[]
+
+  @@map("operators")
+}
+
+// ------------------------------------------------------------
 //  Sale — cabeçalho da venda + dados NFC-e
 // ------------------------------------------------------------
 model Sale {
-  id         String    @id @default(uuid())
-  customerId String?
-  customer   Customer? @relation(fields: [customerId], references: [id])
-  operatorId String?   // ID do usuário operador (vindo do heart)
+  id             String        @id @default(uuid())
+  customerId     String?
+  customer       Customer?     @relation(fields: [customerId], references: [id])
+  operatorId     String?       // ID do colaborador
+  operator       Operator?     @relation(fields: [operatorId], references: [id])
+  cashRegisterId String?
+  cashRegister   CashRegister? @relation(fields: [cashRegisterId], references: [id])
 
   // Valores
   subtotal Decimal @default(0) @db.Decimal(10, 2)
@@ -170,6 +190,7 @@ model Sale {
   items    SaleItem[]
   payments Payment[]
 
+  @@index([createdAt])
   @@map("sales")
 }
 
@@ -241,7 +262,8 @@ model Payment {
 // ------------------------------------------------------------
 model CashRegister {
   id           String    @id @default(uuid())
-  operatorId   String?   // ID do operador (vindo do heart DB) — nullable para compat. com registros antigos
+  operatorId   String?   // ID do colaborador
+  operator     Operator? @relation(fields: [operatorId], references: [id])
   openingTime  DateTime  @default(now())
   closingTime  DateTime?
   openingValue Decimal   @default(0) @db.Decimal(10, 2)
@@ -249,7 +271,9 @@ model CashRegister {
   status       String    @default("open") // open, closed
 
   movements CashMovement[]
+  sales     Sale[]
 
+  @@index([status])
   @@map("cash_registers")
 }
 
@@ -266,6 +290,7 @@ model CashMovement {
   reason    String?
   createdAt DateTime @default(now())
 
+  @@index([createdAt])
   @@map("cash_movements")
 }
 
@@ -308,6 +333,8 @@ model TenantSettings {
   id                 String  @id @default("singleton")
   /// Permite que o PDV finalize vendas mesmo com estoque zerado ou negativo
   allowNegativeStock Boolean @default(false)
+  /// PIN numérico (hasheado) para autorizar descontos no PDV
+  discountPin        String? 
 
   @@map("tenant_settings")
 }

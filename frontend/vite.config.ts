@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 // ============================================================
-//  Vite + React + PWA Config — 7bar PDV
+//  Vite + React + PWA Config — PDV Pro
 //  Substitui next.config.ts na migração para Vite
 // ============================================================
 
@@ -21,9 +21,9 @@ export default defineConfig({
 
       // Ponto de entrada do manifest
       manifest: {
-        name: '7bar — Ponto de Venda',
-        short_name: '7bar POS',
-        description: 'PDV para Adegas e Distribuidoras com suporte offline',
+        name: 'PDV Pro — Ponto de Venda',
+        short_name: 'PDV Pro',
+        description: 'Sistema de Ponto de Venda profissional com suporte offline',
         theme_color: '#0a0a0a',
         background_color: '#09090b',
         display: 'standalone',
@@ -65,7 +65,7 @@ export default defineConfig({
               url.pathname.startsWith('/api/cash-registers'),
             handler: 'NetworkFirst',
             options: {
-              cacheName: '7bar-api-critical',
+              cacheName: 'pdvpro-api-critical',
               networkTimeoutSeconds: 5, // timeout antes de cair pro cache
               expiration: {
                 maxEntries: 50,
@@ -84,7 +84,7 @@ export default defineConfig({
               request.destination === 'worker',
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: '7bar-static-assets',
+              cacheName: 'pdvpro-static-assets',
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 dias
@@ -99,7 +99,7 @@ export default defineConfig({
               request.destination === 'font',
             handler: 'CacheFirst',
             options: {
-              cacheName: '7bar-assets',
+              cacheName: 'pdvpro-assets',
               expiration: {
                 maxEntries: 60,
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 dias
@@ -135,12 +135,14 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        // Code splitting para melhor performance de cache
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          store:  ['zustand'],
-          ui:     ['lucide-react', 'framer-motion'],
-          db:     ['dexie'],
+        // Vite 8 (Rolldown) exige manualChunks como função, não objeto
+        manualChunks: (id: string) => {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('react-router-dom') || id.includes('react-dom') || id.includes('/react/')) return 'vendor';
+          if (id.includes('zustand'))           return 'store';
+          if (id.includes('lucide-react') || id.includes('framer-motion')) return 'ui';
+          if (id.includes('dexie'))             return 'db';
+          return undefined;
         },
       },
     },
