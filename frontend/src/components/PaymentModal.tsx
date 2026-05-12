@@ -146,7 +146,8 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
     if (remaining <= 0) { toast.error('Total já atingido.'); return; }
     if (method !== 'dinheiro' && val > remaining) { toast.error('Cartão/Pix: valor não pode exceder o saldo devedor.'); return; }
     const actualValue = method === 'dinheiro' && val > remaining ? remaining : val;
-    setPayments([...payments, { id: crypto.randomUUID(), method, value: actualValue, given: val }]);
+    const id = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    setPayments([...payments, { id, method, value: actualValue, given: val }]);
   };
 
   // ── Salva venda offline no IndexedDB (OFFLINE_CONTINGENCY) ──────────────
@@ -183,7 +184,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
       const discount = 0;
 
       await saveOfflineSale({
-        localId:     crypto.randomUUID(),
+        localId:     Math.random().toString(36).substring(2) + Date.now().toString(36),
         createdAt:   new Date().toISOString(),
         operatorId:  operator?.id ?? user?.id ?? 'unknown',
         tenantId:    user?.tenant ?? 'unknown',
