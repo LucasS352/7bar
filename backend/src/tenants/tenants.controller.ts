@@ -24,6 +24,15 @@ export class TenantsController {
     return this.tenantsService.findAll();
   }
 
+  /** Lista tenants protegida por PIN — usada pelo sys-init sem JWT */
+  @Get('setup/list')
+  async listByPin(@Request() req: any) {
+    const pin = req.headers['x-setup-pin'] || req.query['pin'];
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN inválido.');
+    return this.tenantsService.findAll();
+  }
+
   /**
    * Retorna dados completos do tenant do usuário logado (para tela de configurações)
    */

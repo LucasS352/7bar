@@ -51,6 +51,53 @@ export declare class TenantsController {
         certSenha: string | null;
         certValidade: Date | null;
     })[]>;
+    listByPin(req: any): Promise<({
+        users: {
+            name: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            active: boolean;
+            pin: string | null;
+            email: string;
+            tenantId: string;
+            password: string;
+            role: string;
+        }[];
+    } & {
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: string;
+        nfceSerie: number;
+        databaseUrl: string;
+        databaseName: string;
+        logoUrl: string | null;
+        modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
+        razaoSocial: string | null;
+        nomeFantasia: string | null;
+        cnpj: string | null;
+        ie: string | null;
+        im: string | null;
+        crt: number;
+        logradouro: string | null;
+        numero: string | null;
+        complemento: string | null;
+        bairro: string | null;
+        municipio: string | null;
+        codMunicipio: string | null;
+        uf: string | null;
+        cep: string | null;
+        telefone: string | null;
+        nfceAtivo: boolean;
+        nfceAmbiente: number;
+        nfceCsc: string | null;
+        nfceIdCsc: string | null;
+        certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
+        certSenha: string | null;
+        certValidade: Date | null;
+    })[]>;
     getMe(req: any): Promise<any>;
     updateMe(req: any, body: any): Promise<{
         name: string;

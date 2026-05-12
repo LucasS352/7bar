@@ -13,17 +13,19 @@ ENV VITE_API_URL=$VITE_API_URL
 
 RUN npm run build
 
-# ---- Production stage ----
-FROM node:20-alpine AS production
+# ---- Production stage (Nginx) ----
+# Nginx com proxy /api/ → backend para que imagens e uploads funcionem
+FROM nginx:alpine AS production
 
-WORKDIR /app
+# Remove config padrão do nginx
+RUN rm /etc/nginx/conf.d/default.conf
 
-ENV NODE_ENV=production
+# Copia nossa configuração com proxy para o backend
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-RUN npm install -g serve
-
-COPY --from=builder /app/dist ./dist
+# Copia o build do Vite
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 3521
 
-CMD ["serve", "-s", "dist", "-l", "3521"]
+CMD ["nginx", "-g", "daemon off;"]

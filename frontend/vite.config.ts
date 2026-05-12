@@ -13,11 +13,11 @@ export default defineConfig({
     react(),
 
     VitePWA({
-      // 'autoUpdate' registra e atualiza o SW automaticamente
+      // 'autoUpdate' instala e ativa o novo SW imediatamente sem prompt
       registerType: 'autoUpdate',
 
-      // Inclui workbox no bundle do dev (hotjar logs de cache)
-      devOptions: { enabled: true },
+      // Força o novo SW a ativar e assumir controle sem esperar a próxima visita
+      injectManifest: false,
 
       // Ponto de entrada do manifest
       manifest: {
@@ -75,19 +75,16 @@ export default defineConfig({
             },
           },
 
-          // ── Stale-While-Revalidate: Assets estáticos ─────────────────────
-          // Serve do cache imediatamente, atualiza em background
+        // ── Stale-While-Revalidate: fontes (NÃO scripts — o precache já versiona JS)
           {
             urlPattern: ({ request }) =>
-              request.destination === 'style' ||
-              request.destination === 'script' ||
-              request.destination === 'worker',
+              request.destination === 'style',
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'pdvpro-static-assets',
+              cacheName: 'pdvpro-styles',
               expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 dias
+                maxEntries: 30,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 dias
               },
             },
           },

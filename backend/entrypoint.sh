@@ -9,7 +9,7 @@ npx prisma db push --schema=prisma/heart.schema.prisma --accept-data-loss
 
 echo "🌱 Verificando se banco precisa de dados iniciais..."
 USER_COUNT=$(node -e "
-const { PrismaClient } = require('./prisma/generated/heart-client');
+const { PrismaClient } = require('./src/generated/heart-client');
 const p = new PrismaClient();
 p.user.count().then(c => { console.log(c); p.\$disconnect(); }).catch(() => { console.log(0); p.\$disconnect(); });
 ")

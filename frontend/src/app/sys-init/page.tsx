@@ -1,8 +1,8 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { api } from "@/lib/api";
+import { getFullUrl } from "@/lib/getFullUrl";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/store/auth";
 import { toast } from "sonner";
 import {
   ShieldCheck, Building2, User, Mail, Lock, Database, Loader2, CheckCircle2,
@@ -25,7 +25,6 @@ function slugify(text: string) {
 
 export default function SysInitPage() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
   const [step, setStep] = useState<Step>("pin");
 
   // ── TENANT LIST ───────────────────────────────────────────────────────
@@ -61,22 +60,19 @@ export default function SysInitPage() {
   const [modulos, setModulos] = useState<any>({});
   const [editLoading, setEditLoading] = useState(false);
 
-  // Check auth
-  useEffect(() => {
-    if (!user || (user.role !== "superadmin" && user.role !== "admin")) {
-      navigate("/login");
-      toast.error("Acesso restrito. Faça login com credenciais de administrador.");
-    }
-  }, [user, navigate]);
+  // Nota: sem redirect de auth — a segurança é garantida pelo PIN de 10 dígitos
 
 
   const loadTenants = async () => {
     setLoadingTenants(true);
     try {
-      const res = await api.get("/tenants");
+      const pin = pinDigits.join('');
+      const res = await api.get('/tenants/setup/list', {
+        headers: { 'x-setup-pin': pin },
+      });
       setTenants(res.data);
     } catch (err) {
-      toast.error("Erro ao carregar tenants.");
+      toast.error('Erro ao carregar tenants.');
     } finally {
       setLoadingTenants(false);
     }
@@ -354,7 +350,7 @@ export default function SysInitPage() {
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                               {t.logoUrl ? (
-                                <img src={t.logoUrl} alt="Logo" className="w-8 h-8 rounded object-cover bg-zinc-950" />
+                                <img src={getFullUrl(t.logoUrl)} alt="Logo" className="w-8 h-8 rounded object-cover bg-zinc-950" />
                               ) : (
                                 <div className="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center text-xs font-bold">{t.name?.charAt(0).toUpperCase()}</div>
                               )}
@@ -462,7 +458,7 @@ export default function SysInitPage() {
                           {logoFile ? (
                             <img src={URL.createObjectURL(logoFile)} alt="Preview" className="w-full h-full object-cover" />
                           ) : editingTenant.logoUrl ? (
-                            <img src={editingTenant.logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
+                            <img src={getFullUrl(editingTenant.logoUrl)} alt="Logo" className="w-full h-full object-contain p-1" />
                           ) : (
                             <ImageIcon size={30} className="text-zinc-700" />
                           )}

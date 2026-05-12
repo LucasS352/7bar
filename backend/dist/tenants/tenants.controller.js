@@ -30,6 +30,13 @@ let TenantsController = class TenantsController {
         }
         return this.tenantsService.findAll();
     }
+    async listByPin(req) {
+        const pin = req.headers['x-setup-pin'] || req.query['pin'];
+        const valid = await this.tenantsService.validatePin(pin);
+        if (!valid)
+            throw new common_1.UnauthorizedException('PIN inválido.');
+        return this.tenantsService.findAll();
+    }
     getMe(req) {
         return this.tenantsService.findById(req.user.tenantId);
     }
@@ -112,6 +119,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], TenantsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('setup/list'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], TenantsController.prototype, "listByPin", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('me'),

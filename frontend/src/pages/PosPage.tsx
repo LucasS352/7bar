@@ -16,6 +16,7 @@ import {
   Search, ShoppingCart, LogOut, PackageOpen, Minus, Plus, Trash2,
   LayoutDashboard, FileText, ArrowDownUp, Database,
 } from 'lucide-react';
+import { getFullUrl } from '@/lib/getFullUrl';
 
 function PosPageContent() {
   const navigate = useNavigate();
@@ -132,7 +133,7 @@ function PosPageContent() {
             {tenantConfig === null ? (
                <div className="h-12 w-32 bg-zinc-800/50 animate-pulse rounded-lg"></div>
             ) : tenantConfig?.logoUrl ? (
-              <img src={tenantConfig.logoUrl} alt="Logo" className="h-16 object-contain drop-shadow-md" />
+              <img src={getFullUrl(tenantConfig.logoUrl)} alt="Logo" className="h-16 object-contain drop-shadow-md" />
             ) : (
               <h1 className="text-3xl font-black bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
                 {tenantConfig?.nomeFantasia || tenantConfig?.razaoSocial || 'PDV'}

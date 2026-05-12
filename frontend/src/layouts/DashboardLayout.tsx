@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { api } from '@/lib/api';
+import { getFullUrl } from '@/lib/getFullUrl';
 
 export function DashboardLayout() {
   const { user, token, logout } = useAuthStore();
@@ -37,7 +38,7 @@ export function DashboardLayout() {
           {tenantConfig === null ? (
              <div className="h-10 w-32 bg-zinc-800/50 animate-pulse rounded-lg"></div>
           ) : tenantConfig?.logoUrl ? (
-            <img src={tenantConfig.logoUrl} alt="Logo" className="h-20 w-full object-contain drop-shadow-md" />
+            <img src={getFullUrl(tenantConfig.logoUrl)} alt="Logo" className="h-20 w-full object-contain drop-shadow-md" />
           ) : (
             <h1 className="text-2xl font-black bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
               {tenantConfig?.nomeFantasia || tenantConfig?.razaoSocial || 'Admin'}

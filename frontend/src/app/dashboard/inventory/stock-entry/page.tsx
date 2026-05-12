@@ -35,8 +35,10 @@ export default function StockEntryPage() {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<Product[]>('/products');
-      setProducts(res.data.filter(p => p !== null));
+      const res = await api.get('/products');
+      // A API retorna { data: [...], total, page } — extraímos o array
+      const list = (res.data as any)?.data ?? res.data ?? [];
+      setProducts((list as Product[]).filter(p => p !== null));
     } catch {
       toast.error('Erro ao carregar produtos.');
     } finally {

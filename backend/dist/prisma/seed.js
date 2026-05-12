@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-const heart_client_1 = require("../../prisma/generated/heart-client");
+const heart_client_1 = require("../generated/heart-client");
 const bcrypt = __importStar(require("bcrypt"));
 const prisma = new heart_client_1.PrismaClient();
 async function main() {
