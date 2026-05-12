@@ -73,7 +73,7 @@ services:
     restart: unless-stopped
     # Não expõe porta externa — comunicação interna apenas
     ports:
-      - "8080:80"
+      - "3522:80"
     networks:
       - 7bar_network
     healthcheck:
