@@ -33,6 +33,12 @@ export default defineConfig({
         lang: 'pt-BR',
         icons: [
           {
+            src: '/favicon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'any maskable',
+          },
+          {
             src: '/icons/icon-192x192.png',
             sizes: '192x192',
             type: 'image/png',
