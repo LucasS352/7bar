@@ -105,33 +105,32 @@ export default function InventoryDashboard() {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
 
-      {/* Header */}
-      <div className="flex justify-between items-center mb-2">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
           <Package className="text-blue-500" size={32} /> Controle de Estoque
         </h1>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           <Link
             to="/dashboard/inventory/categories"
-            className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition"
+            className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-3 md:px-4 py-2 md:py-2.5 rounded-xl font-bold flex items-center gap-2 transition flex-1 md:flex-none justify-center text-sm md:text-base"
           >
             Categorias
           </Link>
           <Link
             to="/dashboard/inventory/stock-entry"
-            className="bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-600/30 text-emerald-400 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition"
+            className="bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-600/30 text-emerald-400 px-3 md:px-5 py-2 md:py-2.5 rounded-xl font-bold flex items-center gap-2 transition flex-1 md:flex-none justify-center text-sm md:text-base"
           >
-            <PackagePlus size={20} /> Entrada de Estoque
+            <PackagePlus size={20} /> <span className="hidden sm:inline">Entrada de Estoque</span><span className="sm:hidden">Entrada</span>
           </Link>
           <Link
             to="/dashboard/inventory/purchases"
-            className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition"
+            className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl font-bold flex items-center gap-2 transition flex-1 md:flex-none justify-center text-sm md:text-base whitespace-nowrap"
           >
-            <Plus size={20} /> Novos Produtos (Fast Grid)
+            <Plus size={20} /> <span className="hidden sm:inline">Novos Produtos (Fast Grid)</span><span className="sm:hidden">Grid Lote</span>
           </Link>
           <button
             onClick={() => setIsAddOpen(true)}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition"
+            className="bg-blue-600 hover:bg-blue-500 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl font-bold flex items-center gap-2 transition flex-1 md:flex-none justify-center text-sm md:text-base whitespace-nowrap"
           >
             <Plus size={20} /> Cadastrar Un.
           </button>
@@ -164,22 +163,22 @@ export default function InventoryDashboard() {
       )}
 
       {/* Cards KPI */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-center">
-          <div className="text-zinc-400 font-medium text-sm flex items-center gap-2 mb-2"><Package size={16}/> SKUs / Físico</div>
-          <div className="text-2xl font-black text-white">{totalVarieties} <span className="text-sm font-medium text-zinc-500">tipos</span> / {totalItemsCount} <span className="text-sm font-medium text-zinc-500">unid.</span></div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center">
+          <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><Package size={16}/> SKUs / Físico</div>
+          <div className="text-xl md:text-2xl font-black text-white">{totalVarieties} <span className="text-xs md:text-sm font-medium text-zinc-500">tipos</span> / {totalItemsCount} <span className="text-xs md:text-sm font-medium text-zinc-500">unid.</span></div>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-rose-500/50">
-          <div className="text-zinc-400 font-medium text-sm flex items-center gap-2 mb-2"><BarChart3 size={16} className="text-rose-400"/> Custo Imobilizado</div>
-          <div className="text-2xl font-black text-rose-400">R$ {totalCostValue.toFixed(2)}</div>
+        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-rose-500/50">
+          <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><BarChart3 size={16} className="text-rose-400"/> <span className="hidden sm:inline">Custo Imobilizado</span><span className="sm:hidden">Custo</span></div>
+          <div className="text-xl md:text-2xl font-black text-rose-400 truncate">R$ {totalCostValue.toFixed(2)}</div>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-blue-500/50">
-          <div className="text-zinc-400 font-medium text-sm flex items-center gap-2 mb-2"><DollarSign size={16} className="text-blue-400"/> Valor Bruto de Venda</div>
-          <div className="text-2xl font-black text-blue-400">R$ {totalGrossValue.toFixed(2)}</div>
+        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-blue-500/50">
+          <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><DollarSign size={16} className="text-blue-400"/> <span className="hidden sm:inline">Valor Bruto de Venda</span><span className="sm:hidden">Varejo</span></div>
+          <div className="text-xl md:text-2xl font-black text-blue-400 truncate">R$ {totalGrossValue.toFixed(2)}</div>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-emerald-500/50">
-          <div className="text-zinc-400 font-medium text-sm flex items-center gap-2 mb-2"><TrendingUp size={16} className="text-emerald-400"/> Lucro Projetado</div>
-          <div className="text-2xl font-black text-emerald-400">R$ {expectedProfit.toFixed(2)}</div>
+        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-emerald-500/50">
+          <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><TrendingUp size={16} className="text-emerald-400"/> Lucro Projetado</div>
+          <div className="text-xl md:text-2xl font-black text-emerald-400 truncate">R$ {expectedProfit.toFixed(2)}</div>
         </div>
       </div>
 
@@ -218,8 +217,8 @@ export default function InventoryDashboard() {
           )}
         </div>
 
-        {/* Tabela de Produtos */}
-        <div className="overflow-x-auto">
+        {/* Tabela de Produtos (Desktop) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-zinc-950 text-zinc-400 text-sm">
               <tr>
@@ -292,6 +291,64 @@ export default function InventoryDashboard() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Cards de Produtos (Mobile) */}
+        <div className="md:hidden flex flex-col divide-y divide-zinc-800/60">
+          {filtered.map(product => (
+            <div key={product.id} className={`p-4 flex flex-col gap-3 ${product.active === false ? 'opacity-50 grayscale' : ''}`}>
+              <div className="flex justify-between items-start gap-2">
+                <div className="flex-1">
+                  <div className="font-semibold text-zinc-200 line-clamp-2">{product.name}</div>
+                  <div className="text-sm font-mono text-zinc-500 mt-1">{product.barcode || 'Sem cód. barras'}</div>
+                </div>
+                <button
+                  onClick={() => handleToggleActive(product.id, product.active !== false)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-950 ${product.active !== false ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.active !== false ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-2 text-xs font-bold items-center">
+                {product.shortCode && (
+                  <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded">
+                    Atalho: {product.shortCode}
+                  </span>
+                )}
+                {(!product.ncm || !product.grupoTributacaoId) ? (
+                  <span className="text-yellow-500/80 flex items-center gap-1"><AlertOctagon size={12}/> Faltam Dados</span>
+                ) : (
+                  <span className="text-indigo-400/80">{product.grupoTributacao?.nome || 'Fiscal OK'}</span>
+                )}
+              </div>
+
+              <div className="flex justify-between items-end border-t border-zinc-800 pt-3 mt-1">
+                <div className="flex flex-col gap-1">
+                  <span className="text-zinc-500 text-xs">Preço Varejo</span>
+                  <span className="text-emerald-400 font-bold text-lg">R$ {Number(product.priceSell).toFixed(2)}</span>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <span className={`inline-flex items-center justify-center min-w-[3rem] px-2 py-1 rounded text-sm font-bold border ${Number(product.stock) <= 0 ? 'bg-red-500/10 text-red-500 border-red-500/20' : product.stock <= 10 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700'}`}>
+                    Estoque: {product.stock}
+                  </span>
+                  
+                  <button
+                    onClick={() => setEditingProduct(product)}
+                    className="p-2 text-zinc-400 hover:text-blue-400 bg-zinc-800 hover:bg-blue-500/10 rounded-lg transition-colors border border-zinc-700"
+                  >
+                    <Edit3 size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div className="p-8 text-center text-zinc-500">
+              Nenhum produto encontrado.
+            </div>
+          )}
         </div>
       </div>
 

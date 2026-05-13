@@ -12,6 +12,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, Legend
 } from 'recharts';
+import { UserIcon } from 'lucide-react';
 
 // --- Types ---
 type SummaryData = {
@@ -213,12 +214,13 @@ export default function SalesDashboard() {
       {/* --- HEADER & FILTROS --- */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Dashboard Analytics</h1>
-          <p className="text-zinc-400 mt-1">Acompanhe o desempenho do seu negócio em tempo real.</p>
+          <h1 className="text-xl md:text-3xl font-bold tracking-tight text-white">Dashboard Analytics</h1>
+          <p className="text-zinc-400 mt-1 hidden md:block">Acompanhe o desempenho do seu negócio em tempo real.</p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3 bg-zinc-900 p-2 rounded-2xl border border-zinc-800">
-          <div className="flex bg-zinc-950 p-1 rounded-xl">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+          <div className="flex bg-zinc-900 p-2 rounded-2xl border border-zinc-800 overflow-x-auto custom-scrollbar">
+            <div className="flex bg-zinc-950 p-1 rounded-xl min-w-max">
             {(['today', 'week', 'month', 'custom'] as const).map(p => (
               <button 
                 key={p} 
@@ -231,7 +233,7 @@ export default function SalesDashboard() {
           </div>
 
           {preset === 'custom' && (
-            <div className="flex items-center gap-2 px-2">
+            <div className="flex items-center gap-2 px-2 pb-2 sm:pb-0 overflow-x-auto min-w-max">
               <input 
                 type="date" 
                 value={startDate} 
@@ -247,20 +249,21 @@ export default function SalesDashboard() {
               />
             </div>
           )}
+          </div>
           
           <div className="w-px h-8 bg-zinc-800 mx-1 hidden lg:block"></div>
 
-          <button onClick={() => setIsExportModalOpen(true)} className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl transition-colors font-medium border border-zinc-700 ml-auto lg:ml-0">
-            <Download size={18} /> Exportar XML
+          <button onClick={() => setIsExportModalOpen(true)} className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-3 sm:py-2 rounded-xl transition-colors font-medium border border-zinc-700 w-full sm:w-auto mt-2 sm:mt-0">
+            <Download size={18} /> <span className="sm:hidden md:inline">Exportar XML</span>
           </button>
         </div>
       </div>
       
       {/* --- KPI CARDS --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         
         {/* Card 1: Caixa Atual */}
-        <div className={`relative overflow-hidden p-6 rounded-2xl border flex flex-col justify-between ${preset !== 'today' ? 'bg-zinc-900/50 border-zinc-800/50 opacity-60' : 'bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl'}`}>
+        <div className={`col-span-2 lg:col-span-1 relative overflow-hidden p-4 md:p-6 rounded-2xl border flex flex-col justify-between ${preset !== 'today' ? 'bg-zinc-900/50 border-zinc-800/50 opacity-60' : 'bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl'}`}>
           {preset === 'today' && summary?.currentRegister && (
             <div className="absolute top-0 right-0 p-4 flex items-center gap-2">
                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -272,7 +275,7 @@ export default function SalesDashboard() {
             Caixa Atual
           </div>
           <div>
-            <h3 className="text-3xl font-black text-white tracking-tight">
+            <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">
               {preset !== 'today' ? 'N/A' : (summary?.currentRegister ? formatCurrency(summary.currentRegister.total) : 'Fechado')}
             </h3>
             <p className="text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
@@ -283,67 +286,67 @@ export default function SalesDashboard() {
         </div>
 
         {/* Card 2: Hoje */}
-        <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl flex flex-col justify-between shadow-lg">
+        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg">
           <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
             <Calendar size={20} className="text-blue-400" /> Hoje
           </div>
           <div>
-            <h3 className="text-3xl font-black text-white tracking-tight">
+            <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">
               {formatCurrency(summary?.today?.revenue || 0)}
             </h3>
-            <p className="text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
+            <p className="text-xs md:text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
               <Receipt size={14}/> {summary?.today?.transactions || 0} transações
             </p>
           </div>
         </div>
 
         {/* Card 3: Semana */}
-        <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl flex flex-col justify-between shadow-lg">
+        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg">
           <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
             <TrendingUp size={20} className="text-purple-400" /> Semana
           </div>
           <div>
-            <h3 className="text-3xl font-black text-white tracking-tight">
+            <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">
               {formatCurrency(summary?.week?.revenue || 0)}
             </h3>
             {summary?.week?.vsLastWeek !== null && summary?.week?.vsLastWeek !== undefined ? (
-              <p className={`text-sm mt-2 flex items-center gap-1 font-medium ${summary.week.vsLastWeek >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              <p className={`text-xs md:text-sm mt-2 flex items-center gap-1 font-medium ${summary.week.vsLastWeek >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {summary.week.vsLastWeek >= 0 ? <ArrowUpRight size={16}/> : <ArrowDownRight size={16}/>}
-                {Math.abs(summary.week.vsLastWeek).toFixed(1)}% vs. semana ant.
+                {Math.abs(summary.week.vsLastWeek).toFixed(1)}% vs. ant.
               </p>
             ) : (
-              <p className="text-sm text-zinc-500 mt-2">Sem histórico anterior</p>
+              <p className="text-xs md:text-sm text-zinc-500 mt-2 line-clamp-1">Sem histórico anterior</p>
             )}
           </div>
         </div>
 
         {/* Card 4: Mês / Personalizado */}
-        <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl flex flex-col justify-between shadow-lg relative overflow-hidden">
+        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl"></div>
           <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3 relative z-10">
             <Banknote size={20} className="text-amber-400" /> 
             {preset === 'custom' ? 'Total do Período' : 'Este Mês'}
           </div>
           <div className="relative z-10">
-            <h3 className="text-3xl font-black text-white tracking-tight">
+            <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">
               {formatCurrency(preset === 'custom' ? (summary?.period?.revenue || 0) : (summary?.month?.revenue || 0))}
             </h3>
-             <p className="text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
+             <p className="text-xs md:text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
                <Receipt size={14}/> Visão macro
             </p>
           </div>
         </div>
 
         {/* Card 5: Ticket Médio */}
-        <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl flex flex-col justify-between shadow-lg">
+        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg">
           <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
             <Package size={20} className="text-sky-400" /> Ticket Médio
           </div>
           <div>
-            <h3 className="text-3xl font-black text-white tracking-tight">
+            <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">
               {formatCurrency(summary?.period?.avgTicket || 0)}
             </h3>
-            <p className="text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
+            <p className="text-xs md:text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
               Média por venda
             </p>
           </div>
@@ -355,11 +358,11 @@ export default function SalesDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Gráfico: Vendas por Hora */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl lg:col-span-2">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl lg:col-span-2">
           <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
             <Clock size={20} className="text-amber-400"/> Vendas por Hora (Período Selecionado)
           </h3>
-          <div className="h-[300px] w-full">
+          <div className="h-[200px] md:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartDataHour} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <XAxis dataKey="name" stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} />
@@ -432,7 +435,7 @@ export default function SalesDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Top Produtos */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl">
           <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
             <Package size={20} className="text-indigo-400"/> Top Produtos (Receita)
           </h3>
@@ -465,7 +468,7 @@ export default function SalesDashboard() {
 
         {/* Histórico de Transações */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl flex flex-col lg:col-span-2 overflow-hidden">
-          <div className="p-6 border-b border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="p-4 md:p-6 border-b border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <Receipt size={20} className="text-blue-400"/> Histórico de Vendas
             </h3>
@@ -481,7 +484,8 @@ export default function SalesDashboard() {
             </div>
           </div>
           
-          <div className="flex-1 overflow-x-auto">
+          {/* Tabela para Desktop */}
+          <div className="hidden md:block flex-1 overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-zinc-950/50 text-zinc-400 text-xs uppercase tracking-wider">
                 <tr>
@@ -560,6 +564,72 @@ export default function SalesDashboard() {
               </tbody>
             </table>
           </div>
+
+          {/* Cards para Mobile */}
+          <div className="md:hidden flex flex-col divide-y divide-zinc-800/60">
+            {currentSales.map(sale => (
+              <div key={sale.id} className="p-4 flex flex-col gap-3">
+                <div className="flex justify-between items-start">
+                  <div className="text-zinc-300 text-sm font-medium">
+                    {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(sale.createdAt))}
+                  </div>
+                  <div className="text-emerald-400 font-black text-lg">
+                    {formatCurrency(sale.total)}
+                  </div>
+                </div>
+
+                <div className="text-sm text-zinc-400 line-clamp-2">
+                  {sale.items.map(i => `${i.quantity}x ${i.product?.name || 'Item'}`).join(', ')}
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-1">
+                    {sale.payments.map((p, idx) => (
+                      <span key={idx} className="inline-block text-[10px] uppercase font-bold text-zinc-400 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded">
+                        {p.method}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div>
+                    {sale.emitirNfce ? (
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        {sale.nfceStatus === 'autorizada' ? (
+                          <span className="text-emerald-400 font-semibold text-[11px] flex items-center justify-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            <CheckCircle2 size={12}/> {sale.nfceNumero ? `Nº ${sale.nfceNumero}` : 'Autorizada'}
+                          </span>
+                        ) : sale.nfceStatus === 'rejeitada' ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-red-400 font-semibold text-[11px] flex items-center justify-center gap-1 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
+                              <XCircle size={12}/> Rejeitada
+                            </span>
+                            <button onClick={() => handleEmitNfce(sale.id)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 p-1 rounded bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-50" title="Tentar Novamente">
+                              {emittingId === sale.id ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-amber-400 font-semibold text-[11px] flex items-center justify-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                            <Clock size={12}/> Pendente
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => handleEmitNfce(sale.id)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 disabled:opacity-50 transition-colors">
+                          {emittingId === sale.id ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />} Gerar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {currentSales.length === 0 && (
+              <div className="p-12 text-center text-zinc-500 italic">
+                Nenhuma venda encontrada.
+              </div>
+            )}
+          </div>
           
           {/* Paginação */}
           {totalPages > 1 && (
@@ -592,7 +662,4 @@ export default function SalesDashboard() {
   );
 }
 
-// Custom Icon helper since lucide-react User is imported above but we used UserIcon
-const UserIcon = ({size}: {size: number}) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-);
+}
