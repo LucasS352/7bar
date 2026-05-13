@@ -7,9 +7,7 @@ RUN npm ci
 
 COPY . .
 
-# Build com variáveis de ambiente de produção (Vite usa prefixo VITE_)
-ARG VITE_API_URL=http://179.127.59.225:3520
-ENV VITE_API_URL=$VITE_API_URL
+# Build sem VITE_API_URL pois agora usamos caminho relativo /api
 
 RUN npm run build
 
