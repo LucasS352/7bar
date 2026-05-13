@@ -8,10 +8,10 @@
  */
 export function getFullUrl(url: string | null | undefined): string {
   if (!url) return '';
-  // Já é URL absoluta (ex: http://...) — retorna como está
   if (url.startsWith('http')) return url;
-  // Caminho relativo: constrói URL absoluta usando a base do backend
-  const apiBase = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3520/api';
-  const base = apiBase.replace(/\/api$/, '');
-  return base + url;
+  
+  // Ao invés de tentar descobrir a VITE_API_URL, simplesmente retornamos o caminho relativo.
+  // Como o frontend e backend rodam sob o mesmo domínio (ou via Nginx Proxy),
+  // o browser vai buscar a imagem na mesma origem (ex: https://pdv.smartek.com.br/uploads/...)
+  return url.startsWith('/') ? url : '/' + url;
 }
