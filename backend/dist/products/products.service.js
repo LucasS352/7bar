@@ -13,10 +13,12 @@ exports.ProductsService = void 0;
 const common_1 = require("@nestjs/common");
 const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
 const tenant_context_service_1 = require("../prisma/tenant-context.service");
+const heart_prisma_service_1 = require("../prisma/heart-prisma.service");
 let ProductsService = class ProductsService {
-    constructor(tenantManager, tenantContext) {
+    constructor(tenantManager, tenantContext, heartPrisma) {
         this.tenantManager = tenantManager;
         this.tenantContext = tenantContext;
+        this.heartPrisma = heartPrisma;
     }
     async getPrisma() {
         const { tenantId, databaseUrl } = this.tenantContext.get();
@@ -42,9 +44,45 @@ let ProductsService = class ProductsService {
             data.ncm = null;
         if ('cest' in data && data.cest === '')
             data.cest = null;
+        if ('imageUrl' in data && data.imageUrl === '')
+            data.imageUrl = null;
         if (data.origem !== undefined)
             data.origem = parseInt(String(data.origem)) || 0;
         return data;
+    }
+    async lookupBarcode(barcode) {
+        const prisma = await this.getPrisma();
+        const localProduct = await prisma.product.findUnique({
+            where: { barcode }
+        });
+        if (localProduct) {
+            return { source: 'local', data: localProduct };
+        }
+        let masterProduct = await this.heartPrisma.masterProduct.findUnique({
+            where: { ean: barcode }
+        });
+        if (!masterProduct && barcode.length === 14 && barcode.startsWith('0')) {
+            const stripped = barcode.substring(1);
+            masterProduct = await this.heartPrisma.masterProduct.findUnique({
+                where: { ean: stripped }
+            });
+        }
+        if (masterProduct) {
+            return {
+                source: 'master',
+                data: {
+                    name: masterProduct.name,
+                    barcode: masterProduct.ean,
+                    ncm: masterProduct.ncm,
+                    cest: masterProduct.cest,
+                    unit: masterProduct.unit,
+                    imageUrl: masterProduct.imageUrl,
+                    brand: masterProduct.brand,
+                    masterCategory: masterProduct.category
+                }
+            };
+        }
+        throw new common_1.NotFoundException('Produto não encontrado em nenhum catálogo.');
     }
     async findAll(page = 1, limit = 50) {
         const prisma = await this.getPrisma();
@@ -178,12 +216,22 @@ let ProductsService = class ProductsService {
         if (!fallbackCategory) {
             fallbackCategory = await prisma.category.create({ data: { name: 'Geral' } });
         }
-        const allProducts = await prisma.product.findMany({
+        const shortCodes = items.map(i => i.shortCode).filter(Boolean);
+        const barcodes = items.map(i => i.barcode).filter(Boolean);
+        const names = items.map(i => i.name?.trim()).filter(Boolean);
+        const batchProducts = await prisma.product.findMany({
+            where: {
+                OR: [
+                    { shortCode: { in: shortCodes } },
+                    { barcode: { in: barcodes } },
+                    { name: { in: names } },
+                ]
+            },
             select: { id: true, name: true, shortCode: true, barcode: true, priceCost: true, priceSell: true, stock: true },
         });
-        const byShortCode = new Map(allProducts.filter(p => p.shortCode).map(p => [p.shortCode, p]));
-        const byBarcode = new Map(allProducts.filter(p => p.barcode).map(p => [p.barcode, p]));
-        const byName = new Map(allProducts.map(p => [p.name.toLowerCase(), p]));
+        const byShortCode = new Map(batchProducts.filter(p => p.shortCode).map(p => [p.shortCode, p]));
+        const byBarcode = new Map(batchProducts.filter(p => p.barcode).map(p => [p.barcode, p]));
+        const byName = new Map(batchProducts.map(p => [p.name.toLowerCase(), p]));
         const duplicateNames = [];
         let importedCount = 0;
         const BATCH = 50;
@@ -209,6 +257,7 @@ let ProductsService = class ProductsService {
                                 ...(item.ncm && { ncm: item.ncm }),
                                 ...(item.cest && { cest: item.cest }),
                                 ...(item.origem !== undefined && { origem: parseInt(String(item.origem)) || 0 }),
+                                ...(item.imageUrl && { imageUrl: item.imageUrl }),
                             },
                         });
                         if (stockToAdd > 0) {
@@ -238,6 +287,7 @@ let ProductsService = class ProductsService {
                                 ncm: item.ncm || null,
                                 cest: item.cest || null,
                                 origem: item.origem !== undefined ? parseInt(String(item.origem)) || 0 : 0,
+                                imageUrl: item.imageUrl || null,
                             },
                         });
                         byName.set(item.name.trim().toLowerCase(), created);
@@ -283,6 +333,7 @@ exports.ProductsService = ProductsService;
 exports.ProductsService = ProductsService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [tenant_prisma_service_1.TenantConnectionManager,
-        tenant_context_service_1.TenantContextService])
+        tenant_context_service_1.TenantContextService,
+        heart_prisma_service_1.HeartPrismaService])
 ], ProductsService);
 //# sourceMappingURL=products.service.js.map

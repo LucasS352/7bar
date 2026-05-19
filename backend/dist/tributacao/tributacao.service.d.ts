@@ -1,8 +1,11 @@
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 export declare class TributacaoService {
     private tenantManager;
-    constructor(tenantManager: TenantConnectionManager);
-    findAll(tenantId: string, databaseUrl: string): Promise<{
+    private tenantContext;
+    constructor(tenantManager: TenantConnectionManager, tenantContext: TenantContextService);
+    private getPrisma;
+    findAll(tenantId: string): Promise<{
         id: string;
         nome: string;
         ativo: boolean;
@@ -20,7 +23,7 @@ export declare class TributacaoService {
         createdAt: Date;
         updatedAt: Date;
     }[]>;
-    findOne(tenantId: string, databaseUrl: string, id: string): Promise<{
+    findOne(tenantId: string, id: string): Promise<{
         id: string;
         nome: string;
         ativo: boolean;
@@ -38,7 +41,7 @@ export declare class TributacaoService {
         createdAt: Date;
         updatedAt: Date;
     }>;
-    create(tenantId: string, databaseUrl: string, data: any): Promise<{
+    create(tenantId: string, data: any): Promise<{
         id: string;
         nome: string;
         ativo: boolean;
@@ -56,7 +59,7 @@ export declare class TributacaoService {
         createdAt: Date;
         updatedAt: Date;
     }>;
-    update(tenantId: string, databaseUrl: string, id: string, data: any): Promise<{
+    update(tenantId: string, id: string, data: any): Promise<{
         id: string;
         nome: string;
         ativo: boolean;
@@ -74,7 +77,7 @@ export declare class TributacaoService {
         createdAt: Date;
         updatedAt: Date;
     }>;
-    remove(tenantId: string, databaseUrl: string, id: string): Promise<{
+    remove(tenantId: string, id: string): Promise<{
         id: string;
         nome: string;
         ativo: boolean;

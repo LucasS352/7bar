@@ -16,6 +16,7 @@ const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
 const tenant_context_service_1 = require("../prisma/tenant-context.service");
 const heart_prisma_service_1 = require("../prisma/heart-prisma.service");
 const nfce_service_1 = require("../nfce/nfce.service");
+const client_1 = require("@prisma/client");
 const archiver = require("archiver");
 const TPAG_MAP = {
     dinheiro: '01',
@@ -38,10 +39,10 @@ let SalesService = SalesService_1 = class SalesService {
     }
     async checkout(data) {
         const { userId } = this.tenantContext.get();
-        const operatorId = data.operatorId || userId;
+        let operatorId = data.operatorId || userId;
         const prisma = await this.getPrisma();
         return prisma.$transaction(async (tx) => {
-            let subtotal = 0;
+            let subtotal = new client_1.Prisma.Decimal(0);
             const saleItemsData = [];
             if (!data.cashRegisterId) {
                 throw new common_1.BadRequestException('Não é possível realizar venda: Caixa não informado.');
@@ -54,25 +55,34 @@ let SalesService = SalesService_1 = class SalesService {
             }
             const tenantSettings = await tx.tenantSettings.findUnique({ where: { id: 'singleton' } });
             const allowNegativeStock = tenantSettings?.allowNegativeStock ?? false;
+            const productIds = data.items.map((item) => item.productId);
+            const productsInDb = await tx.product.findMany({
+                where: { id: { in: productIds } },
+                include: { grupoTributacao: true },
+            });
+            const productMap = new Map(productsInDb.map((p) => [p.id, p]));
+            const inventoryLogsToCreate = [];
+            const productUpdatesPromises = [];
             for (const item of data.items) {
-                const product = await tx.product.findUnique({
-                    where: { id: item.productId },
-                    include: { grupoTributacao: true },
-                });
+                const product = productMap.get(item.productId);
                 if (!product) {
-                    throw new common_1.BadRequestException(`Produto ${item.productId} não encontrado.`);
+                    throw new common_1.BadRequestException(`Produto ${item.productId} não encontrado no banco de dados.`);
                 }
                 const qty = Number(item.quantity);
                 if (!allowNegativeStock && Number(product.stock) < qty) {
-                    throw new common_1.BadRequestException(`Estoque insuficiente: ${product.name} (disponível: ${product.stock})`);
+                    throw new common_1.BadRequestException(`Estoque insuficiente para o produto: ${product.name} (disponível: ${product.stock}, tentado: ${qty})`);
                 }
-                await tx.product.update({
+                productUpdatesPromises.push(tx.product.update({
                     where: { id: item.productId },
-                    data: { stock: { decrement: qty } },
-                });
-                const priceUnit = Number(item.priceUnit);
-                const itemSubtotal = parseFloat((priceUnit * qty).toFixed(2));
-                subtotal += itemSubtotal;
+                    data: {
+                        stock: { decrement: qty },
+                        salesCount: { increment: qty }
+                    },
+                }));
+                const priceUnit = new client_1.Prisma.Decimal(item.priceUnit);
+                const qtyDecimal = new client_1.Prisma.Decimal(qty);
+                const itemSubtotal = priceUnit.mul(qtyDecimal).toDecimalPlaces(2);
+                subtotal = subtotal.add(itemSubtotal);
                 const gt = product.grupoTributacao;
                 saleItemsData.push({
                     productId: product.id,
@@ -97,17 +107,19 @@ let SalesService = SalesService_1 = class SalesService {
                     aliqCofins: item.fiscalSnapshot?.aliqCofins ?? Number(gt?.aliqCofins ?? 0),
                     valorCofins: 0,
                 });
-                await tx.inventoryLog.create({
-                    data: {
-                        productId: product.id,
-                        type: 'SALE',
-                        quantity: qty,
-                        reason: 'Venda PDV',
-                    },
+                inventoryLogsToCreate.push({
+                    productId: product.id,
+                    type: 'SALE',
+                    quantity: qty,
+                    reason: 'Venda PDV',
                 });
             }
-            const discount = Number(data.discount || 0);
-            const total = parseFloat((subtotal - discount).toFixed(2));
+            await Promise.all([
+                ...productUpdatesPromises,
+                tx.inventoryLog.createMany({ data: inventoryLogsToCreate })
+            ]);
+            const discount = new client_1.Prisma.Decimal(data.discount || 0);
+            const total = subtotal.sub(discount).toDecimalPlaces(2);
             const paymentsData = data.payments.map((pay) => ({
                 tPag: TPAG_MAP[pay.method] ?? '99',
                 method: pay.method,
@@ -124,6 +136,13 @@ let SalesService = SalesService_1 = class SalesService {
                     create: { serie, ultimo: 1 },
                 });
                 nfceNumero = numeracao.ultimo;
+            }
+            if (operatorId) {
+                const opExists = await tx.operator.findUnique({ where: { id: operatorId } });
+                if (!opExists) {
+                    this.logger.warn(`Operador ${operatorId} não encontrado no banco — venda será criada sem operador.`);
+                    operatorId = null;
+                }
             }
             const sale = await tx.sale.create({
                 data: {
@@ -151,13 +170,13 @@ let SalesService = SalesService_1 = class SalesService {
                 },
             });
             if (emitirNfce) {
-                setImmediate(() => this.dispararNfce(sale));
+                const { tenantId, databaseUrl } = this.tenantContext.get();
+                setImmediate(() => this.dispararNfce(tenantId, databaseUrl, sale));
             }
             return sale;
         });
     }
-    async dispararNfce(sale) {
-        const { tenantId, databaseUrl } = this.tenantContext.get();
+    async dispararNfce(tenantId, databaseUrl, sale) {
         try {
             const tenant = await this.heartPrisma.tenant.findUnique({
                 where: { id: tenantId },
@@ -259,10 +278,15 @@ let SalesService = SalesService_1 = class SalesService {
         }
         catch (err) {
             this.logger.error(`Erro ao disparar NFC-e para venda ${sale.id}: ${err.message}`);
-            await this.atualizarStatusNfce(tenantId, databaseUrl, sale.id, {
-                nfceStatus: 'rejeitada',
-                nfceMotivoRejeicao: err.message,
-            });
+            try {
+                await this.atualizarStatusNfce(tenantId, databaseUrl, sale.id, {
+                    nfceStatus: 'rejeitada',
+                    nfceMotivoRejeicao: err.message,
+                });
+            }
+            catch (dbErr) {
+                this.logger.error(`Erro fatal ao atualizar status de NFC-e (Venda ${sale.id}): ${dbErr.message}`);
+            }
         }
     }
     async atualizarStatusNfce(tenantId, databaseUrl, saleId, data) {
@@ -294,19 +318,33 @@ let SalesService = SalesService_1 = class SalesService {
             },
         };
     }
-    async getTodaySales() {
+    async getTodaySales(page = 1, limit = 50) {
         const prisma = await this.getPrisma();
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        return prisma.sale.findMany({
-            where: { createdAt: { gte: today } },
-            include: {
-                payments: true,
-                items: { include: { product: true } },
-                customer: true,
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+        const skip = (page - 1) * limit;
+        const [total, data] = await Promise.all([
+            prisma.sale.count({ where: { createdAt: { gte: today } } }),
+            prisma.sale.findMany({
+                where: { createdAt: { gte: today } },
+                include: {
+                    payments: true,
+                    items: { include: { product: true } },
+                    customer: true,
+                },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit,
+            })
+        ]);
+        return {
+            data,
+            meta: {
+                total,
+                page,
+                lastPage: Math.ceil(total / limit)
+            }
+        };
     }
     async getNfceStatus(saleId) {
         const prisma = await this.getPrisma();
@@ -354,7 +392,8 @@ let SalesService = SalesService_1 = class SalesService {
         sale.emitirNfce = true;
         sale.nfceNumero = nfceNumero;
         sale.nfceSerie = nfceSerie;
-        setImmediate(() => this.dispararNfce(sale));
+        const { tenantId, databaseUrl } = this.tenantContext.get();
+        setImmediate(() => this.dispararNfce(tenantId, databaseUrl, sale));
         return { message: 'Emissão de NFC-e solicitada com sucesso', status: 'pendente' };
     }
     async exportNfceXmls(startDate, endDate) {

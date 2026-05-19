@@ -23,6 +23,9 @@ let ProductsController = class ProductsController {
     findAll(page, limit) {
         return this.productsService.findAll(Number(page || 1), Number(limit || 50));
     }
+    lookupBarcode(barcode) {
+        return this.productsService.lookupBarcode(barcode);
+    }
     create(body) {
         return this.productsService.create(body);
     }
@@ -54,6 +57,13 @@ __decorate([
     __metadata("design:paramtypes", [Number, Number]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('lookup/:barcode'),
+    __param(0, (0, common_1.Param)('barcode')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "lookupBarcode", null);
 __decorate([
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),

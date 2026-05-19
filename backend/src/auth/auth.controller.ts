@@ -19,6 +19,6 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('operator-login')
   async operatorLogin(@CurrentUser() user: any, @Body() body: { operatorId: string, pin: string }) {
-    return this.authService.validateOperatorPin(user.tenantId, user.databaseUrl, body.operatorId, body.pin);
+    return this.authService.validateOperatorPin(user.tenantId, body.operatorId, body.pin);
   }
 }

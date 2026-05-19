@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useDeferredValue, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
@@ -35,7 +35,7 @@ export default function StockEntryPage() {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/products');
+      const res = await api.get('/products?limit=2000');
       // A API retorna { data: [...], total, page } — extraímos o array
       const list = (res.data as any)?.data ?? res.data ?? [];
       setProducts((list as Product[]).filter(p => p !== null));
@@ -48,12 +48,19 @@ export default function StockEntryPage() {
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  // ── Filtro de busca ───────────────────────────────────────────────────────
+  // ── Filtro de busca inteligente ───────────────────────────────────────────
+  const deferredSearch = useDeferredValue(search);
+  
+  const filtered = useMemo(() => {
+    const normalizeStr = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-  const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.shortCode?.toLowerCase().includes(search.toLowerCase()) ?? false)
-  );
+    const searchTerms = normalizeStr(deferredSearch).split(' ').filter(t => t.trim() !== '');
+    return products.filter(p => {
+      if (searchTerms.length === 0) return true;
+      const searchString = normalizeStr(`${p.name} ${p.shortCode || ''}`);
+      return searchTerms.every(term => searchString.includes(term));
+    });
+  }, [products, deferredSearch]);
 
   // ── Gerenciar linhas de entrada ───────────────────────────────────────────
 

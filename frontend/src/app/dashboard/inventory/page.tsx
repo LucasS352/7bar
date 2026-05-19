@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useDeferredValue, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,6 +24,7 @@ interface Product {
   ncm?: string | null;
   grupoTributacaoId?: string | null;
   grupoTributacao?: GrupoTributacao | null;
+  imageUrl?: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,10 +40,11 @@ export default function InventoryDashboard() {
   const [editingProduct,      setEditingProduct]      = useState<Product | null>(null);
   const [allowNegativeStock,  setAllowNegativeStock]  = useState(false);
   const [savingSettings,      setSavingSettings]      = useState(false);
+  const [showLowStockAlert,   setShowLowStockAlert]   = useState(false);
 
   const fetchProducts = useCallback(() => {
     setLoading(true);
-    api.get('/products')
+    api.get('/products?limit=2000')
       .then(res => {
         const data = Array.isArray(res.data) ? res.data : (res.data as any).data;
         setProducts(data || []);
@@ -87,7 +89,48 @@ export default function InventoryDashboard() {
     }
   };
 
-  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  const displayedProducts = useMemo(() => {
+    const normalizeStr = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    
+    const searchTerms = normalizeStr(debouncedSearch).split(' ').filter(t => t.trim() !== '');
+    
+    const filtered = products.filter(p => {
+      if (searchTerms.length === 0) return true;
+      const searchString = normalizeStr(`${p.name} ${p.barcode || ''} ${p.shortCode || ''}`);
+      return searchTerms.every(term => searchString.includes(term));
+    });
+    
+    // Limita a exibição da tabela para não travar o navegador com milhares de linhas de DOM
+    return filtered.slice(0, 100);
+  }, [products, debouncedSearch]);
+
+  const { totalVarieties, totalItemsCount, totalGrossValue, totalCostValue, expectedProfit, lowStockProducts } = useMemo(() => {
+    const totalVarieties  = products.length;
+    let totalItemsCount = 0;
+    let totalGrossValue = 0;
+    let totalCostValue  = 0;
+    const lowStockProducts = [];
+
+    for (const p of products) {
+      const stock = Number(p.stock);
+      totalItemsCount += stock;
+      totalGrossValue += Number(p.priceSell) * stock;
+      totalCostValue  += Number(p.priceCost || 0) * stock;
+      if (stock <= 10) lowStockProducts.push(p);
+    }
+    const expectedProfit  = totalGrossValue - totalCostValue;
+
+    return { totalVarieties, totalItemsCount, totalGrossValue, totalCostValue, expectedProfit, lowStockProducts };
+  }, [products]);
 
   if (loading) return (
     <div className="flex h-full items-center justify-center">
@@ -95,12 +138,7 @@ export default function InventoryDashboard() {
     </div>
   );
 
-  const totalVarieties  = products.length;
-  const totalItemsCount = products.reduce((acc, p) => acc + Number(p.stock), 0);
-  const totalGrossValue = products.reduce((acc, p) => acc + (Number(p.priceSell) * p.stock), 0);
-  const totalCostValue  = products.reduce((acc, p) => acc + (Number(p.priceCost || 0) * p.stock), 0);
-  const expectedProfit  = totalGrossValue - totalCostValue;
-  const lowStockProducts = products.filter(p => p.stock <= 10);
+
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -139,26 +177,37 @@ export default function InventoryDashboard() {
 
       {/* Alerta estoque baixo */}
       {lowStockProducts.length > 0 && (
-        <div className="bg-red-500/10 border-l-4 border-l-red-500 p-5 rounded-r-xl flex items-start gap-4 shadow-sm animate-in slide-in-from-top-4">
-          <AlertOctagon className="text-red-500 mt-0.5" size={24} />
-          <div>
-            <h3 className="text-red-400 font-bold text-lg">Alerta Crítico: Reposição Necessária</h3>
-            <p className="text-red-400/80 text-sm mt-1 mb-3">
-              Foram detectados <strong>{lowStockProducts.length}</strong> produtos com estoque igual ou inferior a 10 unidades físicas. Realize um pedido de compra ao fornecedor em breve.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {lowStockProducts.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => setSearch(p.name)}
-                  title="Filtrar tabela por este item"
-                  className="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 active:scale-95"
-                >
-                  {p.name} <span className="bg-red-500/40 text-white px-1.5 py-0.5 rounded text-xs">{p.stock}</span>
-                </button>
-              ))}
+        <div className="mb-4">
+          <button 
+            onClick={() => setShowLowStockAlert(!showLowStockAlert)}
+            className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold px-4 py-2 rounded-xl border border-red-500/20 transition-colors"
+          >
+            <AlertOctagon size={18} />
+            {showLowStockAlert ? 'Ocultar Alerta de Reposição' : `Exibir Alerta de Reposição (${lowStockProducts.length} itens)`}
+          </button>
+          
+          {showLowStockAlert && (
+            <div className="mt-3 bg-red-500/10 border-l-4 border-l-red-500 p-5 rounded-r-xl shadow-sm animate-in fade-in slide-in-from-top-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+              <h3 className="text-red-400 font-bold text-lg mb-1 flex items-center gap-2">
+                Alerta Crítico: Reposição Necessária
+              </h3>
+              <p className="text-red-400/80 text-sm mb-3">
+                Foram detectados <strong>{lowStockProducts.length}</strong> produtos com estoque igual ou inferior a 10 unidades físicas. Realize um pedido de compra ao fornecedor em breve.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {lowStockProducts.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setSearch(p.name)}
+                    title="Filtrar tabela por este item"
+                    className="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 active:scale-95"
+                  >
+                    {p.name} <span className="bg-red-500/40 text-white px-1.5 py-0.5 rounded text-xs">{p.stock}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -233,21 +282,28 @@ export default function InventoryDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60">
-              {filtered.map(product => (
+              {displayedProducts.map(product => (
                 <tr key={product.id} className={`hover:bg-zinc-800/40 transition-colors ${product.active === false ? 'opacity-40 grayscale' : ''}`}>
                   <td className="px-6 py-5 font-medium text-zinc-200">
-                    <div className="flex flex-col">
-                      <span>{product.name}</span>
-                      {(!product.ncm || !product.grupoTributacaoId) && (
-                        <span className="flex items-center gap-1 text-[10px] text-yellow-500/80 uppercase font-bold mt-1" title="Faltam dados fiscais para emitir NFC-e">
-                          <AlertOctagon size={12} /> Faltam Dados Fiscais
-                        </span>
+                    <div className="flex items-center gap-3">
+                      {product.imageUrl && (
+                        <div className="w-10 h-10 shrink-0 bg-white rounded-lg flex items-center justify-center p-1 shadow-inner">
+                          <img src={product.imageUrl} alt="" className="w-full h-full object-contain mix-blend-multiply" loading="lazy" />
+                        </div>
                       )}
-                      {(product.ncm && product.grupoTributacaoId) && (
-                        <span className="text-[10px] text-indigo-400/80 uppercase font-bold mt-1" title="Pronto para NFC-e">
-                          {product.grupoTributacao?.nome || 'Fiscal OK'}
-                        </span>
-                      )}
+                      <div className="flex flex-col">
+                        <span>{product.name}</span>
+                        {(!product.ncm || !product.grupoTributacaoId) && (
+                          <span className="flex items-center gap-1 text-[10px] text-yellow-500/80 uppercase font-bold mt-1" title="Faltam dados fiscais para emitir NFC-e">
+                            <AlertOctagon size={12} /> Faltam Dados Fiscais
+                          </span>
+                        )}
+                        {(product.ncm && product.grupoTributacaoId) && (
+                          <span className="text-[10px] text-indigo-400/80 uppercase font-bold mt-1" title="Pronto para NFC-e">
+                            {product.grupoTributacao?.nome || 'Fiscal OK'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-5 text-center">
@@ -295,12 +351,19 @@ export default function InventoryDashboard() {
 
         {/* Cards de Produtos (Mobile) */}
         <div className="md:hidden flex flex-col divide-y divide-zinc-800/60">
-          {filtered.map(product => (
+          {displayedProducts.map(product => (
             <div key={product.id} className={`p-4 flex flex-col gap-3 ${product.active === false ? 'opacity-50 grayscale' : ''}`}>
               <div className="flex justify-between items-start gap-2">
-                <div className="flex-1">
-                  <div className="font-semibold text-zinc-200 line-clamp-2">{product.name}</div>
-                  <div className="text-sm font-mono text-zinc-500 mt-1">{product.barcode || 'Sem cód. barras'}</div>
+                <div className="flex items-start gap-3 flex-1">
+                  {product.imageUrl && (
+                    <div className="w-12 h-12 shrink-0 bg-white rounded-lg flex items-center justify-center p-1 shadow-inner">
+                      <img src={product.imageUrl} alt="" className="w-full h-full object-contain mix-blend-multiply" loading="lazy" />
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-semibold text-zinc-200 line-clamp-2">{product.name}</div>
+                    <div className="text-sm font-mono text-zinc-500 mt-1">{product.barcode || 'Sem cód. barras'}</div>
+                  </div>
                 </div>
                 <button
                   onClick={() => handleToggleActive(product.id, product.active !== false)}
@@ -344,7 +407,7 @@ export default function InventoryDashboard() {
               </div>
             </div>
           ))}
-          {filtered.length === 0 && (
+          {displayedProducts.length === 0 && (
             <div className="p-8 text-center text-zinc-500">
               Nenhum produto encontrado.
             </div>

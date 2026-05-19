@@ -13,6 +13,7 @@ exports.CashRegistersService = void 0;
 const common_1 = require("@nestjs/common");
 const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
 const tenant_context_service_1 = require("../prisma/tenant-context.service");
+const client_1 = require("@prisma/client");
 let CashRegistersService = class CashRegistersService {
     constructor(tenantManager, tenantContext) {
         this.tenantManager = tenantManager;
@@ -27,18 +28,22 @@ let CashRegistersService = class CashRegistersService {
             const { userId } = this.tenantContext.get();
             const prisma = await this.getPrisma();
             const currentOpId = operatorId || userId;
-            const existing = await prisma.cashRegister.findFirst({
-                where: { status: 'open' }
-            });
-            if (existing) {
-                throw new common_1.BadRequestException(`Já existe um caixa aberto (${existing.operatorId === currentOpId ? 'por você' : 'por outro operador'}). Feche-o antes de abrir um novo.`);
-            }
-            return await prisma.cashRegister.create({
-                data: {
-                    operatorId: currentOpId,
-                    openingValue,
-                    status: 'open'
+            return await prisma.$transaction(async (tx) => {
+                const existing = await tx.cashRegister.findFirst({
+                    where: { status: 'open' }
+                });
+                if (existing) {
+                    throw new common_1.BadRequestException(`Já existe um caixa aberto (${existing.operatorId === currentOpId ? 'por você' : 'por outro operador'}). Feche-o antes de abrir um novo.`);
                 }
+                return await tx.cashRegister.create({
+                    data: {
+                        operatorId: currentOpId,
+                        openingValue,
+                        status: 'open'
+                    }
+                });
+            }, {
+                isolationLevel: client_1.Prisma.TransactionIsolationLevel.Serializable,
             });
         }
         catch (error) {
@@ -87,45 +92,53 @@ let CashRegistersService = class CashRegistersService {
             include: { payments: true, items: { include: { product: true } } },
             orderBy: { createdAt: 'desc' }
         });
-        let totalDinheiro = 0, totalPix = 0, totalCredito = 0, totalDebito = 0;
+        let totalDinheiro = new client_1.Prisma.Decimal(0);
+        let totalPix = new client_1.Prisma.Decimal(0);
+        let totalCredito = new client_1.Prisma.Decimal(0);
+        let totalDebito = new client_1.Prisma.Decimal(0);
         sales.forEach(sale => {
             sale.payments.forEach(p => {
-                const v = Number(p.value);
+                const v = new client_1.Prisma.Decimal(p.value);
                 if (p.method === 'dinheiro')
-                    totalDinheiro += v;
+                    totalDinheiro = totalDinheiro.add(v);
                 else if (p.method === 'pix')
-                    totalPix += v;
+                    totalPix = totalPix.add(v);
                 else if (p.method === 'credito')
-                    totalCredito += v;
+                    totalCredito = totalCredito.add(v);
                 else if (p.method === 'debito')
-                    totalDebito += v;
+                    totalDebito = totalDebito.add(v);
             });
         });
         const movements = await prisma.cashMovement.findMany({
             where: { cashRegisterId: id },
             orderBy: { createdAt: 'desc' }
         });
-        let totalSuprimentos = 0, totalSangrias = 0;
+        let totalSuprimentos = new client_1.Prisma.Decimal(0);
+        let totalSangrias = new client_1.Prisma.Decimal(0);
         movements.forEach((m) => {
+            const mv = new client_1.Prisma.Decimal(m.value);
             if (m.type === 'IN')
-                totalSuprimentos += Number(m.value);
+                totalSuprimentos = totalSuprimentos.add(mv);
             if (m.type === 'OUT')
-                totalSangrias += Number(m.value);
+                totalSangrias = totalSangrias.add(mv);
         });
-        const openingValue = Number(register.openingValue);
+        const openingValue = new client_1.Prisma.Decimal(register.openingValue);
+        const totalCartao = totalCredito.add(totalDebito);
+        const totalVendas = totalDinheiro.add(totalPix).add(totalCartao);
+        const expectedDinheiro = openingValue.add(totalDinheiro).add(totalSuprimentos).sub(totalSangrias);
         return {
             register,
             report: {
-                totalDinheiro,
-                totalPix,
-                totalCredito,
-                totalDebito,
-                totalCartao: totalCredito + totalDebito,
-                totalVendas: totalDinheiro + totalPix + totalCredito + totalDebito,
-                totalSuprimentos,
-                totalSangrias,
+                totalDinheiro: totalDinheiro.toNumber(),
+                totalPix: totalPix.toNumber(),
+                totalCredito: totalCredito.toNumber(),
+                totalDebito: totalDebito.toNumber(),
+                totalCartao: totalCartao.toNumber(),
+                totalVendas: totalVendas.toNumber(),
+                totalSuprimentos: totalSuprimentos.toNumber(),
+                totalSangrias: totalSangrias.toNumber(),
                 countSales: sales.length,
-                expectedDinheiro: openingValue + totalDinheiro + totalSuprimentos - totalSangrias,
+                expectedDinheiro: expectedDinheiro.toNumber(),
                 salesDetails: sales,
                 movements
             }

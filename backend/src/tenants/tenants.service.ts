@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { exec } from 'child_process';
@@ -18,6 +19,7 @@ export class TenantsService {
   constructor(
     private heartPrisma: HeartPrismaService,
     private tenantManager: TenantConnectionManager,
+    private tenantContext: TenantContextService
   ) {}
 
   findAll() {
@@ -48,13 +50,44 @@ export class TenantsService {
       'nfceAtivo', 'nfceSerie', 'nfceAmbiente', 'nfceCsc', 'nfceIdCsc',
       'modulos', 'status'
     ];
-    const safeData = Object.fromEntries(
+    // Tipamos explicitamente como Record<string, any> para evitar erro TS no acesso de chaves dinâmicas
+    const safeData: Record<string, any> = Object.fromEntries(
       Object.entries(data).filter(([k]) => allowed.includes(k))
     );
-    return this.heartPrisma.tenant.update({
-      where: { id: tenantId },
-      data: safeData,
-    });
+
+    // Tratar tipos numéricos para evitar que strings quebrem o Prisma
+    if (safeData.crt != null)          safeData.crt          = Number(safeData.crt);
+    if (safeData.nfceSerie != null)    safeData.nfceSerie    = Number(safeData.nfceSerie);
+    if (safeData.nfceAmbiente != null) safeData.nfceAmbiente = Number(safeData.nfceAmbiente);
+
+    // Normalizar CNPJ: remove pontuação e verifica duplicidade em outros tenants
+    if (safeData.cnpj) {
+      const cleanCnpj = String(safeData.cnpj).replace(/\D/g, '');
+      const duplicate = await this.heartPrisma.tenant.findFirst({
+        where: { cnpj: cleanCnpj, id: { not: tenantId } }
+      });
+
+      if (duplicate) {
+        // Em ambiente de desenvolvimento pode haver CNPJs duplicados de testes — ignoramos silenciosamente
+        this.logger.warn(
+          `[Ambiente de Testes] CNPJ ${data.cnpj} já pertence à empresa "${duplicate.razaoSocial || duplicate.name}". ` +
+          'CNPJ não atualizado. Demais campos serão salvos normalmente.'
+        );
+        delete safeData.cnpj;
+      } else {
+        safeData.cnpj = cleanCnpj;
+      }
+    }
+
+    try {
+      return await this.heartPrisma.tenant.update({
+        where: { id: tenantId },
+        data: safeData,
+      });
+    } catch (err: any) {
+      this.logger.error(`Erro ao atualizar tenant ${tenantId}: ${err.message}`, err.stack);
+      throw new BadRequestException(`Erro ao salvar dados no banco: ${err.message}`);
+    }
   }
 
   async uploadLogo(tenantId: string, file: Express.Multer.File) {
@@ -218,69 +251,92 @@ export class TenantsService {
     try {
       await client.$connect();
 
-      const categories = await client.category.createMany({
-        data: [
-          { name: 'Cervejas' },
-          { name: 'Destilados' },
-          { name: 'Convenência' },
-          { name: 'Energéticos' },
-          { name: 'Refrigerantes e Sucos' },
-          { name: 'Salgadinhos e Petiscos' },
-          { name: 'Chocolates e Balas' },
-          { name: 'Copão / Combos' },
-          { name: 'Tabacaria' },
-        ],
+      this.logger.log(`⏳ Buscando produtos essenciais na Base Mestre para o tenant...`);
+
+      const targetCategories = [
+        'Cerveja Lata', 'Cerveja Long Neck', 'Cerveja Garrafa', 
+        'Refrigerante Lata', 'Energético', 
+        'Salgadinho Elma Chips', 'Salgadinho', 
+        'Cachaça', 'Whisky', 'Vodka', 'Gin', 
+        'Vinho', 'Vinho Tinto', 
+        'Isqueiro', 'Gelo', 'Fósforo', 
+        'Detergente Líquido', 'Corote', 'Conhaque', 
+        'Água Mineral', 'Água Tônica'
+      ];
+
+      // Busca até 1500 produtos dessas categorias na base mestre
+      const masterProducts = await this.heartPrisma.masterProduct.findMany({
+        where: {
+          category: { in: targetCategories }
+        },
+        take: 1500,
+        orderBy: { category: 'asc' }
+      });
+
+      if (masterProducts.length === 0) {
+        this.logger.warn(`Aviso: Nenhum produto encontrado na Base Mestre para o seed inicial.`);
+        return;
+      }
+
+      this.logger.log(`✅ ${masterProducts.length} produtos encontrados na Base Mestre. Injetando no Tenant...`);
+
+      // Extrai categorias únicas e cadastra no banco do Tenant
+      const uniqueCategories = [...new Set(masterProducts.map(p => p.category).filter(Boolean))];
+      
+      await client.category.createMany({
+        data: uniqueCategories.map(name => ({ name: name as string })),
         skipDuplicates: true,
       });
 
-      const allCategories = await client.category.findMany();
-      const cat = (name: string) => allCategories.find((c) => c.name === name)!;
+      const tenantCategories = await client.category.findMany();
+      const getCatId = (name: string | null) => {
+        if (!name) return undefined;
+        return tenantCategories.find(c => c.name === name)?.id;
+      };
 
-      await client.product.createMany({
-        data: [
-          { name: 'Heineken Long Neck 330ml',               shortCode: '1',  priceSell: 6.90,   priceCost: 4.80,   stock: 120, categoryId: cat('Cervejas').id },
-          { name: 'Heineken Latão 473ml',                   shortCode: '2',  priceSell: 7.50,   priceCost: 5.50,   stock: 100, categoryId: cat('Cervejas').id },
-          { name: 'Brahma Duplo Malte Latão 473ml',         shortCode: '3',  priceSell: 4.90,   priceCost: 3.20,   stock: 300, categoryId: cat('Cervejas').id },
-          { name: 'Brahma Chopp Lata 350ml',                shortCode: '4',  priceSell: 3.50,   priceCost: 2.20,   stock: 150, categoryId: cat('Cervejas').id },
-          { name: 'Amstel Latão 473ml',                     shortCode: '5',  priceSell: 4.80,   priceCost: 3.50,   stock: 120, categoryId: cat('Cervejas').id },
-          { name: 'Spaten Long Neck 355ml',                 shortCode: '6',  priceSell: 5.90,   priceCost: 4.00,   stock: 90,  categoryId: cat('Cervejas').id },
-          { name: 'Stella Artois Long Neck 330ml',          shortCode: '7',  priceSell: 7.50,   priceCost: 5.50,   stock: 40,  categoryId: cat('Cervejas').id },
-          { name: 'Corona Long Neck 330ml',                 shortCode: '8',  priceSell: 6.90,   priceCost: 4.90,   stock: 60,  categoryId: cat('Cervejas').id },
-          { name: 'Skol Lata 350ml',                        shortCode: '9',  priceSell: 3.20,   priceCost: 2.00,   stock: 250, categoryId: cat('Cervejas').id },
-          { name: 'Absolut Vodka 1L',                       shortCode: '10', priceSell: 95.00,  priceCost: 65.00,  stock: 15,  categoryId: cat('Destilados').id },
-          { name: 'Smirnoff Vodka 998ml',                   shortCode: '11', priceSell: 49.90,  priceCost: 35.00,  stock: 30,  categoryId: cat('Destilados').id },
-          { name: 'Johnnie Walker Red Label 1L',            shortCode: '12', priceSell: 109.90, priceCost: 80.00,  stock: 20,  categoryId: cat('Destilados').id },
-          { name: 'Jack Daniels No. 7 1L',                  shortCode: '13', priceSell: 159.90, priceCost: 110.00, stock: 10,  categoryId: cat('Destilados').id },
-          { name: 'Gin Tanqueray 750ml',                    shortCode: '14', priceSell: 139.90, priceCost: 95.00,  stock: 12,  categoryId: cat('Destilados').id },
-          { name: 'Cachaça 51 965ml',                       shortCode: '15', priceSell: 14.00,  priceCost: 8.50,   stock: 40,  categoryId: cat('Destilados').id },
-          { name: 'Tequila Jose Cuervo 750ml',              shortCode: '16', priceSell: 129.90, priceCost: 90.00,  stock: 15,  categoryId: cat('Destilados').id },
-          { name: 'Red Bull Lata 250ml',                    shortCode: '17', priceSell: 9.90,   priceCost: 6.90,   stock: 80,  categoryId: cat('Energéticos').id },
-          { name: 'Monster Energy 473ml',                   shortCode: '18', priceSell: 11.90,  priceCost: 8.50,   stock: 50,  categoryId: cat('Energéticos').id },
-          { name: 'Baly Tradicional 2L',                    shortCode: '19', priceSell: 15.00,  priceCost: 10.00,  stock: 40,  categoryId: cat('Energéticos').id },
-          { name: 'Coca-Cola 2L',                           shortCode: '20', priceSell: 11.00,  priceCost: 7.50,   stock: 60,  categoryId: cat('Refrigerantes e Sucos').id },
-          { name: 'Guaraná Antarctica 2L',                  shortCode: '21', priceSell: 8.50,   priceCost: 5.50,   stock: 70,  categoryId: cat('Refrigerantes e Sucos').id },
-          { name: 'Coca-Cola Lata 350ml',                   shortCode: '22', priceSell: 5.00,   priceCost: 3.20,   stock: 120, categoryId: cat('Refrigerantes e Sucos').id },
-          { name: 'Água Mineral s/ Gás 500ml',              shortCode: '23', priceSell: 2.00,   priceCost: 0.80,   stock: 120, categoryId: cat('Refrigerantes e Sucos').id },
-          { name: 'Ruffles Original 76g',                   shortCode: '24', priceSell: 8.50,   priceCost: 5.50,   stock: 30,  categoryId: cat('Salgadinhos e Petiscos').id },
-          { name: 'Doritos Queijo Nacho 76g',               shortCode: '25', priceSell: 8.50,   priceCost: 5.50,   stock: 35,  categoryId: cat('Salgadinhos e Petiscos').id },
-          { name: 'Gelo Escama 5kg',                        shortCode: '26', priceSell: 12.00,  priceCost: 6.00,   stock: 30,  categoryId: cat('Convenência').id },
-          { name: 'Copo Descartável 400ml (50 un)',          shortCode: '27', priceSell: 10.00,  priceCost: 6.00,   stock: 25,  categoryId: cat('Convenência').id },
-          { name: 'Combo: Vodka Smirnoff + Baly 2L + Gelo', shortCode: '28', priceSell: 68.00,  priceCost: 48.00,  stock: 50,  categoryId: cat('Copão / Combos').id },
-          { name: 'Copão: Vodka e Energético 500ml',         shortCode: '29', priceSell: 15.00,  priceCost: 7.00,   stock: 200, categoryId: cat('Copão / Combos').id },
-          { name: 'Cigarro Marlboro Vermelho',               shortCode: '30', priceSell: 12.50,  priceCost: 10.00,  stock: 50,  categoryId: cat('Tabacaria').id },
-          { name: 'Isqueiro Bic',                           shortCode: '31', priceSell: 6.00,   priceCost: 3.50,   stock: 80,  categoryId: cat('Tabacaria').id },
-        ],
-        skipDuplicates: true,
-      });
+      // Mapeia os produtos para inserção
+      const productsData = masterProducts.map((p, index) => {
+        const catId = getCatId(p.category);
+        if (!catId) return null; // Ignora se não houver categoria (improvável)
 
-      this.logger.log(`✅ Produtos base populados no banco: ${databaseUrl}`);
+        return {
+          name: p.name + (p.brand ? ` - ${p.brand}` : ''),
+          shortCode: (index + 1).toString(), // Gera códigos curtos sequenciais de 1 a 1500
+          barcode: p.ean || null,
+          priceCost: 0,
+          priceSell: 0,
+          stock: 0,
+          categoryId: catId,
+          imageUrl: p.imageUrl || null,
+          ncm: p.ncm || null,
+          cest: p.cest || null,
+          active: true,
+          unit: 'UN'
+        };
+      }).filter(Boolean);
+
+      // Insere em lotes caso seja muito grande
+      const batchSize = 500;
+      for (let i = 0; i < productsData.length; i += batchSize) {
+        const batch = productsData.slice(i, i + batchSize);
+        await client.product.createMany({
+          data: batch as any,
+          skipDuplicates: true,
+        });
+      }
+
+      this.logger.log(`✅ Produtos base populados com SUCESSO no banco: ${databaseUrl}`);
+    } catch (err) {
+      this.logger.error(`❌ Erro ao popular produtos base: ${err.message}`, err.stack);
+      throw err;
     } finally {
       await client.$disconnect();
     }
   }
 
   /** Define/atualiza o PIN de desconto do PDV (armazenado na tabela tenant_settings do banco do tenant) */
-  async setDiscountPin(tenantId: string, databaseUrl: string, pin: string) {
+  async setDiscountPin(tenantId: string, pin: string) {
+    const { databaseUrl } = this.tenantContext.get();
     const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
     const hashed = await bcrypt.hash(pin, 10);
     await prisma.tenantSettings.upsert({
@@ -292,7 +348,8 @@ export class TenantsService {
   }
 
   /** Verifica se o PIN de desconto é válido */
-  async verifyDiscountPin(tenantId: string, databaseUrl: string, pin: string): Promise<boolean> {
+  async verifyDiscountPin(tenantId: string, pin: string): Promise<boolean> {
+    const { databaseUrl } = this.tenantContext.get();
     const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
     const settings = await prisma.tenantSettings.findUnique({ where: { id: 'singleton' } });
     if (!settings?.discountPin) return false;

@@ -39,9 +39,11 @@ export declare class ProductsController {
             barcode: string | null;
             unit: string;
             active: boolean;
+            imageUrl: string | null;
             priceCost: import("@prisma/client/runtime/library").Decimal;
             priceSell: import("@prisma/client/runtime/library").Decimal;
             stock: import("@prisma/client/runtime/library").Decimal;
+            salesCount: number;
             ncm: string | null;
             cest: string | null;
             origem: number;
@@ -50,6 +52,41 @@ export declare class ProductsController {
             total: number;
             page: number;
             lastPage: number;
+        };
+    }>;
+    lookupBarcode(barcode: string): Promise<{
+        source: string;
+        data: {
+            name: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            categoryId: string;
+            grupoTributacaoId: string | null;
+            shortCode: string | null;
+            barcode: string | null;
+            unit: string;
+            active: boolean;
+            imageUrl: string | null;
+            priceCost: import("@prisma/client/runtime/library").Decimal;
+            priceSell: import("@prisma/client/runtime/library").Decimal;
+            stock: import("@prisma/client/runtime/library").Decimal;
+            salesCount: number;
+            ncm: string | null;
+            cest: string | null;
+            origem: number;
+        };
+    } | {
+        source: string;
+        data: {
+            name: string;
+            barcode: string;
+            ncm: string | null;
+            cest: string | null;
+            unit: string;
+            imageUrl: string | null;
+            brand: string | null;
+            masterCategory: string | null;
         };
     }>;
     create(body: any): Promise<{
@@ -63,9 +100,11 @@ export declare class ProductsController {
         barcode: string | null;
         unit: string;
         active: boolean;
+        imageUrl: string | null;
         priceCost: import("@prisma/client/runtime/library").Decimal;
         priceSell: import("@prisma/client/runtime/library").Decimal;
         stock: import("@prisma/client/runtime/library").Decimal;
+        salesCount: number;
         ncm: string | null;
         cest: string | null;
         origem: number;
@@ -88,9 +127,11 @@ export declare class ProductsController {
             barcode: string | null;
             unit: string;
             active: boolean;
+            imageUrl: string | null;
             priceCost: import("@prisma/client/runtime/library").Decimal;
             priceSell: import("@prisma/client/runtime/library").Decimal;
             stock: import("@prisma/client/runtime/library").Decimal;
+            salesCount: number;
             ncm: string | null;
             cest: string | null;
             origem: number;
@@ -112,9 +153,11 @@ export declare class ProductsController {
         barcode: string | null;
         unit: string;
         active: boolean;
+        imageUrl: string | null;
         priceCost: import("@prisma/client/runtime/library").Decimal;
         priceSell: import("@prisma/client/runtime/library").Decimal;
         stock: import("@prisma/client/runtime/library").Decimal;
+        salesCount: number;
         ncm: string | null;
         cest: string | null;
         origem: number;
@@ -130,9 +173,11 @@ export declare class ProductsController {
         barcode: string | null;
         unit: string;
         active: boolean;
+        imageUrl: string | null;
         priceCost: import("@prisma/client/runtime/library").Decimal;
         priceSell: import("@prisma/client/runtime/library").Decimal;
         stock: import("@prisma/client/runtime/library").Decimal;
+        salesCount: number;
         ncm: string | null;
         cest: string | null;
         origem: number;

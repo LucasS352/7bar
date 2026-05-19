@@ -78,9 +78,11 @@ export declare class CashRegistersController {
                         barcode: string | null;
                         unit: string;
                         active: boolean;
+                        imageUrl: string | null;
                         priceCost: import("@prisma/client/runtime/library").Decimal;
                         priceSell: import("@prisma/client/runtime/library").Decimal;
                         stock: import("@prisma/client/runtime/library").Decimal;
+                        salesCount: number;
                         ncm: string | null;
                         cest: string | null;
                         origem: number;

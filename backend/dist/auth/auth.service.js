@@ -48,11 +48,13 @@ const heart_prisma_service_1 = require("../prisma/heart-prisma.service");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
 const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
+const tenant_context_service_1 = require("../prisma/tenant-context.service");
 let AuthService = class AuthService {
-    constructor(heartPrisma, jwtService, tenantManager) {
+    constructor(heartPrisma, jwtService, tenantManager, tenantContext) {
         this.heartPrisma = heartPrisma;
         this.jwtService = jwtService;
         this.tenantManager = tenantManager;
+        this.tenantContext = tenantContext;
     }
     async validateUser(email, pass) {
         const user = await this.heartPrisma.user.findUnique({
@@ -68,7 +70,8 @@ let AuthService = class AuthService {
         }
         return null;
     }
-    async validateOperatorPin(tenantId, databaseUrl, operatorId, pin) {
+    async validateOperatorPin(tenantId, operatorId, pin) {
+        const { databaseUrl } = this.tenantContext.get();
         const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
         const operator = await prisma.operator.findFirst({
             where: { id: operatorId, active: true },
@@ -86,7 +89,6 @@ let AuthService = class AuthService {
             sub: user.id,
             email: user.email,
             tenantId: user.tenant.id,
-            databaseUrl: user.tenant.databaseUrl,
             role: user.role
         };
         return {
@@ -105,6 +107,7 @@ exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [heart_prisma_service_1.HeartPrismaService,
         jwt_1.JwtService,
-        tenant_prisma_service_1.TenantConnectionManager])
+        tenant_prisma_service_1.TenantConnectionManager,
+        tenant_context_service_1.TenantContextService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

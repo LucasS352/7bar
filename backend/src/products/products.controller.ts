@@ -26,6 +26,11 @@ export class ProductsController {
     );
   }
 
+  @Get('lookup/:barcode')
+  lookupBarcode(@Param('barcode') barcode: string) {
+    return this.productsService.lookupBarcode(barcode);
+  }
+
   @Post()
   create(@Body() body: any) {
     return this.productsService.create(body);

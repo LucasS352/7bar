@@ -1,6 +1,8 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler, UnauthorizedException } from '@nestjs/common';
 import { AsyncLocalStorage } from 'async_hooks';
-import { Observable } from 'rxjs';
+import { Observable, from } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
+import { HeartPrismaService } from './heart-prisma.service';
 
 export interface TenantContext {
   tenantId: string;
@@ -27,7 +29,36 @@ export class TenantContextService {
 
 @Injectable()
 export class TenantInterceptor implements NestInterceptor {
-  constructor(private readonly tenantContext: TenantContextService) {}
+  private urlCache = new Map<string, { url: string; expiresAt: number }>();
+  private readonly CACHE_TTL = 1000 * 60 * 60; // 1 hora de cache
+
+  constructor(
+    private readonly tenantContext: TenantContextService,
+    private readonly heartPrisma: HeartPrismaService
+  ) {}
+
+  private async getDatabaseUrl(tenantId: string): Promise<string> {
+    const cached = this.urlCache.get(tenantId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.url;
+    }
+
+    const tenant = await this.heartPrisma.tenant.findUnique({
+      where: { id: tenantId }
+    });
+
+    if (!tenant) {
+      throw new UnauthorizedException('Acesso negado: Tenant inativo ou não encontrado.');
+    }
+
+    const databaseUrl = tenant.databaseUrl;
+    this.urlCache.set(tenantId, {
+      url: databaseUrl,
+      expiresAt: Date.now() + this.CACHE_TTL
+    });
+
+    return databaseUrl;
+  }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
@@ -35,16 +66,21 @@ export class TenantInterceptor implements NestInterceptor {
 
     if (!user) return next.handle();
 
-    const tenantContext: TenantContext = {
-      tenantId: user.tenantId,
-      databaseUrl: user.databaseUrl,
-      userId: user.id || user.sub,
-    };
+    // Use from() and switchMap to safely handle async fetch inside interceptor
+    return from(this.getDatabaseUrl(user.tenantId)).pipe(
+      switchMap((databaseUrl) => {
+        const tenantContext: TenantContext = {
+          tenantId: user.tenantId,
+          databaseUrl,
+          userId: user.id || user.sub,
+        };
 
-    return new Observable((observer) => {
-      this.tenantContext.run(tenantContext, () => {
-        next.handle().subscribe(observer);
-      });
-    });
+        return new Observable((observer) => {
+          this.tenantContext.run(tenantContext, () => {
+            next.handle().subscribe(observer);
+          });
+        });
+      })
+    );
   }
 }

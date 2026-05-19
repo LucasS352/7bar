@@ -117,6 +117,7 @@ exports.Prisma.TenantScalarFieldEnum = {
   cep: 'cep',
   telefone: 'telefone',
   nfceAtivo: 'nfceAtivo',
+  nfceAutoSync: 'nfceAutoSync',
   nfceSerie: 'nfceSerie',
   nfceAmbiente: 'nfceAmbiente',
   nfceCsc: 'nfceCsc',
@@ -124,6 +125,7 @@ exports.Prisma.TenantScalarFieldEnum = {
   certPfx: 'certPfx',
   certSenha: 'certSenha',
   certValidade: 'certValidade',
+  cosmosApiKey: 'cosmosApiKey',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -139,6 +141,20 @@ exports.Prisma.UserScalarFieldEnum = {
   active: 'active',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.MasterProductScalarFieldEnum = {
+  id: 'id',
+  ean: 'ean',
+  name: 'name',
+  brand: 'brand',
+  ncm: 'ncm',
+  cest: 'cest',
+  unit: 'unit',
+  imageUrl: 'imageUrl',
+  category: 'category',
+  source: 'source',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -190,7 +206,8 @@ exports.Prisma.TenantOrderByRelevanceFieldEnum = {
   telefone: 'telefone',
   nfceCsc: 'nfceCsc',
   nfceIdCsc: 'nfceIdCsc',
-  certSenha: 'certSenha'
+  certSenha: 'certSenha',
+  cosmosApiKey: 'cosmosApiKey'
 };
 
 exports.Prisma.UserOrderByRelevanceFieldEnum = {
@@ -203,10 +220,24 @@ exports.Prisma.UserOrderByRelevanceFieldEnum = {
   pin: 'pin'
 };
 
+exports.Prisma.MasterProductOrderByRelevanceFieldEnum = {
+  id: 'id',
+  ean: 'ean',
+  name: 'name',
+  brand: 'brand',
+  ncm: 'ncm',
+  cest: 'cest',
+  unit: 'unit',
+  imageUrl: 'imageUrl',
+  category: 'category',
+  source: 'source'
+};
+
 
 exports.Prisma.ModelName = {
   Tenant: 'Tenant',
-  User: 'User'
+  User: 'User',
+  MasterProduct: 'MasterProduct'
 };
 /**
  * Create the Client
@@ -230,6 +261,10 @@ const config = {
         "fromEnvVar": null,
         "value": "windows",
         "native": true
+      },
+      {
+        "fromEnvVar": null,
+        "value": "linux-musl-openssl-3.0.x"
       }
     ],
     "previewFeatures": [],
@@ -247,6 +282,7 @@ const config = {
     "db"
   ],
   "activeProvider": "mysql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
@@ -255,13 +291,13 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// ============================================================\n//  HEART SCHEMA — Banco mestre multi-tenant\n//  Gerencia tenants (empresas) e usuários globais\n// ============================================================\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/heart-client\"\n}\n\ndatasource db {\n  provider = \"mysql\"\n  url      = env(\"DATABASE_URL_HEART\")\n}\n\n// ------------------------------------------------------------\n//  Tenant — dados completos da empresa emitente (NFC-e)\n// ------------------------------------------------------------\nmodel Tenant {\n  id           String  @id @default(uuid())\n  databaseName String  @unique @map(\"database_name\")\n  databaseUrl  String  @map(\"database_url\")\n  name         String  @default(\"\") // nome legado (mantém compatibilidade)\n  status       String  @default(\"active\") // active, suspended, inactive\n  logoUrl      String?\n  modulos      Json?   @default(\"{\\\"nfce\\\": true, \\\"estoque\\\": true, \\\"dashboardMobile\\\": true}\")\n\n  // Identificação\n  razaoSocial  String?\n  nomeFantasia String?\n  cnpj         String? @unique\n  ie           String? // Inscrição Estadual\n  im           String? // Inscrição Municipal\n  crt          Int     @default(1) // 1=Simples Nacional, 2=SN Excesso, 3=Regime Normal\n\n  // Endereço\n  logradouro   String?\n  numero       String?\n  complemento  String?\n  bairro       String?\n  municipio    String?\n  codMunicipio String? // Código IBGE (7 dígitos) ex: \"3506003\" para Bauru-SP\n  uf           String?\n  cep          String?\n  telefone     String?\n\n  // NFC-e — configurações de emissão\n  nfceAtivo    Boolean @default(false) // habilita emissão NFC-e\n  nfceSerie    Int     @default(1) // série (ex: 1)\n  nfceAmbiente Int     @default(2) // 1=Produção, 2=Homologação\n  nfceCsc      String? // Código de Segurança do Contribuinte (SEFAZ)\n  nfceIdCsc    String? // ID do CSC\n\n  // Certificado Digital A1\n  certPfx      Bytes? // .pfx armazenado como BLOB\n  certSenha    String? // senha do certificado\n  certValidade DateTime? // data de vencimento\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  users User[]\n\n  @@map(\"tenants\")\n}\n\n// ------------------------------------------------------------\n//  User — usuários vinculados ao tenant\n// ------------------------------------------------------------\nmodel User {\n  id       String @id @default(uuid())\n  tenantId String\n  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)\n\n  name     String\n  email    String  @unique\n  password String\n  role     String  @default(\"operator\") // admin, manager, operator\n  pin      String? // PIN de 4-6 dígitos para troca rápida no PDV\n  active   Boolean @default(true)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  @@map(\"users\")\n}\n",
-  "inlineSchemaHash": "d04092c2ee18cc1ca7ccf99526a04e8b840b662183ce957b03568f1c1ea42657",
+  "inlineSchema": "// ============================================================\n//  HEART SCHEMA — Banco mestre multi-tenant\n//  Gerencia tenants (empresas) e usuários globais\n// ============================================================\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  output        = \"../src/generated/heart-client\"\n  binaryTargets = [\"native\", \"linux-musl-openssl-3.0.x\"]\n}\n\ndatasource db {\n  provider = \"mysql\"\n  url      = env(\"DATABASE_URL_HEART\")\n}\n\n// ------------------------------------------------------------\n//  Tenant — dados completos da empresa emitente (NFC-e)\n// ------------------------------------------------------------\nmodel Tenant {\n  id           String  @id @default(uuid())\n  databaseName String  @unique @map(\"database_name\")\n  databaseUrl  String  @map(\"database_url\")\n  name         String  @default(\"\") // nome legado (mantém compatibilidade)\n  status       String  @default(\"active\") // active, suspended, inactive\n  logoUrl      String?\n  modulos      Json?   @default(\"{\\\"nfce\\\": true, \\\"estoque\\\": true, \\\"dashboardMobile\\\": true}\")\n\n  // Identificação\n  razaoSocial  String?\n  nomeFantasia String?\n  cnpj         String? @unique\n  ie           String? // Inscrição Estadual\n  im           String? // Inscrição Municipal\n  crt          Int     @default(1) // 1=Simples Nacional, 2=SN Excesso, 3=Regime Normal\n\n  // Endereço\n  logradouro   String?\n  numero       String?\n  complemento  String?\n  bairro       String?\n  municipio    String?\n  codMunicipio String? // Código IBGE (7 dígitos) ex: \"3506003\" para Bauru-SP\n  uf           String?\n  cep          String?\n  telefone     String?\n\n  // NFC-e — configurações de emissão\n  nfceAtivo    Boolean @default(false) // habilita emissão NFC-e\n  nfceAutoSync Boolean @default(true) // habilita o CRON de retentativa para este tenant\n  nfceSerie    Int     @default(1) // série (ex: 1)\n  nfceAmbiente Int     @default(2) // 1=Produção, 2=Homologação\n  nfceCsc      String? // Código de Segurança do Contribuinte (SEFAZ)\n  nfceIdCsc    String? // ID do CSC\n\n  // Certificado Digital A1\n  certPfx      Bytes? // .pfx armazenado como BLOB\n  certSenha    String? // senha do certificado\n  certValidade DateTime? // data de vencimento\n\n  // Integração Cosmos (Bluesoft) — lookup de EAN brasileiro\n  cosmosApiKey String? // Token da API Cosmos do cliente para lookup de EAN\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  users User[]\n\n  @@map(\"tenants\")\n}\n\n// ------------------------------------------------------------\n//  User — usuários vinculados ao tenant\n// ------------------------------------------------------------\nmodel User {\n  id       String @id @default(uuid())\n  tenantId String\n  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)\n\n  name     String\n  email    String  @unique\n  password String\n  role     String  @default(\"operator\") // admin, manager, operator\n  pin      String? // PIN de 4-6 dígitos para troca rápida no PDV\n  active   Boolean @default(true)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  @@map(\"users\")\n}\n\n// ------------------------------------------------------------\n//  MasterProduct — dicionário global de produtos por EAN\n//  Compartilhado entre todos os tenants (banco heart)\n//  Usado para auto-preenchimento ao bipar código de barras\n// ------------------------------------------------------------\nmodel MasterProduct {\n  id       String  @id @default(uuid())\n  ean      String  @unique // EAN-13 (13 dígitos)\n  name     String // Nome comercial padronizado (PT-BR)\n  brand    String? // Marca (ex: Heineken, Ambev)\n  ncm      String? // NCM 8 dígitos — obrigatório NFC-e\n  cest     String? // CEST 7 dígitos — quando há ST\n  unit     String  @default(\"UN\") // UN, LT, FD, CX, KG\n  imageUrl String? @db.Text // URL da foto do produto\n  category String? // Categoria OFF (ex: en:beers)\n  source   String  @default(\"openfoodfacts\") // rastreabilidade da origem\n\n  createdAt DateTime @default(now())\n\n  @@index([ean])\n  @@map(\"master_products\")\n}\n",
+  "inlineSchemaHash": "064af1401732276bee48a04b8f94f4243088f21e5a1886903b4cdc2bce478036",
   "copyEngine": true
 }
 config.dirname = '/'
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"Tenant\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"databaseName\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"database_name\"},{\"name\":\"databaseUrl\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"database_url\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"logoUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"modulos\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"razaoSocial\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"nomeFantasia\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cnpj\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"ie\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"im\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"crt\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"logradouro\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"numero\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"complemento\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bairro\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"municipio\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"codMunicipio\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"uf\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cep\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"telefone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"nfceAtivo\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"nfceSerie\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"nfceAmbiente\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"nfceCsc\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"nfceIdCsc\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"certPfx\",\"kind\":\"scalar\",\"type\":\"Bytes\"},{\"name\":\"certSenha\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"certValidade\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"users\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"TenantToUser\"}],\"dbName\":\"tenants\"},\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tenantId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tenant\",\"kind\":\"object\",\"type\":\"Tenant\",\"relationName\":\"TenantToUser\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"pin\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"active\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"users\"}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"Tenant\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"databaseName\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"database_name\"},{\"name\":\"databaseUrl\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"database_url\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"logoUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"modulos\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"razaoSocial\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"nomeFantasia\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cnpj\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"ie\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"im\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"crt\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"logradouro\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"numero\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"complemento\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bairro\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"municipio\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"codMunicipio\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"uf\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cep\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"telefone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"nfceAtivo\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"nfceAutoSync\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"nfceSerie\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"nfceAmbiente\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"nfceCsc\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"nfceIdCsc\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"certPfx\",\"kind\":\"scalar\",\"type\":\"Bytes\"},{\"name\":\"certSenha\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"certValidade\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"cosmosApiKey\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"users\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"TenantToUser\"}],\"dbName\":\"tenants\"},\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tenantId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tenant\",\"kind\":\"object\",\"type\":\"Tenant\",\"relationName\":\"TenantToUser\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"pin\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"active\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"users\"},\"MasterProduct\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"ean\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"brand\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"ncm\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cest\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"unit\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"imageUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"category\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"source\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"master_products\"}},\"enums\":{},\"types\":{}}")
 defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
 config.engineWasm = {
   getRuntime: async () => require('./query_engine_bg.js'),

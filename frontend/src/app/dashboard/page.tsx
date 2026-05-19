@@ -57,6 +57,8 @@ type Sale = {
   emitirNfce: boolean;
   nfceStatus: string | null;
   nfceNumero: number | null;
+  nfceCodRejeicao?: string | null;
+  nfceMotivoRejeicao?: string | null;
   operatorId?: string;
   cashRegisterId?: string;
 };
@@ -528,9 +530,18 @@ export default function SalesDashboard() {
                             </span>
                           ) : sale.nfceStatus === 'rejeitada' ? (
                             <div className="flex items-center gap-2">
-                              <span className="text-red-400 font-semibold text-[11px] flex items-center justify-center gap-1 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
-                                <XCircle size={12}/> Rejeitada
-                              </span>
+                              <div className="relative group">
+                                <span className="text-red-400 font-semibold text-[11px] flex items-center justify-center gap-1 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 cursor-help">
+                                  <XCircle size={12}/> Rejeitada
+                                </span>
+                                {sale.nfceMotivoRejeicao && (
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 p-2 bg-zinc-800 text-white text-[10px] rounded shadow-xl border border-red-500/50 z-50 text-center pointer-events-none break-words">
+                                    <div className="font-bold text-red-400 mb-0.5">Motivo da Rejeição:</div>
+                                    {sale.nfceMotivoRejeicao}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-800"></div>
+                                  </div>
+                                )}
+                              </div>
                               <button onClick={() => handleEmitNfce(sale.id)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 p-1 rounded bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-50" title="Tentar Novamente">
                                 {emittingId === sale.id ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />}
                               </button>
@@ -600,9 +611,18 @@ export default function SalesDashboard() {
                           </span>
                         ) : sale.nfceStatus === 'rejeitada' ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-red-400 font-semibold text-[11px] flex items-center justify-center gap-1 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
-                              <XCircle size={12}/> Rejeitada
-                            </span>
+                            <div className="relative group">
+                              <span className="text-red-400 font-semibold text-[11px] flex items-center justify-center gap-1 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 cursor-help">
+                                <XCircle size={12}/> Rejeitada
+                              </span>
+                              {sale.nfceMotivoRejeicao && (
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 p-2 bg-zinc-800 text-white text-[10px] rounded shadow-xl border border-red-500/50 z-50 text-center pointer-events-none break-words">
+                                  <div className="font-bold text-red-400 mb-0.5">Motivo da Rejeição:</div>
+                                  {sale.nfceMotivoRejeicao}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-800"></div>
+                                </div>
+                              )}
+                            </div>
                             <button onClick={() => handleEmitNfce(sale.id)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 p-1 rounded bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-50" title="Tentar Novamente">
                               {emittingId === sale.id ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />}
                             </button>

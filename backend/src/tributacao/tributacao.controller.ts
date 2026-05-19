@@ -9,26 +9,26 @@ export class TributacaoController {
 
   @Get()
   findAll(@Request() req: any) {
-    return this.service.findAll(req.user.tenantId, req.user.databaseUrl);
+    return this.service.findAll(req.user.tenantId);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req: any) {
-    return this.service.findOne(req.user.tenantId, req.user.databaseUrl, id);
+    return this.service.findOne(req.user.tenantId, id);
   }
 
   @Post()
   create(@Body() body: any, @Request() req: any) {
-    return this.service.create(req.user.tenantId, req.user.databaseUrl, body);
+    return this.service.create(req.user.tenantId, body);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-    return this.service.update(req.user.tenantId, req.user.databaseUrl, id, body);
+    return this.service.update(req.user.tenantId, id, body);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req: any) {
-    return this.service.remove(req.user.tenantId, req.user.databaseUrl, id);
+    return this.service.remove(req.user.tenantId, id);
   }
 }

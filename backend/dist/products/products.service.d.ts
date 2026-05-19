@@ -13,6 +13,7 @@ interface ProductCreateDto {
     ncm?: string | null;
     cest?: string | null;
     origem?: number;
+    imageUrl?: string | null;
 }
 interface ProductUpdateDto {
     name?: string;
@@ -28,6 +29,7 @@ interface ProductUpdateDto {
     cest?: string | null;
     origem?: number;
     active?: boolean;
+    imageUrl?: string | null;
 }
 interface BulkItem {
     name: string;
@@ -41,17 +43,55 @@ interface BulkItem {
     ncm?: string | null;
     cest?: string | null;
     origem?: number;
+    imageUrl?: string | null;
 }
 export interface TenantSettingsDto {
     allowNegativeStock: boolean;
 }
+import { HeartPrismaService } from '../prisma/heart-prisma.service';
 export declare class ProductsService {
     private tenantManager;
     private tenantContext;
-    constructor(tenantManager: TenantConnectionManager, tenantContext: TenantContextService);
+    private heartPrisma;
+    constructor(tenantManager: TenantConnectionManager, tenantContext: TenantContextService, heartPrisma: HeartPrismaService);
     private getPrisma;
     private nextShortCode;
     private sanitize;
+    lookupBarcode(barcode: string): Promise<{
+        source: string;
+        data: {
+            name: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            categoryId: string;
+            grupoTributacaoId: string | null;
+            shortCode: string | null;
+            barcode: string | null;
+            unit: string;
+            active: boolean;
+            imageUrl: string | null;
+            priceCost: import("@prisma/client/runtime/library").Decimal;
+            priceSell: import("@prisma/client/runtime/library").Decimal;
+            stock: import("@prisma/client/runtime/library").Decimal;
+            salesCount: number;
+            ncm: string | null;
+            cest: string | null;
+            origem: number;
+        };
+    } | {
+        source: string;
+        data: {
+            name: string;
+            barcode: string;
+            ncm: string | null;
+            cest: string | null;
+            unit: string;
+            imageUrl: string | null;
+            brand: string | null;
+            masterCategory: string | null;
+        };
+    }>;
     findAll(page?: number, limit?: number): Promise<{
         data: ({
             grupoTributacao: {
@@ -89,9 +129,11 @@ export declare class ProductsService {
             barcode: string | null;
             unit: string;
             active: boolean;
+            imageUrl: string | null;
             priceCost: import("@prisma/client/runtime/library").Decimal;
             priceSell: import("@prisma/client/runtime/library").Decimal;
             stock: import("@prisma/client/runtime/library").Decimal;
+            salesCount: number;
             ncm: string | null;
             cest: string | null;
             origem: number;
@@ -113,9 +155,11 @@ export declare class ProductsService {
         barcode: string | null;
         unit: string;
         active: boolean;
+        imageUrl: string | null;
         priceCost: import("@prisma/client/runtime/library").Decimal;
         priceSell: import("@prisma/client/runtime/library").Decimal;
         stock: import("@prisma/client/runtime/library").Decimal;
+        salesCount: number;
         ncm: string | null;
         cest: string | null;
         origem: number;
@@ -131,9 +175,11 @@ export declare class ProductsService {
         barcode: string | null;
         unit: string;
         active: boolean;
+        imageUrl: string | null;
         priceCost: import("@prisma/client/runtime/library").Decimal;
         priceSell: import("@prisma/client/runtime/library").Decimal;
         stock: import("@prisma/client/runtime/library").Decimal;
+        salesCount: number;
         ncm: string | null;
         cest: string | null;
         origem: number;
@@ -149,9 +195,11 @@ export declare class ProductsService {
         barcode: string | null;
         unit: string;
         active: boolean;
+        imageUrl: string | null;
         priceCost: import("@prisma/client/runtime/library").Decimal;
         priceSell: import("@prisma/client/runtime/library").Decimal;
         stock: import("@prisma/client/runtime/library").Decimal;
+        salesCount: number;
         ncm: string | null;
         cest: string | null;
         origem: number;
@@ -168,9 +216,11 @@ export declare class ProductsService {
             barcode: string | null;
             unit: string;
             active: boolean;
+            imageUrl: string | null;
             priceCost: import("@prisma/client/runtime/library").Decimal;
             priceSell: import("@prisma/client/runtime/library").Decimal;
             stock: import("@prisma/client/runtime/library").Decimal;
+            salesCount: number;
             ncm: string | null;
             cest: string | null;
             origem: number;

@@ -9,26 +9,26 @@ export class OperatorsController {
 
   @Post()
   create(@Request() req: any, @Body() body: { name: string; pin: string }) {
-    return this.operatorsService.create(req.user.tenantId, req.user.databaseUrl, body);
+    return this.operatorsService.create(req.user.tenantId, body);
   }
 
   @Get()
   findAll(@Request() req: any) {
-    return this.operatorsService.findAll(req.user.tenantId, req.user.databaseUrl);
+    return this.operatorsService.findAll(req.user.tenantId);
   }
 
   @Get(':id')
   findOne(@Request() req: any, @Param('id') id: string) {
-    return this.operatorsService.findOne(req.user.tenantId, req.user.databaseUrl, id);
+    return this.operatorsService.findOne(req.user.tenantId, id);
   }
 
   @Patch(':id')
   update(@Request() req: any, @Param('id') id: string, @Body() body: { name?: string; pin?: string; active?: boolean }) {
-    return this.operatorsService.update(req.user.tenantId, req.user.databaseUrl, id, body);
+    return this.operatorsService.update(req.user.tenantId, id, body);
   }
 
   @Delete(':id')
   remove(@Request() req: any, @Param('id') id: string) {
-    return this.operatorsService.remove(req.user.tenantId, req.user.databaseUrl, id);
+    return this.operatorsService.remove(req.user.tenantId, id);
   }
 }

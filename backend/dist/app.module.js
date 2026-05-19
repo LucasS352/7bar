@@ -22,14 +22,17 @@ const tributacao_module_1 = require("./tributacao/tributacao.module");
 const nfce_module_1 = require("./nfce/nfce.module");
 const operators_module_1 = require("./operators/operators.module");
 const dashboard_module_1 = require("./dashboard/dashboard.module");
+const master_products_module_1 = require("./master-products/master-products.module");
 const core_1 = require("@nestjs/core");
 const tenant_context_service_1 = require("./prisma/tenant-context.service");
+const schedule_1 = require("@nestjs/schedule");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            schedule_1.ScheduleModule.forRoot(),
             prisma_module_1.PrismaModule,
             auth_module_1.AuthModule,
             products_module_1.ProductsModule,
@@ -43,6 +46,7 @@ exports.AppModule = AppModule = __decorate([
             nfce_module_1.NfceModule,
             operators_module_1.OperatorsModule,
             dashboard_module_1.DashboardModule,
+            master_products_module_1.MasterProductsModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [

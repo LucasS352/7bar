@@ -27,10 +27,40 @@ export class TenantsController {
   /** Lista tenants protegida por PIN — usada pelo sys-init sem JWT */
   @Get('setup/list')
   async listByPin(@Request() req: any) {
-    const pin = req.headers['x-setup-pin'] || req.query['pin'];
+    const pin = (req.headers['x-setup-pin'] || req.query['pin']) as string;
     const valid = await this.tenantsService.validatePin(pin);
     if (!valid) throw new UnauthorizedException('PIN inválido.');
     return this.tenantsService.findAll();
+  }
+
+  private static isSyncingCosmos = false;
+
+  /** Aciona a sincronização automática da Cosmos (via script) protegido por PIN */
+  @Post('setup/sync-cosmos')
+  async syncCosmos(@Request() req: any) {
+    const pin = req.headers['x-setup-pin'] as string;
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN inválido.');
+
+    if (TenantsController.isSyncingCosmos) {
+      throw new BadRequestException('Uma sincronização já está em andamento. Aguarde a conclusão.');
+    }
+
+    const { execFile } = require('child_process');
+    const path = require('path');
+    const scriptPath = path.join(process.cwd(), 'scripts', 'etl', 'cosmos-auto-sync.js');
+    
+    TenantsController.isSyncingCosmos = true;
+
+    // Executa em background com controle de trava
+    execFile('node', [scriptPath], (error, stdout, stderr) => {
+      TenantsController.isSyncingCosmos = false;
+      if (error) console.error(`Erro no sync: ${error.message}`);
+      if (stderr) console.error(`Stderr sync: ${stderr}`);
+      if (stdout) console.log(`Stdout sync: ${stdout}`);
+    });
+
+    return { message: 'Sincronização iniciada em background com sucesso.' };
   }
 
   /**
@@ -52,6 +82,15 @@ export class TenantsController {
       throw new UnauthorizedException('Somente Gerentes podem alterar configurações da empresa.');
     }
     return this.tenantsService.updateTenant(req.user.tenantId, body);
+  }
+
+  /** Atualiza dados do tenant via sys-init (protegido por PIN) */
+  @Patch('setup/:id')
+  async updateTenantSetup(@Request() req: any, @Param('id') id: string, @Body() body: any) {
+    const pin = req.headers['x-setup-pin'] as string;
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN inválido.');
+    return this.tenantsService.updateTenant(id, body);
   }
 
   /**
@@ -86,6 +125,22 @@ export class TenantsController {
     return this.tenantsService.uploadCertificado(req.user.tenantId, file.buffer, body.certSenha);
   }
 
+  /** Upload de logotipo para White Label via sys-init (protegido por PIN) */
+  @Post('setup/:id/logo')
+  @UseInterceptors(FileInterceptor('logo'))
+  async uploadLogoSetup(
+    @Request() req: any,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const pin = req.headers['x-setup-pin'] as string;
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN inválido.');
+    
+    if (!file) throw new BadRequestException('Arquivo não enviado.');
+    return this.tenantsService.uploadLogo(id, file);
+  }
+
   /**
    * Upload de logotipo para White Label
    */
@@ -101,7 +156,6 @@ export class TenantsController {
       throw new UnauthorizedException('Permissão negada.');
     }
     if (!file) throw new BadRequestException('Arquivo não enviado.');
-    
     return this.tenantsService.uploadLogo(id, file);
   }
 
@@ -150,7 +204,7 @@ export class TenantsController {
     if (!body.pin || body.pin.length < 4) {
       throw new BadRequestException('O PIN deve ter no mínimo 4 caracteres.');
     }
-    return this.tenantsService.setDiscountPin(req.user.tenantId, req.user.databaseUrl, body.pin);
+    return this.tenantsService.setDiscountPin(req.user.tenantId, body.pin);
   }
 
   /**
@@ -159,7 +213,7 @@ export class TenantsController {
   @UseGuards(JwtAuthGuard)
   @Post('me/verify-discount-pin')
   async verifyDiscountPin(@Request() req: any, @Body() body: { pin: string }) {
-    const valid = await this.tenantsService.verifyDiscountPin(req.user.tenantId, req.user.databaseUrl, body.pin);
+    const valid = await this.tenantsService.verifyDiscountPin(req.user.tenantId, body.pin);
     if (!valid) throw new UnauthorizedException('PIN de desconto inválido.');
     return { valid: true };
   }

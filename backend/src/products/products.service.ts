@@ -18,6 +18,7 @@ interface ProductCreateDto {
   ncm?: string | null;
   cest?: string | null;
   origem?: number;
+  imageUrl?: string | null;
 }
 
 interface ProductUpdateDto {
@@ -34,6 +35,7 @@ interface ProductUpdateDto {
   cest?: string | null;
   origem?: number;
   active?: boolean;
+  imageUrl?: string | null;
 }
 
 interface BulkItem {
@@ -48,6 +50,7 @@ interface BulkItem {
   ncm?: string | null;
   cest?: string | null;
   origem?: number;
+  imageUrl?: string | null;
 }
 
 // Exported so the controller can reference the return type without TS4053
@@ -57,11 +60,14 @@ export interface TenantSettingsDto {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { HeartPrismaService } from '../prisma/heart-prisma.service';
+
 @Injectable()
 export class ProductsService {
   constructor(
     private tenantManager: TenantConnectionManager,
-    private tenantContext: TenantContextService
+    private tenantContext: TenantContextService,
+    private heartPrisma: HeartPrismaService
   ) {}
 
   /** Atalho para pegar o cliente prisma do contexto atual */
@@ -90,8 +96,56 @@ export class ProductsService {
     if ('grupoTributacaoId' in data && data.grupoTributacaoId === '') data.grupoTributacaoId = null;
     if ('ncm' in data && data.ncm === '') data.ncm = null;
     if ('cest' in data && data.cest === '') data.cest = null;
+    if ('imageUrl' in data && data.imageUrl === '') data.imageUrl = null;
     if (data.origem !== undefined) data.origem = parseInt(String(data.origem)) || 0;
     return data;
+  }
+
+  // ── Rota Mágica (Lookup MasterProduct) ────────────────────────────────────
+
+  async lookupBarcode(barcode: string) {
+    const prisma = await this.getPrisma();
+    
+    // 1. Busca no banco da loja (Tenant) primeiro
+    const localProduct = await prisma.product.findUnique({
+      where: { barcode }
+    });
+    
+    if (localProduct) {
+      return { source: 'local', data: localProduct };
+    }
+
+    // 2. Não achou? Busca no banco Mestre (Heart)
+    let masterProduct = await this.heartPrisma.masterProduct.findUnique({
+      where: { ean: barcode }
+    });
+
+    // 2.1 Fallback para códigos com zero à esquerda (leitores às vezes mandam 14 dígitos em EAN-13)
+    if (!masterProduct && barcode.length === 14 && barcode.startsWith('0')) {
+      const stripped = barcode.substring(1);
+      masterProduct = await this.heartPrisma.masterProduct.findUnique({
+        where: { ean: stripped }
+      });
+    }
+
+    if (masterProduct) {
+      return {
+        source: 'master',
+        data: {
+          name: masterProduct.name,
+          barcode: masterProduct.ean,
+          ncm: masterProduct.ncm,
+          cest: masterProduct.cest,
+          unit: masterProduct.unit,
+          imageUrl: masterProduct.imageUrl,
+          // brand and category can be passed to front-end to be used as default names if needed
+          brand: masterProduct.brand,
+          masterCategory: masterProduct.category
+        }
+      };
+    }
+
+    throw new NotFoundException('Produto não encontrado em nenhum catálogo.');
   }
 
   // ── CRUD Padrão ───────────────────────────────────────────────────────────
@@ -275,13 +329,24 @@ export class ProductsService {
       fallbackCategory = await prisma.category.create({ data: { name: 'Geral' } });
     }
 
-    // ── Carrega TODOS os produtos em 1 query (elimina N+1) ────────────────
-    const allProducts = await prisma.product.findMany({
+    // ── Carrega APENAS os produtos do lote em 1 query (elimina N+1 e OOM) ────────────────
+    const shortCodes = items.map(i => i.shortCode).filter(Boolean) as string[];
+    const barcodes = items.map(i => i.barcode).filter(Boolean) as string[];
+    const names = items.map(i => i.name?.trim()).filter(Boolean) as string[];
+
+    const batchProducts = await prisma.product.findMany({
+      where: {
+        OR: [
+          { shortCode: { in: shortCodes } },
+          { barcode: { in: barcodes } },
+          { name: { in: names } },
+        ]
+      },
       select: { id: true, name: true, shortCode: true, barcode: true, priceCost: true, priceSell: true, stock: true },
     });
-    const byShortCode = new Map(allProducts.filter(p => p.shortCode).map(p => [p.shortCode!, p]));
-    const byBarcode   = new Map(allProducts.filter(p => p.barcode).map(p => [p.barcode!, p]));
-    const byName      = new Map(allProducts.map(p => [p.name.toLowerCase(), p]));
+    const byShortCode = new Map(batchProducts.filter(p => p.shortCode).map(p => [p.shortCode!, p]));
+    const byBarcode   = new Map(batchProducts.filter(p => p.barcode).map(p => [p.barcode!, p]));
+    const byName      = new Map(batchProducts.map(p => [p.name.toLowerCase(), p]));
 
     const duplicateNames: string[] = [];
     let importedCount = 0;
@@ -315,6 +380,7 @@ export class ProductsService {
                 ...(item.ncm               && { ncm: item.ncm }),
                 ...(item.cest              && { cest: item.cest }),
                 ...(item.origem !== undefined && { origem: parseInt(String(item.origem)) || 0 }),
+                ...(item.imageUrl          && { imageUrl: item.imageUrl }),
               },
             });
 
@@ -347,6 +413,7 @@ export class ProductsService {
                 ncm:               item.ncm               || null,
                 cest:              item.cest              || null,
                 origem:            item.origem !== undefined ? parseInt(String(item.origem)) || 0 : 0,
+                imageUrl:          item.imageUrl          || null,
               },
             });
 

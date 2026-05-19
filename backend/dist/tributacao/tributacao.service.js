@@ -12,33 +12,39 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TributacaoService = void 0;
 const common_1 = require("@nestjs/common");
 const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
+const tenant_context_service_1 = require("../prisma/tenant-context.service");
 let TributacaoService = class TributacaoService {
-    constructor(tenantManager) {
+    constructor(tenantManager, tenantContext) {
         this.tenantManager = tenantManager;
+        this.tenantContext = tenantContext;
     }
-    async findAll(tenantId, databaseUrl) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async getPrisma(tenantId) {
+        const { databaseUrl } = this.tenantContext.get();
+        return this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    }
+    async findAll(tenantId) {
+        const prisma = await this.getPrisma(tenantId);
         return prisma.grupoTributacao.findMany({
             orderBy: { nome: 'asc' },
         });
     }
-    async findOne(tenantId, databaseUrl, id) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async findOne(tenantId, id) {
+        const prisma = await this.getPrisma(tenantId);
         const grupo = await prisma.grupoTributacao.findUnique({ where: { id } });
         if (!grupo)
             throw new common_1.NotFoundException(`Grupo tributário ${id} não encontrado.`);
         return grupo;
     }
-    async create(tenantId, databaseUrl, data) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async create(tenantId, data) {
+        const prisma = await this.getPrisma(tenantId);
         return prisma.grupoTributacao.create({ data });
     }
-    async update(tenantId, databaseUrl, id, data) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async update(tenantId, id, data) {
+        const prisma = await this.getPrisma(tenantId);
         return prisma.grupoTributacao.update({ where: { id }, data });
     }
-    async remove(tenantId, databaseUrl, id) {
-        const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    async remove(tenantId, id) {
+        const prisma = await this.getPrisma(tenantId);
         const count = await prisma.product.count({
             where: { grupoTributacaoId: id },
         });
@@ -51,6 +57,7 @@ let TributacaoService = class TributacaoService {
 exports.TributacaoService = TributacaoService;
 exports.TributacaoService = TributacaoService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [tenant_prisma_service_1.TenantConnectionManager])
+    __metadata("design:paramtypes", [tenant_prisma_service_1.TenantConnectionManager,
+        tenant_context_service_1.TenantContextService])
 ], TributacaoService);
 //# sourceMappingURL=tributacao.service.js.map

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { Save, Plus, Trash2, ArrowLeft, Send, Upload, AlertTriangle, Info } from 'lucide-react';
+import { Save, Plus, Trash2, ArrowLeft, Send, Upload, AlertTriangle, Info, Image } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function MassEntryPage() {
@@ -10,7 +10,7 @@ export default function MassEntryPage() {
   const [loading, setLoading] = useState(false);
   
   const [rows, setRows] = useState([
-    { id: Date.now(), shortCode: '', barcode: '', name: '', priceCost: '', priceSell: '', stockToAdd: '', categoryId: '', grupoTributacaoId: '', ncm: '', cest: '', origem: 0 }
+    { id: Date.now(), shortCode: '', barcode: '', name: '', priceCost: '', priceSell: '', stockToAdd: '', categoryId: '', grupoTributacaoId: '', ncm: '', cest: '', origem: 0, imageUrl: '' }
   ]);
   
   // Cache de Produtos e Auxiliares
@@ -20,7 +20,7 @@ export default function MassEntryPage() {
 
   useEffect(() => {
     Promise.all([
-      api.get('/products'),
+      api.get('/products?limit=2000'),
       api.get('/categories'),
       api.get('/tributacao')
     ]).then(([prodRes, catRes, grupRes]) => {
@@ -48,7 +48,8 @@ export default function MassEntryPage() {
       grupoTributacaoId: lastRow?.grupoTributacaoId || '',
       ncm: lastRow?.ncm || '',
       cest: lastRow?.cest || '',
-      origem: lastRow?.origem || 0
+      origem: lastRow?.origem || 0,
+      imageUrl: ''
     }]);
   };
 
@@ -179,7 +180,7 @@ export default function MassEntryPage() {
       
       const updated = { ...r, [field]: value };
       
-      // Auto-preenchimento Inteligente
+      // Auto-preenchimento Inteligente (Local)
       if (field === 'shortCode' || field === 'barcode') {
          const match = products.find(p => 
            (field === 'shortCode' && value && p.shortCode === value) || 
@@ -189,8 +190,42 @@ export default function MassEntryPage() {
             updated.name = match.name;
             updated.priceCost = match.priceCost?.toString() || '0';
             updated.priceSell = match.priceSell?.toString() || '0';
+            updated.ncm = match.ncm || '';
+            updated.cest = match.cest || '';
+            updated.imageUrl = match.imageUrl || '';
+            if (match.categoryId) updated.categoryId = match.categoryId;
+            if (match.grupoTributacaoId) updated.grupoTributacaoId = match.grupoTributacaoId;
             if (field === 'shortCode') updated.barcode = match.barcode || '';
             if (field === 'barcode') updated.shortCode = match.shortCode || '';
+         } else if (field === 'barcode') {
+            const clean = value.trim().replace(/\D/g, '');
+            if (clean.length >= 8 && clean.length <= 14) {
+              // Se não achou localmente e é um EAN válido, busca na Rota Mágica
+              api.get(`/products/lookup/${clean}`)
+                .then(res => {
+                  const product = res.data.data;
+                if (product) {
+                  setRows(currentRows => currentRows.map(cr => {
+                    if (cr.id === id) {
+                      return {
+                        ...cr,
+                        name: product.name,
+                        ncm: product.ncm || '',
+                        cest: product.cest || '',
+                        imageUrl: product.imageUrl || '',
+                      };
+                    }
+                    return cr;
+                  }));
+                  toast.success(`Mestre: ${product.name} importado!`);
+                }
+              })
+              .catch((err) => {
+                if (err.response?.status !== 404) {
+                  toast.error(`Erro Rota Mágica: ${err.message}`);
+                }
+              });
+            }
          }
       }
       return updated;
@@ -210,6 +245,7 @@ export default function MassEntryPage() {
       ncm:               r.ncm                   || undefined,
       cest:              r.cest                  || undefined,
       origem:            r.origem,
+      imageUrl:          r.imageUrl              || undefined,
     }));
 
     if (validRows.length === 0) {
@@ -238,7 +274,7 @@ export default function MassEntryPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 max-w-[1400px]">
+    <div className="space-y-6 animate-in fade-in duration-500 w-full px-2 max-w-none">
 
       {/* Banner: Área exclusiva para NOVOS produtos */}
       <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 flex items-start gap-3">
@@ -323,31 +359,48 @@ export default function MassEntryPage() {
         </div>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto custom-scrollbar relative">
-          <table className="w-full text-left min-w-[1000px]">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl w-full">
+        <div className="overflow-x-auto relative w-full">
+          <table className="w-full text-left min-w-0 table-fixed">
             <thead className="bg-zinc-950 text-zinc-400 text-xs shadow-md relative z-10">
               <tr>
-                <th className="px-4 py-3 font-bold uppercase tracking-widest text-left w-12 text-center">#</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-widest text-left">Nome da Mercadoria</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-widest text-left w-24">Venda (R$)</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-widest text-left w-32">Categoria</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-widest text-left w-24">Estoque</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-widest text-left w-32">Cód. Barras</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-widest text-left w-24">NCM</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-widest text-left w-24">CEST</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-widest text-left w-24">Origem</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-widest text-left w-24">Custo (R$)</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-widest text-left w-40">Grupo Fiscal</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-widest text-left w-24">Cód. Curto</th>
-                <th className="px-4 py-3 font-bold uppercase tracking-widest text-center w-16">Ação</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-center w-[40px]">#</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-center w-[60px]">Foto</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[18%]">Nome da Mercadoria</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">Venda (R$)</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[11%]">Categoria</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">Estoque</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[130px]">Cód. Barras</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">NCM</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">CEST</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[120px]">Origem</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">Custo (R$)</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[11%]">Grupo Fiscal</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">Cód. Curto</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-center w-[60px]">Ação</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/50">
               {rows.map((row, index) => (
                 <tr key={row.id} className="hover:bg-zinc-800/30 transition-colors group">
-                  <td className="px-4 py-2 text-center text-zinc-600 font-bold text-sm">{index + 1}</td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 text-center text-zinc-600 font-bold text-sm w-[40px]">{index + 1}</td>
+                  
+                  {/* Foto Column */}
+                  <td className="px-3 py-2 w-[60px]">
+                    <div className="flex justify-center">
+                      {row.imageUrl ? (
+                        <div className="w-10 h-10 shrink-0 bg-white rounded-lg flex items-center justify-center p-1 shadow-md border border-zinc-800/60 animate-in fade-in zoom-in duration-300">
+                          <img src={row.imageUrl} alt="" className="w-full h-full object-contain mix-blend-multiply" />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 shrink-0 bg-zinc-950/80 rounded-lg flex items-center justify-center border border-zinc-800/50 text-zinc-700">
+                          <Image size={18} />
+                        </div>
+                      )}
+                    </div>
+                  </td>
+
+                  <td className="px-3 py-2 w-[18%]">
                     <input 
                       type="text" 
                       placeholder="Nome do Produto"
@@ -356,7 +409,7 @@ export default function MassEntryPage() {
                       className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-3 py-2 text-sm text-white font-bold focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition-colors"
                     />
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 w-[90px]">
                     <input 
                       type="number" step="0.01"
                       placeholder="0.00"
@@ -365,35 +418,35 @@ export default function MassEntryPage() {
                       className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-3 py-2 text-sm text-emerald-400 font-black focus:outline-none focus:border-emerald-500 focus:bg-zinc-900 transition-colors"
                     />
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 w-[11%]">
                     <select
                       value={row.categoryId}
                       onChange={e => updateRow(row.id, 'categoryId', e.target.value)}
-                      className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition-colors"
+                      className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition-colors select-none"
                     >
                       <option value="" disabled>Selecione...</option>
                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 w-[90px]">
                     <input 
                       type="number"
-                      placeholder="Qtd Fardo"
+                      placeholder="Qtd"
                       value={row.stockToAdd}
                       onChange={e => updateRow(row.id, 'stockToAdd', e.target.value)}
                       className="w-full bg-zinc-950 flex border-2 border-zinc-800 rounded-lg px-3 py-2 text-sm text-blue-400 font-black focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition-colors"
                     />
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 w-[130px]">
                     <input 
                       type="text" 
-                      placeholder="EAN"
+                      placeholder="Código Barras"
                       value={row.barcode}
                       onChange={e => updateRow(row.id, 'barcode', e.target.value)}
                       className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-3 py-2 text-sm text-zinc-300 font-mono focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition-colors"
                     />
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 w-[90px]">
                     <input 
                       type="text" 
                       placeholder="NCM"
@@ -403,7 +456,7 @@ export default function MassEntryPage() {
                       className="w-full bg-indigo-950/20 border border-zinc-800/80 rounded-lg px-2 py-2 text-xs text-zinc-300 font-mono focus:outline-none focus:border-indigo-500 focus:bg-zinc-900 transition-colors"
                     />
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 w-[90px]">
                     <input 
                       type="text" 
                       placeholder="CEST"
@@ -413,18 +466,18 @@ export default function MassEntryPage() {
                       className="w-full bg-indigo-950/20 border border-zinc-800/80 rounded-lg px-2 py-2 text-xs text-zinc-300 font-mono focus:outline-none focus:border-indigo-500 focus:bg-zinc-900 transition-colors"
                     />
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 w-[120px]">
                     <select
                       value={row.origem}
                       onChange={e => updateRow(row.id, 'origem', parseInt(e.target.value) || 0)}
-                      className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-2 py-2 text-xs text-zinc-300 focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition-colors"
+                      className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-2 py-2 text-xs text-zinc-300 focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition-colors select-none"
                     >
                       <option value={0}>0-Nac</option>
                       <option value={1}>1-Imp</option>
                       <option value={2}>2-Imp</option>
                     </select>
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 w-[90px]">
                     <input 
                       type="number" step="0.01"
                       placeholder="0.00"
@@ -433,17 +486,17 @@ export default function MassEntryPage() {
                       className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-3 py-2 text-sm text-rose-400 font-bold focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition-colors"
                     />
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 w-[11%]">
                     <select
                       value={row.grupoTributacaoId}
                       onChange={e => updateRow(row.id, 'grupoTributacaoId', e.target.value)}
-                      className="w-full bg-indigo-950/30 border border-indigo-500/30 rounded-lg px-3 py-2 text-xs text-indigo-300 focus:outline-none focus:border-indigo-500 focus:bg-zinc-900 transition-colors"
+                      className="w-full bg-indigo-950/30 border border-indigo-500/30 rounded-lg px-3 py-2 text-xs text-indigo-300 focus:outline-none focus:border-indigo-500 focus:bg-zinc-900 transition-colors select-none"
                     >
                       <option value="">— Sem Fiscal —</option>
                       {grupos.map(g => <option key={g.id} value={g.id}>{g.nome}</option>)}
                     </select>
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 w-[90px]">
                     <input 
                       type="text" 
                       placeholder="Auto"
@@ -459,7 +512,7 @@ export default function MassEntryPage() {
                       className="w-full bg-zinc-900/40 border border-zinc-800/80 rounded-lg px-3 py-2 text-sm text-yellow-500/50 font-mono focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition-colors"
                     />
                   </td>
-                  <td className="px-4 py-2 text-center">
+                  <td className="px-3 py-2 text-center w-[60px]">
                     <button 
                       onClick={() => removeRow(row.id)}
                       disabled={rows.length === 1}

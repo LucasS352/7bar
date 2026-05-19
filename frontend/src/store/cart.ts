@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type Product = { id: string; name: string; priceSell: number; stock: number; barcode: string | null; shortCode: string | null; active?: boolean; };
+export type Product = { id: string; name: string; priceSell: number; stock: number; salesCount?: number; barcode: string | null; shortCode: string | null; active?: boolean; imageUrl?: string | null; };
 export type CartItem = Product & { quantity: number; subtotal: number };
 
 interface CartState {

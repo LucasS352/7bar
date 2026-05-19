@@ -3,7 +3,6 @@ export interface JwtPayload {
     sub: string;
     email: string;
     tenantId: string;
-    databaseUrl: string;
     role: string;
 }
 export declare const jwtConstants: {

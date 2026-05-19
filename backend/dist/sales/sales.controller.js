@@ -26,8 +26,8 @@ let SalesController = class SalesController {
     findAll(page, limit) {
         return this.salesService.findAll(Number(page || 1), Number(limit || 50));
     }
-    getTodaySales() {
-        return this.salesService.getTodaySales();
+    getTodaySales(page, limit) {
+        return this.salesService.getTodaySales(Number(page || 1), Number(limit || 50));
     }
     getNfceStatus(id) {
         return this.salesService.getNfceStatus(id);
@@ -65,8 +65,10 @@ __decorate([
 ], SalesController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)('today'),
+    __param(0, (0, common_1.Query)('page')),
+    __param(1, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Number, Number]),
     __metadata("design:returntype", void 0)
 ], SalesController.prototype, "getTodaySales", null);
 __decorate([

@@ -13,12 +13,15 @@ import { TributacaoModule } from './tributacao/tributacao.module';
 import { NfceModule } from './nfce/nfce.module';
 import { OperatorsModule } from './operators/operators.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { MasterProductsModule } from './master-products/master-products.module';
 
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TenantInterceptor } from './prisma/tenant-context.service';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     ProductsModule,
@@ -32,6 +35,7 @@ import { TenantInterceptor } from './prisma/tenant-context.service';
     NfceModule,
     OperatorsModule,
     DashboardModule,
+    MasterProductsModule,
   ],
   controllers: [AppController],
   providers: [

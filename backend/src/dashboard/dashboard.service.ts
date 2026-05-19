@@ -1,16 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 
 @Injectable()
 export class DashboardService {
-  constructor(private tenantManager: TenantConnectionManager) {}
+  constructor(
+    private tenantManager: TenantConnectionManager,
+    private tenantContext: TenantContextService
+  ) {}
 
   async getSummary(
     tenantId: string,
-    databaseUrl: string,
     startDate: string,
     endDate: string,
   ) {
+    const { databaseUrl } = this.tenantContext.get();
     const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
 
     // ── Definir janelas de tempo ────────────────────────────────────────────

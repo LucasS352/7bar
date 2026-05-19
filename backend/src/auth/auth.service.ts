@@ -3,6 +3,7 @@ import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 
 @Injectable()
 export class AuthService {
@@ -10,6 +11,7 @@ export class AuthService {
     private heartPrisma: HeartPrismaService,
     private jwtService: JwtService,
     private tenantManager: TenantConnectionManager,
+    private tenantContext: TenantContextService
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -28,7 +30,8 @@ export class AuthService {
     return null;
   }
 
-  async validateOperatorPin(tenantId: string, databaseUrl: string, operatorId: string, pin: string): Promise<any> {
+  async validateOperatorPin(tenantId: string, operatorId: string, pin: string): Promise<any> {
+    const { databaseUrl } = this.tenantContext.get();
     const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
     const operator = await prisma.operator.findFirst({
       where: { id: operatorId, active: true },
@@ -49,7 +52,6 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       tenantId: user.tenant.id,
-      databaseUrl: user.tenant.databaseUrl,   // camelCase — via @map("database_url")
       role: user.role
     };
     return {

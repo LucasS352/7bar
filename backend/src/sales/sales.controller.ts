@@ -25,8 +25,14 @@ export class SalesController {
   }
 
   @Get('today')
-  getTodaySales() {
-    return this.salesService.getTodaySales();
+  getTodaySales(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number
+  ) {
+    return this.salesService.getTodaySales(
+      Number(page || 1), 
+      Number(limit || 50)
+    );
   }
 
   /** Polling de status NFC-e — chamado pelo frontend a cada 2s */

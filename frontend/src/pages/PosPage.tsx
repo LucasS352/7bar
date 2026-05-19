@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useDeferredValue, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { useCartStore, type Product } from '@/store/cart';
@@ -46,14 +46,38 @@ function PosPageContent() {
 
     setIsLoading(true);
 
+    const PRIORITY_KEYWORDS = ['cerveja', 'heineken', 'brahma', 'skol', 'amstel', 'coca-cola', 'refrigerante', 'red bull', 'energético', 'vodka', 'gin', 'água'];
+    const getScore = (name: string) => {
+      const lower = name.toLowerCase();
+      for (let i = 0; i < PRIORITY_KEYWORDS.length; i++) {
+        if (lower.includes(PRIORITY_KEYWORDS[i])) return PRIORITY_KEYWORDS.length - i;
+      }
+      return 0;
+    };
+
+    const sortProducts = (list: any[]) => {
+      return [...list].sort((a, b) => {
+        // 1. Prioriza pelo número REAL de vendas (maior para menor)
+        const aSales = Number(a.salesCount || 0);
+        const bSales = Number(b.salesCount || 0);
+        if (bSales !== aSales) {
+          return bSales - aSales;
+        }
+        // 2. Desempate: Se as vendas forem iguais (ex: tudo zerado), 
+        // prioriza pelas palavras chaves (Cerveja, refri, etc)
+        return getScore(b.name) - getScore(a.name);
+      });
+    };
+
     if (syncState.isOnline) {
       // Online: busca da API e atualiza cache local
-      api.get('/products')
+      api.get('/products?limit=2000')
         .then(async res => {
           const data = (res.data as any).data || [];
-          setProducts(data);
+          const sorted = sortProducts(data);
+          setProducts(sorted);
           // Persiste no IndexedDB para uso offline futuro
-          await updateProductsCache(data.map((p: any) => ({
+          await updateProductsCache(sorted.map((p: any) => ({
             id:         p.id,
             name:       p.name,
             shortCode:  p.shortCode,
@@ -61,19 +85,21 @@ function PosPageContent() {
             unit:       'UN',
             priceSell:  Number(p.priceSell),
             stock:      Number(p.stock),
+            salesCount: Number(p.salesCount || 0),
             active:     p.active !== false,
             ncm:        null, cest: null, origem: 0,
             cfop:       '5102', csosn: null, cstIcms: null,
             aliqIcms:   0, cstPis: '99', aliqPis: 0,
             cstCofins:  '99', aliqCofins: 0,
             cachedAt:   Date.now(),
+            imageUrl:   p.imageUrl,
           })));
           setIsOfflineCatalog(false);
         })
         .catch(async () => {
           // Falhou mesmo online — tenta o cache
           const cached = await getCachedProducts();
-          setProducts(cached as unknown as Product[]);
+          setProducts(sortProducts(cached as unknown as Product[]));
           setIsOfflineCatalog(true);
         })
         .finally(() => setIsLoading(false));
@@ -81,7 +107,7 @@ function PosPageContent() {
       // Offline: carrega catálogo do IndexedDB
       getCachedProducts()
         .then(cached => {
-          setProducts(cached as unknown as Product[]);
+          setProducts(sortProducts(cached as unknown as Product[]));
           setIsOfflineCatalog(true);
         })
         .finally(() => setIsLoading(false));
@@ -103,13 +129,24 @@ function PosPageContent() {
     navigate('/login');
   };
 
-  const filtered = products.filter(p =>
-    p.active !== false && (
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.barcode?.includes(search) ||
-      p.shortCode?.toLowerCase().includes(search.toLowerCase())
-    )
-  );
+  const deferredSearch = useDeferredValue(search);
+  
+  const displayedProducts = useMemo(() => {
+    const normalizeStr = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+    const searchTerms = normalizeStr(deferredSearch).split(' ').filter(t => t.trim() !== '');
+
+    const filtered = products.filter(p => {
+      if (p.active === false) return false;
+      if (searchTerms.length === 0) return true;
+      
+      const searchString = normalizeStr(`${p.name} ${p.barcode || ''} ${p.shortCode || ''}`);
+      return searchTerms.every(term => searchString.includes(term));
+    });
+
+    // Limita a exibição na tela para não travar o navegador com milhares de cards
+    return filtered.slice(0, 50);
+  }, [products, deferredSearch]);
 
   const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && search.trim() !== '') {
@@ -117,7 +154,7 @@ function PosPageContent() {
         p.shortCode?.toLowerCase() === search.toLowerCase().trim() || p.barcode === search.trim()
       );
       if (match) { addItem(match); setSearch(''); }
-      else if (filtered.length === 1) { addItem(filtered[0]); setSearch(''); }
+      else if (displayedProducts.length === 1) { addItem(displayedProducts[0]); setSearch(''); }
     }
   };
 
@@ -201,7 +238,7 @@ function PosPageContent() {
               <PackageOpen size={48} className="opacity-50 animate-pulse" />
               <p className="text-lg">Carregando catálogo...</p>
             </div>
-          ) : filtered.length === 0 ? (
+          ) : displayedProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-zinc-500 space-y-4">
               <PackageOpen size={48} className="opacity-50" />
               <p className="text-lg text-center">
@@ -210,16 +247,23 @@ function PosPageContent() {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-12">
-              {filtered.map(product => (
-                <div key={product.id} className="group relative bg-zinc-900 border border-zinc-800 p-4 rounded-2xl hover:border-blue-500 transition-all flex flex-col items-center justify-between min-h-[160px] overflow-hidden shadow-sm hover:shadow-md">
+              {displayedProducts.map(product => (
+                <div key={product.id} className="group relative bg-zinc-900 border border-zinc-800 p-3 rounded-2xl hover:border-blue-500 transition-all flex flex-col items-center justify-between min-h-[160px] overflow-hidden shadow-sm hover:shadow-md">
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-                  <button onClick={() => addItem(product)} className="w-full flex-1 flex flex-col items-center justify-center z-10 active:scale-95 transition-transform">
+                  <button onClick={() => addItem(product)} className="w-full flex-1 flex flex-col items-center justify-start z-10 active:scale-95 transition-transform">
                     {product.shortCode && (
-                      <span className="absolute top-3 right-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 font-extrabold text-[11px] px-2 py-0.5 rounded shadow-sm">
+                      <span className="absolute top-3 right-3 bg-zinc-900/80 backdrop-blur-md border border-blue-500/30 text-blue-400 font-extrabold text-[11px] px-2 py-0.5 rounded shadow-sm z-20">
                         {product.shortCode}
                       </span>
                     )}
-                    <span className="font-semibold text-[1.1rem] text-center leading-snug z-10 line-clamp-2 px-1 text-zinc-100">{product.name}</span>
+                    
+                    {product.imageUrl && (
+                      <div className="w-full h-32 mb-3 bg-white rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
+                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply transition-transform group-hover:scale-105" loading="lazy" />
+                      </div>
+                    )}
+                    
+                    <span className="font-semibold text-[1.05rem] text-center leading-snug z-10 line-clamp-2 px-1 text-zinc-100 mt-auto">{product.name}</span>
                     <span className="text-blue-400 font-bold mt-2 text-xl z-10">R$ {Number(product.priceSell).toFixed(2)}</span>
                     <div className="text-xs text-zinc-500 mt-2 z-10 border border-zinc-700 px-2 py-0.5 rounded-full bg-zinc-950 flex items-center gap-1 font-medium">
                       Estoque: {product.stock}
@@ -259,8 +303,15 @@ function PosPageContent() {
             items.map(item => (
               <div key={item.id} className="flex flex-col p-4 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-sm hover:border-zinc-700 transition-colors group">
                 <div className="flex justify-between items-start mb-3">
-                  <div className="font-semibold text-zinc-200 line-clamp-2 pr-2">{item.name}</div>
-                  <div className="font-bold text-lg text-emerald-400 whitespace-nowrap">R$ {item.subtotal.toFixed(2)}</div>
+                  <div className="flex items-start gap-3">
+                    {item.imageUrl && (
+                      <div className="w-10 h-10 shrink-0 bg-white rounded-lg flex items-center justify-center p-1 shadow-inner">
+                        <img src={item.imageUrl} alt="" className="w-full h-full object-contain mix-blend-multiply" loading="lazy" />
+                      </div>
+                    )}
+                    <div className="font-semibold text-zinc-200 line-clamp-2 pr-2 leading-tight mt-0.5">{item.name}</div>
+                  </div>
+                  <div className="font-bold text-lg text-emerald-400 whitespace-nowrap mt-0.5">R$ {item.subtotal.toFixed(2)}</div>
                 </div>
                 <div className="flex justify-between items-center bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800">
                   <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-2 hover:bg-zinc-800 text-zinc-400 hover:text-white transition"><Minus size={18} /></button>
@@ -319,6 +370,7 @@ function PosPageContent() {
         onClose={() => setIsPaymentOpen(false)}
         isOnline={syncState.isOnline}
         onPendingCountChange={syncState.syncNow}
+        tenantConfig={tenantConfig}
       />
       {cashRegister?.id && (
         <CashMovementModal

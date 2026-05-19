@@ -24,13 +24,13 @@ export declare class TenantsController {
         updatedAt: Date;
         status: string;
         nfceSerie: number;
-        databaseUrl: string;
         databaseName: string;
+        cnpj: string | null;
+        databaseUrl: string;
         logoUrl: string | null;
         modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
         razaoSocial: string | null;
         nomeFantasia: string | null;
-        cnpj: string | null;
         ie: string | null;
         im: string | null;
         crt: number;
@@ -44,12 +44,14 @@ export declare class TenantsController {
         cep: string | null;
         telefone: string | null;
         nfceAtivo: boolean;
+        nfceAutoSync: boolean;
         nfceAmbiente: number;
         nfceCsc: string | null;
         nfceIdCsc: string | null;
         certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
         certSenha: string | null;
         certValidade: Date | null;
+        cosmosApiKey: string | null;
     })[]>;
     listByPin(req: any): Promise<({
         users: {
@@ -71,13 +73,13 @@ export declare class TenantsController {
         updatedAt: Date;
         status: string;
         nfceSerie: number;
-        databaseUrl: string;
         databaseName: string;
+        cnpj: string | null;
+        databaseUrl: string;
         logoUrl: string | null;
         modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
         razaoSocial: string | null;
         nomeFantasia: string | null;
-        cnpj: string | null;
         ie: string | null;
         im: string | null;
         crt: number;
@@ -91,13 +93,19 @@ export declare class TenantsController {
         cep: string | null;
         telefone: string | null;
         nfceAtivo: boolean;
+        nfceAutoSync: boolean;
         nfceAmbiente: number;
         nfceCsc: string | null;
         nfceIdCsc: string | null;
         certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
         certSenha: string | null;
         certValidade: Date | null;
+        cosmosApiKey: string | null;
     })[]>;
+    private static isSyncingCosmos;
+    syncCosmos(req: any): Promise<{
+        message: string;
+    }>;
     getMe(req: any): Promise<any>;
     updateMe(req: any, body: any): Promise<{
         name: string;
@@ -106,13 +114,13 @@ export declare class TenantsController {
         updatedAt: Date;
         status: string;
         nfceSerie: number;
-        databaseUrl: string;
         databaseName: string;
+        cnpj: string | null;
+        databaseUrl: string;
         logoUrl: string | null;
         modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
         razaoSocial: string | null;
         nomeFantasia: string | null;
-        cnpj: string | null;
         ie: string | null;
         im: string | null;
         crt: number;
@@ -126,12 +134,50 @@ export declare class TenantsController {
         cep: string | null;
         telefone: string | null;
         nfceAtivo: boolean;
+        nfceAutoSync: boolean;
         nfceAmbiente: number;
         nfceCsc: string | null;
         nfceIdCsc: string | null;
         certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
         certSenha: string | null;
         certValidade: Date | null;
+        cosmosApiKey: string | null;
+    }>;
+    updateTenantSetup(req: any, id: string, body: any): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: string;
+        nfceSerie: number;
+        databaseName: string;
+        cnpj: string | null;
+        databaseUrl: string;
+        logoUrl: string | null;
+        modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
+        razaoSocial: string | null;
+        nomeFantasia: string | null;
+        ie: string | null;
+        im: string | null;
+        crt: number;
+        logradouro: string | null;
+        numero: string | null;
+        complemento: string | null;
+        bairro: string | null;
+        municipio: string | null;
+        codMunicipio: string | null;
+        uf: string | null;
+        cep: string | null;
+        telefone: string | null;
+        nfceAtivo: boolean;
+        nfceAutoSync: boolean;
+        nfceAmbiente: number;
+        nfceCsc: string | null;
+        nfceIdCsc: string | null;
+        certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
+        certSenha: string | null;
+        certValidade: Date | null;
+        cosmosApiKey: string | null;
     }>;
     updateTenant(req: any, id: string, body: any): Promise<{
         name: string;
@@ -140,13 +186,13 @@ export declare class TenantsController {
         updatedAt: Date;
         status: string;
         nfceSerie: number;
-        databaseUrl: string;
         databaseName: string;
+        cnpj: string | null;
+        databaseUrl: string;
         logoUrl: string | null;
         modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
         razaoSocial: string | null;
         nomeFantasia: string | null;
-        cnpj: string | null;
         ie: string | null;
         im: string | null;
         crt: number;
@@ -160,15 +206,21 @@ export declare class TenantsController {
         cep: string | null;
         telefone: string | null;
         nfceAtivo: boolean;
+        nfceAutoSync: boolean;
         nfceAmbiente: number;
         nfceCsc: string | null;
         nfceIdCsc: string | null;
         certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
         certSenha: string | null;
         certValidade: Date | null;
+        cosmosApiKey: string | null;
     }>;
     uploadCertificado(req: any, file: Express.Multer.File, body: any): Promise<{
         message: string;
+    }>;
+    uploadLogoSetup(req: any, id: string, file: Express.Multer.File): Promise<{
+        message: string;
+        logoUrl: string;
     }>;
     uploadLogo(req: any, id: string, file: Express.Multer.File): Promise<{
         message: string;
@@ -182,13 +234,13 @@ export declare class TenantsController {
         updatedAt: Date;
         status: string;
         nfceSerie: number;
-        databaseUrl: string;
         databaseName: string;
+        cnpj: string | null;
+        databaseUrl: string;
         logoUrl: string | null;
         modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
         razaoSocial: string | null;
         nomeFantasia: string | null;
-        cnpj: string | null;
         ie: string | null;
         im: string | null;
         crt: number;
@@ -202,12 +254,14 @@ export declare class TenantsController {
         cep: string | null;
         telefone: string | null;
         nfceAtivo: boolean;
+        nfceAutoSync: boolean;
         nfceAmbiente: number;
         nfceCsc: string | null;
         nfceIdCsc: string | null;
         certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
         certSenha: string | null;
         certValidade: Date | null;
+        cosmosApiKey: string | null;
     }, never, import("src/generated/heart-client/runtime/library").DefaultArgs, import("src/generated/heart-client").Prisma.PrismaClientOptions>;
     setup(body: ProvisionTenantDto): Promise<{
         message: string;

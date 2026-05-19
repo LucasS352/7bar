@@ -21,19 +21,19 @@ let TributacaoController = class TributacaoController {
         this.service = service;
     }
     findAll(req) {
-        return this.service.findAll(req.user.tenantId, req.user.databaseUrl);
+        return this.service.findAll(req.user.tenantId);
     }
     findOne(id, req) {
-        return this.service.findOne(req.user.tenantId, req.user.databaseUrl, id);
+        return this.service.findOne(req.user.tenantId, id);
     }
     create(body, req) {
-        return this.service.create(req.user.tenantId, req.user.databaseUrl, body);
+        return this.service.create(req.user.tenantId, body);
     }
     update(id, body, req) {
-        return this.service.update(req.user.tenantId, req.user.databaseUrl, id, body);
+        return this.service.update(req.user.tenantId, id, body);
     }
     remove(id, req) {
-        return this.service.remove(req.user.tenantId, req.user.databaseUrl, id);
+        return this.service.remove(req.user.tenantId, id);
     }
 };
 exports.TributacaoController = TributacaoController;

@@ -9,7 +9,7 @@ import { saveOfflineSale } from '@/lib/db';
 import type { OfflineSaleItemSnapshot, OfflineSalePayment } from '@/lib/db';
 import {
   CreditCard, Banknote, QrCode, X, Loader2, Plus, Trash2,
-  ShoppingBag, Receipt, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, User, WifiOff, Tag, Lock,
+  ShoppingBag, Receipt, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, User, WifiOff, Tag, Lock, Printer,
 } from 'lucide-react';
 
 type PayMode = 'simple' | 'nfce';
@@ -31,9 +31,10 @@ interface PaymentModalProps {
   onClose: () => void;
   isOnline: boolean;
   onPendingCountChange?: () => void;
+  tenantConfig?: any;
 }
 
-export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, tenantConfig }: PaymentModalProps) {
   const { total, items, clearCart } = useCartStore();
   const { user } = useAuthStore();
   const { cashRegister, operator } = useShift();
@@ -67,6 +68,128 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
     if (typeof window !== 'undefined') return localStorage.getItem('7bar_auto_nfce') === 'true';
     return false;
   });
+
+  const [autoPrint, setAutoPrint] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('7bar_auto_print') === 'true';
+    return false;
+  });
+
+  // ── Impressão de cupom 80mm ────────────────────────────────────────────
+  const printReceipt = (saleData: Record<string, unknown>) => {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('pt-BR');
+    const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    const companyName = tenantConfig?.name || tenantConfig?.razaoSocial || 'Estabelecimento';
+    const cnpj        = tenantConfig?.cnpj  || '';
+    const address     = tenantConfig?.address || tenantConfig?.endereco || '';
+    const phone       = tenantConfig?.phone  || tenantConfig?.telefone  || '';
+    const footerMsg   = tenantConfig?.receiptFooter || 'Obrigado pela preferência! Volte sempre!';
+
+    const itemsHtml = items.map((item, idx) => `
+      <div class="item">
+        <div class="item-header">
+          <span class="item-num">${String(idx + 1).padStart(2, '0')}</span>
+          <span class="item-name">${item.name}</span>
+          <span class="item-total">R$ ${item.subtotal.toFixed(2)}</span>
+        </div>
+        <div class="item-detail">
+          ${item.quantity} UN x R$ ${Number(item.priceSell).toFixed(2)}
+        </div>
+      </div>
+    `).join('');
+
+    const paymentsHtml = payments.map(p => `
+      <div class="payment-row">
+        <span>${{ dinheiro: 'DINHEIRO', pix: 'PIX', credito: 'CRÉDITO', debito: 'DÉBITO' }[p.method] || p.method}</span>
+        <span>R$ ${p.value.toFixed(2)}</span>
+      </div>
+    `).join('');
+
+    const changeVal = payments
+      .filter(p => p.method === 'dinheiro')
+      .reduce((acc, p) => acc + (p.given - p.value), 0);
+
+    const receiptHtml = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cupom</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @page { size: 80mm auto; margin: 4mm 3mm; }
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      width: 74mm;
+      color: #000;
+      background: #fff;
+    }
+    .center  { text-align: center; }
+    .bold    { font-weight: bold; }
+    .divider { border-top: 1px dashed #000; margin: 5px 0; }
+    .header  { text-align: center; margin-bottom: 6px; }
+    .header .company { font-size: 14px; font-weight: bold; text-transform: uppercase; }
+    .header .subtitle { font-size: 10px; }
+    .meta { display: flex; justify-content: space-between; font-size: 10px; margin: 3px 0; }
+    .label-row { text-align: center; font-weight: bold; font-size: 12px; margin: 4px 0; letter-spacing: 1px; }
+    .item { margin: 4px 0; }
+    .item-header { display: flex; justify-content: space-between; font-weight: bold; }
+    .item-num   { min-width: 18px; }
+    .item-name  { flex: 1; margin: 0 4px; word-break: break-word; }
+    .item-total { white-space: nowrap; }
+    .item-detail { font-size: 10px; color: #555; padding-left: 22px; margin-top: 1px; }
+    .totals { margin-top: 4px; }
+    .totals-row { display: flex; justify-content: space-between; margin: 2px 0; }
+    .totals-row.grand { font-size: 14px; font-weight: bold; margin-top: 4px; }
+    .payment-row { display: flex; justify-content: space-between; margin: 2px 0; }
+    .change-row  { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin-top: 3px; }
+    .footer { text-align: center; font-size: 10px; margin-top: 8px; line-height: 1.5; }
+    @media print {
+      html, body { width: 80mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="company">${companyName}</div>
+    ${cnpj    ? `<div class="subtitle">CNPJ: ${cnpj}</div>` : ''}
+    ${address ? `<div class="subtitle">${address}</div>`  : ''}
+    ${phone   ? `<div class="subtitle">Tel: ${phone}</div>` : ''}
+  </div>
+  <div class="divider"></div>
+  <div class="label-row">CUPOM NÃO FISCAL</div>
+  <div class="meta"><span>${dateStr} ${timeStr}</span><span>Venda #${saleData.id || '—'}</span></div>
+  <div class="meta"><span>Operador: ${ (operator?.name || user?.name || 'Operador') }</span></div>
+  <div class="divider"></div>
+  ${itemsHtml}
+  <div class="divider"></div>
+  <div class="totals">
+    <div class="totals-row"><span>SUBTOTAL:</span><span>R$ ${total.toFixed(2)}</span></div>
+    ${ effectiveTotal < total ? `<div class="totals-row"><span>DESCONTO:</span><span>-R$ ${discountValue.toFixed(2)}</span></div>` : '' }
+    <div class="totals-row grand"><span>TOTAL:</span><span>R$ ${effectiveTotal.toFixed(2)}</span></div>
+  </div>
+  <div class="divider"></div>
+  ${paymentsHtml}
+  ${ changeVal > 0 ? `<div class="change-row"><span>TROCO:</span><span>R$ ${changeVal.toFixed(2)}</span></div>` : '' }
+  <div class="divider"></div>
+  <div class="footer">${footerMsg}</div>
+  <br/><br/>
+</body>
+</html>`;
+
+    const printWin = window.open('', '_blank', 'width=340,height=600,toolbar=0,menubar=0,scrollbars=0');
+    if (!printWin) { toast.error('Popup bloqueado. Permita pop-ups para imprimir.'); return; }
+    printWin.document.open();
+    printWin.document.write(receiptHtml);
+    printWin.document.close();
+    printWin.onload = () => {
+      setTimeout(() => {
+        printWin.print();
+        setTimeout(() => printWin.close(), 800);
+      }, 300);
+    };
+  };
 
 
 
@@ -257,6 +380,10 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
       setSaleResult(res.data); clearCart();
       if (mode === 'nfce') { toast.info('NFC-e em processamento...', { duration: 3000 }); setNfcePolling(true); }
       else toast.success('Venda finalizada!');
+      // Impressão automática do cupom
+      if (autoPrint) {
+        setTimeout(() => printReceipt(res.data), 300);
+      }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erro ao finalizar venda.';
       toast.error(msg);
@@ -555,7 +682,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
 
         {/* Footer */}
         <div className="p-6 border-t border-zinc-800 bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex-1 flex items-center gap-3">
+          <div className="flex-1 flex flex-col gap-2">
              <label className={`flex items-center gap-2 font-medium transition ${isOnline ? 'cursor-pointer text-zinc-300 hover:text-white' : 'cursor-not-allowed text-zinc-600'}`}>
                 <input 
                   type="checkbox" 
@@ -569,7 +696,20 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange }
                 />
                 Emitir NFC-e automaticamente
              </label>
-             {!isOnline && <span className="text-xs text-orange-400 font-bold bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded-lg">Indisponível Offline</span>}
+             <label className="flex items-center gap-2 font-medium cursor-pointer text-zinc-300 hover:text-white transition">
+                <input 
+                  type="checkbox" 
+                  className="w-5 h-5 rounded border-zinc-700 bg-zinc-950 text-emerald-500 focus:ring-emerald-500 accent-emerald-600" 
+                  checked={autoPrint} 
+                  onChange={(e) => {
+                     setAutoPrint(e.target.checked);
+                     localStorage.setItem('7bar_auto_print', String(e.target.checked));
+                  }} 
+                />
+                <Printer size={15} className="text-emerald-400" />
+                Imprimir Cupom automaticamente
+             </label>
+             {!isOnline && <span className="text-xs text-orange-400 font-bold bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded-lg w-fit">NFC-e Indisponível Offline</span>}
           </div>
           
           <div className="w-full sm:w-auto">

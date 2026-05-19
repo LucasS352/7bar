@@ -55,10 +55,27 @@ export default function SysInitPage() {
 
   // ── Edit Form step ────────────────────────────────────────────────────
   const [editingTenant, setEditingTenant] = useState<any>(null);
-  const [editTab, setEditTab] = useState<"identidade" | "modulos" | "fiscal">("identidade");
+  const [editTab, setEditTab] = useState<"identidade" | "modulos" | "fiscal" | "integracoes">("identidade");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [modulos, setModulos] = useState<any>({});
   const [editLoading, setEditLoading] = useState(false);
+
+  const [syncingCosmos, setSyncingCosmos] = useState(false);
+
+  const handleSyncCosmos = async () => {
+    setSyncingCosmos(true);
+    try {
+      const pin = pinDigits.join('');
+      await api.post('/tenants/setup/sync-cosmos', {}, {
+        headers: { 'x-setup-pin': pin },
+      });
+      toast.success('Sincronização com Cosmos iniciada em background!');
+    } catch (err) {
+      toast.error('Erro ao acionar sincronização.');
+    } finally {
+      setSyncingCosmos(false);
+    }
+  };
 
   // Nota: sem redirect de auth — a segurança é garantida pelo PIN de 10 dígitos
 
@@ -193,23 +210,31 @@ export default function SysInitPage() {
   const handleSaveEdit = async () => {
     setEditLoading(true);
     try {
+      const pin = pinDigits.join('');
       if (logoFile) {
         const formData = new FormData();
         formData.append("logo", logoFile);
-        await api.post(`/tenants/${editingTenant.id}/logo`, formData);
+        await api.post(`/tenants/setup/${editingTenant.id}/logo`, formData, {
+          headers: { 'x-setup-pin': pin },
+        });
       }
       
-      await api.patch(`/tenants/${editingTenant.id}`, {
+      await api.patch(`/tenants/setup/${editingTenant.id}`, {
         nomeFantasia: editingTenant.nomeFantasia,
         razaoSocial: editingTenant.razaoSocial,
         cnpj: editingTenant.cnpj,
         status: editingTenant.status,
+        nfceAmbiente: editingTenant.nfceAmbiente,
+        cosmosApiKey: editingTenant.cosmosApiKey,
         modulos,
+      }, {
+        headers: { 'x-setup-pin': pin },
       });
       
       toast.success("Tenant atualizado com sucesso!");
       setLogoFile(null);
       setStep("list");
+      loadTenants(); // Recarrega a lista para refletir alterações
     } catch (err: any) {
       console.error(err.response?.data || err);
       toast.error(err.response?.data?.message || "Erro ao salvar alterações.");
@@ -297,9 +322,14 @@ export default function SysInitPage() {
                 <p className="text-zinc-400 mt-1">Gerencie os clientes SaaS, módulos e identidades visuais.</p>
               </div>
               
-              <button onClick={() => setStep("create")} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
-                <Building2 size={18} /> Novo Tenant
-              </button>
+              <div className="flex gap-3">
+                <button onClick={handleSyncCosmos} disabled={syncingCosmos} className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-blue-500/20">
+                  {syncingCosmos ? <Loader2 className="animate-spin" size={18} /> : <Database size={18} />} Sincronizar Cosmos
+                </button>
+                <button onClick={() => setStep("create")} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
+                  <Building2 size={18} /> Novo Tenant
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -446,6 +476,7 @@ export default function SysInitPage() {
                 <button onClick={() => setEditTab("identidade")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'identidade' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Identidade</button>
                 <button onClick={() => setEditTab("modulos")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'modulos' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Módulos</button>
                 <button onClick={() => setEditTab("fiscal")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'fiscal' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Fiscal</button>
+                <button onClick={() => setEditTab("integracoes")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'integracoes' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Integrações</button>
               </div>
 
               <div className="p-6 flex-1">
@@ -507,10 +538,20 @@ export default function SysInitPage() {
                 {editTab === 'fiscal' && (
                   <div className="space-y-5">
                     <p className="text-sm text-zinc-400 border-b border-zinc-800 pb-3">Estes dados serão injetados no motor fiscal.</p>
-                    {/* Simplified fiscal config inputs */}
                     <div className="grid grid-cols-2 gap-4">
                       <div><label className="text-xs text-zinc-400 uppercase">CNPJ</label><input type="text" value={editingTenant.cnpj || ''} onChange={e => setEditingTenant({...editingTenant, cnpj: e.target.value})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm" /></div>
                       <div><label className="text-xs text-zinc-400 uppercase">Ambiente NFC-e</label><select value={editingTenant.nfceAmbiente || 2} onChange={e => setEditingTenant({...editingTenant, nfceAmbiente: Number(e.target.value)})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm"><option value={1}>1 - Produção</option><option value={2}>2 - Homologação</option></select></div>
+                    </div>
+                  </div>
+                )}
+
+                {editTab === 'integracoes' && (
+                  <div className="space-y-5">
+                    <p className="text-sm text-zinc-400 border-b border-zinc-800 pb-3">Integrações de serviços externos para este tenant.</p>
+                    <div>
+                      <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block">Token Cosmos (Bluesoft)</label>
+                      <input type="text" placeholder="Cole a API Key..." value={editingTenant.cosmosApiKey || ''} onChange={e => setEditingTenant({...editingTenant, cosmosApiKey: e.target.value})} className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white font-mono text-sm focus:border-violet-500 outline-none" />
+                      <p className="text-xs text-zinc-500 mt-2">Usado para enriquecimento automático de NCM/CEST dos produtos (auto-sync).</p>
                     </div>
                   </div>
                 )}

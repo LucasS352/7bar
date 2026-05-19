@@ -1,13 +1,22 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class OperatorsService {
-  constructor(private readonly tenantManager: TenantConnectionManager) {}
+  constructor(
+    private readonly tenantManager: TenantConnectionManager,
+    private readonly tenantContext: TenantContextService
+  ) {}
 
-  async findAll(tenantId: string, databaseUrl: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  private async getPrisma(tenantId: string) {
+    const { databaseUrl } = this.tenantContext.get();
+    return this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  }
+
+  async findAll(tenantId: string) {
+    const prisma = await this.getPrisma(tenantId);
     return prisma.operator.findMany({
       select: {
         id: true,
@@ -20,8 +29,8 @@ export class OperatorsService {
     });
   }
 
-  async findOne(tenantId: string, databaseUrl: string, id: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async findOne(tenantId: string, id: string) {
+    const prisma = await this.getPrisma(tenantId);
     const operator = await prisma.operator.findUnique({
       where: { id },
     });
@@ -29,11 +38,11 @@ export class OperatorsService {
     return operator;
   }
 
-  async create(tenantId: string, databaseUrl: string, data: { name: string; pin: string }) {
+  async create(tenantId: string, data: { name: string; pin: string }) {
     if (!data.pin || data.pin.length < 4 || data.pin.length > 6) {
       throw new BadRequestException('O PIN deve ter entre 4 e 6 dígitos.');
     }
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    const prisma = await this.getPrisma(tenantId);
     const hashedPin = await bcrypt.hash(data.pin, 10);
     
     const op = await prisma.operator.create({
@@ -49,8 +58,8 @@ export class OperatorsService {
     return result;
   }
 
-  async update(tenantId: string, databaseUrl: string, id: string, data: { name?: string; pin?: string; active?: boolean }) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async update(tenantId: string, id: string, data: { name?: string; pin?: string; active?: boolean }) {
+    const prisma = await this.getPrisma(tenantId);
     
     const updateData: any = {};
     if (data.name) updateData.name = data.name;
@@ -75,8 +84,8 @@ export class OperatorsService {
     }
   }
 
-  async remove(tenantId: string, databaseUrl: string, id: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async remove(tenantId: string, id: string) {
+    const prisma = await this.getPrisma(tenantId);
     try {
       await prisma.operator.delete({
         where: { id },

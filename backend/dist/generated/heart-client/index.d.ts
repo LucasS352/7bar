@@ -23,6 +23,11 @@ export type Tenant = $Result.DefaultSelection<Prisma.$TenantPayload>
  * 
  */
 export type User = $Result.DefaultSelection<Prisma.$UserPayload>
+/**
+ * Model MasterProduct
+ * 
+ */
+export type MasterProduct = $Result.DefaultSelection<Prisma.$MasterProductPayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -161,6 +166,16 @@ export class PrismaClient<
     * ```
     */
   get user(): Prisma.UserDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.masterProduct`: Exposes CRUD operations for the **MasterProduct** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more MasterProducts
+    * const masterProducts = await prisma.masterProduct.findMany()
+    * ```
+    */
+  get masterProduct(): Prisma.MasterProductDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -603,7 +618,8 @@ export namespace Prisma {
 
   export const ModelName: {
     Tenant: 'Tenant',
-    User: 'User'
+    User: 'User',
+    MasterProduct: 'MasterProduct'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -622,7 +638,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "tenant" | "user"
+      modelProps: "tenant" | "user" | "masterProduct"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -758,6 +774,72 @@ export namespace Prisma {
           }
         }
       }
+      MasterProduct: {
+        payload: Prisma.$MasterProductPayload<ExtArgs>
+        fields: Prisma.MasterProductFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.MasterProductFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MasterProductPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.MasterProductFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MasterProductPayload>
+          }
+          findFirst: {
+            args: Prisma.MasterProductFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MasterProductPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.MasterProductFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MasterProductPayload>
+          }
+          findMany: {
+            args: Prisma.MasterProductFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MasterProductPayload>[]
+          }
+          create: {
+            args: Prisma.MasterProductCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MasterProductPayload>
+          }
+          createMany: {
+            args: Prisma.MasterProductCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.MasterProductDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MasterProductPayload>
+          }
+          update: {
+            args: Prisma.MasterProductUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MasterProductPayload>
+          }
+          deleteMany: {
+            args: Prisma.MasterProductDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.MasterProductUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.MasterProductUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MasterProductPayload>
+          }
+          aggregate: {
+            args: Prisma.MasterProductAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateMasterProduct>
+          }
+          groupBy: {
+            args: Prisma.MasterProductGroupByArgs<ExtArgs>
+            result: $Utils.Optional<MasterProductGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.MasterProductCountArgs<ExtArgs>
+            result: $Utils.Optional<MasterProductCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -856,6 +938,7 @@ export namespace Prisma {
   export type GlobalOmitConfig = {
     tenant?: TenantOmit
     user?: UserOmit
+    masterProduct?: MasterProductOmit
   }
 
   /* Types for Logging */
@@ -1013,6 +1096,7 @@ export namespace Prisma {
     cep: string | null
     telefone: string | null
     nfceAtivo: boolean | null
+    nfceAutoSync: boolean | null
     nfceSerie: number | null
     nfceAmbiente: number | null
     nfceCsc: string | null
@@ -1020,6 +1104,7 @@ export namespace Prisma {
     certPfx: Bytes | null
     certSenha: string | null
     certValidade: Date | null
+    cosmosApiKey: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -1047,6 +1132,7 @@ export namespace Prisma {
     cep: string | null
     telefone: string | null
     nfceAtivo: boolean | null
+    nfceAutoSync: boolean | null
     nfceSerie: number | null
     nfceAmbiente: number | null
     nfceCsc: string | null
@@ -1054,6 +1140,7 @@ export namespace Prisma {
     certPfx: Bytes | null
     certSenha: string | null
     certValidade: Date | null
+    cosmosApiKey: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -1082,6 +1169,7 @@ export namespace Prisma {
     cep: number
     telefone: number
     nfceAtivo: number
+    nfceAutoSync: number
     nfceSerie: number
     nfceAmbiente: number
     nfceCsc: number
@@ -1089,6 +1177,7 @@ export namespace Prisma {
     certPfx: number
     certSenha: number
     certValidade: number
+    cosmosApiKey: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -1130,6 +1219,7 @@ export namespace Prisma {
     cep?: true
     telefone?: true
     nfceAtivo?: true
+    nfceAutoSync?: true
     nfceSerie?: true
     nfceAmbiente?: true
     nfceCsc?: true
@@ -1137,6 +1227,7 @@ export namespace Prisma {
     certPfx?: true
     certSenha?: true
     certValidade?: true
+    cosmosApiKey?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -1164,6 +1255,7 @@ export namespace Prisma {
     cep?: true
     telefone?: true
     nfceAtivo?: true
+    nfceAutoSync?: true
     nfceSerie?: true
     nfceAmbiente?: true
     nfceCsc?: true
@@ -1171,6 +1263,7 @@ export namespace Prisma {
     certPfx?: true
     certSenha?: true
     certValidade?: true
+    cosmosApiKey?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -1199,6 +1292,7 @@ export namespace Prisma {
     cep?: true
     telefone?: true
     nfceAtivo?: true
+    nfceAutoSync?: true
     nfceSerie?: true
     nfceAmbiente?: true
     nfceCsc?: true
@@ -1206,6 +1300,7 @@ export namespace Prisma {
     certPfx?: true
     certSenha?: true
     certValidade?: true
+    cosmosApiKey?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -1321,6 +1416,7 @@ export namespace Prisma {
     cep: string | null
     telefone: string | null
     nfceAtivo: boolean
+    nfceAutoSync: boolean
     nfceSerie: number
     nfceAmbiente: number
     nfceCsc: string | null
@@ -1328,6 +1424,7 @@ export namespace Prisma {
     certPfx: Bytes | null
     certSenha: string | null
     certValidade: Date | null
+    cosmosApiKey: string | null
     createdAt: Date
     updatedAt: Date
     _count: TenantCountAggregateOutputType | null
@@ -1375,6 +1472,7 @@ export namespace Prisma {
     cep?: boolean
     telefone?: boolean
     nfceAtivo?: boolean
+    nfceAutoSync?: boolean
     nfceSerie?: boolean
     nfceAmbiente?: boolean
     nfceCsc?: boolean
@@ -1382,6 +1480,7 @@ export namespace Prisma {
     certPfx?: boolean
     certSenha?: boolean
     certValidade?: boolean
+    cosmosApiKey?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     users?: boolean | Tenant$usersArgs<ExtArgs>
@@ -1414,6 +1513,7 @@ export namespace Prisma {
     cep?: boolean
     telefone?: boolean
     nfceAtivo?: boolean
+    nfceAutoSync?: boolean
     nfceSerie?: boolean
     nfceAmbiente?: boolean
     nfceCsc?: boolean
@@ -1421,11 +1521,12 @@ export namespace Prisma {
     certPfx?: boolean
     certSenha?: boolean
     certValidade?: boolean
+    cosmosApiKey?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type TenantOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "databaseName" | "databaseUrl" | "name" | "status" | "logoUrl" | "modulos" | "razaoSocial" | "nomeFantasia" | "cnpj" | "ie" | "im" | "crt" | "logradouro" | "numero" | "complemento" | "bairro" | "municipio" | "codMunicipio" | "uf" | "cep" | "telefone" | "nfceAtivo" | "nfceSerie" | "nfceAmbiente" | "nfceCsc" | "nfceIdCsc" | "certPfx" | "certSenha" | "certValidade" | "createdAt" | "updatedAt", ExtArgs["result"]["tenant"]>
+  export type TenantOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "databaseName" | "databaseUrl" | "name" | "status" | "logoUrl" | "modulos" | "razaoSocial" | "nomeFantasia" | "cnpj" | "ie" | "im" | "crt" | "logradouro" | "numero" | "complemento" | "bairro" | "municipio" | "codMunicipio" | "uf" | "cep" | "telefone" | "nfceAtivo" | "nfceAutoSync" | "nfceSerie" | "nfceAmbiente" | "nfceCsc" | "nfceIdCsc" | "certPfx" | "certSenha" | "certValidade" | "cosmosApiKey" | "createdAt" | "updatedAt", ExtArgs["result"]["tenant"]>
   export type TenantInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     users?: boolean | Tenant$usersArgs<ExtArgs>
     _count?: boolean | TenantCountOutputTypeDefaultArgs<ExtArgs>
@@ -1460,6 +1561,7 @@ export namespace Prisma {
       cep: string | null
       telefone: string | null
       nfceAtivo: boolean
+      nfceAutoSync: boolean
       nfceSerie: number
       nfceAmbiente: number
       nfceCsc: string | null
@@ -1467,6 +1569,7 @@ export namespace Prisma {
       certPfx: Prisma.Bytes | null
       certSenha: string | null
       certValidade: Date | null
+      cosmosApiKey: string | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["tenant"]>
@@ -1862,6 +1965,7 @@ export namespace Prisma {
     readonly cep: FieldRef<"Tenant", 'String'>
     readonly telefone: FieldRef<"Tenant", 'String'>
     readonly nfceAtivo: FieldRef<"Tenant", 'Boolean'>
+    readonly nfceAutoSync: FieldRef<"Tenant", 'Boolean'>
     readonly nfceSerie: FieldRef<"Tenant", 'Int'>
     readonly nfceAmbiente: FieldRef<"Tenant", 'Int'>
     readonly nfceCsc: FieldRef<"Tenant", 'String'>
@@ -1869,6 +1973,7 @@ export namespace Prisma {
     readonly certPfx: FieldRef<"Tenant", 'Bytes'>
     readonly certSenha: FieldRef<"Tenant", 'String'>
     readonly certValidade: FieldRef<"Tenant", 'DateTime'>
+    readonly cosmosApiKey: FieldRef<"Tenant", 'String'>
     readonly createdAt: FieldRef<"Tenant", 'DateTime'>
     readonly updatedAt: FieldRef<"Tenant", 'DateTime'>
   }
@@ -3241,6 +3346,954 @@ export namespace Prisma {
 
 
   /**
+   * Model MasterProduct
+   */
+
+  export type AggregateMasterProduct = {
+    _count: MasterProductCountAggregateOutputType | null
+    _min: MasterProductMinAggregateOutputType | null
+    _max: MasterProductMaxAggregateOutputType | null
+  }
+
+  export type MasterProductMinAggregateOutputType = {
+    id: string | null
+    ean: string | null
+    name: string | null
+    brand: string | null
+    ncm: string | null
+    cest: string | null
+    unit: string | null
+    imageUrl: string | null
+    category: string | null
+    source: string | null
+    createdAt: Date | null
+  }
+
+  export type MasterProductMaxAggregateOutputType = {
+    id: string | null
+    ean: string | null
+    name: string | null
+    brand: string | null
+    ncm: string | null
+    cest: string | null
+    unit: string | null
+    imageUrl: string | null
+    category: string | null
+    source: string | null
+    createdAt: Date | null
+  }
+
+  export type MasterProductCountAggregateOutputType = {
+    id: number
+    ean: number
+    name: number
+    brand: number
+    ncm: number
+    cest: number
+    unit: number
+    imageUrl: number
+    category: number
+    source: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type MasterProductMinAggregateInputType = {
+    id?: true
+    ean?: true
+    name?: true
+    brand?: true
+    ncm?: true
+    cest?: true
+    unit?: true
+    imageUrl?: true
+    category?: true
+    source?: true
+    createdAt?: true
+  }
+
+  export type MasterProductMaxAggregateInputType = {
+    id?: true
+    ean?: true
+    name?: true
+    brand?: true
+    ncm?: true
+    cest?: true
+    unit?: true
+    imageUrl?: true
+    category?: true
+    source?: true
+    createdAt?: true
+  }
+
+  export type MasterProductCountAggregateInputType = {
+    id?: true
+    ean?: true
+    name?: true
+    brand?: true
+    ncm?: true
+    cest?: true
+    unit?: true
+    imageUrl?: true
+    category?: true
+    source?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type MasterProductAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which MasterProduct to aggregate.
+     */
+    where?: MasterProductWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MasterProducts to fetch.
+     */
+    orderBy?: MasterProductOrderByWithRelationInput | MasterProductOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: MasterProductWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MasterProducts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MasterProducts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned MasterProducts
+    **/
+    _count?: true | MasterProductCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: MasterProductMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: MasterProductMaxAggregateInputType
+  }
+
+  export type GetMasterProductAggregateType<T extends MasterProductAggregateArgs> = {
+        [P in keyof T & keyof AggregateMasterProduct]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateMasterProduct[P]>
+      : GetScalarType<T[P], AggregateMasterProduct[P]>
+  }
+
+
+
+
+  export type MasterProductGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: MasterProductWhereInput
+    orderBy?: MasterProductOrderByWithAggregationInput | MasterProductOrderByWithAggregationInput[]
+    by: MasterProductScalarFieldEnum[] | MasterProductScalarFieldEnum
+    having?: MasterProductScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: MasterProductCountAggregateInputType | true
+    _min?: MasterProductMinAggregateInputType
+    _max?: MasterProductMaxAggregateInputType
+  }
+
+  export type MasterProductGroupByOutputType = {
+    id: string
+    ean: string
+    name: string
+    brand: string | null
+    ncm: string | null
+    cest: string | null
+    unit: string
+    imageUrl: string | null
+    category: string | null
+    source: string
+    createdAt: Date
+    _count: MasterProductCountAggregateOutputType | null
+    _min: MasterProductMinAggregateOutputType | null
+    _max: MasterProductMaxAggregateOutputType | null
+  }
+
+  type GetMasterProductGroupByPayload<T extends MasterProductGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<MasterProductGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof MasterProductGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], MasterProductGroupByOutputType[P]>
+            : GetScalarType<T[P], MasterProductGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type MasterProductSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    ean?: boolean
+    name?: boolean
+    brand?: boolean
+    ncm?: boolean
+    cest?: boolean
+    unit?: boolean
+    imageUrl?: boolean
+    category?: boolean
+    source?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["masterProduct"]>
+
+
+
+  export type MasterProductSelectScalar = {
+    id?: boolean
+    ean?: boolean
+    name?: boolean
+    brand?: boolean
+    ncm?: boolean
+    cest?: boolean
+    unit?: boolean
+    imageUrl?: boolean
+    category?: boolean
+    source?: boolean
+    createdAt?: boolean
+  }
+
+  export type MasterProductOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "ean" | "name" | "brand" | "ncm" | "cest" | "unit" | "imageUrl" | "category" | "source" | "createdAt", ExtArgs["result"]["masterProduct"]>
+
+  export type $MasterProductPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "MasterProduct"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      ean: string
+      name: string
+      brand: string | null
+      ncm: string | null
+      cest: string | null
+      unit: string
+      imageUrl: string | null
+      category: string | null
+      source: string
+      createdAt: Date
+    }, ExtArgs["result"]["masterProduct"]>
+    composites: {}
+  }
+
+  type MasterProductGetPayload<S extends boolean | null | undefined | MasterProductDefaultArgs> = $Result.GetResult<Prisma.$MasterProductPayload, S>
+
+  type MasterProductCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<MasterProductFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: MasterProductCountAggregateInputType | true
+    }
+
+  export interface MasterProductDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['MasterProduct'], meta: { name: 'MasterProduct' } }
+    /**
+     * Find zero or one MasterProduct that matches the filter.
+     * @param {MasterProductFindUniqueArgs} args - Arguments to find a MasterProduct
+     * @example
+     * // Get one MasterProduct
+     * const masterProduct = await prisma.masterProduct.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends MasterProductFindUniqueArgs>(args: SelectSubset<T, MasterProductFindUniqueArgs<ExtArgs>>): Prisma__MasterProductClient<$Result.GetResult<Prisma.$MasterProductPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one MasterProduct that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {MasterProductFindUniqueOrThrowArgs} args - Arguments to find a MasterProduct
+     * @example
+     * // Get one MasterProduct
+     * const masterProduct = await prisma.masterProduct.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends MasterProductFindUniqueOrThrowArgs>(args: SelectSubset<T, MasterProductFindUniqueOrThrowArgs<ExtArgs>>): Prisma__MasterProductClient<$Result.GetResult<Prisma.$MasterProductPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first MasterProduct that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MasterProductFindFirstArgs} args - Arguments to find a MasterProduct
+     * @example
+     * // Get one MasterProduct
+     * const masterProduct = await prisma.masterProduct.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends MasterProductFindFirstArgs>(args?: SelectSubset<T, MasterProductFindFirstArgs<ExtArgs>>): Prisma__MasterProductClient<$Result.GetResult<Prisma.$MasterProductPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first MasterProduct that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MasterProductFindFirstOrThrowArgs} args - Arguments to find a MasterProduct
+     * @example
+     * // Get one MasterProduct
+     * const masterProduct = await prisma.masterProduct.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends MasterProductFindFirstOrThrowArgs>(args?: SelectSubset<T, MasterProductFindFirstOrThrowArgs<ExtArgs>>): Prisma__MasterProductClient<$Result.GetResult<Prisma.$MasterProductPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more MasterProducts that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MasterProductFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all MasterProducts
+     * const masterProducts = await prisma.masterProduct.findMany()
+     * 
+     * // Get first 10 MasterProducts
+     * const masterProducts = await prisma.masterProduct.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const masterProductWithIdOnly = await prisma.masterProduct.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends MasterProductFindManyArgs>(args?: SelectSubset<T, MasterProductFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MasterProductPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a MasterProduct.
+     * @param {MasterProductCreateArgs} args - Arguments to create a MasterProduct.
+     * @example
+     * // Create one MasterProduct
+     * const MasterProduct = await prisma.masterProduct.create({
+     *   data: {
+     *     // ... data to create a MasterProduct
+     *   }
+     * })
+     * 
+     */
+    create<T extends MasterProductCreateArgs>(args: SelectSubset<T, MasterProductCreateArgs<ExtArgs>>): Prisma__MasterProductClient<$Result.GetResult<Prisma.$MasterProductPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many MasterProducts.
+     * @param {MasterProductCreateManyArgs} args - Arguments to create many MasterProducts.
+     * @example
+     * // Create many MasterProducts
+     * const masterProduct = await prisma.masterProduct.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends MasterProductCreateManyArgs>(args?: SelectSubset<T, MasterProductCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a MasterProduct.
+     * @param {MasterProductDeleteArgs} args - Arguments to delete one MasterProduct.
+     * @example
+     * // Delete one MasterProduct
+     * const MasterProduct = await prisma.masterProduct.delete({
+     *   where: {
+     *     // ... filter to delete one MasterProduct
+     *   }
+     * })
+     * 
+     */
+    delete<T extends MasterProductDeleteArgs>(args: SelectSubset<T, MasterProductDeleteArgs<ExtArgs>>): Prisma__MasterProductClient<$Result.GetResult<Prisma.$MasterProductPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one MasterProduct.
+     * @param {MasterProductUpdateArgs} args - Arguments to update one MasterProduct.
+     * @example
+     * // Update one MasterProduct
+     * const masterProduct = await prisma.masterProduct.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends MasterProductUpdateArgs>(args: SelectSubset<T, MasterProductUpdateArgs<ExtArgs>>): Prisma__MasterProductClient<$Result.GetResult<Prisma.$MasterProductPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more MasterProducts.
+     * @param {MasterProductDeleteManyArgs} args - Arguments to filter MasterProducts to delete.
+     * @example
+     * // Delete a few MasterProducts
+     * const { count } = await prisma.masterProduct.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends MasterProductDeleteManyArgs>(args?: SelectSubset<T, MasterProductDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more MasterProducts.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MasterProductUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many MasterProducts
+     * const masterProduct = await prisma.masterProduct.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends MasterProductUpdateManyArgs>(args: SelectSubset<T, MasterProductUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one MasterProduct.
+     * @param {MasterProductUpsertArgs} args - Arguments to update or create a MasterProduct.
+     * @example
+     * // Update or create a MasterProduct
+     * const masterProduct = await prisma.masterProduct.upsert({
+     *   create: {
+     *     // ... data to create a MasterProduct
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the MasterProduct we want to update
+     *   }
+     * })
+     */
+    upsert<T extends MasterProductUpsertArgs>(args: SelectSubset<T, MasterProductUpsertArgs<ExtArgs>>): Prisma__MasterProductClient<$Result.GetResult<Prisma.$MasterProductPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of MasterProducts.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MasterProductCountArgs} args - Arguments to filter MasterProducts to count.
+     * @example
+     * // Count the number of MasterProducts
+     * const count = await prisma.masterProduct.count({
+     *   where: {
+     *     // ... the filter for the MasterProducts we want to count
+     *   }
+     * })
+    **/
+    count<T extends MasterProductCountArgs>(
+      args?: Subset<T, MasterProductCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], MasterProductCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a MasterProduct.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MasterProductAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends MasterProductAggregateArgs>(args: Subset<T, MasterProductAggregateArgs>): Prisma.PrismaPromise<GetMasterProductAggregateType<T>>
+
+    /**
+     * Group by MasterProduct.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MasterProductGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends MasterProductGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: MasterProductGroupByArgs['orderBy'] }
+        : { orderBy?: MasterProductGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, MasterProductGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetMasterProductGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the MasterProduct model
+   */
+  readonly fields: MasterProductFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for MasterProduct.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__MasterProductClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the MasterProduct model
+   */
+  interface MasterProductFieldRefs {
+    readonly id: FieldRef<"MasterProduct", 'String'>
+    readonly ean: FieldRef<"MasterProduct", 'String'>
+    readonly name: FieldRef<"MasterProduct", 'String'>
+    readonly brand: FieldRef<"MasterProduct", 'String'>
+    readonly ncm: FieldRef<"MasterProduct", 'String'>
+    readonly cest: FieldRef<"MasterProduct", 'String'>
+    readonly unit: FieldRef<"MasterProduct", 'String'>
+    readonly imageUrl: FieldRef<"MasterProduct", 'String'>
+    readonly category: FieldRef<"MasterProduct", 'String'>
+    readonly source: FieldRef<"MasterProduct", 'String'>
+    readonly createdAt: FieldRef<"MasterProduct", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * MasterProduct findUnique
+   */
+  export type MasterProductFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MasterProduct
+     */
+    select?: MasterProductSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MasterProduct
+     */
+    omit?: MasterProductOmit<ExtArgs> | null
+    /**
+     * Filter, which MasterProduct to fetch.
+     */
+    where: MasterProductWhereUniqueInput
+  }
+
+  /**
+   * MasterProduct findUniqueOrThrow
+   */
+  export type MasterProductFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MasterProduct
+     */
+    select?: MasterProductSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MasterProduct
+     */
+    omit?: MasterProductOmit<ExtArgs> | null
+    /**
+     * Filter, which MasterProduct to fetch.
+     */
+    where: MasterProductWhereUniqueInput
+  }
+
+  /**
+   * MasterProduct findFirst
+   */
+  export type MasterProductFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MasterProduct
+     */
+    select?: MasterProductSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MasterProduct
+     */
+    omit?: MasterProductOmit<ExtArgs> | null
+    /**
+     * Filter, which MasterProduct to fetch.
+     */
+    where?: MasterProductWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MasterProducts to fetch.
+     */
+    orderBy?: MasterProductOrderByWithRelationInput | MasterProductOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for MasterProducts.
+     */
+    cursor?: MasterProductWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MasterProducts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MasterProducts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MasterProducts.
+     */
+    distinct?: MasterProductScalarFieldEnum | MasterProductScalarFieldEnum[]
+  }
+
+  /**
+   * MasterProduct findFirstOrThrow
+   */
+  export type MasterProductFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MasterProduct
+     */
+    select?: MasterProductSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MasterProduct
+     */
+    omit?: MasterProductOmit<ExtArgs> | null
+    /**
+     * Filter, which MasterProduct to fetch.
+     */
+    where?: MasterProductWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MasterProducts to fetch.
+     */
+    orderBy?: MasterProductOrderByWithRelationInput | MasterProductOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for MasterProducts.
+     */
+    cursor?: MasterProductWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MasterProducts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MasterProducts.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MasterProducts.
+     */
+    distinct?: MasterProductScalarFieldEnum | MasterProductScalarFieldEnum[]
+  }
+
+  /**
+   * MasterProduct findMany
+   */
+  export type MasterProductFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MasterProduct
+     */
+    select?: MasterProductSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MasterProduct
+     */
+    omit?: MasterProductOmit<ExtArgs> | null
+    /**
+     * Filter, which MasterProducts to fetch.
+     */
+    where?: MasterProductWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MasterProducts to fetch.
+     */
+    orderBy?: MasterProductOrderByWithRelationInput | MasterProductOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing MasterProducts.
+     */
+    cursor?: MasterProductWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MasterProducts from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MasterProducts.
+     */
+    skip?: number
+    distinct?: MasterProductScalarFieldEnum | MasterProductScalarFieldEnum[]
+  }
+
+  /**
+   * MasterProduct create
+   */
+  export type MasterProductCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MasterProduct
+     */
+    select?: MasterProductSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MasterProduct
+     */
+    omit?: MasterProductOmit<ExtArgs> | null
+    /**
+     * The data needed to create a MasterProduct.
+     */
+    data: XOR<MasterProductCreateInput, MasterProductUncheckedCreateInput>
+  }
+
+  /**
+   * MasterProduct createMany
+   */
+  export type MasterProductCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many MasterProducts.
+     */
+    data: MasterProductCreateManyInput | MasterProductCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * MasterProduct update
+   */
+  export type MasterProductUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MasterProduct
+     */
+    select?: MasterProductSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MasterProduct
+     */
+    omit?: MasterProductOmit<ExtArgs> | null
+    /**
+     * The data needed to update a MasterProduct.
+     */
+    data: XOR<MasterProductUpdateInput, MasterProductUncheckedUpdateInput>
+    /**
+     * Choose, which MasterProduct to update.
+     */
+    where: MasterProductWhereUniqueInput
+  }
+
+  /**
+   * MasterProduct updateMany
+   */
+  export type MasterProductUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update MasterProducts.
+     */
+    data: XOR<MasterProductUpdateManyMutationInput, MasterProductUncheckedUpdateManyInput>
+    /**
+     * Filter which MasterProducts to update
+     */
+    where?: MasterProductWhereInput
+    /**
+     * Limit how many MasterProducts to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * MasterProduct upsert
+   */
+  export type MasterProductUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MasterProduct
+     */
+    select?: MasterProductSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MasterProduct
+     */
+    omit?: MasterProductOmit<ExtArgs> | null
+    /**
+     * The filter to search for the MasterProduct to update in case it exists.
+     */
+    where: MasterProductWhereUniqueInput
+    /**
+     * In case the MasterProduct found by the `where` argument doesn't exist, create a new MasterProduct with this data.
+     */
+    create: XOR<MasterProductCreateInput, MasterProductUncheckedCreateInput>
+    /**
+     * In case the MasterProduct was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<MasterProductUpdateInput, MasterProductUncheckedUpdateInput>
+  }
+
+  /**
+   * MasterProduct delete
+   */
+  export type MasterProductDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MasterProduct
+     */
+    select?: MasterProductSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MasterProduct
+     */
+    omit?: MasterProductOmit<ExtArgs> | null
+    /**
+     * Filter which MasterProduct to delete.
+     */
+    where: MasterProductWhereUniqueInput
+  }
+
+  /**
+   * MasterProduct deleteMany
+   */
+  export type MasterProductDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which MasterProducts to delete
+     */
+    where?: MasterProductWhereInput
+    /**
+     * Limit how many MasterProducts to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * MasterProduct without action
+   */
+  export type MasterProductDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MasterProduct
+     */
+    select?: MasterProductSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the MasterProduct
+     */
+    omit?: MasterProductOmit<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -3278,6 +4331,7 @@ export namespace Prisma {
     cep: 'cep',
     telefone: 'telefone',
     nfceAtivo: 'nfceAtivo',
+    nfceAutoSync: 'nfceAutoSync',
     nfceSerie: 'nfceSerie',
     nfceAmbiente: 'nfceAmbiente',
     nfceCsc: 'nfceCsc',
@@ -3285,6 +4339,7 @@ export namespace Prisma {
     certPfx: 'certPfx',
     certSenha: 'certSenha',
     certValidade: 'certValidade',
+    cosmosApiKey: 'cosmosApiKey',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -3306,6 +4361,23 @@ export namespace Prisma {
   };
 
   export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+  export const MasterProductScalarFieldEnum: {
+    id: 'id',
+    ean: 'ean',
+    name: 'name',
+    brand: 'brand',
+    ncm: 'ncm',
+    cest: 'cest',
+    unit: 'unit',
+    imageUrl: 'imageUrl',
+    category: 'category',
+    source: 'source',
+    createdAt: 'createdAt'
+  };
+
+  export type MasterProductScalarFieldEnum = (typeof MasterProductScalarFieldEnum)[keyof typeof MasterProductScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -3372,7 +4444,8 @@ export namespace Prisma {
     telefone: 'telefone',
     nfceCsc: 'nfceCsc',
     nfceIdCsc: 'nfceIdCsc',
-    certSenha: 'certSenha'
+    certSenha: 'certSenha',
+    cosmosApiKey: 'cosmosApiKey'
   };
 
   export type TenantOrderByRelevanceFieldEnum = (typeof TenantOrderByRelevanceFieldEnum)[keyof typeof TenantOrderByRelevanceFieldEnum]
@@ -3389,6 +4462,22 @@ export namespace Prisma {
   };
 
   export type UserOrderByRelevanceFieldEnum = (typeof UserOrderByRelevanceFieldEnum)[keyof typeof UserOrderByRelevanceFieldEnum]
+
+
+  export const MasterProductOrderByRelevanceFieldEnum: {
+    id: 'id',
+    ean: 'ean',
+    name: 'name',
+    brand: 'brand',
+    ncm: 'ncm',
+    cest: 'cest',
+    unit: 'unit',
+    imageUrl: 'imageUrl',
+    category: 'category',
+    source: 'source'
+  };
+
+  export type MasterProductOrderByRelevanceFieldEnum = (typeof MasterProductOrderByRelevanceFieldEnum)[keyof typeof MasterProductOrderByRelevanceFieldEnum]
 
 
   /**
@@ -3482,6 +4571,7 @@ export namespace Prisma {
     cep?: StringNullableFilter<"Tenant"> | string | null
     telefone?: StringNullableFilter<"Tenant"> | string | null
     nfceAtivo?: BoolFilter<"Tenant"> | boolean
+    nfceAutoSync?: BoolFilter<"Tenant"> | boolean
     nfceSerie?: IntFilter<"Tenant"> | number
     nfceAmbiente?: IntFilter<"Tenant"> | number
     nfceCsc?: StringNullableFilter<"Tenant"> | string | null
@@ -3489,6 +4579,7 @@ export namespace Prisma {
     certPfx?: BytesNullableFilter<"Tenant"> | Bytes | null
     certSenha?: StringNullableFilter<"Tenant"> | string | null
     certValidade?: DateTimeNullableFilter<"Tenant"> | Date | string | null
+    cosmosApiKey?: StringNullableFilter<"Tenant"> | string | null
     createdAt?: DateTimeFilter<"Tenant"> | Date | string
     updatedAt?: DateTimeFilter<"Tenant"> | Date | string
     users?: UserListRelationFilter
@@ -3518,6 +4609,7 @@ export namespace Prisma {
     cep?: SortOrderInput | SortOrder
     telefone?: SortOrderInput | SortOrder
     nfceAtivo?: SortOrder
+    nfceAutoSync?: SortOrder
     nfceSerie?: SortOrder
     nfceAmbiente?: SortOrder
     nfceCsc?: SortOrderInput | SortOrder
@@ -3525,6 +4617,7 @@ export namespace Prisma {
     certPfx?: SortOrderInput | SortOrder
     certSenha?: SortOrderInput | SortOrder
     certValidade?: SortOrderInput | SortOrder
+    cosmosApiKey?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     users?: UserOrderByRelationAggregateInput
@@ -3558,6 +4651,7 @@ export namespace Prisma {
     cep?: StringNullableFilter<"Tenant"> | string | null
     telefone?: StringNullableFilter<"Tenant"> | string | null
     nfceAtivo?: BoolFilter<"Tenant"> | boolean
+    nfceAutoSync?: BoolFilter<"Tenant"> | boolean
     nfceSerie?: IntFilter<"Tenant"> | number
     nfceAmbiente?: IntFilter<"Tenant"> | number
     nfceCsc?: StringNullableFilter<"Tenant"> | string | null
@@ -3565,6 +4659,7 @@ export namespace Prisma {
     certPfx?: BytesNullableFilter<"Tenant"> | Bytes | null
     certSenha?: StringNullableFilter<"Tenant"> | string | null
     certValidade?: DateTimeNullableFilter<"Tenant"> | Date | string | null
+    cosmosApiKey?: StringNullableFilter<"Tenant"> | string | null
     createdAt?: DateTimeFilter<"Tenant"> | Date | string
     updatedAt?: DateTimeFilter<"Tenant"> | Date | string
     users?: UserListRelationFilter
@@ -3594,6 +4689,7 @@ export namespace Prisma {
     cep?: SortOrderInput | SortOrder
     telefone?: SortOrderInput | SortOrder
     nfceAtivo?: SortOrder
+    nfceAutoSync?: SortOrder
     nfceSerie?: SortOrder
     nfceAmbiente?: SortOrder
     nfceCsc?: SortOrderInput | SortOrder
@@ -3601,6 +4697,7 @@ export namespace Prisma {
     certPfx?: SortOrderInput | SortOrder
     certSenha?: SortOrderInput | SortOrder
     certValidade?: SortOrderInput | SortOrder
+    cosmosApiKey?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: TenantCountOrderByAggregateInput
@@ -3637,6 +4734,7 @@ export namespace Prisma {
     cep?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     telefone?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     nfceAtivo?: BoolWithAggregatesFilter<"Tenant"> | boolean
+    nfceAutoSync?: BoolWithAggregatesFilter<"Tenant"> | boolean
     nfceSerie?: IntWithAggregatesFilter<"Tenant"> | number
     nfceAmbiente?: IntWithAggregatesFilter<"Tenant"> | number
     nfceCsc?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
@@ -3644,6 +4742,7 @@ export namespace Prisma {
     certPfx?: BytesNullableWithAggregatesFilter<"Tenant"> | Bytes | null
     certSenha?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     certValidade?: DateTimeNullableWithAggregatesFilter<"Tenant"> | Date | string | null
+    cosmosApiKey?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Tenant"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Tenant"> | Date | string
   }
@@ -3729,6 +4828,89 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
   }
 
+  export type MasterProductWhereInput = {
+    AND?: MasterProductWhereInput | MasterProductWhereInput[]
+    OR?: MasterProductWhereInput[]
+    NOT?: MasterProductWhereInput | MasterProductWhereInput[]
+    id?: StringFilter<"MasterProduct"> | string
+    ean?: StringFilter<"MasterProduct"> | string
+    name?: StringFilter<"MasterProduct"> | string
+    brand?: StringNullableFilter<"MasterProduct"> | string | null
+    ncm?: StringNullableFilter<"MasterProduct"> | string | null
+    cest?: StringNullableFilter<"MasterProduct"> | string | null
+    unit?: StringFilter<"MasterProduct"> | string
+    imageUrl?: StringNullableFilter<"MasterProduct"> | string | null
+    category?: StringNullableFilter<"MasterProduct"> | string | null
+    source?: StringFilter<"MasterProduct"> | string
+    createdAt?: DateTimeFilter<"MasterProduct"> | Date | string
+  }
+
+  export type MasterProductOrderByWithRelationInput = {
+    id?: SortOrder
+    ean?: SortOrder
+    name?: SortOrder
+    brand?: SortOrderInput | SortOrder
+    ncm?: SortOrderInput | SortOrder
+    cest?: SortOrderInput | SortOrder
+    unit?: SortOrder
+    imageUrl?: SortOrderInput | SortOrder
+    category?: SortOrderInput | SortOrder
+    source?: SortOrder
+    createdAt?: SortOrder
+    _relevance?: MasterProductOrderByRelevanceInput
+  }
+
+  export type MasterProductWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    ean?: string
+    AND?: MasterProductWhereInput | MasterProductWhereInput[]
+    OR?: MasterProductWhereInput[]
+    NOT?: MasterProductWhereInput | MasterProductWhereInput[]
+    name?: StringFilter<"MasterProduct"> | string
+    brand?: StringNullableFilter<"MasterProduct"> | string | null
+    ncm?: StringNullableFilter<"MasterProduct"> | string | null
+    cest?: StringNullableFilter<"MasterProduct"> | string | null
+    unit?: StringFilter<"MasterProduct"> | string
+    imageUrl?: StringNullableFilter<"MasterProduct"> | string | null
+    category?: StringNullableFilter<"MasterProduct"> | string | null
+    source?: StringFilter<"MasterProduct"> | string
+    createdAt?: DateTimeFilter<"MasterProduct"> | Date | string
+  }, "id" | "ean">
+
+  export type MasterProductOrderByWithAggregationInput = {
+    id?: SortOrder
+    ean?: SortOrder
+    name?: SortOrder
+    brand?: SortOrderInput | SortOrder
+    ncm?: SortOrderInput | SortOrder
+    cest?: SortOrderInput | SortOrder
+    unit?: SortOrder
+    imageUrl?: SortOrderInput | SortOrder
+    category?: SortOrderInput | SortOrder
+    source?: SortOrder
+    createdAt?: SortOrder
+    _count?: MasterProductCountOrderByAggregateInput
+    _max?: MasterProductMaxOrderByAggregateInput
+    _min?: MasterProductMinOrderByAggregateInput
+  }
+
+  export type MasterProductScalarWhereWithAggregatesInput = {
+    AND?: MasterProductScalarWhereWithAggregatesInput | MasterProductScalarWhereWithAggregatesInput[]
+    OR?: MasterProductScalarWhereWithAggregatesInput[]
+    NOT?: MasterProductScalarWhereWithAggregatesInput | MasterProductScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"MasterProduct"> | string
+    ean?: StringWithAggregatesFilter<"MasterProduct"> | string
+    name?: StringWithAggregatesFilter<"MasterProduct"> | string
+    brand?: StringNullableWithAggregatesFilter<"MasterProduct"> | string | null
+    ncm?: StringNullableWithAggregatesFilter<"MasterProduct"> | string | null
+    cest?: StringNullableWithAggregatesFilter<"MasterProduct"> | string | null
+    unit?: StringWithAggregatesFilter<"MasterProduct"> | string
+    imageUrl?: StringNullableWithAggregatesFilter<"MasterProduct"> | string | null
+    category?: StringNullableWithAggregatesFilter<"MasterProduct"> | string | null
+    source?: StringWithAggregatesFilter<"MasterProduct"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"MasterProduct"> | Date | string
+  }
+
   export type TenantCreateInput = {
     id?: string
     databaseName: string
@@ -3753,6 +4935,7 @@ export namespace Prisma {
     cep?: string | null
     telefone?: string | null
     nfceAtivo?: boolean
+    nfceAutoSync?: boolean
     nfceSerie?: number
     nfceAmbiente?: number
     nfceCsc?: string | null
@@ -3760,6 +4943,7 @@ export namespace Prisma {
     certPfx?: Bytes | null
     certSenha?: string | null
     certValidade?: Date | string | null
+    cosmosApiKey?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     users?: UserCreateNestedManyWithoutTenantInput
@@ -3789,6 +4973,7 @@ export namespace Prisma {
     cep?: string | null
     telefone?: string | null
     nfceAtivo?: boolean
+    nfceAutoSync?: boolean
     nfceSerie?: number
     nfceAmbiente?: number
     nfceCsc?: string | null
@@ -3796,6 +4981,7 @@ export namespace Prisma {
     certPfx?: Bytes | null
     certSenha?: string | null
     certValidade?: Date | string | null
+    cosmosApiKey?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     users?: UserUncheckedCreateNestedManyWithoutTenantInput
@@ -3825,6 +5011,7 @@ export namespace Prisma {
     cep?: NullableStringFieldUpdateOperationsInput | string | null
     telefone?: NullableStringFieldUpdateOperationsInput | string | null
     nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
+    nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
     nfceSerie?: IntFieldUpdateOperationsInput | number
     nfceAmbiente?: IntFieldUpdateOperationsInput | number
     nfceCsc?: NullableStringFieldUpdateOperationsInput | string | null
@@ -3832,6 +5019,7 @@ export namespace Prisma {
     certPfx?: NullableBytesFieldUpdateOperationsInput | Bytes | null
     certSenha?: NullableStringFieldUpdateOperationsInput | string | null
     certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     users?: UserUpdateManyWithoutTenantNestedInput
@@ -3861,6 +5049,7 @@ export namespace Prisma {
     cep?: NullableStringFieldUpdateOperationsInput | string | null
     telefone?: NullableStringFieldUpdateOperationsInput | string | null
     nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
+    nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
     nfceSerie?: IntFieldUpdateOperationsInput | number
     nfceAmbiente?: IntFieldUpdateOperationsInput | number
     nfceCsc?: NullableStringFieldUpdateOperationsInput | string | null
@@ -3868,6 +5057,7 @@ export namespace Prisma {
     certPfx?: NullableBytesFieldUpdateOperationsInput | Bytes | null
     certSenha?: NullableStringFieldUpdateOperationsInput | string | null
     certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     users?: UserUncheckedUpdateManyWithoutTenantNestedInput
@@ -3897,6 +5087,7 @@ export namespace Prisma {
     cep?: string | null
     telefone?: string | null
     nfceAtivo?: boolean
+    nfceAutoSync?: boolean
     nfceSerie?: number
     nfceAmbiente?: number
     nfceCsc?: string | null
@@ -3904,6 +5095,7 @@ export namespace Prisma {
     certPfx?: Bytes | null
     certSenha?: string | null
     certValidade?: Date | string | null
+    cosmosApiKey?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -3932,6 +5124,7 @@ export namespace Prisma {
     cep?: NullableStringFieldUpdateOperationsInput | string | null
     telefone?: NullableStringFieldUpdateOperationsInput | string | null
     nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
+    nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
     nfceSerie?: IntFieldUpdateOperationsInput | number
     nfceAmbiente?: IntFieldUpdateOperationsInput | number
     nfceCsc?: NullableStringFieldUpdateOperationsInput | string | null
@@ -3939,6 +5132,7 @@ export namespace Prisma {
     certPfx?: NullableBytesFieldUpdateOperationsInput | Bytes | null
     certSenha?: NullableStringFieldUpdateOperationsInput | string | null
     certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -3967,6 +5161,7 @@ export namespace Prisma {
     cep?: NullableStringFieldUpdateOperationsInput | string | null
     telefone?: NullableStringFieldUpdateOperationsInput | string | null
     nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
+    nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
     nfceSerie?: IntFieldUpdateOperationsInput | number
     nfceAmbiente?: IntFieldUpdateOperationsInput | number
     nfceCsc?: NullableStringFieldUpdateOperationsInput | string | null
@@ -3974,6 +5169,7 @@ export namespace Prisma {
     certPfx?: NullableBytesFieldUpdateOperationsInput | Bytes | null
     certSenha?: NullableStringFieldUpdateOperationsInput | string | null
     certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -4066,6 +5262,104 @@ export namespace Prisma {
     active?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MasterProductCreateInput = {
+    id?: string
+    ean: string
+    name: string
+    brand?: string | null
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    imageUrl?: string | null
+    category?: string | null
+    source?: string
+    createdAt?: Date | string
+  }
+
+  export type MasterProductUncheckedCreateInput = {
+    id?: string
+    ean: string
+    name: string
+    brand?: string | null
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    imageUrl?: string | null
+    category?: string | null
+    source?: string
+    createdAt?: Date | string
+  }
+
+  export type MasterProductUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ean?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    brand?: NullableStringFieldUpdateOperationsInput | string | null
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    category?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MasterProductUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ean?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    brand?: NullableStringFieldUpdateOperationsInput | string | null
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    category?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MasterProductCreateManyInput = {
+    id?: string
+    ean: string
+    name: string
+    brand?: string | null
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    imageUrl?: string | null
+    category?: string | null
+    source?: string
+    createdAt?: Date | string
+  }
+
+  export type MasterProductUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ean?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    brand?: NullableStringFieldUpdateOperationsInput | string | null
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    category?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MasterProductUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ean?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    brand?: NullableStringFieldUpdateOperationsInput | string | null
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    category?: NullableStringFieldUpdateOperationsInput | string | null
+    source?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type StringFilter<$PrismaModel = never> = {
@@ -4211,6 +5505,7 @@ export namespace Prisma {
     cep?: SortOrder
     telefone?: SortOrder
     nfceAtivo?: SortOrder
+    nfceAutoSync?: SortOrder
     nfceSerie?: SortOrder
     nfceAmbiente?: SortOrder
     nfceCsc?: SortOrder
@@ -4218,6 +5513,7 @@ export namespace Prisma {
     certPfx?: SortOrder
     certSenha?: SortOrder
     certValidade?: SortOrder
+    cosmosApiKey?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -4251,6 +5547,7 @@ export namespace Prisma {
     cep?: SortOrder
     telefone?: SortOrder
     nfceAtivo?: SortOrder
+    nfceAutoSync?: SortOrder
     nfceSerie?: SortOrder
     nfceAmbiente?: SortOrder
     nfceCsc?: SortOrder
@@ -4258,6 +5555,7 @@ export namespace Prisma {
     certPfx?: SortOrder
     certSenha?: SortOrder
     certValidade?: SortOrder
+    cosmosApiKey?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -4285,6 +5583,7 @@ export namespace Prisma {
     cep?: SortOrder
     telefone?: SortOrder
     nfceAtivo?: SortOrder
+    nfceAutoSync?: SortOrder
     nfceSerie?: SortOrder
     nfceAmbiente?: SortOrder
     nfceCsc?: SortOrder
@@ -4292,6 +5591,7 @@ export namespace Prisma {
     certPfx?: SortOrder
     certSenha?: SortOrder
     certValidade?: SortOrder
+    cosmosApiKey?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -4474,6 +5774,54 @@ export namespace Prisma {
     active?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type MasterProductOrderByRelevanceInput = {
+    fields: MasterProductOrderByRelevanceFieldEnum | MasterProductOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type MasterProductCountOrderByAggregateInput = {
+    id?: SortOrder
+    ean?: SortOrder
+    name?: SortOrder
+    brand?: SortOrder
+    ncm?: SortOrder
+    cest?: SortOrder
+    unit?: SortOrder
+    imageUrl?: SortOrder
+    category?: SortOrder
+    source?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type MasterProductMaxOrderByAggregateInput = {
+    id?: SortOrder
+    ean?: SortOrder
+    name?: SortOrder
+    brand?: SortOrder
+    ncm?: SortOrder
+    cest?: SortOrder
+    unit?: SortOrder
+    imageUrl?: SortOrder
+    category?: SortOrder
+    source?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type MasterProductMinOrderByAggregateInput = {
+    id?: SortOrder
+    ean?: SortOrder
+    name?: SortOrder
+    brand?: SortOrder
+    ncm?: SortOrder
+    cest?: SortOrder
+    unit?: SortOrder
+    imageUrl?: SortOrder
+    category?: SortOrder
+    source?: SortOrder
+    createdAt?: SortOrder
   }
 
   export type UserCreateNestedManyWithoutTenantInput = {
@@ -4872,6 +6220,7 @@ export namespace Prisma {
     cep?: string | null
     telefone?: string | null
     nfceAtivo?: boolean
+    nfceAutoSync?: boolean
     nfceSerie?: number
     nfceAmbiente?: number
     nfceCsc?: string | null
@@ -4879,6 +6228,7 @@ export namespace Prisma {
     certPfx?: Bytes | null
     certSenha?: string | null
     certValidade?: Date | string | null
+    cosmosApiKey?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -4907,6 +6257,7 @@ export namespace Prisma {
     cep?: string | null
     telefone?: string | null
     nfceAtivo?: boolean
+    nfceAutoSync?: boolean
     nfceSerie?: number
     nfceAmbiente?: number
     nfceCsc?: string | null
@@ -4914,6 +6265,7 @@ export namespace Prisma {
     certPfx?: Bytes | null
     certSenha?: string | null
     certValidade?: Date | string | null
+    cosmosApiKey?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -4958,6 +6310,7 @@ export namespace Prisma {
     cep?: NullableStringFieldUpdateOperationsInput | string | null
     telefone?: NullableStringFieldUpdateOperationsInput | string | null
     nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
+    nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
     nfceSerie?: IntFieldUpdateOperationsInput | number
     nfceAmbiente?: IntFieldUpdateOperationsInput | number
     nfceCsc?: NullableStringFieldUpdateOperationsInput | string | null
@@ -4965,6 +6318,7 @@ export namespace Prisma {
     certPfx?: NullableBytesFieldUpdateOperationsInput | Bytes | null
     certSenha?: NullableStringFieldUpdateOperationsInput | string | null
     certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -4993,6 +6347,7 @@ export namespace Prisma {
     cep?: NullableStringFieldUpdateOperationsInput | string | null
     telefone?: NullableStringFieldUpdateOperationsInput | string | null
     nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
+    nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
     nfceSerie?: IntFieldUpdateOperationsInput | number
     nfceAmbiente?: IntFieldUpdateOperationsInput | number
     nfceCsc?: NullableStringFieldUpdateOperationsInput | string | null
@@ -5000,6 +6355,7 @@ export namespace Prisma {
     certPfx?: NullableBytesFieldUpdateOperationsInput | Bytes | null
     certSenha?: NullableStringFieldUpdateOperationsInput | string | null
     certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

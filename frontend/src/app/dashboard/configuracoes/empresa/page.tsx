@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { Building2, MapPin, Receipt, ShieldCheck, Save, Loader2, Upload, CheckCircle, AlertCircle } from 'lucide-react';
+import { Building2, MapPin, Receipt, ShieldCheck, Save, Loader2, Upload, CheckCircle, AlertCircle, Zap, Eye, EyeOff, FlaskConical } from 'lucide-react';
 
 const TABS = [
   { id: 'dados',        label: 'Dados da Empresa', icon: Building2 },
@@ -34,10 +34,15 @@ export default function EmpresaConfigPage() {
     nfceAtivo: false, nfceSerie: 1, nfceAmbiente: 2, nfceCsc: '', nfceIdCsc: '',
     // Certificado (apenas leitura — upload separado)
     certValidade: '',
+    // Integrações
+    cosmosApiKey: '',
   });
 
   const [certFile, setCertFile] = useState<File | null>(null);
   const [certSenha, setCertSenha] = useState('');
+  const [showCosmosKey, setShowCosmosKey] = useState(false);
+  const [testingCosmos, setTestingCosmos] = useState(false);
+  const [masterCount, setMasterCount] = useState<{ total: number; withNcm: number } | null>(null);
 
   useEffect(() => {
     api.get('/tenants/me')
@@ -54,24 +59,27 @@ export default function EmpresaConfigPage() {
           nfceAtivo: d.nfceAtivo ?? false, nfceSerie: d.nfceSerie ?? 1,
           nfceAmbiente: d.nfceAmbiente ?? 2, nfceCsc: d.nfceCsc ?? '',
           nfceIdCsc: d.nfceIdCsc ?? '', certValidade: d.certValidade ?? '',
+          cosmosApiKey: d.cosmosApiKey ?? '',
         }));
       })
       .catch(() => toast.error('Erro ao carregar dados da empresa.'))
       .finally(() => setLoading(false));
 
-    // Health check do serviço NFC-e
     api.get('/nfce/health')
       .then(res => setNfceHealth(res.data.online))
       .catch(() => setNfceHealth(false));
+
+    // Contagem de produtos na base mestre
+    api.get('/master-products/count')
+      .then(res => setMasterCount(res.data))
+      .catch(() => {});
   }, []);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Salvar dados textuais
       await api.patch('/tenants/me', form);
 
-      // Upload do certificado (se selecionado)
       if (certFile) {
         const fd = new FormData();
         fd.append('certPfx', certFile);
@@ -84,20 +92,44 @@ export default function EmpresaConfigPage() {
       }
 
       toast.success('Configurações salvas com sucesso!');
-      
-      // Recarrega os dados para atualizar a validade do certificado na tela
+
       const res = await api.get('/tenants/me');
       const d = res.data;
       setForm(prev => ({
         ...prev,
         certValidade: d.certValidade ?? '',
         nfceAtivo: d.nfceAtivo ?? false,
+        cosmosApiKey: d.cosmosApiKey ?? '',
       }));
-      
+
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Erro ao salvar configurações.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestCosmos = async () => {
+    if (!form.cosmosApiKey) {
+      toast.error('Informe o token da Cosmos antes de testar.');
+      return;
+    }
+    setTestingCosmos(true);
+    try {
+      // Salva o token primeiro, depois testa
+      await api.patch('/tenants/me', { cosmosApiKey: form.cosmosApiKey });
+      const res = await api.get('/master-products/lookup/7898438720078');
+      if (res.data.found) {
+        toast.success(`✅ Cosmos funcionando! Produto: ${res.data.product.name}`);
+      } else {
+        toast.info('Token válido, mas produto de teste não encontrado na Cosmos.');
+      }
+      const count = await api.get('/master-products/count');
+      setMasterCount(count.data);
+    } catch {
+      toast.error('Erro ao testar. Verifique o token e tente novamente.');
+    } finally {
+      setTestingCosmos(false);
     }
   };
 
@@ -130,12 +162,12 @@ export default function EmpresaConfigPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-2xl p-1">
+      <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-2xl p-1 overflow-x-auto">
         {TABS.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${
               activeTab === tab.id
                 ? 'bg-blue-600 text-white shadow-lg'
                 : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
@@ -225,7 +257,6 @@ export default function EmpresaConfigPage() {
         {/* ABA: NFC-e */}
         {activeTab === 'nfce' && (
           <div className="space-y-6">
-            {/* Status do serviço PHP */}
             <div className={`flex items-center gap-3 p-4 rounded-xl border ${nfceHealth ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
               {nfceHealth
                 ? <CheckCircle className="text-emerald-400" size={20} />
@@ -255,11 +286,7 @@ export default function EmpresaConfigPage() {
 
               <div>
                 <label className={labelCls}>Ambiente</label>
-                <select
-                  className={inputCls}
-                  value={form.nfceAmbiente}
-                  onChange={e => f('nfceAmbiente', parseInt(e.target.value))}
-                >
+                <select className={inputCls} value={form.nfceAmbiente} onChange={e => f('nfceAmbiente', parseInt(e.target.value))}>
                   <option value={2}>2 — Homologação (Testes)</option>
                   <option value={1}>1 — Produção</option>
                 </select>

@@ -1,5 +1,6 @@
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
+import { Prisma } from '@prisma/client';
 export declare class CashRegistersService {
     private tenantManager;
     private tenantContext;
@@ -11,8 +12,8 @@ export declare class CashRegistersService {
         status: string;
         openingTime: Date;
         closingTime: Date | null;
-        openingValue: import("@prisma/client/runtime/library").Decimal;
-        closingValue: import("@prisma/client/runtime/library").Decimal | null;
+        openingValue: Prisma.Decimal;
+        closingValue: Prisma.Decimal | null;
     }>;
     closeRegister(id: string, closingValue: number): Promise<{
         id: string;
@@ -20,8 +21,8 @@ export declare class CashRegistersService {
         status: string;
         openingTime: Date;
         closingTime: Date | null;
-        openingValue: import("@prisma/client/runtime/library").Decimal;
-        closingValue: import("@prisma/client/runtime/library").Decimal | null;
+        openingValue: Prisma.Decimal;
+        closingValue: Prisma.Decimal | null;
     }>;
     getCurrentRegister(): Promise<{
         id: string;
@@ -29,8 +30,8 @@ export declare class CashRegistersService {
         status: string;
         openingTime: Date;
         closingTime: Date | null;
-        openingValue: import("@prisma/client/runtime/library").Decimal;
-        closingValue: import("@prisma/client/runtime/library").Decimal | null;
+        openingValue: Prisma.Decimal;
+        closingValue: Prisma.Decimal | null;
     } | null>;
     addMovement(registerId: string, type: 'IN' | 'OUT', value: number, reason?: string): Promise<{
         id: string;
@@ -38,7 +39,7 @@ export declare class CashRegistersService {
         type: string;
         reason: string | null;
         cashRegisterId: string;
-        value: import("@prisma/client/runtime/library").Decimal;
+        value: Prisma.Decimal;
     }>;
     findAll(): Promise<{
         id: string;
@@ -46,8 +47,8 @@ export declare class CashRegistersService {
         status: string;
         openingTime: Date;
         closingTime: Date | null;
-        openingValue: import("@prisma/client/runtime/library").Decimal;
-        closingValue: import("@prisma/client/runtime/library").Decimal | null;
+        openingValue: Prisma.Decimal;
+        closingValue: Prisma.Decimal | null;
     }[]>;
     getReport(id: string): Promise<{
         register: {
@@ -56,8 +57,8 @@ export declare class CashRegistersService {
             status: string;
             openingTime: Date;
             closingTime: Date | null;
-            openingValue: import("@prisma/client/runtime/library").Decimal;
-            closingValue: import("@prisma/client/runtime/library").Decimal | null;
+            openingValue: Prisma.Decimal;
+            closingValue: Prisma.Decimal | null;
         };
         report: {
             totalDinheiro: number;
@@ -83,9 +84,11 @@ export declare class CashRegistersService {
                         barcode: string | null;
                         unit: string;
                         active: boolean;
-                        priceCost: import("@prisma/client/runtime/library").Decimal;
-                        priceSell: import("@prisma/client/runtime/library").Decimal;
-                        stock: import("@prisma/client/runtime/library").Decimal;
+                        imageUrl: string | null;
+                        priceCost: Prisma.Decimal;
+                        priceSell: Prisma.Decimal;
+                        stock: Prisma.Decimal;
+                        salesCount: number;
                         ncm: string | null;
                         cest: string | null;
                         origem: number;
@@ -95,11 +98,11 @@ export declare class CashRegistersService {
                     csosn: string | null;
                     cstIcms: string | null;
                     cfop: string | null;
-                    aliqIcms: import("@prisma/client/runtime/library").Decimal;
+                    aliqIcms: Prisma.Decimal;
                     cstPis: string;
-                    aliqPis: import("@prisma/client/runtime/library").Decimal;
+                    aliqPis: Prisma.Decimal;
                     cstCofins: string;
-                    aliqCofins: import("@prisma/client/runtime/library").Decimal;
+                    aliqCofins: Prisma.Decimal;
                     unit: string;
                     ncm: string | null;
                     cest: string | null;
@@ -107,32 +110,32 @@ export declare class CashRegistersService {
                     saleId: string;
                     productId: string;
                     productName: string;
-                    quantity: import("@prisma/client/runtime/library").Decimal;
-                    priceUnit: import("@prisma/client/runtime/library").Decimal;
-                    discount: import("@prisma/client/runtime/library").Decimal;
-                    subtotal: import("@prisma/client/runtime/library").Decimal;
-                    valorIcms: import("@prisma/client/runtime/library").Decimal;
-                    valorPis: import("@prisma/client/runtime/library").Decimal;
-                    valorCofins: import("@prisma/client/runtime/library").Decimal;
+                    quantity: Prisma.Decimal;
+                    priceUnit: Prisma.Decimal;
+                    discount: Prisma.Decimal;
+                    subtotal: Prisma.Decimal;
+                    valorIcms: Prisma.Decimal;
+                    valorPis: Prisma.Decimal;
+                    valorCofins: Prisma.Decimal;
                 })[];
                 payments: {
                     id: string;
                     saleId: string;
                     tPag: string;
                     method: string;
-                    value: import("@prisma/client/runtime/library").Decimal;
-                    troco: import("@prisma/client/runtime/library").Decimal;
+                    value: Prisma.Decimal;
+                    troco: Prisma.Decimal;
                 }[];
             } & {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
-                discount: import("@prisma/client/runtime/library").Decimal;
-                subtotal: import("@prisma/client/runtime/library").Decimal;
+                discount: Prisma.Decimal;
+                subtotal: Prisma.Decimal;
                 customerId: string | null;
                 operatorId: string | null;
                 cashRegisterId: string | null;
-                total: import("@prisma/client/runtime/library").Decimal;
+                total: Prisma.Decimal;
                 status: string;
                 emitirNfce: boolean;
                 nfceStatus: string | null;
@@ -154,7 +157,7 @@ export declare class CashRegistersService {
                 type: string;
                 reason: string | null;
                 cashRegisterId: string;
-                value: import("@prisma/client/runtime/library").Decimal;
+                value: Prisma.Decimal;
             }[];
         };
     }>;

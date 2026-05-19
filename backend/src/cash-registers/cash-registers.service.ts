@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CashRegistersService {
@@ -22,20 +23,24 @@ export class CashRegistersService {
       // Se não vier operatorId do frontend, tenta usar o userId do token (fallback)
       const currentOpId = operatorId || userId;
 
-      const existing = await prisma.cashRegister.findFirst({
-        where: { status: 'open' }
-      });
+      return await prisma.$transaction(async (tx) => {
+        const existing = await tx.cashRegister.findFirst({
+          where: { status: 'open' }
+        });
 
-      if (existing) {
-        throw new BadRequestException(`Já existe um caixa aberto (${existing.operatorId === currentOpId ? 'por você' : 'por outro operador'}). Feche-o antes de abrir um novo.`);
-      }
-
-      return await prisma.cashRegister.create({
-        data: {
-          operatorId: currentOpId,
-          openingValue,
-          status: 'open'
+        if (existing) {
+          throw new BadRequestException(`Já existe um caixa aberto (${existing.operatorId === currentOpId ? 'por você' : 'por outro operador'}). Feche-o antes de abrir um novo.`);
         }
+
+        return await tx.cashRegister.create({
+          data: {
+            operatorId: currentOpId,
+            openingValue,
+            status: 'open'
+          }
+        });
+      }, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
       });
     } catch (error: any) {
       if (error instanceof BadRequestException) throw error;
@@ -89,15 +94,19 @@ export class CashRegistersService {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Decimal → number para cálculos (Prisma retorna Decimal objects)
-    let totalDinheiro = 0, totalPix = 0, totalCredito = 0, totalDebito = 0;
+    // Matemática Segura (Prisma.Decimal) para evitar perda de precisão flutuante (0.1 + 0.2 != 0.3)
+    let totalDinheiro = new Prisma.Decimal(0);
+    let totalPix = new Prisma.Decimal(0);
+    let totalCredito = new Prisma.Decimal(0);
+    let totalDebito = new Prisma.Decimal(0);
+
     sales.forEach(sale => {
       sale.payments.forEach(p => {
-        const v = Number(p.value);
-        if (p.method === 'dinheiro')      totalDinheiro += v;
-        else if (p.method === 'pix')      totalPix      += v;
-        else if (p.method === 'credito')  totalCredito  += v;
-        else if (p.method === 'debito')   totalDebito   += v;
+        const v = new Prisma.Decimal(p.value as any);
+        if (p.method === 'dinheiro')      totalDinheiro = totalDinheiro.add(v);
+        else if (p.method === 'pix')      totalPix      = totalPix.add(v);
+        else if (p.method === 'credito')  totalCredito  = totalCredito.add(v);
+        else if (p.method === 'debito')   totalDebito   = totalDebito.add(v);
       });
     });
 
@@ -106,28 +115,38 @@ export class CashRegistersService {
       orderBy: { createdAt: 'desc' }
     });
 
-    let totalSuprimentos = 0, totalSangrias = 0;
+    let totalSuprimentos = new Prisma.Decimal(0);
+    let totalSangrias = new Prisma.Decimal(0);
+
     movements.forEach((m: any) => {
-      if (m.type === 'IN')  totalSuprimentos += Number(m.value);
-      if (m.type === 'OUT') totalSangrias    += Number(m.value);
+      const mv = new Prisma.Decimal(m.value as any);
+      if (m.type === 'IN')  totalSuprimentos = totalSuprimentos.add(mv);
+      if (m.type === 'OUT') totalSangrias    = totalSangrias.add(mv);
     });
 
-    const openingValue = Number(register.openingValue);
+    const openingValue = new Prisma.Decimal(register.openingValue as any);
+    
+    // Total Cartão = Crédito + Débito
+    const totalCartao = totalCredito.add(totalDebito);
+    // Total Vendas = Dinheiro + Pix + Cartão
+    const totalVendas = totalDinheiro.add(totalPix).add(totalCartao);
+    // Dinheiro Esperado na Gaveta = Abertura + Vendas(Dinheiro) + Suprimentos - Sangrias
+    const expectedDinheiro = openingValue.add(totalDinheiro).add(totalSuprimentos).sub(totalSangrias);
 
     return {
       register,
       report: {
-        totalDinheiro,
-        totalPix,
-        totalCredito,
-        totalDebito,
-        totalCartao:    totalCredito + totalDebito,
-        totalVendas:    totalDinheiro + totalPix + totalCredito + totalDebito,
-        totalSuprimentos,
-        totalSangrias,
-        countSales:     sales.length,
-        expectedDinheiro: openingValue + totalDinheiro + totalSuprimentos - totalSangrias,
-        salesDetails:   sales,
+        totalDinheiro: totalDinheiro.toNumber(),
+        totalPix: totalPix.toNumber(),
+        totalCredito: totalCredito.toNumber(),
+        totalDebito: totalDebito.toNumber(),
+        totalCartao: totalCartao.toNumber(),
+        totalVendas: totalVendas.toNumber(),
+        totalSuprimentos: totalSuprimentos.toNumber(),
+        totalSangrias: totalSangrias.toNumber(),
+        countSales: sales.length,
+        expectedDinheiro: expectedDinheiro.toNumber(),
+        salesDetails: sales,
         movements
       }
     };

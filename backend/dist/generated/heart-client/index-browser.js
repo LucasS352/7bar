@@ -145,6 +145,7 @@ exports.Prisma.TenantScalarFieldEnum = {
   cep: 'cep',
   telefone: 'telefone',
   nfceAtivo: 'nfceAtivo',
+  nfceAutoSync: 'nfceAutoSync',
   nfceSerie: 'nfceSerie',
   nfceAmbiente: 'nfceAmbiente',
   nfceCsc: 'nfceCsc',
@@ -152,6 +153,7 @@ exports.Prisma.TenantScalarFieldEnum = {
   certPfx: 'certPfx',
   certSenha: 'certSenha',
   certValidade: 'certValidade',
+  cosmosApiKey: 'cosmosApiKey',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -167,6 +169,20 @@ exports.Prisma.UserScalarFieldEnum = {
   active: 'active',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.MasterProductScalarFieldEnum = {
+  id: 'id',
+  ean: 'ean',
+  name: 'name',
+  brand: 'brand',
+  ncm: 'ncm',
+  cest: 'cest',
+  unit: 'unit',
+  imageUrl: 'imageUrl',
+  category: 'category',
+  source: 'source',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -218,7 +234,8 @@ exports.Prisma.TenantOrderByRelevanceFieldEnum = {
   telefone: 'telefone',
   nfceCsc: 'nfceCsc',
   nfceIdCsc: 'nfceIdCsc',
-  certSenha: 'certSenha'
+  certSenha: 'certSenha',
+  cosmosApiKey: 'cosmosApiKey'
 };
 
 exports.Prisma.UserOrderByRelevanceFieldEnum = {
@@ -231,10 +248,24 @@ exports.Prisma.UserOrderByRelevanceFieldEnum = {
   pin: 'pin'
 };
 
+exports.Prisma.MasterProductOrderByRelevanceFieldEnum = {
+  id: 'id',
+  ean: 'ean',
+  name: 'name',
+  brand: 'brand',
+  ncm: 'ncm',
+  cest: 'cest',
+  unit: 'unit',
+  imageUrl: 'imageUrl',
+  category: 'category',
+  source: 'source'
+};
+
 
 exports.Prisma.ModelName = {
   Tenant: 'Tenant',
-  User: 'User'
+  User: 'User',
+  MasterProduct: 'MasterProduct'
 };
 
 /**

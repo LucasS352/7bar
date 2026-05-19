@@ -1,8 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { PackagePlus, X, Loader2, Save, DollarSign } from 'lucide-react';
+import { PackagePlus, X, Loader2, Save, DollarSign, Barcode, CheckCircle2, HelpCircle } from 'lucide-react';
 
 const UNIT_OPTIONS = ['UN', 'KG', 'LT', 'CX', 'DZ', 'PCT', 'FD', 'ML', 'GR'];
 const ORIGEM_OPTIONS = [
@@ -21,10 +21,15 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
   const [grupos, setGrupos] = useState<GrupoTributacao[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // ── EAN Lookup state ──────────────────────────────────────
+  const [eanStatus, setEanStatus] = useState<'idle' | 'loading' | 'found' | 'not_found'>('idle');
+  const [eanLookupInfo, setEanLookupInfo] = useState<string | null>(null);
+  const eanDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const emptyForm = {
     name: '', barcode: '', unit: 'UN',
     priceCost: '', priceSell: '', stock: '', categoryId: '',
-    ncm: '', cest: '', origem: 0, grupoTributacaoId: '',
+    ncm: '', cest: '', origem: 0, grupoTributacaoId: '', imageUrl: '',
   };
 
   const [formData, setFormData] = useState(emptyForm);
@@ -41,6 +46,50 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
       if (catRes.data.length > 0) setFormData(f => ({ ...f, categoryId: catRes.data[0].id }));
     }).catch(() => toast.error('Erro ao carregar dados auxiliares'));
   }, [isOpen]);
+
+  // ── EAN Lookup handler ───────────────────────────────────
+  const handleEanChange = useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, barcode: value }));
+    setEanStatus('idle');
+    setEanLookupInfo(null);
+
+    if (eanDebounceRef.current) clearTimeout(eanDebounceRef.current);
+
+    // Aguarda pelo menos 8 dígitos para disparar o lookup (EAN-8, EAN-13, EAN-14)
+    const clean = value.trim().replace(/\D/g, '');
+    if (clean.length < 8 || clean.length > 14) return;
+
+    eanDebounceRef.current = setTimeout(async () => {
+      setEanStatus('loading');
+      try {
+        const res = await api.get(`/products/lookup/${clean}`);
+        const product = res.data.data;
+
+        if (product) {
+          // Preenche automaticamente os campos — mantém editáveis
+          setFormData(prev => ({
+            ...prev,
+            name: prev.name || product.name,          // só preenche se vazio
+            ncm:  prev.ncm  || product.ncm  || '',
+            cest: prev.cest || product.cest || '',
+            unit: product.unit || prev.unit,
+            imageUrl: product.imageUrl || prev.imageUrl,
+          }));
+          setEanStatus('found');
+          setEanLookupInfo(`${product.name}${product.brand ? ` · ${product.brand}` : ''}`);
+        } else {
+          setEanStatus('not_found');
+        }
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          setEanStatus('not_found');
+        } else {
+          setEanStatus('idle');
+          toast.error(`Erro no lookup: ${err.message}`);
+        }
+      }
+    }, 400);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -72,6 +121,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
         cest:              formData.cest      || undefined,
         origem:            formData.origem,
         grupoTributacaoId: formData.grupoTributacaoId || undefined,
+        imageUrl:          formData.imageUrl  || undefined,
       });
       toast.success('Produto cadastrado com sucesso!');
       onSuccess();
@@ -153,13 +203,46 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={labelCls}>Cód. Barras (EAN-13)</label>
-                <input
-                  className={`${inputCls} font-mono`}
-                  placeholder="789..."
-                  value={formData.barcode}
-                  onChange={e => f('barcode', e.target.value)}
-                />
+                <label className={labelCls} htmlFor="add-product-barcode">
+                  <span className="flex items-center gap-1.5">
+                    <Barcode size={12} className="text-zinc-500" />
+                    Cód. Barras (EAN-13)
+                  </span>
+                </label>
+                <div className="relative">
+                  <input
+                    id="add-product-barcode"
+                    className={`${inputCls} font-mono pr-10`}
+                    placeholder="Bipe ou digite 13 dígitos..."
+                    value={formData.barcode}
+                    onChange={e => handleEanChange(e.target.value)}
+                    maxLength={14}
+                  />
+                  {/* Indicador de status do lookup */}
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {eanStatus === 'loading' && (
+                      <Loader2 size={16} className="animate-spin text-blue-400" />
+                    )}
+                    {eanStatus === 'found' && (
+                      <CheckCircle2 size={16} className="text-emerald-400" />
+                    )}
+                    {eanStatus === 'not_found' && (
+                      <HelpCircle size={16} className="text-zinc-500" />
+                    )}
+                  </div>
+                </div>
+                {/* Badge de feedback do lookup */}
+                {eanStatus === 'found' && eanLookupInfo && (
+                  <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
+                    <CheckCircle2 size={11} />
+                    <span className="truncate">Identificado: {eanLookupInfo}</span>
+                  </div>
+                )}
+                {eanStatus === 'not_found' && (
+                  <div className="mt-1.5 text-[11px] text-zinc-500 font-medium">
+                    EAN não encontrado na base mestre — preencha manualmente.
+                  </div>
+                )}
               </div>
               <div>
                 <label className={labelCls}>Unidade de Venda</label>

@@ -172,6 +172,11 @@ function PosPageContent() {
                          {product.shortCode}
                        </span>
                     )}
+                    {product.imageUrl ? (
+                      <img src={product.imageUrl} alt={product.name} className="w-16 h-16 object-contain mb-3 opacity-90 group-hover:opacity-100 transition-opacity drop-shadow-sm" />
+                    ) : (
+                      <PackageOpen size={32} className="text-zinc-700 mb-3" />
+                    )}
                     <span className="font-semibold text-[1.1rem] text-center leading-snug z-10 line-clamp-2 px-1 text-zinc-100">{product.name}</span>
                     <span className="text-blue-400 font-bold mt-2 text-xl z-10">R$ {Number(product.priceSell).toFixed(2)}</span>
                     <div className="text-xs text-zinc-500 mt-2 z-10 border border-zinc-700 px-2 py-0.5 rounded-full bg-zinc-950 flex items-center gap-1 font-medium">
@@ -253,10 +258,17 @@ function PosPageContent() {
             ) : (
               items.map(item => (
                 <div key={item.id} className="flex flex-col p-4 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-sm hover:border-zinc-700 transition-colors group">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="font-semibold text-zinc-200 line-clamp-2 pr-2">{item.name}</div>
-                    <div className="font-bold text-lg text-emerald-400 whitespace-nowrap">
-                      R$ {item.subtotal.toFixed(2)}
+                  <div className="flex gap-3 mb-3">
+                    {item.imageUrl && (
+                      <div className="w-12 h-12 flex-shrink-0 bg-white/5 rounded-lg flex items-center justify-center p-1 border border-white/5">
+                        <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
+                      </div>
+                    )}
+                    <div className="flex-1 flex justify-between items-start">
+                      <div className="font-semibold text-zinc-200 line-clamp-2 pr-2 leading-tight">{item.name}</div>
+                      <div className="font-bold text-lg text-emerald-400 whitespace-nowrap pl-2">
+                        R$ {item.subtotal.toFixed(2)}
+                      </div>
                     </div>
                   </div>
                   

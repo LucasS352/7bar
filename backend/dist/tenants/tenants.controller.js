@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var TenantsController_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TenantsController = void 0;
 const common_1 = require("@nestjs/common");
@@ -20,7 +21,7 @@ const platform_express_1 = require("@nestjs/platform-express");
 const tenants_service_1 = require("./tenants.service");
 const provision_tenant_dto_1 = require("./provision-tenant.dto");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
-let TenantsController = class TenantsController {
+let TenantsController = TenantsController_1 = class TenantsController {
     constructor(tenantsService) {
         this.tenantsService = tenantsService;
     }
@@ -31,11 +32,34 @@ let TenantsController = class TenantsController {
         return this.tenantsService.findAll();
     }
     async listByPin(req) {
-        const pin = req.headers['x-setup-pin'] || req.query['pin'];
+        const pin = (req.headers['x-setup-pin'] || req.query['pin']);
         const valid = await this.tenantsService.validatePin(pin);
         if (!valid)
             throw new common_1.UnauthorizedException('PIN inválido.');
         return this.tenantsService.findAll();
+    }
+    async syncCosmos(req) {
+        const pin = req.headers['x-setup-pin'];
+        const valid = await this.tenantsService.validatePin(pin);
+        if (!valid)
+            throw new common_1.UnauthorizedException('PIN inválido.');
+        if (TenantsController_1.isSyncingCosmos) {
+            throw new common_1.BadRequestException('Uma sincronização já está em andamento. Aguarde a conclusão.');
+        }
+        const { execFile } = require('child_process');
+        const path = require('path');
+        const scriptPath = path.join(process.cwd(), 'scripts', 'etl', 'cosmos-auto-sync.js');
+        TenantsController_1.isSyncingCosmos = true;
+        execFile('node', [scriptPath], (error, stdout, stderr) => {
+            TenantsController_1.isSyncingCosmos = false;
+            if (error)
+                console.error(`Erro no sync: ${error.message}`);
+            if (stderr)
+                console.error(`Stderr sync: ${stderr}`);
+            if (stdout)
+                console.log(`Stdout sync: ${stdout}`);
+        });
+        return { message: 'Sincronização iniciada em background com sucesso.' };
     }
     getMe(req) {
         return this.tenantsService.findById(req.user.tenantId);
@@ -45,6 +69,13 @@ let TenantsController = class TenantsController {
             throw new common_1.UnauthorizedException('Somente Gerentes podem alterar configurações da empresa.');
         }
         return this.tenantsService.updateTenant(req.user.tenantId, body);
+    }
+    async updateTenantSetup(req, id, body) {
+        const pin = req.headers['x-setup-pin'];
+        const valid = await this.tenantsService.validatePin(pin);
+        if (!valid)
+            throw new common_1.UnauthorizedException('PIN inválido.');
+        return this.tenantsService.updateTenant(id, body);
     }
     updateTenant(req, id, body) {
         if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
@@ -61,6 +92,15 @@ let TenantsController = class TenantsController {
         if (!body.certSenha)
             throw new common_1.BadRequestException('Senha do certificado não informada.');
         return this.tenantsService.uploadCertificado(req.user.tenantId, file.buffer, body.certSenha);
+    }
+    async uploadLogoSetup(req, id, file) {
+        const pin = req.headers['x-setup-pin'];
+        const valid = await this.tenantsService.validatePin(pin);
+        if (!valid)
+            throw new common_1.UnauthorizedException('PIN inválido.');
+        if (!file)
+            throw new common_1.BadRequestException('Arquivo não enviado.');
+        return this.tenantsService.uploadLogo(id, file);
     }
     async uploadLogo(req, id, file) {
         if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
@@ -101,16 +141,17 @@ let TenantsController = class TenantsController {
         if (!body.pin || body.pin.length < 4) {
             throw new common_1.BadRequestException('O PIN deve ter no mínimo 4 caracteres.');
         }
-        return this.tenantsService.setDiscountPin(req.user.tenantId, req.user.databaseUrl, body.pin);
+        return this.tenantsService.setDiscountPin(req.user.tenantId, body.pin);
     }
     async verifyDiscountPin(req, body) {
-        const valid = await this.tenantsService.verifyDiscountPin(req.user.tenantId, req.user.databaseUrl, body.pin);
+        const valid = await this.tenantsService.verifyDiscountPin(req.user.tenantId, body.pin);
         if (!valid)
             throw new common_1.UnauthorizedException('PIN de desconto inválido.');
         return { valid: true };
     }
 };
 exports.TenantsController = TenantsController;
+TenantsController.isSyncingCosmos = false;
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)(),
@@ -126,6 +167,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], TenantsController.prototype, "listByPin", null);
+__decorate([
+    (0, common_1.Post)('setup/sync-cosmos'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], TenantsController.prototype, "syncCosmos", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('me'),
@@ -143,6 +191,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], TenantsController.prototype, "updateMe", null);
+__decorate([
+    (0, common_1.Patch)('setup/:id'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], TenantsController.prototype, "updateTenantSetup", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Patch)(':id'),
@@ -164,6 +221,16 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object, Object]),
     __metadata("design:returntype", Promise)
 ], TenantsController.prototype, "uploadCertificado", null);
+__decorate([
+    (0, common_1.Post)('setup/:id/logo'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('logo')),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.UploadedFile)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], TenantsController.prototype, "uploadLogoSetup", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Post)(':id/logo'),
@@ -224,7 +291,7 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], TenantsController.prototype, "verifyDiscountPin", null);
-exports.TenantsController = TenantsController = __decorate([
+exports.TenantsController = TenantsController = TenantsController_1 = __decorate([
     (0, common_1.Controller)('tenants'),
     __metadata("design:paramtypes", [tenants_service_1.TenantsService])
 ], TenantsController);

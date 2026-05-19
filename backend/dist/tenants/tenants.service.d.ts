@@ -1,11 +1,13 @@
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 import { ProvisionTenantDto } from './provision-tenant.dto';
 export declare class TenantsService {
     private heartPrisma;
     private tenantManager;
+    private tenantContext;
     private readonly logger;
-    constructor(heartPrisma: HeartPrismaService, tenantManager: TenantConnectionManager);
+    constructor(heartPrisma: HeartPrismaService, tenantManager: TenantConnectionManager, tenantContext: TenantContextService);
     findAll(): import("src/generated/heart-client").Prisma.PrismaPromise<({
         users: {
             name: string;
@@ -26,13 +28,13 @@ export declare class TenantsService {
         updatedAt: Date;
         status: string;
         nfceSerie: number;
-        databaseUrl: string;
         databaseName: string;
+        cnpj: string | null;
+        databaseUrl: string;
         logoUrl: string | null;
         modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
         razaoSocial: string | null;
         nomeFantasia: string | null;
-        cnpj: string | null;
         ie: string | null;
         im: string | null;
         crt: number;
@@ -46,12 +48,14 @@ export declare class TenantsService {
         cep: string | null;
         telefone: string | null;
         nfceAtivo: boolean;
+        nfceAutoSync: boolean;
         nfceAmbiente: number;
         nfceCsc: string | null;
         nfceIdCsc: string | null;
         certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
         certSenha: string | null;
         certValidade: Date | null;
+        cosmosApiKey: string | null;
     })[]>;
     create(data: any): import("src/generated/heart-client").Prisma.Prisma__TenantClient<{
         name: string;
@@ -60,13 +64,13 @@ export declare class TenantsService {
         updatedAt: Date;
         status: string;
         nfceSerie: number;
-        databaseUrl: string;
         databaseName: string;
+        cnpj: string | null;
+        databaseUrl: string;
         logoUrl: string | null;
         modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
         razaoSocial: string | null;
         nomeFantasia: string | null;
-        cnpj: string | null;
         ie: string | null;
         im: string | null;
         crt: number;
@@ -80,12 +84,14 @@ export declare class TenantsService {
         cep: string | null;
         telefone: string | null;
         nfceAtivo: boolean;
+        nfceAutoSync: boolean;
         nfceAmbiente: number;
         nfceCsc: string | null;
         nfceIdCsc: string | null;
         certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
         certSenha: string | null;
         certValidade: Date | null;
+        cosmosApiKey: string | null;
     }, never, import("src/generated/heart-client/runtime/library").DefaultArgs, import("src/generated/heart-client").Prisma.PrismaClientOptions>;
     findById(tenantId: string): Promise<any>;
     updateTenant(tenantId: string, data: any): Promise<{
@@ -95,13 +101,13 @@ export declare class TenantsService {
         updatedAt: Date;
         status: string;
         nfceSerie: number;
-        databaseUrl: string;
         databaseName: string;
+        cnpj: string | null;
+        databaseUrl: string;
         logoUrl: string | null;
         modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
         razaoSocial: string | null;
         nomeFantasia: string | null;
-        cnpj: string | null;
         ie: string | null;
         im: string | null;
         crt: number;
@@ -115,12 +121,14 @@ export declare class TenantsService {
         cep: string | null;
         telefone: string | null;
         nfceAtivo: boolean;
+        nfceAutoSync: boolean;
         nfceAmbiente: number;
         nfceCsc: string | null;
         nfceIdCsc: string | null;
         certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
         certSenha: string | null;
         certValidade: Date | null;
+        cosmosApiKey: string | null;
     }>;
     uploadLogo(tenantId: string, file: Express.Multer.File): Promise<{
         message: string;
@@ -144,8 +152,8 @@ export declare class TenantsService {
         };
     }>;
     private seedTenantProducts;
-    setDiscountPin(tenantId: string, databaseUrl: string, pin: string): Promise<{
+    setDiscountPin(tenantId: string, pin: string): Promise<{
         message: string;
     }>;
-    verifyDiscountPin(tenantId: string, databaseUrl: string, pin: string): Promise<boolean>;
+    verifyDiscountPin(tenantId: string, pin: string): Promise<boolean>;
 }

@@ -29,7 +29,7 @@ let AuthController = class AuthController {
         return this.authService.login(user);
     }
     async operatorLogin(user, body) {
-        return this.authService.validateOperatorPin(user.tenantId, user.databaseUrl, body.operatorId, body.pin);
+        return this.authService.validateOperatorPin(user.tenantId, body.operatorId, body.pin);
     }
 };
 exports.AuthController = AuthController;

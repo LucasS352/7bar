@@ -3,6 +3,7 @@ import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { NfceService } from '../nfce/nfce.service';
+import { Prisma } from '@prisma/client';
 import archiver = require('archiver');
 
 /** Mapa de método de pagamento → tPag SEFAZ (Tabela 5.4) */
@@ -32,11 +33,11 @@ export class SalesService {
 
   async checkout(data: any) {
     const { userId } = this.tenantContext.get();
-    const operatorId = data.operatorId || userId;
+    let operatorId = data.operatorId || userId;
     const prisma = await this.getPrisma();
 
     return prisma.$transaction(async (tx: any) => {
-      let subtotal = 0;
+      let subtotal = new Prisma.Decimal(0);
       const saleItemsData: any[] = [];
 
       // ─── 0. Ler configurações do tenant e validar caixa ────────────────────
@@ -56,33 +57,50 @@ export class SalesService {
       const allowNegativeStock = tenantSettings?.allowNegativeStock ?? false;
 
       // ─── 1. Validar estoque e montar snapshot fiscal de cada item ───────────
+      // OTIMIZAÇÃO CRÍTICA (Fase 1): Buscamos todos os produtos em lote (Batch Fetching)
+      const productIds = data.items.map((item: any) => item.productId);
+      const productsInDb = await tx.product.findMany({
+        where: { id: { in: productIds } },
+        include: { grupoTributacao: true },
+      });
+
+      // Cria um mapa para acesso rápido em memória O(1)
+      const productMap = new Map(productsInDb.map((p: any) => [p.id, p]));
+
+      const inventoryLogsToCreate: any[] = [];
+      const productUpdatesPromises: any[] = [];
+
       for (const item of data.items) {
-        const product = await tx.product.findUnique({
-          where: { id: item.productId },
-          include: { grupoTributacao: true },
-        });
+        const product = productMap.get(item.productId) as any;
 
         if (!product) {
-          throw new BadRequestException(`Produto ${item.productId} não encontrado.`);
+          throw new BadRequestException(`Produto ${item.productId} não encontrado no banco de dados.`);
         }
 
         const qty = Number(item.quantity);
 
-        // Valida estoque apenas se a flag estiver desativada
+        // Valida estoque apenas se a flag estiver desativada (Validação em memória, zero queries extras)
         if (!allowNegativeStock && Number(product.stock) < qty) {
-          throw new BadRequestException(`Estoque insuficiente: ${product.name} (disponível: ${product.stock})`);
+          throw new BadRequestException(`Estoque insuficiente para o produto: ${product.name} (disponível: ${product.stock}, tentado: ${qty})`);
         }
 
-        // Decrementa estoque (pode ficar negativo se flag ativa)
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: qty } },
-        });
+        // Prepara a query de atualização de estoque para execução paralela futura
+        productUpdatesPromises.push(
+          tx.product.update({
+            where: { id: item.productId },
+            data: { 
+              stock: { decrement: qty },
+              salesCount: { increment: qty }
+            },
+          })
+        );
 
-
-        const priceUnit = Number(item.priceUnit);
-        const itemSubtotal = parseFloat((priceUnit * qty).toFixed(2));
-        subtotal += itemSubtotal;
+        const priceUnit = new Prisma.Decimal(item.priceUnit);
+        const qtyDecimal = new Prisma.Decimal(qty);
+        const itemSubtotal = priceUnit.mul(qtyDecimal).toDecimalPlaces(2);
+        
+        // Accumulate subtotal (requires subtotal to be Prisma.Decimal as well)
+        subtotal = subtotal.add(itemSubtotal);
 
         const gt = product.grupoTributacao;
 
@@ -112,19 +130,23 @@ export class SalesService {
           valorCofins: 0,
         });
 
-        // Registra movimentação de estoque
-        await tx.inventoryLog.create({
-          data: {
-            productId: product.id,
-            type: 'SALE',
-            quantity: qty,
-            reason: 'Venda PDV',
-          },
+        // Prepara Log de Inventário para bulk insert (createMany)
+        inventoryLogsToCreate.push({
+          productId: product.id,
+          type: 'SALE',
+          quantity: qty,
+          reason: 'Venda PDV',
         });
       }
 
-      const discount = Number(data.discount || 0);
-      const total = parseFloat((subtotal - discount).toFixed(2));
+      // Dispara todas as atualizações de estoque e cria todos os logs PARALELAMENTE
+      await Promise.all([
+        ...productUpdatesPromises,
+        tx.inventoryLog.createMany({ data: inventoryLogsToCreate })
+      ]);
+
+      const discount = new Prisma.Decimal(data.discount || 0);
+      const total = subtotal.sub(discount).toDecimalPlaces(2);
 
       // ─── 2. Montar pagamentos com tPag SEFAZ ────────────────────────────────
       const paymentsData = data.payments.map((pay: any) => ({
@@ -149,6 +171,15 @@ export class SalesService {
       }
 
       // ─── 4. Criar a venda ────────────────────────────────────────────────────
+      // Valida se o operador existe para evitar erro de Foreign Key
+      if (operatorId) {
+        const opExists = await tx.operator.findUnique({ where: { id: operatorId } });
+        if (!opExists) {
+          this.logger.warn(`Operador ${operatorId} não encontrado no banco — venda será criada sem operador.`);
+          operatorId = null;
+        }
+      }
+
       const sale = await tx.sale.create({
         data: {
           customerId:     data.customerId || null,
@@ -179,7 +210,8 @@ export class SalesService {
       // ─── 5. Disparar emissão NFC-e (se solicitada) — fora da transação principal ──
       // A emissão é feita após o commit para não bloquear a transação se o PHP demorar
       if (emitirNfce) {
-        setImmediate(() => this.dispararNfce(sale));
+        const { tenantId, databaseUrl } = this.tenantContext.get();
+        setImmediate(() => this.dispararNfce(tenantId, databaseUrl, sale));
       }
 
       return sale;
@@ -187,11 +219,10 @@ export class SalesService {
   }
 
   /**
-   * Dispara a emissão NFC-e de forma assíncrona após a venda ser salva.
+   * Dispara a emissão NFC-e de forma assíncrona após a venda ser salva ou via CRON.
    * Atualiza o registro da venda com o resultado.
    */
-  private async dispararNfce(sale: any) {
-    const { tenantId, databaseUrl } = this.tenantContext.get();
+  public async dispararNfce(tenantId: string, databaseUrl: string, sale: any) {
     try {
       // Buscar dados do tenant (emitente) e certificado
       const tenant = await this.heartPrisma.tenant.findUnique({
@@ -298,10 +329,14 @@ export class SalesService {
       }
     } catch (err: any) {
       this.logger.error(`Erro ao disparar NFC-e para venda ${sale.id}: ${err.message}`);
-      await this.atualizarStatusNfce(tenantId, databaseUrl, sale.id, {
-        nfceStatus: 'rejeitada',
-        nfceMotivoRejeicao: err.message,
-      });
+      try {
+        await this.atualizarStatusNfce(tenantId, databaseUrl, sale.id, {
+          nfceStatus: 'rejeitada',
+          nfceMotivoRejeicao: err.message,
+        });
+      } catch (dbErr: any) {
+        this.logger.error(`Erro fatal ao atualizar status de NFC-e (Venda ${sale.id}): ${dbErr.message}`);
+      }
     }
   }
 
@@ -338,19 +373,35 @@ export class SalesService {
     };
   }
 
-  async getTodaySales() {
+  async getTodaySales(page = 1, limit = 50) {
     const prisma = await this.getPrisma();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return prisma.sale.findMany({
-      where: { createdAt: { gte: today } },
-      include: {
-        payments: true,
-        items: { include: { product: true } },
-        customer: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const skip = (page - 1) * limit;
+
+    const [total, data] = await Promise.all([
+      prisma.sale.count({ where: { createdAt: { gte: today } } }),
+      prisma.sale.findMany({
+        where: { createdAt: { gte: today } },
+        include: {
+          payments: true,
+          items: { include: { product: true } },
+          customer: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      })
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        lastPage: Math.ceil(total / limit)
+      }
+    };
   }
 
   /** Retorna apenas os campos de status NFC-e — usado pelo polling do frontend */
@@ -406,7 +457,8 @@ export class SalesService {
     sale.nfceNumero = nfceNumero;
     sale.nfceSerie = nfceSerie;
 
-    setImmediate(() => this.dispararNfce(sale));
+    const { tenantId, databaseUrl } = this.tenantContext.get();
+    setImmediate(() => this.dispararNfce(tenantId, databaseUrl, sale));
 
     return { message: 'Emissão de NFC-e solicitada com sucesso', status: 'pendente' };
   }

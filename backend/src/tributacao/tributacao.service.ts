@@ -1,36 +1,45 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
 
 @Injectable()
 export class TributacaoService {
-  constructor(private tenantManager: TenantConnectionManager) {}
+  constructor(
+    private tenantManager: TenantConnectionManager,
+    private tenantContext: TenantContextService
+  ) {}
 
-  async findAll(tenantId: string, databaseUrl: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  private async getPrisma(tenantId: string) {
+    const { databaseUrl } = this.tenantContext.get();
+    return this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  }
+
+  async findAll(tenantId: string) {
+    const prisma = await this.getPrisma(tenantId);
     return prisma.grupoTributacao.findMany({
       orderBy: { nome: 'asc' },
     });
   }
 
-  async findOne(tenantId: string, databaseUrl: string, id: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async findOne(tenantId: string, id: string) {
+    const prisma = await this.getPrisma(tenantId);
     const grupo = await prisma.grupoTributacao.findUnique({ where: { id } });
     if (!grupo) throw new NotFoundException(`Grupo tributário ${id} não encontrado.`);
     return grupo;
   }
 
-  async create(tenantId: string, databaseUrl: string, data: any) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async create(tenantId: string, data: any) {
+    const prisma = await this.getPrisma(tenantId);
     return prisma.grupoTributacao.create({ data });
   }
 
-  async update(tenantId: string, databaseUrl: string, id: string, data: any) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async update(tenantId: string, id: string, data: any) {
+    const prisma = await this.getPrisma(tenantId);
     return prisma.grupoTributacao.update({ where: { id }, data });
   }
 
-  async remove(tenantId: string, databaseUrl: string, id: string) {
-    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  async remove(tenantId: string, id: string) {
+    const prisma = await this.getPrisma(tenantId);
     // Verificar se há produtos vinculados
     const count = await prisma.product.count({
       where: { grupoTributacaoId: id },
