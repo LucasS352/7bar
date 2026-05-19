@@ -180,8 +180,8 @@ model Sale {
   nfceQrcode String? @db.Text     // URL do QR Code
 
   // Erro (quando rejeitada)
-  nfceCodRejeicao  String?
-  nfceMotivoRejeicao String?
+  nfceCodRejeicao    String?
+  nfceMotivoRejeicao String? @db.Text // Mensagens SEFAZ podem ser longas
 
   // CPF do consumidor informado na emissão (opcional)
   consumidorCpf  String?
