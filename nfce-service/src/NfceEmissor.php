@@ -297,9 +297,9 @@ class NfceEmissor
                 'vPag' => number_format($vPag, 2, '.', ''),
             ];
 
-            // Cartão crédito (03) ou débito (04) exige grupo <card>
-            if (in_array($pag['tPag'], ['03', '04'], true)) {
-                $detPag['tpIntegra'] = 2; // Não integrado com POS
+            // Cartão crédito (03), débito (04) ou Pix (17) exige grupo de integração
+            if (in_array($pag['tPag'], ['03', '04', '17'], true)) {
+                $detPag['tpIntegra'] = 2; // Não integrado com sistema do caixa (POS/QR Code avulso)
             }
 
             $make->tagdetPag((object) $detPag);
