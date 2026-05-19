@@ -56,7 +56,7 @@ export function EditProductModal({
         unit:               product.unit           || 'UN',
         priceCost:          product.priceCost?.toString()  || '0',
         priceSell:          product.priceSell?.toString()  || '0',
-        stock:              product.stock?.toString()       || '0',
+        stock:              product.stock ? Math.round(Number(product.stock)).toString() : '0',
         categoryId:         product.categoryId     || '',
         ncm:                product.ncm            || '',
         cest:               product.cest           || '',
@@ -96,7 +96,7 @@ export function EditProductModal({
         unit:               formData.unit || 'UN',
         priceCost:          parseFloat(formData.priceCost) || 0,
         priceSell:          parseFloat(formData.priceSell) || 0,
-        stock:              parseFloat(formData.stock) || 0,
+        stock:              parseInt(formData.stock, 10) || 0,
         categoryId:         formData.categoryId,
         ncm:                formData.ncm || undefined,
         cest:               formData.cest || undefined,
@@ -210,7 +210,7 @@ export function EditProductModal({
                 Estoque Físico Atual
                 <span className="ml-1 text-zinc-600 normal-case font-normal">(ajuste manual — use Entrada de Estoque para repor)</span>
               </label>
-              <input type="number" step="0.001" min="0" className={`${inp} text-blue-400 font-bold`} value={formData.stock} onChange={e => f('stock', e.target.value)} />
+              <input type="number" step="1" min="0" className={`${inp} text-blue-400 font-bold`} value={formData.stock} onChange={e => f('stock', e.target.value)} />
             </div>
           </div>
 

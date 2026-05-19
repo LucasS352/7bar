@@ -180,7 +180,7 @@ function PosPageContent() {
                     <span className="font-semibold text-[1.1rem] text-center leading-snug z-10 line-clamp-2 px-1 text-zinc-100">{product.name}</span>
                     <span className="text-blue-400 font-bold mt-2 text-xl z-10">R$ {Number(product.priceSell).toFixed(2)}</span>
                     <div className="text-xs text-zinc-500 mt-2 z-10 border border-zinc-700 px-2 py-0.5 rounded-full bg-zinc-950 flex items-center gap-1 font-medium">
-                       Estoque: {product.stock}
+                       Estoque: {Math.round(Number(product.stock))}
                     </div>
                   </button>
 

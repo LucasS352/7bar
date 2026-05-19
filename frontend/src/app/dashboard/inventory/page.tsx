@@ -202,7 +202,7 @@ export default function InventoryDashboard() {
                     title="Filtrar tabela por este item"
                     className="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 active:scale-95"
                   >
-                    {p.name} <span className="bg-red-500/40 text-white px-1.5 py-0.5 rounded text-xs">{p.stock}</span>
+                    {p.name} <span className="bg-red-500/40 text-white px-1.5 py-0.5 rounded text-xs">{Math.round(Number(p.stock))}</span>
                   </button>
                 ))}
               </div>
@@ -330,8 +330,8 @@ export default function InventoryDashboard() {
                     </button>
                   </td>
                   <td className="px-6 py-5 text-center">
-                    <span className={`inline-flex items-center justify-center min-w-[3rem] px-2 py-1 rounded text-sm font-bold border ${Number(product.stock) <= 0 ? 'bg-red-500/10 text-red-500 border-red-500/20' : product.stock <= 10 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700'}`}>
-                      {product.stock}
+                    <span className={`inline-flex items-center justify-center min-w-[3rem] px-2 py-1 rounded text-sm font-bold border ${Number(product.stock) <= 0 ? 'bg-red-500/10 text-red-500 border-red-500/20' : Number(product.stock) <= 10 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700'}`}>
+                      {Math.round(Number(product.stock))}
                     </span>
                   </td>
                   <td className="px-8 py-5 text-center">
@@ -393,8 +393,8 @@ export default function InventoryDashboard() {
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <span className={`inline-flex items-center justify-center min-w-[3rem] px-2 py-1 rounded text-sm font-bold border ${Number(product.stock) <= 0 ? 'bg-red-500/10 text-red-500 border-red-500/20' : product.stock <= 10 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700'}`}>
-                    Estoque: {product.stock}
+                  <span className={`inline-flex items-center justify-center min-w-[3rem] px-2 py-1 rounded text-sm font-bold border ${Number(product.stock) <= 0 ? 'bg-red-500/10 text-red-500 border-red-500/20' : Number(product.stock) <= 10 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700'}`}>
+                    Estoque: {Math.round(Number(product.stock))}
                   </span>
                   
                   <button

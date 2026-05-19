@@ -115,7 +115,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
         unit:              formData.unit       || 'UN',
         priceCost:         parseFloat(formData.priceCost)  || 0,
         priceSell:         parseFloat(formData.priceSell)  || 0,
-        stock:             parseFloat(formData.stock)      || 0,
+        stock:             parseInt(formData.stock, 10)    || 0,
         categoryId:        formData.categoryId,
         ncm:               formData.ncm       || undefined,
         cest:              formData.cest      || undefined,
@@ -274,7 +274,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
               <div>
                 <label className={labelCls}>Estoque Inicial</label>
                 <input
-                  type="number" step="0.001" min="0"
+                  type="number" step="1" min="0"
                   className={`${inputCls} text-blue-400 font-bold`}
                   placeholder="0"
                   value={formData.stock}

@@ -84,7 +84,7 @@ function PosPageContent() {
             barcode:    p.barcode,
             unit:       'UN',
             priceSell:  Number(p.priceSell),
-            stock:      Number(p.stock),
+            stock:      Math.round(Number(p.stock)),
             salesCount: Number(p.salesCount || 0),
             active:     p.active !== false,
             ncm:        null, cest: null, origem: 0,
@@ -266,7 +266,7 @@ function PosPageContent() {
                     <span className="font-semibold text-[1.05rem] text-center leading-snug z-10 line-clamp-2 px-1 text-zinc-100 mt-auto">{product.name}</span>
                     <span className="text-blue-400 font-bold mt-2 text-xl z-10">R$ {Number(product.priceSell).toFixed(2)}</span>
                     <div className="text-xs text-zinc-500 mt-2 z-10 border border-zinc-700 px-2 py-0.5 rounded-full bg-zinc-950 flex items-center gap-1 font-medium">
-                      Estoque: {product.stock}
+                      Estoque: {Math.round(Number(product.stock))}
                     </div>
                   </button>
                   <div className="w-full flex justify-center gap-1 mt-3 z-20 sm:opacity-0 group-hover:opacity-100 transition-all sm:translate-y-2 group-hover:translate-y-0">
