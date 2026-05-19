@@ -302,7 +302,7 @@ export class ProductsService {
       // Usa increment nativo do Prisma — atômico, sem condição de corrida
       const updated = await tx.product.update({
         where: { id: productId },
-        data: { stock: { increment: quantity } },
+        data: { stock: { increment: new Prisma.Decimal(quantity) } },
       });
 
       await tx.inventoryLog.create({
@@ -374,7 +374,7 @@ export class ProductsService {
               data: {
                 priceCost:        item.priceCost        ?? existing.priceCost,
                 priceSell:        item.priceSell        ?? existing.priceSell,
-                stock:            { increment: stockToAdd },
+                stock:            { increment: new Prisma.Decimal(stockToAdd) },
                 ...(item.categoryId        && { categoryId: item.categoryId }),
                 ...(item.grupoTributacaoId && { grupoTributacaoId: item.grupoTributacaoId }),
                 ...(item.ncm               && { ncm: item.ncm }),

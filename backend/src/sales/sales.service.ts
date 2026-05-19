@@ -89,7 +89,7 @@ export class SalesService {
           tx.product.update({
             where: { id: item.productId },
             data: { 
-              stock: { decrement: qty },
+              stock: { decrement: new Prisma.Decimal(qty) },
               salesCount: { increment: qty }
             },
           })
