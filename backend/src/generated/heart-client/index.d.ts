@@ -1095,6 +1095,7 @@ export namespace Prisma {
     uf: string | null
     cep: string | null
     telefone: string | null
+    emailContador: string | null
     nfceAtivo: boolean | null
     nfceAutoSync: boolean | null
     nfceSerie: number | null
@@ -1131,6 +1132,7 @@ export namespace Prisma {
     uf: string | null
     cep: string | null
     telefone: string | null
+    emailContador: string | null
     nfceAtivo: boolean | null
     nfceAutoSync: boolean | null
     nfceSerie: number | null
@@ -1168,6 +1170,7 @@ export namespace Prisma {
     uf: number
     cep: number
     telefone: number
+    emailContador: number
     nfceAtivo: number
     nfceAutoSync: number
     nfceSerie: number
@@ -1218,6 +1221,7 @@ export namespace Prisma {
     uf?: true
     cep?: true
     telefone?: true
+    emailContador?: true
     nfceAtivo?: true
     nfceAutoSync?: true
     nfceSerie?: true
@@ -1254,6 +1258,7 @@ export namespace Prisma {
     uf?: true
     cep?: true
     telefone?: true
+    emailContador?: true
     nfceAtivo?: true
     nfceAutoSync?: true
     nfceSerie?: true
@@ -1291,6 +1296,7 @@ export namespace Prisma {
     uf?: true
     cep?: true
     telefone?: true
+    emailContador?: true
     nfceAtivo?: true
     nfceAutoSync?: true
     nfceSerie?: true
@@ -1415,6 +1421,7 @@ export namespace Prisma {
     uf: string | null
     cep: string | null
     telefone: string | null
+    emailContador: string | null
     nfceAtivo: boolean
     nfceAutoSync: boolean
     nfceSerie: number
@@ -1471,6 +1478,7 @@ export namespace Prisma {
     uf?: boolean
     cep?: boolean
     telefone?: boolean
+    emailContador?: boolean
     nfceAtivo?: boolean
     nfceAutoSync?: boolean
     nfceSerie?: boolean
@@ -1512,6 +1520,7 @@ export namespace Prisma {
     uf?: boolean
     cep?: boolean
     telefone?: boolean
+    emailContador?: boolean
     nfceAtivo?: boolean
     nfceAutoSync?: boolean
     nfceSerie?: boolean
@@ -1526,7 +1535,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type TenantOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "databaseName" | "databaseUrl" | "name" | "status" | "logoUrl" | "modulos" | "razaoSocial" | "nomeFantasia" | "cnpj" | "ie" | "im" | "crt" | "logradouro" | "numero" | "complemento" | "bairro" | "municipio" | "codMunicipio" | "uf" | "cep" | "telefone" | "nfceAtivo" | "nfceAutoSync" | "nfceSerie" | "nfceAmbiente" | "nfceCsc" | "nfceIdCsc" | "certPfx" | "certSenha" | "certValidade" | "cosmosApiKey" | "createdAt" | "updatedAt", ExtArgs["result"]["tenant"]>
+  export type TenantOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "databaseName" | "databaseUrl" | "name" | "status" | "logoUrl" | "modulos" | "razaoSocial" | "nomeFantasia" | "cnpj" | "ie" | "im" | "crt" | "logradouro" | "numero" | "complemento" | "bairro" | "municipio" | "codMunicipio" | "uf" | "cep" | "telefone" | "emailContador" | "nfceAtivo" | "nfceAutoSync" | "nfceSerie" | "nfceAmbiente" | "nfceCsc" | "nfceIdCsc" | "certPfx" | "certSenha" | "certValidade" | "cosmosApiKey" | "createdAt" | "updatedAt", ExtArgs["result"]["tenant"]>
   export type TenantInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     users?: boolean | Tenant$usersArgs<ExtArgs>
     _count?: boolean | TenantCountOutputTypeDefaultArgs<ExtArgs>
@@ -1560,6 +1569,7 @@ export namespace Prisma {
       uf: string | null
       cep: string | null
       telefone: string | null
+      emailContador: string | null
       nfceAtivo: boolean
       nfceAutoSync: boolean
       nfceSerie: number
@@ -1964,6 +1974,7 @@ export namespace Prisma {
     readonly uf: FieldRef<"Tenant", 'String'>
     readonly cep: FieldRef<"Tenant", 'String'>
     readonly telefone: FieldRef<"Tenant", 'String'>
+    readonly emailContador: FieldRef<"Tenant", 'String'>
     readonly nfceAtivo: FieldRef<"Tenant", 'Boolean'>
     readonly nfceAutoSync: FieldRef<"Tenant", 'Boolean'>
     readonly nfceSerie: FieldRef<"Tenant", 'Int'>
@@ -4330,6 +4341,7 @@ export namespace Prisma {
     uf: 'uf',
     cep: 'cep',
     telefone: 'telefone',
+    emailContador: 'emailContador',
     nfceAtivo: 'nfceAtivo',
     nfceAutoSync: 'nfceAutoSync',
     nfceSerie: 'nfceSerie',
@@ -4442,6 +4454,7 @@ export namespace Prisma {
     uf: 'uf',
     cep: 'cep',
     telefone: 'telefone',
+    emailContador: 'emailContador',
     nfceCsc: 'nfceCsc',
     nfceIdCsc: 'nfceIdCsc',
     certSenha: 'certSenha',
@@ -4570,6 +4583,7 @@ export namespace Prisma {
     uf?: StringNullableFilter<"Tenant"> | string | null
     cep?: StringNullableFilter<"Tenant"> | string | null
     telefone?: StringNullableFilter<"Tenant"> | string | null
+    emailContador?: StringNullableFilter<"Tenant"> | string | null
     nfceAtivo?: BoolFilter<"Tenant"> | boolean
     nfceAutoSync?: BoolFilter<"Tenant"> | boolean
     nfceSerie?: IntFilter<"Tenant"> | number
@@ -4608,6 +4622,7 @@ export namespace Prisma {
     uf?: SortOrderInput | SortOrder
     cep?: SortOrderInput | SortOrder
     telefone?: SortOrderInput | SortOrder
+    emailContador?: SortOrderInput | SortOrder
     nfceAtivo?: SortOrder
     nfceAutoSync?: SortOrder
     nfceSerie?: SortOrder
@@ -4650,6 +4665,7 @@ export namespace Prisma {
     uf?: StringNullableFilter<"Tenant"> | string | null
     cep?: StringNullableFilter<"Tenant"> | string | null
     telefone?: StringNullableFilter<"Tenant"> | string | null
+    emailContador?: StringNullableFilter<"Tenant"> | string | null
     nfceAtivo?: BoolFilter<"Tenant"> | boolean
     nfceAutoSync?: BoolFilter<"Tenant"> | boolean
     nfceSerie?: IntFilter<"Tenant"> | number
@@ -4688,6 +4704,7 @@ export namespace Prisma {
     uf?: SortOrderInput | SortOrder
     cep?: SortOrderInput | SortOrder
     telefone?: SortOrderInput | SortOrder
+    emailContador?: SortOrderInput | SortOrder
     nfceAtivo?: SortOrder
     nfceAutoSync?: SortOrder
     nfceSerie?: SortOrder
@@ -4733,6 +4750,7 @@ export namespace Prisma {
     uf?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     cep?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     telefone?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
+    emailContador?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     nfceAtivo?: BoolWithAggregatesFilter<"Tenant"> | boolean
     nfceAutoSync?: BoolWithAggregatesFilter<"Tenant"> | boolean
     nfceSerie?: IntWithAggregatesFilter<"Tenant"> | number
@@ -4934,6 +4952,7 @@ export namespace Prisma {
     uf?: string | null
     cep?: string | null
     telefone?: string | null
+    emailContador?: string | null
     nfceAtivo?: boolean
     nfceAutoSync?: boolean
     nfceSerie?: number
@@ -4972,6 +4991,7 @@ export namespace Prisma {
     uf?: string | null
     cep?: string | null
     telefone?: string | null
+    emailContador?: string | null
     nfceAtivo?: boolean
     nfceAutoSync?: boolean
     nfceSerie?: number
@@ -5010,6 +5030,7 @@ export namespace Prisma {
     uf?: NullableStringFieldUpdateOperationsInput | string | null
     cep?: NullableStringFieldUpdateOperationsInput | string | null
     telefone?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContador?: NullableStringFieldUpdateOperationsInput | string | null
     nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
     nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
     nfceSerie?: IntFieldUpdateOperationsInput | number
@@ -5048,6 +5069,7 @@ export namespace Prisma {
     uf?: NullableStringFieldUpdateOperationsInput | string | null
     cep?: NullableStringFieldUpdateOperationsInput | string | null
     telefone?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContador?: NullableStringFieldUpdateOperationsInput | string | null
     nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
     nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
     nfceSerie?: IntFieldUpdateOperationsInput | number
@@ -5086,6 +5108,7 @@ export namespace Prisma {
     uf?: string | null
     cep?: string | null
     telefone?: string | null
+    emailContador?: string | null
     nfceAtivo?: boolean
     nfceAutoSync?: boolean
     nfceSerie?: number
@@ -5123,6 +5146,7 @@ export namespace Prisma {
     uf?: NullableStringFieldUpdateOperationsInput | string | null
     cep?: NullableStringFieldUpdateOperationsInput | string | null
     telefone?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContador?: NullableStringFieldUpdateOperationsInput | string | null
     nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
     nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
     nfceSerie?: IntFieldUpdateOperationsInput | number
@@ -5160,6 +5184,7 @@ export namespace Prisma {
     uf?: NullableStringFieldUpdateOperationsInput | string | null
     cep?: NullableStringFieldUpdateOperationsInput | string | null
     telefone?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContador?: NullableStringFieldUpdateOperationsInput | string | null
     nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
     nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
     nfceSerie?: IntFieldUpdateOperationsInput | number
@@ -5504,6 +5529,7 @@ export namespace Prisma {
     uf?: SortOrder
     cep?: SortOrder
     telefone?: SortOrder
+    emailContador?: SortOrder
     nfceAtivo?: SortOrder
     nfceAutoSync?: SortOrder
     nfceSerie?: SortOrder
@@ -5546,6 +5572,7 @@ export namespace Prisma {
     uf?: SortOrder
     cep?: SortOrder
     telefone?: SortOrder
+    emailContador?: SortOrder
     nfceAtivo?: SortOrder
     nfceAutoSync?: SortOrder
     nfceSerie?: SortOrder
@@ -5582,6 +5609,7 @@ export namespace Prisma {
     uf?: SortOrder
     cep?: SortOrder
     telefone?: SortOrder
+    emailContador?: SortOrder
     nfceAtivo?: SortOrder
     nfceAutoSync?: SortOrder
     nfceSerie?: SortOrder
@@ -6219,6 +6247,7 @@ export namespace Prisma {
     uf?: string | null
     cep?: string | null
     telefone?: string | null
+    emailContador?: string | null
     nfceAtivo?: boolean
     nfceAutoSync?: boolean
     nfceSerie?: number
@@ -6256,6 +6285,7 @@ export namespace Prisma {
     uf?: string | null
     cep?: string | null
     telefone?: string | null
+    emailContador?: string | null
     nfceAtivo?: boolean
     nfceAutoSync?: boolean
     nfceSerie?: number
@@ -6309,6 +6339,7 @@ export namespace Prisma {
     uf?: NullableStringFieldUpdateOperationsInput | string | null
     cep?: NullableStringFieldUpdateOperationsInput | string | null
     telefone?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContador?: NullableStringFieldUpdateOperationsInput | string | null
     nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
     nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
     nfceSerie?: IntFieldUpdateOperationsInput | number
@@ -6346,6 +6377,7 @@ export namespace Prisma {
     uf?: NullableStringFieldUpdateOperationsInput | string | null
     cep?: NullableStringFieldUpdateOperationsInput | string | null
     telefone?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContador?: NullableStringFieldUpdateOperationsInput | string | null
     nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
     nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
     nfceSerie?: IntFieldUpdateOperationsInput | number

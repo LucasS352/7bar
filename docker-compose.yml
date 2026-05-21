@@ -38,6 +38,12 @@ services:
       JWT_SECRET: ${JWT_SECRET:-7bar_jwt_super_secret_2025}
       SETUP_PIN: ${SETUP_PIN:-teltech352}
       NFCE_SERVICE_URL: http://nfce-service:80
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
     volumes:
       - ./uploads:/app/uploads
     depends_on:

@@ -60,7 +60,7 @@ export class TenantsService {
       'logradouro', 'numero', 'complemento', 'bairro',
       'municipio', 'codMunicipio', 'uf', 'cep', 'telefone',
       'nfceAtivo', 'nfceSerie', 'nfceAmbiente', 'nfceCsc', 'nfceIdCsc',
-      'modulos', 'status'
+      'modulos', 'status', 'emailContador'
     ];
     // Tipamos explicitamente como Record<string, any> para evitar erro TS no acesso de chaves dinâmicas
     const safeData: Record<string, any> = Object.fromEntries(

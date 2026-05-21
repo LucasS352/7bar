@@ -6,6 +6,7 @@ import { NfceService } from '../nfce/nfce.service';
 import { ProductsService } from '../products/products.service';
 import { Prisma } from '@prisma/client';
 import archiver = require('archiver');
+import { MailService } from '../mail/mail.service';
 
 /** Mapa de método de pagamento → tPag SEFAZ (Tabela 5.4) */
 const TPAG_MAP: Record<string, string> = {
@@ -25,7 +26,8 @@ export class SalesService {
     private heartPrisma: HeartPrismaService,
     private nfceService: NfceService,
     private tenantContext: TenantContextService,
-    private productsService: ProductsService
+    private productsService: ProductsService,
+    private mailService: MailService
   ) {}
 
   private async getPrisma() {
@@ -643,5 +645,114 @@ export class SalesService {
     archive.finalize();
 
     return new StreamableFile(archive);
+  }
+
+  private generateZipBuffer(sales: any[]): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const archive = archiver('zip', { zlib: { level: 9 } });
+      const buffers: Buffer[] = [];
+
+      archive.on('data', (data) => buffers.push(data));
+      archive.on('end', () => resolve(Buffer.concat(buffers)));
+      archive.on('error', (err) => reject(err));
+
+      sales.forEach((sale: any) => {
+        archive.append(sale.nfceXml, { name: `${sale.nfceChave}-nfe.xml` });
+      });
+
+      archive.finalize();
+    });
+  }
+
+  /** Exportar XMLs das vendas do mês no formato ZIP e enviar por e-mail */
+  async exportNfceXmlsAndSendEmail(startDate: string, endDate: string, targetEmail?: string) {
+    const { tenantId } = this.tenantContext.get();
+    
+    // Obter dados do emitente (Tenant)
+    const tenant = await this.heartPrisma.tenant.findUnique({
+      where: { id: tenantId }
+    });
+    
+    if (!tenant) {
+      throw new NotFoundException('Empresa não encontrada.');
+    }
+    
+    const emailToUse = targetEmail || tenant.emailContador;
+    
+    if (!emailToUse) {
+      throw new BadRequestException('E-mail do contador não configurado para esta empresa. Por favor, configure nas configurações ou informe um e-mail.');
+    }
+
+    const prisma = await this.getPrisma();
+
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const start = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
+
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    const end = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
+
+    const sales = await prisma.sale.findMany({
+      where: {
+        createdAt: { gte: start, lte: end },
+        nfceStatus: 'autorizada',
+        nfceXml: { not: null },
+      },
+      select: { nfceChave: true, nfceXml: true },
+    });
+
+    if (sales.length === 0) {
+      throw new NotFoundException('Nenhum XML encontrado neste período.');
+    }
+
+    const zipBuffer = await this.generateZipBuffer(sales);
+    
+    const razaoSocial = tenant.razaoSocial || tenant.name || 'Empresa';
+    const cnpj = tenant.cnpj ? tenant.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : 'Não informado';
+    
+    const subject = `XMLs de NFC-e — ${razaoSocial} — Período ${startDate} a ${endDate}`;
+    
+    const text = `Prezado(a) Contador(a),\n\nSegue em anexo o arquivo ZIP contendo os XMLs das notas fiscais emitidas no período de ${startDate} a ${endDate}.\n\nDados do emitente:\nRazão Social: ${razaoSocial}\nCNPJ: ${cnpj}\n\nEste é um e-mail automático gerado pelo sistema PDV 7bar.`;
+    
+    const html = `
+      <div style="font-family: sans-serif; color: #333; line-height: 1.6;">
+        <h2 style="color: #6366f1;">Exportação de XMLs de NFC-e</h2>
+        <p>Prezado(a) Contador(a),</p>
+        <p>Segue em anexo o arquivo comprimido (ZIP) contendo os arquivos XML das Notas Fiscais do Consumidor Eletrônicas (NFC-e) referentes ao período de <strong>${startDate}</strong> a <strong>${endDate}</strong>.</p>
+        
+        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #4b5563;">Dados da Empresa Emitente</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 4px 0; font-weight: bold; width: 120px;">Razão Social:</td>
+              <td style="padding: 4px 0;">${razaoSocial}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 0; font-weight: bold;">CNPJ:</td>
+              <td style="padding: 4px 0;">${cnpj}</td>
+            </tr>
+            ${tenant.telefone ? `<tr><td style="padding: 4px 0; font-weight: bold;">Contato:</td><td style="padding: 4px 0;">${tenant.telefone}</td></tr>` : ''}
+          </table>
+        </div>
+        
+        <p style="font-size: 0.9em; color: #6b7280; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 10px;">
+          Este é um e-mail automático gerado pelo sistema PDV 7bar. Por favor, não responda a esta mensagem.
+        </p>
+      </div>
+    `;
+
+    await this.mailService.sendMail(
+      emailToUse,
+      subject,
+      text,
+      html,
+      [
+        {
+          filename: `xmls_${startDate}_a_${endDate}.zip`,
+          content: zipBuffer,
+        }
+      ]
+    );
+
+    return { message: 'XMLs exportados e enviados com sucesso para a contabilidade.' };
   }
 }

@@ -6,9 +6,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { ProductsModule } from '../products/products.module';
 
 import { SalesCronService } from './sales-cron.service';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
-  imports: [NfceModule, PrismaModule, ProductsModule],
+  imports: [NfceModule, PrismaModule, ProductsModule, MailModule],
   providers: [SalesService, SalesCronService],
   controllers: [SalesController],
 })

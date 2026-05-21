@@ -61,4 +61,17 @@ export class SalesController {
     });
     stream.getStream().pipe(res);
   }
+
+  /** Exportar XMLs em lote e enviar diretamente por e-mail */
+  @Post('export/xmls/send-email')
+  async exportXmlsAndSendEmail(
+    @Body('startDate') startDate: string,
+    @Body('endDate') endDate: string,
+    @Body('email') email?: string,
+  ) {
+    if (!startDate || !endDate) {
+      throw new BadRequestException('As datas inicial e final são obrigatórias.');
+    }
+    return this.salesService.exportNfceXmlsAndSendEmail(startDate, endDate, email);
+  }
 }

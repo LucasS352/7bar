@@ -47,13 +47,14 @@ export default function CashRegistersHistoryPage() {
           <History className="text-blue-500" size={32} /> Histórico e Auditoria de Caixas
         </h1>
       </div>
-
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
         <div className="p-6 border-b border-zinc-800 bg-zinc-900/50">
           <h2 className="text-xl font-bold">Relatórios Anteriores</h2>
           <p className="text-zinc-500 text-sm mt-1">Acompanhe todos os turnos abertos e fechados na história da loja. Audite eventuais quebras de caixa do passado.</p>
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Desktop View (Table) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-zinc-950 text-zinc-400 text-sm">
               <tr>
@@ -105,6 +106,54 @@ export default function CashRegistersHistoryPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View (Cards) */}
+        <div className="md:hidden divide-y divide-zinc-800/60">
+          {registers.map(reg => (
+            <div key={reg.id} className="p-5 space-y-4 hover:bg-zinc-800/20 transition-colors">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-zinc-500 font-mono">ID: {reg.id.slice(0, 8)}</span>
+                {reg.status === 'open' ? (
+                   <span className="flex items-center gap-1.5 text-emerald-400 font-bold text-[10px] bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 tracking-wider"><CheckCircle2 size={12}/> ABERTO</span>
+                ) : (
+                   <span className="flex items-center gap-1.5 text-zinc-500 font-bold text-[10px] bg-zinc-800 px-2.5 py-0.5 rounded-full border border-zinc-700 tracking-wider"><XCircle size={12}/> FECHADO</span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-zinc-500 text-xs block">Abertura</span>
+                  <span className="text-zinc-300 font-medium">{new Date(reg.openingTime).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' }).replace(',', ' -')}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500 text-xs block">Fechamento</span>
+                  <span className="text-zinc-300 font-medium">{reg.closingTime ? new Date(reg.closingTime).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' }).replace(',', ' -') : '--'}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500 text-xs block">Fundo (Início)</span>
+                  <span className="text-blue-400 font-bold">R$ {Number(reg.openingValue || 0).toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500 text-xs block">Terminou com</span>
+                  <span className="text-zinc-400 font-bold">{reg.closingValue !== undefined && reg.closingValue !== null ? `R$ ${Number(reg.closingValue).toFixed(2)}` : '--'}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button 
+                  onClick={() => setSelectedId(reg.id)}
+                  className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-semibold transition-colors"
+                >
+                  <FileText size={14} />
+                  {reg.status === 'open' ? "Fechar Caixa" : "Ver Detalhes"}
+                </button>
+              </div>
+            </div>
+          ))}
+          {registers.length === 0 && (
+            <div className="p-8 text-center text-zinc-500 text-sm">Nenhum caixa encontrado no banco de dados da loja.</div>
+          )}
         </div>
       </div>
 

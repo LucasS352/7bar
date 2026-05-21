@@ -147,6 +147,39 @@ export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
               </div>
             </div>
 
+            {tenantConfig && (
+              <div className="p-4 bg-zinc-950 rounded-2xl border border-zinc-800 space-y-3 mb-6 text-sm text-zinc-300">
+                <div className="flex items-center gap-2 border-b border-zinc-800/60 pb-2">
+                  <div className="w-6 h-6 rounded bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-blue-400">CNPJ</div>
+                  <span className="font-semibold text-white">{tenantConfig.cnpj || 'CNPJ não informado'}</span>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider block">Endereço</span>
+                  <p className="leading-relaxed text-xs">
+                    {tenantConfig.logradouro ? (
+                      <>
+                        {tenantConfig.logradouro}, {tenantConfig.numero}
+                        {tenantConfig.complemento ? ` - ${tenantConfig.complemento}` : ''}
+                        <br />
+                        {tenantConfig.bairro ? `${tenantConfig.bairro}, ` : ''}
+                        {tenantConfig.municipioNome ? `${tenantConfig.municipioNome} - ` : ''}
+                        {tenantConfig.uf || ''}
+                        {tenantConfig.cep ? ` | CEP: ${tenantConfig.cep}` : ''}
+                      </>
+                    ) : (
+                      <span className="text-zinc-500 italic">Endereço não cadastrado</span>
+                    )}
+                  </p>
+                </div>
+                {tenantConfig.telefone && (
+                  <div className="pt-1 text-xs text-zinc-400 flex items-center gap-1.5">
+                    <span className="text-zinc-500">Contato:</span>
+                    <span>{tenantConfig.telefone}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="space-y-2">
               <button
                 onClick={() => setProfileOpen(false)}

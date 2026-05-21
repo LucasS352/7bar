@@ -26,7 +26,7 @@ export default function EmpresaConfigPage() {
 
   const [form, setForm] = useState({
     // Dados
-    razaoSocial: '', nomeFantasia: '', cnpj: '', ie: '', im: '', crt: 1,
+    razaoSocial: '', nomeFantasia: '', cnpj: '', ie: '', im: '', crt: 1, emailContador: '',
     // Endereço
     logradouro: '', numero: '', complemento: '', bairro: '',
     municipio: '', codMunicipio: '', uf: '', cep: '', telefone: '',
@@ -53,6 +53,7 @@ export default function EmpresaConfigPage() {
           ...prev,
           razaoSocial: d.razaoSocial ?? '', nomeFantasia: d.nomeFantasia ?? '',
           cnpj: d.cnpj ?? '', ie: d.ie ?? '', im: d.im ?? '', crt: d.crt ?? 1,
+          emailContador: d.emailContador ?? '',
           logradouro: d.logradouro ?? '', numero: d.numero ?? '',
           complemento: d.complemento ?? '', bairro: d.bairro ?? '',
           municipio: d.municipio ?? '', codMunicipio: d.codMunicipio ?? '',
@@ -244,6 +245,10 @@ export default function EmpresaConfigPage() {
               <select className={inputCls} value={form.crt} onChange={e => f('crt', parseInt(e.target.value))}>
                 {CRT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelCls}>E-mail do Contador</label>
+              <input className={inputCls} type="email" value={form.emailContador} onChange={e => f('emailContador', e.target.value)} placeholder="Ex: contabilidade@empresa.com" />
             </div>
           </div>
         )}

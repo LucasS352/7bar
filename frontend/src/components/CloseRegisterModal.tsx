@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { FileText, Loader2, X, AlertOctagon, Receipt } from 'lucide-react';
@@ -8,6 +9,11 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
   const [loading, setLoading] = useState(true);
   const [closingValue, setClosingValue] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isOpen || !registerId) return;
@@ -23,10 +29,11 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
   }, [isOpen, registerId]);
 
   if (!isOpen) return null;
+  if (!mounted) return null;
 
   // Sem caixa aberto: mostra aviso em vez de travar
   if (!registerId) {
-    return (
+    const fallbackContent = (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
         <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-md p-8 text-center shadow-2xl">
           <p className="text-zinc-400 text-lg">Nenhum caixa aberto no momento.</p>
@@ -34,6 +41,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
         </div>
       </div>
     );
+    return createPortal(fallbackContent, document.body);
   }
 
   const handleClose = async () => {
@@ -49,7 +57,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
     }
   };
 
-  return (
+  const modalBody = (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 lg:p-8 transition-all">
       <div className="bg-zinc-950 border border-zinc-800 rounded-[2rem] w-full max-w-6xl shadow-[0_0_100px_rgba(239,68,68,0.1)] overflow-hidden animate-in fade-in zoom-in-95 duration-300 flex flex-col h-full max-h-[95vh] lg:max-h-[90vh]">
         <div className="flex justify-between items-center p-6 border-b border-zinc-800 bg-zinc-900/50">
@@ -60,10 +68,10 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
         {loading || !data ? (
           <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-red-500" size={48} /></div>
         ) : (
-          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
             
             {/* Lado Esquerdo: Resumo Financeiro e Declaração */}
-            <div className="w-full lg:w-[45%] flex flex-col border-r border-zinc-800 bg-zinc-900/20 overflow-y-auto custom-scrollbar">
+            <div className="w-full lg:w-[45%] h-auto lg:h-full flex flex-col border-b lg:border-b-0 lg:border-r border-zinc-800 bg-zinc-900/20 lg:overflow-y-auto custom-scrollbar shrink-0">
               <div className="p-6 space-y-6">
                 <div className="flex justify-between items-center text-xs text-zinc-400 pb-2 border-b border-zinc-800">
                   <span>Abertura: <strong className="text-zinc-300 text-sm ml-1">{new Date(data.register.openingTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</strong></span>
@@ -201,7 +209,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
             </div>
 
             {/* Lado Direito: Transações Detalhadas (Painel Rolável Grande) */}
-            <div className="w-full lg:w-[55%] flex flex-col bg-zinc-950/80">
+            <div className="w-full lg:w-[55%] h-auto lg:h-full flex flex-col bg-zinc-950/80 shrink-0">
               <div className="p-6 border-b border-zinc-800/80 flex items-center gap-3 bg-zinc-900/30">
                  <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-400">
                    <Receipt size={22}/>
@@ -212,7 +220,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                  </div>
               </div>
               
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
+              <div className="flex-1 h-auto lg:h-full overflow-y-visible lg:overflow-y-auto custom-scrollbar p-6 space-y-4">
                 {data.report.salesDetails && data.report.salesDetails.length > 0 ? (
                   data.report.salesDetails.map((s: any) => (
                     <div key={s.id} className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-5 hover:border-zinc-700 transition-colors group relative overflow-hidden">
@@ -263,4 +271,6 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
       </div>
     </div>
   );
+
+  return createPortal(modalBody, document.body);
 }

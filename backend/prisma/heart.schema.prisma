@@ -44,6 +44,7 @@ model Tenant {
   uf            String?
   cep           String?
   telefone      String?
+  emailContador String?
 
   // NFC-e — configurações de emissão
   nfceAtivo       Boolean  @default(false)  // habilita emissão NFC-e
