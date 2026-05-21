@@ -84,7 +84,8 @@ export default function UserModal({ onClose, onSuccess, user }: UserModalProps) 
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all outline-none text-white text-sm appearance-none"
+              disabled={user?.role === "admin"}
+              className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all outline-none text-white text-sm appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="operator">Operador de Caixa (Terminal)</option>
               <option value="admin">Administrador (Total)</option>

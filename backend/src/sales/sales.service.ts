@@ -3,6 +3,7 @@ import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { NfceService } from '../nfce/nfce.service';
+import { ProductsService } from '../products/products.service';
 import { Prisma } from '@prisma/client';
 import archiver = require('archiver');
 
@@ -23,7 +24,8 @@ export class SalesService {
     private tenantManager: TenantConnectionManager,
     private heartPrisma: HeartPrismaService,
     private nfceService: NfceService,
-    private tenantContext: TenantContextService
+    private tenantContext: TenantContextService,
+    private productsService: ProductsService
   ) {}
 
   private async getPrisma() {
@@ -32,11 +34,11 @@ export class SalesService {
   }
 
   async checkout(data: any) {
-    const { userId } = this.tenantContext.get();
+    const { userId, tenantId } = this.tenantContext.get();
     let operatorId = data.operatorId || userId;
     const prisma = await this.getPrisma();
 
-    return prisma.$transaction(async (tx: any) => {
+    const sale = await prisma.$transaction(async (tx: any) => {
       let subtotal = new Prisma.Decimal(0);
       const saleItemsData: any[] = [];
 
@@ -305,6 +307,14 @@ export class SalesService {
 
       return sale;
     });
+
+    try {
+      this.productsService.invalidateCache(tenantId);
+    } catch (err) {
+      this.logger.error(`Erro ao invalidar cache de produtos do tenant ${tenantId}: ${err.message}`);
+    }
+
+    return sale;
   }
 
   /**

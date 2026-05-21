@@ -451,7 +451,9 @@ export default function SysInitPage() {
                                 )}
                                 <div>
                                   <p className="font-semibold text-zinc-200">{t.name || t.nomeFantasia}</p>
-                                  <p className="text-xs text-zinc-500">{t.users?.[0]?.email || 'Sem admin'}</p>
+                                  <p className="text-xs text-zinc-500">
+                                    {t.users?.find((u: any) => u.role === 'admin')?.email || t.users?.[0]?.email || 'Sem admin'}
+                                  </p>
                                 </div>
                               </div>
                             </td>

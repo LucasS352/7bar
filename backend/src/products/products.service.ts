@@ -92,7 +92,7 @@ export class ProductsService {
   private catalogCache = new Map<string, { data: any; timestamp: number }>();
   private readonly CACHE_TTL = 10 * 60 * 1000; // 10 minutos
 
-  private invalidateCache(tenantId: string) {
+  invalidateCache(tenantId: string) {
     for (const key of this.catalogCache.keys()) {
       if (key.startsWith(tenantId)) {
         this.catalogCache.delete(key);

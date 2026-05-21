@@ -90,11 +90,35 @@ export class UsersService {
 
     if (!user) throw new NotFoundException('Usuário não encontrado.');
 
-    const updateData: any = {
-      name: data.name,
-      email: data.email,
-      role: data.role,
-    };
+    // 1. Impedir alteração de role de admin para outra coisa
+    if (user.role === 'admin' && data.role && data.role !== 'admin') {
+      throw new BadRequestException('Não é possível alterar a função do Administrador principal.');
+    }
+
+    // 2. Impedir promoção de outro usuário para admin se já houver um admin
+    if (data.role === 'admin' && user.role !== 'admin') {
+      const adminCount = await this.heartPrisma.user.count({
+        where: { tenantId, role: 'admin' }
+      });
+      if (adminCount >= 1) {
+        throw new BadRequestException('Limite atingido: Já existe 1 Administrador neste sistema.');
+      }
+    }
+
+    // 3. Impedir e-mail duplicado
+    if (data.email && data.email !== user.email) {
+      const existingUser = await this.heartPrisma.user.findUnique({
+        where: { email: data.email }
+      });
+      if (existingUser) {
+        throw new BadRequestException('Já existe um usuário cadastrado com este e-mail.');
+      }
+    }
+
+    const updateData: any = {};
+    if (data.name) updateData.name = data.name;
+    if (data.email) updateData.email = data.email;
+    if (data.role) updateData.role = data.role;
 
     if (data.password) {
       updateData.password = await bcrypt.hash(data.password, 10);
