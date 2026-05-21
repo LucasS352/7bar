@@ -7,7 +7,8 @@ import { toast } from "sonner";
 import {
   ShieldCheck, Building2, User, Mail, Lock, Database, Loader2, CheckCircle2,
   AlertCircle, ArrowRight, Eye, EyeOff, Search, Edit, Image as ImageIcon,
-  Settings, ToggleLeft, ToggleRight, AlertTriangle, Upload, X
+  Settings, ToggleLeft, ToggleRight, AlertTriangle, Upload, X, Terminal,
+  ChevronDown, ChevronRight
 } from "lucide-react";
 
 const PIN_LENGTH = 10;
@@ -31,6 +32,13 @@ export default function SysInitPage() {
   const [tenants, setTenants] = useState<any[]>([]);
   const [loadingTenants, setLoadingTenants] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
+
+  // ── DATABASE MIGRATION STATE ──────────────────────────────────────────
+  const [migrationModalOpen, setMigrationModalOpen] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+  const [migrationResults, setMigrationResults] = useState<any[]>([]);
+  const [activeLogTenantId, setActiveLogTenantId] = useState<string | null>(null);
 
   // ── PIN step ──────────────────────────────────────────────────────────
   const [pinDigits, setPinDigits] = useState<string[]>(Array(PIN_LENGTH).fill(""));
@@ -55,30 +63,10 @@ export default function SysInitPage() {
 
   // ── Edit Form step ────────────────────────────────────────────────────
   const [editingTenant, setEditingTenant] = useState<any>(null);
-  const [editTab, setEditTab] = useState<"identidade" | "modulos" | "fiscal" | "integracoes">("identidade");
+  const [editTab, setEditTab] = useState<"identidade" | "modulos" | "fiscal">("identidade");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [modulos, setModulos] = useState<any>({});
   const [editLoading, setEditLoading] = useState(false);
-
-  const [syncingCosmos, setSyncingCosmos] = useState(false);
-
-  const handleSyncCosmos = async () => {
-    setSyncingCosmos(true);
-    try {
-      const pin = pinDigits.join('');
-      await api.post('/tenants/setup/sync-cosmos', {}, {
-        headers: { 'x-setup-pin': pin },
-      });
-      toast.success('Sincronização com Cosmos iniciada em background!');
-    } catch (err) {
-      toast.error('Erro ao acionar sincronização.');
-    } finally {
-      setSyncingCosmos(false);
-    }
-  };
-
-  // Nota: sem redirect de auth — a segurança é garantida pelo PIN de 10 dígitos
-
 
   const loadTenants = async () => {
     setLoadingTenants(true);
@@ -203,7 +191,16 @@ export default function SysInitPage() {
   const openEdit = (tenant: any) => {
     setEditingTenant(tenant);
     setLogoFile(null);
-    setModulos(tenant.modulos ? (typeof tenant.modulos === 'string' ? JSON.parse(tenant.modulos) : tenant.modulos) : { nfce: true, estoque: true, dashboardMobile: true });
+    let parsedModulos = { nfce: true, estoque: true, dashboardMobile: true };
+    try {
+      if (tenant.modulos) {
+        parsedModulos = typeof tenant.modulos === 'string' ? JSON.parse(tenant.modulos) : tenant.modulos;
+      }
+    } catch (e) {
+      console.error("Erro ao fazer parse dos módulos:", e);
+    }
+    setModulos(parsedModulos);
+    setEditTab("identidade");
     setStep("edit");
   };
 
@@ -225,7 +222,6 @@ export default function SysInitPage() {
         cnpj: editingTenant.cnpj,
         status: editingTenant.status,
         nfceAmbiente: editingTenant.nfceAmbiente,
-        cosmosApiKey: editingTenant.cosmosApiKey,
         modulos,
       }, {
         headers: { 'x-setup-pin': pin },
@@ -240,6 +236,43 @@ export default function SysInitPage() {
       toast.error(err.response?.data?.message || "Erro ao salvar alterações.");
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  const handleMigrateBancos = async () => {
+    setMigrationModalOpen(true);
+    setMigrating(true);
+    setMigrationResults(selectedTenantIds.map(id => {
+      const tenant = tenants.find(t => t.id === id);
+      return {
+        tenantId: id,
+        name: tenant?.name || tenant?.nomeFantasia || 'Tenant',
+        databaseName: tenant?.databaseName || '',
+        status: 'processing',
+        output: ''
+      };
+    }));
+    
+    try {
+      const pin = pinDigits.join('');
+      const res = await api.post('/tenants/setup/migrate', {
+        tenantIds: selectedTenantIds
+      }, {
+        headers: { 'x-setup-pin': pin },
+      });
+      
+      setMigrationResults(res.data);
+      toast.success('Migração de bancos concluída!');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Erro ao executar migração.';
+      toast.error(msg);
+      setMigrationResults(prev => prev.map(item => 
+        item.status === 'processing' ? { ...item, status: 'error', output: msg } : item
+      ));
+    } finally {
+      setMigrating(false);
+      setSelectedTenantIds([]);
+      loadTenants();
     }
   };
 
@@ -323,9 +356,11 @@ export default function SysInitPage() {
               </div>
               
               <div className="flex gap-3">
-                <button onClick={handleSyncCosmos} disabled={syncingCosmos} className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-blue-500/20">
-                  {syncingCosmos ? <Loader2 className="animate-spin" size={18} /> : <Database size={18} />} Sincronizar Cosmos
-                </button>
+                {selectedTenantIds.length > 0 && (
+                  <button onClick={handleMigrateBancos} className="bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-violet-500/20">
+                    <Database size={18} /> Atualizar Bancos ({selectedTenantIds.length})
+                  </button>
+                )}
                 <button onClick={() => setStep("create")} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
                   <Building2 size={18} /> Novo Tenant
                 </button>
@@ -362,6 +397,20 @@ export default function SysInitPage() {
                 <table className="w-full text-left text-sm whitespace-nowrap">
                   <thead className="bg-zinc-950/50 text-zinc-400 sticky top-0 z-10 border-b border-zinc-800">
                     <tr>
+                      <th className="px-6 py-4 font-medium w-12">
+                        <input
+                          type="checkbox"
+                          checked={filteredTenants.length > 0 && selectedTenantIds.length === filteredTenants.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedTenantIds(filteredTenants.map(t => t.id));
+                            } else {
+                              setSelectedTenantIds([]);
+                            }
+                          }}
+                          className="rounded border-zinc-700 bg-zinc-950 text-violet-600 focus:ring-violet-500"
+                        />
+                      </th>
                       <th className="px-6 py-4 font-medium">Tenant</th>
                       <th className="px-6 py-4 font-medium">Banco / CNPJ</th>
                       <th className="px-6 py-4 font-medium">Status</th>
@@ -371,55 +420,79 @@ export default function SysInitPage() {
                   </thead>
                   <tbody className="divide-y divide-zinc-800/50">
                     {loadingTenants ? (
-                      <tr><td colSpan={5} className="px-6 py-12 text-center text-zinc-500"><Loader2 className="animate-spin inline-block mr-2" /> Carregando...</td></tr>
+                      <tr><td colSpan={6} className="px-6 py-12 text-center text-zinc-500"><Loader2 className="animate-spin inline-block mr-2" /> Carregando...</td></tr>
                     ) : filteredTenants.length === 0 ? (
-                      <tr><td colSpan={5} className="px-6 py-12 text-center text-zinc-500">Nenhum tenant encontrado.</td></tr>
+                      <tr><td colSpan={6} className="px-6 py-12 text-center text-zinc-500">Nenhum tenant encontrado.</td></tr>
                     ) : (
-                      filteredTenants.map(t => (
-                        <tr key={t.id} className="hover:bg-zinc-800/30 transition">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              {t.logoUrl ? (
-                                <img src={getFullUrl(t.logoUrl)} alt="Logo" className="w-8 h-8 rounded object-cover bg-zinc-950" />
-                              ) : (
-                                <div className="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center text-xs font-bold">{t.name?.charAt(0).toUpperCase()}</div>
-                              )}
-                              <div>
-                                <p className="font-semibold text-zinc-200">{t.name || t.nomeFantasia}</p>
-                                <p className="text-xs text-zinc-500">{t.users?.[0]?.email || 'Sem admin'}</p>
+                      filteredTenants.map(t => {
+                        const isSelected = selectedTenantIds.includes(t.id);
+                        return (
+                          <tr key={t.id} className={`hover:bg-zinc-800/30 transition ${isSelected ? 'bg-violet-950/10' : ''}`}>
+                            <td className="px-6 py-4">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedTenantIds(prev => [...prev, t.id]);
+                                  } else {
+                                    setSelectedTenantIds(prev => prev.filter(id => id !== t.id));
+                                  }
+                                }}
+                                className="rounded border-zinc-700 bg-zinc-950 text-violet-600 focus:ring-violet-500"
+                              />
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                {t.logoUrl ? (
+                                  <img src={getFullUrl(t.logoUrl)} alt="Logo" className="w-8 h-8 rounded object-cover bg-zinc-950" />
+                                ) : (
+                                  <div className="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center text-xs font-bold">{t.name?.charAt(0).toUpperCase()}</div>
+                                )}
+                                <div>
+                                  <p className="font-semibold text-zinc-200">{t.name || t.nomeFantasia}</p>
+                                  <p className="text-xs text-zinc-500">{t.users?.[0]?.email || 'Sem admin'}</p>
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="font-mono text-zinc-300">{t.databaseName}</p>
-                            <p className="text-xs text-zinc-500">{t.cnpj || 'CNPJ não informado'}</p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${t.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                              {t.status === 'active' ? 'Ativo' : 'Inativo'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex gap-1">
-                              {(() => {
-                                const m = t.modulos ? (typeof t.modulos === 'string' ? JSON.parse(t.modulos) : t.modulos) : {};
-                                return (
-                                  <>
-                                    <span className={`w-2 h-2 rounded-full ${m.nfce ? 'bg-blue-500' : 'bg-zinc-700'}`} title="NFC-e" />
-                                    <span className={`w-2 h-2 rounded-full ${m.estoque ? 'bg-indigo-500' : 'bg-zinc-700'}`} title="Estoque" />
-                                    <span className={`w-2 h-2 rounded-full ${m.dashboardMobile ? 'bg-violet-500' : 'bg-zinc-700'}`} title="App Mobile" />
-                                  </>
-                                )
-                              })()}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <button onClick={() => openEdit(t)} className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition">
-                              <Edit size={18} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="font-mono text-zinc-300">{t.databaseName}</p>
+                              <p className="text-xs text-zinc-500">{t.cnpj || 'CNPJ não informado'}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${t.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                                {t.status === 'active' ? 'Ativo' : 'Inativo'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex gap-1">
+                                {(() => {
+                                  let m = { nfce: true, estoque: true, dashboardMobile: true };
+                                  try {
+                                    if (t.modulos) {
+                                      m = typeof t.modulos === 'string' ? JSON.parse(t.modulos) : t.modulos;
+                                    }
+                                  } catch (e) {
+                                    console.error("Erro ao renderizar módulos do tenant:", e);
+                                  }
+                                  return (
+                                    <>
+                                      <span className={`w-2 h-2 rounded-full ${m.nfce ? 'bg-blue-500' : 'bg-zinc-700'}`} title="NFC-e" />
+                                      <span className={`w-2 h-2 rounded-full ${m.estoque ? 'bg-indigo-500' : 'bg-zinc-700'}`} title="Estoque" />
+                                      <span className={`w-2 h-2 rounded-full ${m.dashboardMobile ? 'bg-violet-500' : 'bg-zinc-700'}`} title="App Mobile" />
+                                    </>
+                                  )
+                                })()}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <button onClick={() => openEdit(t)} className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition">
+                                <Edit size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -428,11 +501,9 @@ export default function SysInitPage() {
           </div>
         )}
 
-        {/* REUSE EXISTING WIZARD FOR CREATE (omitted most for brevity, using same logic) */}
         {step === "create" && (
            <div className="max-w-md mx-auto mt-20 animate-[fadeIn_0.4s_ease]">
               <button onClick={() => setStep("list")} className="mb-4 text-zinc-400 hover:text-white flex items-center gap-2 text-sm"><ArrowRight className="rotate-180" size={16} /> Voltar para lista</button>
-             {/* Exact same form as before goes here, I'll put a condensed version */}
              <div className="p-8 rounded-3xl bg-zinc-900/70 backdrop-blur-xl border border-zinc-800 shadow-2xl">
                <h1 className="text-2xl font-bold tracking-tight mb-6">Novo Tenant</h1>
                <form onSubmit={handleProvision} className="space-y-4">
@@ -461,110 +532,98 @@ export default function SysInitPage() {
         )}
 
         {step === "edit" && editingTenant && (
-          <div className="max-w-2xl mx-auto mt-10 animate-[fadeIn_0.3s_ease] w-full">
-            <button onClick={() => setStep("list")} className="mb-4 text-zinc-400 hover:text-white flex items-center gap-2 text-sm"><ArrowRight className="rotate-180" size={16} /> Voltar para lista</button>
-            <div className="bg-zinc-900/70 backdrop-blur-xl border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col">
-              <div className="p-6 border-b border-zinc-800 flex justify-between items-center">
-                <h2 className="text-xl font-bold flex items-center gap-3">
-                  <Settings className="text-violet-500" />
-                  Configurações: {editingTenant.name || editingTenant.nomeFantasia}
-                </h2>
-                <span className="text-xs font-mono text-zinc-500">{editingTenant.databaseName}</span>
-              </div>
-              
-              <div className="flex border-b border-zinc-800 bg-zinc-950/50">
-                <button onClick={() => setEditTab("identidade")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'identidade' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Identidade</button>
-                <button onClick={() => setEditTab("modulos")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'modulos' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Módulos</button>
-                <button onClick={() => setEditTab("fiscal")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'fiscal' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Fiscal</button>
-                <button onClick={() => setEditTab("integracoes")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'integracoes' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Integrações</button>
-              </div>
+           <div className="max-w-2xl mx-auto mt-10 animate-[fadeIn_0.3s_ease] w-full">
+             <button onClick={() => setStep("list")} className="mb-4 text-zinc-400 hover:text-white flex items-center gap-2 text-sm"><ArrowRight className="rotate-180" size={16} /> Voltar para lista</button>
+             <div className="bg-zinc-900/70 backdrop-blur-xl border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+               <div className="p-6 border-b border-zinc-800 flex justify-between items-center">
+                 <h2 className="text-xl font-bold flex items-center gap-3">
+                   <Settings className="text-violet-500" />
+                   Configurações: {editingTenant.name || editingTenant.nomeFantasia}
+                 </h2>
+                 <span className="text-xs font-mono text-zinc-500">{editingTenant.databaseName}</span>
+               </div>
+               
+               <div className="flex border-b border-zinc-800 bg-zinc-950/50">
+                 <button onClick={() => setEditTab("identidade")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'identidade' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Identidade</button>
+                 <button onClick={() => setEditTab("modulos")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'modulos' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Módulos</button>
+                 <button onClick={() => setEditTab("fiscal")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'fiscal' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Fiscal</button>
+               </div>
 
-              <div className="p-6 flex-1">
-                {editTab === 'identidade' && (
-                  <div className="space-y-5">
-                    <div>
-                      <label className="text-xs text-zinc-400 uppercase tracking-wider mb-2 block">Logotipo (White Label)</label>
-                      <div className="flex items-center gap-4">
-                        <div className="w-20 h-20 bg-zinc-950 border border-zinc-800 rounded-2xl flex items-center justify-center overflow-hidden">
-                          {logoFile ? (
-                            <img src={URL.createObjectURL(logoFile)} alt="Preview" className="w-full h-full object-cover" />
-                          ) : editingTenant.logoUrl ? (
-                            <img src={getFullUrl(editingTenant.logoUrl)} alt="Logo" className="w-full h-full object-contain p-1" />
-                          ) : (
-                            <ImageIcon size={30} className="text-zinc-700" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <label className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl cursor-pointer transition text-sm flex items-center gap-2 w-max">
-                            <Upload size={16} /> Fazer Upload
-                            <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files && setLogoFile(e.target.files[0])} />
-                          </label>
-                          <p className="text-xs text-zinc-500 mt-2">Recomendado: PNG ou SVG transparente, proporção horizontal.</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block">Nome Fantasia (Exibição)</label>
-                      <input type="text" value={editingTenant.nomeFantasia || editingTenant.name} onChange={e => setEditingTenant({...editingTenant, nomeFantasia: e.target.value})} className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:border-violet-500 outline-none" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block">Status</label>
-                      <select value={editingTenant.status} onChange={e => setEditingTenant({...editingTenant, status: e.target.value})} className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:border-violet-500 outline-none">
-                        <option value="active">Ativo</option>
-                        <option value="inactive">Inativo</option>
-                        <option value="suspended">Suspenso</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
+               <div className="p-6 flex-1">
+                 {editTab === 'identidade' && (
+                   <div className="space-y-5">
+                     <div>
+                       <label className="text-xs text-zinc-400 uppercase tracking-wider mb-2 block">Logotipo (White Label)</label>
+                       <div className="flex items-center gap-4">
+                         <div className="w-20 h-20 bg-zinc-950 border border-zinc-800 rounded-2xl flex items-center justify-center overflow-hidden">
+                           {logoFile ? (
+                             <img src={URL.createObjectURL(logoFile)} alt="Preview" className="w-full h-full object-cover" />
+                           ) : editingTenant.logoUrl ? (
+                             <img src={getFullUrl(editingTenant.logoUrl)} alt="Logo" className="w-full h-full object-contain p-1" />
+                           ) : (
+                             <ImageIcon size={30} className="text-zinc-700" />
+                           )}
+                         </div>
+                         <div className="flex-1">
+                           <label className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl cursor-pointer transition text-sm flex items-center gap-2 w-max">
+                             <Upload size={16} /> Fazer Upload
+                             <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files && setLogoFile(e.target.files[0])} />
+                           </label>
+                           <p className="text-xs text-zinc-500 mt-2">Recomendado: PNG ou SVG transparente, proporção horizontal.</p>
+                         </div>
+                       </div>
+                     </div>
+                     <div>
+                       <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block">Nome Fantasia (Exibição)</label>
+                       <input type="text" value={editingTenant.nomeFantasia || editingTenant.name || ''} onChange={e => setEditingTenant({...editingTenant, nomeFantasia: e.target.value})} className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:border-violet-500 outline-none" />
+                     </div>
+                     <div>
+                       <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block">Status</label>
+                       <select value={editingTenant.status} onChange={e => setEditingTenant({...editingTenant, status: e.target.value})} className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:border-violet-500 outline-none">
+                         <option value="active">Ativo</option>
+                         <option value="inactive">Inativo</option>
+                         <option value="suspended">Suspenso</option>
+                       </select>
+                     </div>
+                   </div>
+                 )}
 
-                {editTab === 'modulos' && (
-                  <div className="space-y-4">
-                    <p className="text-zinc-400 text-sm mb-4">Habilite ou desabilite os recursos (Feature Flags) para este cliente.</p>
-                    {['nfce', 'estoque', 'dashboardMobile'].map(mod => (
-                      <div key={mod} className="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-800 rounded-xl">
-                        <div>
-                          <p className="font-semibold text-zinc-200 capitalize">{mod === 'nfce' ? 'NFC-e / Fiscal' : mod === 'dashboardMobile' ? 'Dashboard Mobile' : mod}</p>
-                          <p className="text-xs text-zinc-500">Permite o acesso a este módulo no sistema.</p>
-                        </div>
-                        <button onClick={() => setModulos({...modulos, [mod]: !modulos[mod]})} className={`transition-colors ${modulos[mod] ? 'text-violet-500' : 'text-zinc-600'}`}>
-                          {modulos[mod] ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                 {editTab === 'modulos' && (
+                   <div className="space-y-4">
+                     <p className="text-zinc-400 text-sm mb-4">Habilite ou desabilite os recursos (Feature Flags) para este cliente.</p>
+                     {['nfce', 'estoque', 'dashboardMobile'].map(mod => (
+                       <div key={mod} className="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-800 rounded-xl">
+                         <div>
+                           <p className="font-semibold text-zinc-200 capitalize">{mod === 'nfce' ? 'NFC-e / Fiscal' : mod === 'dashboardMobile' ? 'Dashboard Mobile' : mod === 'estoque' ? 'Estoque' : mod}</p>
+                           <p className="text-xs text-zinc-500">Permite o acesso a este módulo no sistema.</p>
+                         </div>
+                         <button onClick={() => setModulos({...modulos, [mod]: !modulos[mod]})} className={`transition-colors ${modulos[mod] ? 'text-violet-500' : 'text-zinc-600'}`}>
+                           {modulos[mod] ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
+                         </button>
+                       </div>
+                     ))}
+                   </div>
+                 )}
 
-                {editTab === 'fiscal' && (
-                  <div className="space-y-5">
-                    <p className="text-sm text-zinc-400 border-b border-zinc-800 pb-3">Estes dados serão injetados no motor fiscal.</p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div><label className="text-xs text-zinc-400 uppercase">CNPJ</label><input type="text" value={editingTenant.cnpj || ''} onChange={e => setEditingTenant({...editingTenant, cnpj: e.target.value})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm" /></div>
-                      <div><label className="text-xs text-zinc-400 uppercase">Ambiente NFC-e</label><select value={editingTenant.nfceAmbiente || 2} onChange={e => setEditingTenant({...editingTenant, nfceAmbiente: Number(e.target.value)})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm"><option value={1}>1 - Produção</option><option value={2}>2 - Homologação</option></select></div>
-                    </div>
-                  </div>
-                )}
+                 {editTab === 'fiscal' && (
+                   <div className="space-y-5">
+                     <p className="text-sm text-zinc-400 border-b border-zinc-800 pb-3">Estes dados serão injetados no motor fiscal.</p>
+                     <div className="grid grid-cols-2 gap-4">
+                       <div><label className="text-xs text-zinc-400 uppercase">CNPJ</label><input type="text" value={editingTenant.cnpj || ''} onChange={e => setEditingTenant({...editingTenant, cnpj: e.target.value})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm" /></div>
+                       <div><label className="text-xs text-zinc-400 uppercase">Ambiente NFC-e</label><select value={editingTenant.nfceAmbiente || 2} onChange={e => setEditingTenant({...editingTenant, nfceAmbiente: Number(e.target.value)})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm"><option value={1}>1 - Produção</option><option value={2}>2 - Homologação</option></select></div>
+                     </div>
+                   </div>
+                 )}
+               </div>
 
-                {editTab === 'integracoes' && (
-                  <div className="space-y-5">
-                    <p className="text-sm text-zinc-400 border-b border-zinc-800 pb-3">Integrações de serviços externos para este tenant.</p>
-                    <div>
-                      <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block">Token Cosmos (Bluesoft)</label>
-                      <input type="text" placeholder="Cole a API Key..." value={editingTenant.cosmosApiKey || ''} onChange={e => setEditingTenant({...editingTenant, cosmosApiKey: e.target.value})} className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white font-mono text-sm focus:border-violet-500 outline-none" />
-                      <p className="text-xs text-zinc-500 mt-2">Usado para enriquecimento automático de NCM/CEST dos produtos (auto-sync).</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="p-6 border-t border-zinc-800 bg-zinc-900/50 flex justify-end gap-3">
-                <button onClick={() => setStep("list")} className="px-5 py-2.5 rounded-xl font-medium text-zinc-400 hover:text-white transition">Cancelar</button>
-                <button onClick={handleSaveEdit} disabled={editLoading} className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition">
-                  {editLoading ? <Loader2 className="animate-spin" size={18} /> : 'Salvar Alterações'}
-                </button>
-              </div>
-            </div>
-          </div>
+               <div className="p-6 border-t border-zinc-800 bg-zinc-900/50 flex justify-end gap-3">
+                 <button onClick={() => setStep("list")} className="px-5 py-2.5 rounded-xl font-medium text-zinc-400 hover:text-white transition">Cancelar</button>
+                 <button onClick={handleSaveEdit} disabled={editLoading} className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition">
+                   {editLoading ? <Loader2 className="animate-spin" size={18} /> : 'Salvar Alterações'}
+                 </button>
+               </div>
+             </div>
+           </div>
         )}
 
         {step === "success" && successData && (
@@ -576,6 +635,103 @@ export default function SysInitPage() {
                <button onClick={() => { setStep("list"); loadTenants(); }} className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-3 rounded-xl">Voltar para o Painel</button>
              </div>
            </div>
+        )}
+
+        {/* MODAL MIGRACAO DE BANCO DE DADOS */}
+        {migrationModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-[fadeIn_0.2s_ease]">
+            <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+              <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/40">
+                <div>
+                  <h2 className="text-xl font-bold flex items-center gap-2 text-violet-400">
+                    <Database size={20} />
+                    Migração de Bancos de Dados
+                  </h2>
+                  <p className="text-xs text-zinc-500 mt-1">Atualizando estrutura e schemas do Prisma nos tenants selecionados</p>
+                </div>
+                {!migrating && (
+                  <button 
+                    onClick={() => {
+                      setMigrationModalOpen(false);
+                      setMigrationResults([]);
+                      setActiveLogTenantId(null);
+                    }}
+                    className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition"
+                  >
+                    <X size={20} />
+                  </button>
+                )}
+              </div>
+
+              <div className="p-6 overflow-y-auto flex-1 space-y-4">
+                <div className="space-y-2">
+                  {migrationResults.map((result) => {
+                    const isActiveLog = activeLogTenantId === result.tenantId;
+                    return (
+                      <div key={result.tenantId} className="border border-zinc-800 bg-zinc-950/40 rounded-xl overflow-hidden transition">
+                        <div 
+                          onClick={() => result.output && setActiveLogTenantId(isActiveLog ? null : result.tenantId)}
+                          className={`p-4 flex items-center justify-between cursor-pointer hover:bg-zinc-800/20 transition`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {result.status === 'processing' && <Loader2 className="animate-spin text-violet-400" size={18} />}
+                            {result.status === 'success' && <CheckCircle2 className="text-emerald-400" size={18} />}
+                            {result.status === 'error' && <AlertCircle className="text-red-400" size={18} />}
+                            <div>
+                              <p className="font-semibold text-sm text-zinc-200">{result.name}</p>
+                              <p className="text-xs text-zinc-500">Banco: {result.databaseName || '-'}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs px-2.5 py-0.5 rounded-full border ${
+                              result.status === 'success' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                              result.status === 'error' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                              'bg-zinc-800 text-zinc-400 border-zinc-700'
+                            }`}>
+                              {result.status === 'success' ? 'Sucesso' :
+                               result.status === 'error' ? 'Falhou' : 'Processando...'}
+                            </span>
+                            {result.output && (
+                              <span className="text-zinc-500">
+                                {isActiveLog ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {isActiveLog && result.output && (
+                          <div className="px-4 pb-4 border-t border-zinc-800 bg-zinc-950">
+                            <div className="flex items-center gap-2 py-2 text-xs font-mono text-zinc-400 border-b border-zinc-900 mb-2">
+                              <Terminal size={12} />
+                              <span>Console Log</span>
+                            </div>
+                            <pre className="text-xs font-mono text-zinc-300 whitespace-pre-wrap max-h-60 overflow-y-auto p-3 rounded-lg bg-zinc-900/50 border border-zinc-800 custom-scrollbar">
+                              {result.output}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-zinc-800 bg-zinc-900/50 flex justify-end">
+                <button
+                  disabled={migrating}
+                  onClick={() => {
+                    setMigrationModalOpen(false);
+                    setMigrationResults([]);
+                    setActiveLogTenantId(null);
+                  }}
+                  className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl font-bold transition animate-[fadeIn_0.2s_ease]"
+                >
+                  {migrating ? 'Migrando bancos...' : 'Fechar'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 

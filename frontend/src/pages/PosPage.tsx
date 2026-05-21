@@ -1,7 +1,7 @@
 import { useState, useEffect, useDeferredValue, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
-import { useCartStore, type Product } from '@/store/cart';
+import { useCartStore, type Product, type CartItemModifier } from '@/store/cart';
 import { api } from '@/lib/api';
 import { updateProductsCache, getCachedProducts } from '@/lib/db';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -11,10 +11,11 @@ import { OperatorLoginModal } from '@/components/OperatorLoginModal';
 import { OpenShiftModal } from '@/components/OpenShiftModal';
 import { CloseRegisterModal } from '@/components/CloseRegisterModal';
 import { CashMovementModal } from '@/components/CashMovementModal';
+import { CompositeModifierModal } from '@/components/CompositeModifierModal';
 import { ShiftProvider, useShift } from '@/contexts/ShiftContext';
 import {
   Search, ShoppingCart, LogOut, PackageOpen, Minus, Plus, Trash2,
-  LayoutDashboard, FileText, ArrowDownUp, Database,
+  LayoutDashboard, FileText, ArrowDownUp, Database, Layers
 } from 'lucide-react';
 import { getFullUrl } from '@/lib/getFullUrl';
 
@@ -33,7 +34,18 @@ function PosPageContent() {
   const [isLoading,          setIsLoading]          = useState(true);
   const [isOfflineCatalog,   setIsOfflineCatalog]   = useState(false);
   const [tenantConfig,       setTenantConfig]       = useState<any>(null);
+  const [compositeProduct,   setCompositeProduct]   = useState<Product | null>(null);
   const { operator, cashRegister, isLoading: isShiftLoading, logoutOperator, refreshShift } = useShift();
+
+  const handleClickProduct = (product: Product) => {
+    // Busca o produto com os modifierGroups completos do array de products em memória
+    const fullProduct = products.find(p => p.id === product.id) || product;
+    if (fullProduct.isComposite && fullProduct.modifierGroups && fullProduct.modifierGroups.length > 0) {
+      setCompositeProduct(fullProduct);
+    } else {
+      addItem(product);
+    }
+  };
 
   useEffect(() => {
     if (token) {
@@ -43,6 +55,11 @@ function PosPageContent() {
 
   useEffect(() => {
     if (!token) { navigate('/login'); return; }
+
+    if (window.innerWidth < 768) {
+      navigate('/dashboard');
+      return;
+    }
 
     setIsLoading(true);
 
@@ -153,8 +170,8 @@ function PosPageContent() {
       const match = products.find(p =>
         p.shortCode?.toLowerCase() === search.toLowerCase().trim() || p.barcode === search.trim()
       );
-      if (match) { addItem(match); setSearch(''); }
-      else if (displayedProducts.length === 1) { addItem(displayedProducts[0]); setSearch(''); }
+      if (match) { handleClickProduct(match); setSearch(''); }
+      else if (displayedProducts.length === 1) { handleClickProduct(displayedProducts[0]); setSearch(''); }
     }
   };
 
@@ -250,7 +267,13 @@ function PosPageContent() {
               {displayedProducts.map(product => (
                 <div key={product.id} className="group relative bg-zinc-900 border border-zinc-800 p-3 rounded-2xl hover:border-blue-500 transition-all flex flex-col items-center justify-between min-h-[160px] overflow-hidden shadow-sm hover:shadow-md">
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-                  <button onClick={() => addItem(product)} className="w-full flex-1 flex flex-col items-center justify-start z-10 active:scale-95 transition-transform">
+                  <button onClick={() => handleClickProduct(product)} className="w-full flex-1 flex flex-col items-center justify-start z-10 active:scale-95 transition-transform">
+                    {product.isComposite && (
+                      <span className="absolute top-3 left-3 bg-indigo-600 border border-indigo-500 text-white font-extrabold text-[10px] px-2 py-0.5 rounded shadow-sm z-20 flex items-center gap-1">
+                        <Layers size={10} /> Combo
+                      </span>
+                    )}
+
                     {product.shortCode && (
                       <span className="absolute top-3 right-3 bg-zinc-900/80 backdrop-blur-md border border-blue-500/30 text-blue-400 font-extrabold text-[11px] px-2 py-0.5 rounded shadow-sm z-20">
                         {product.shortCode}
@@ -269,14 +292,16 @@ function PosPageContent() {
                       Estoque: {Math.round(Number(product.stock))}
                     </div>
                   </button>
-                  <div className="w-full flex justify-center gap-1 mt-3 z-20 sm:opacity-0 group-hover:opacity-100 transition-all sm:translate-y-2 group-hover:translate-y-0">
-                    {[4, 6, 12, 16, 24].map(qt => (
-                      <button key={qt} onClick={(e) => { e.stopPropagation(); addItem(product, qt); }}
-                        className="bg-zinc-800 hover:bg-blue-600 text-zinc-300 hover:text-white font-bold text-[10px] sm:text-xs py-1.5 px-2 rounded-lg transition-colors active:scale-90">
-                        +{qt}
-                      </button>
-                    ))}
-                  </div>
+                  {!product.isComposite && (
+                    <div className="w-full flex justify-center gap-1 mt-3 z-20 sm:opacity-0 group-hover:opacity-100 transition-all sm:translate-y-2 group-hover:translate-y-0">
+                      {[4, 6, 12, 16, 24].map(qt => (
+                        <button key={qt} onClick={(e) => { e.stopPropagation(); addItem(product, qt); }}
+                          className="bg-zinc-800 hover:bg-blue-600 text-zinc-300 hover:text-white font-bold text-[10px] sm:text-xs py-1.5 px-2 rounded-lg transition-colors active:scale-90">
+                          +{qt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -301,24 +326,37 @@ function PosPageContent() {
             </div>
           ) : (
             items.map(item => (
-              <div key={item.id} className="flex flex-col p-4 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-sm hover:border-zinc-700 transition-colors group">
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-start gap-3">
-                    {item.imageUrl && (
-                      <div className="w-10 h-10 shrink-0 bg-white rounded-lg flex items-center justify-center p-1 shadow-inner">
-                        <img src={item.imageUrl} alt="" className="w-full h-full object-contain mix-blend-multiply" loading="lazy" />
-                      </div>
-                    )}
-                    <div className="font-semibold text-zinc-200 line-clamp-2 pr-2 leading-tight mt-0.5">{item.name}</div>
+              <div key={item.cartKey} className="flex flex-col p-4 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-sm hover:border-zinc-700 transition-colors group">
+                <div className="flex gap-3 mb-3">
+                  {item.imageUrl && (
+                    <div className="w-12 h-12 flex-shrink-0 bg-white/5 rounded-lg flex items-center justify-center p-1 border border-white/5">
+                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
+                    </div>
+                  )}
+                  <div className="flex-1 flex justify-between items-start">
+                    <div className="flex-1 pr-2">
+                      <div className="font-semibold text-zinc-200 line-clamp-2 leading-tight">{item.name}</div>
+                      {item.modifiers && item.modifiers.length > 0 && (
+                        <div className="mt-1 space-y-0.5">
+                          {item.modifiers.map((mod, idx) => (
+                            <div key={idx} className="text-[11px] text-indigo-400 font-medium">
+                              {mod.groupName}: <span className="text-zinc-300">{mod.optionName}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="font-bold text-lg text-emerald-400 whitespace-nowrap pl-2">
+                      R$ {item.subtotal.toFixed(2)}
+                    </div>
                   </div>
-                  <div className="font-bold text-lg text-emerald-400 whitespace-nowrap mt-0.5">R$ {item.subtotal.toFixed(2)}</div>
                 </div>
                 <div className="flex justify-between items-center bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800">
-                  <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-2 hover:bg-zinc-800 text-zinc-400 hover:text-white transition"><Minus size={18} /></button>
+                  <button onClick={() => updateQuantity(item.cartKey, item.quantity - 1)} className="p-2 hover:bg-zinc-800 text-zinc-400 hover:text-white transition"><Minus size={18} /></button>
                   <span className="font-bold w-10 text-center">{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-2 hover:bg-zinc-800 text-zinc-400 hover:text-white transition"><Plus size={18} /></button>
+                  <button onClick={() => updateQuantity(item.cartKey, item.quantity + 1)} className="p-2 hover:bg-zinc-800 text-zinc-400 hover:text-white transition"><Plus size={18} /></button>
                   <div className="w-px h-6 bg-zinc-800 mx-1"></div>
-                  <button onClick={() => removeItem(item.id)} className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition w-full flex justify-center"><Trash2 size={18} /></button>
+                  <button onClick={() => removeItem(item.cartKey)} className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition w-full flex justify-center"><Trash2 size={18} /></button>
                 </div>
               </div>
             ))
@@ -379,6 +417,25 @@ function PosPageContent() {
           onClose={() => setIsMovementOpen(false)}
         />
       )}
+
+      <CompositeModifierModal
+        product={compositeProduct as any}
+        isOpen={!!compositeProduct}
+        onClose={() => setCompositeProduct(null)}
+        onConfirm={(product, selectedModifiers) => {
+          const modifiers: CartItemModifier[] = selectedModifiers.map(({ group, option }) => ({
+            groupId: group.id,
+            groupName: group.name,
+            optionId: option.id,
+            optionName: option.name,
+            componentProductId: option.componentProductId,
+            quantity: Number(option.quantity || 1),
+            priceAdjustment: Number(option.priceAdjustment || 0),
+          }));
+          addItem(product as any, 1, modifiers);
+          setCompositeProduct(null);
+        }}
+      />
     </div>
   );
 }

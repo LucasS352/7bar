@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { Save, Plus, Trash2, ArrowLeft, Send, Upload, AlertTriangle, Info, Image } from 'lucide-react';
+import { Save, Plus, Trash2, ArrowLeft, Send, Upload, AlertTriangle, Info, Image, Loader2, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function MassEntryPage() {
@@ -10,8 +10,58 @@ export default function MassEntryPage() {
   const [loading, setLoading] = useState(false);
   
   const [rows, setRows] = useState([
-    { id: Date.now(), shortCode: '', barcode: '', name: '', priceCost: '', priceSell: '', stockToAdd: '', categoryId: '', grupoTributacaoId: '', ncm: '', cest: '', origem: 0, imageUrl: '' }
+    { id: Date.now(), shortCode: '', barcode: '', name: '', priceCost: '', priceSell: '', stockToAdd: '', categoryId: '', grupoTributacaoId: '', ncm: '', cest: '', origem: 0, imageUrl: '', volumeUnit: '', volumeCapacity: '' }
   ]);
+
+  const rowFileInputRef = useRef<HTMLInputElement>(null);
+  const [activeUploadRowId, setActiveUploadRowId] = useState<number | null>(null);
+  const [rowUploadingIds, setRowUploadingIds] = useState<Record<number, boolean>>({});
+
+  const handleRowClickPhoto = (rowId: number) => {
+    setActiveUploadRowId(rowId);
+    rowFileInputRef.current?.click();
+  };
+
+  const handleRowFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const rowId = activeUploadRowId;
+    if (!file || rowId === null) return;
+    
+    // Clear input
+    e.target.value = '';
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 5MB.');
+      return;
+    }
+
+    const formDataObj = new FormData();
+    formDataObj.append('file', file);
+
+    setRowUploadingIds(prev => ({ ...prev, [rowId]: true }));
+    try {
+      const res = await api.post('/products/upload', formDataObj, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      // Update the row
+      setRows(currentRows => currentRows.map(cr => {
+        if (cr.id === rowId) {
+          return {
+            ...cr,
+            imageUrl: res.data.imageUrl,
+          };
+        }
+        return cr;
+      }));
+      toast.success('Foto do produto carregada!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao enviar a foto.');
+    } finally {
+      setRowUploadingIds(prev => ({ ...prev, [rowId]: false }));
+      setActiveUploadRowId(null);
+    }
+  };
   
   // Cache de Produtos e Auxiliares
   const [products, setProducts] = useState<any[]>([]);
@@ -49,7 +99,9 @@ export default function MassEntryPage() {
       ncm: lastRow?.ncm || '',
       cest: lastRow?.cest || '',
       origem: lastRow?.origem || 0,
-      imageUrl: ''
+      imageUrl: '',
+      volumeUnit: '',
+      volumeCapacity: ''
     }]);
   };
 
@@ -112,6 +164,8 @@ export default function MassEntryPage() {
             ncm,
             cest,
             origem: parseInt(origemStr) || 0,
+            volumeUnit: '',
+            volumeCapacity: ''
           };
         })
         .filter((r): r is NonNullable<typeof r> => r !== null);
@@ -173,7 +227,7 @@ export default function MassEntryPage() {
     }
   };
 
-  const updateRow = (id: number, field: string, value: string) => {
+  const updateRow = (id: number, field: string, value: any) => {
     setRows(rows.map(r => {
 
       if (r.id !== id) return r;
@@ -193,6 +247,8 @@ export default function MassEntryPage() {
             updated.ncm = match.ncm || '';
             updated.cest = match.cest || '';
             updated.imageUrl = match.imageUrl || '';
+            updated.volumeUnit = match.volumeUnit || '';
+            updated.volumeCapacity = match.volumeCapacity?.toString() || '';
             if (match.categoryId) updated.categoryId = match.categoryId;
             if (match.grupoTributacaoId) updated.grupoTributacaoId = match.grupoTributacaoId;
             if (field === 'shortCode') updated.barcode = match.barcode || '';
@@ -246,6 +302,8 @@ export default function MassEntryPage() {
       cest:              r.cest                  || undefined,
       origem:            r.origem,
       imageUrl:          r.imageUrl              || undefined,
+      volumeUnit:        r.volumeUnit            || null,
+      volumeCapacity:    r.volumeCapacity ? parseFloat(r.volumeCapacity) : null,
     }));
 
     if (validRows.length === 0) {
@@ -275,6 +333,13 @@ export default function MassEntryPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 w-full px-2 max-w-none">
+      <input
+        type="file"
+        ref={rowFileInputRef}
+        onChange={handleRowFileChange}
+        accept="image/*"
+        className="hidden"
+      />
 
       {/* Banner: Área exclusiva para NOVOS produtos */}
       <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 flex items-start gap-3">
@@ -366,7 +431,8 @@ export default function MassEntryPage() {
               <tr>
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-center w-[40px]">#</th>
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-center w-[60px]">Foto</th>
-                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[18%]">Nome da Mercadoria</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[15%]">Nome da Mercadoria</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-center w-[150px]">Fracionado</th>
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">Venda (R$)</th>
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[11%]">Categoria</th>
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">Estoque</th>
@@ -387,20 +453,47 @@ export default function MassEntryPage() {
                   
                   {/* Foto Column */}
                   <td className="px-3 py-2 w-[60px]">
-                    <div className="flex justify-center">
-                      {row.imageUrl ? (
-                        <div className="w-10 h-10 shrink-0 bg-white rounded-lg flex items-center justify-center p-1 shadow-md border border-zinc-800/60 animate-in fade-in zoom-in duration-300">
-                          <img src={row.imageUrl} alt="" className="w-full h-full object-contain mix-blend-multiply" />
+                    <div className="flex justify-center relative group">
+                      {rowUploadingIds[row.id] ? (
+                        <div className="w-10 h-10 shrink-0 bg-zinc-950/80 rounded-lg flex items-center justify-center border border-zinc-800/50 text-blue-500">
+                          <Loader2 className="animate-spin" size={16} />
+                        </div>
+                      ) : row.imageUrl ? (
+                        <div className="w-10 h-10 shrink-0 bg-white rounded-lg flex items-center justify-center p-1 shadow-md border border-zinc-800/60 relative animate-in fade-in zoom-in duration-300">
+                          <img
+                            src={row.imageUrl}
+                            alt=""
+                            className="w-full h-full object-contain cursor-pointer"
+                            onClick={() => handleRowClickPhoto(row.id)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRows(currentRows => currentRows.map(cr => {
+                                if (cr.id === row.id) {
+                                  return { ...cr, imageUrl: '' };
+                                }
+                                return cr;
+                              }));
+                            }}
+                            className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 hover:bg-red-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer shadow-md"
+                            title="Remover foto"
+                          >
+                            <X size={10} />
+                          </button>
                         </div>
                       ) : (
-                        <div className="w-10 h-10 shrink-0 bg-zinc-950/80 rounded-lg flex items-center justify-center border border-zinc-800/50 text-zinc-700">
+                        <div
+                          onClick={() => handleRowClickPhoto(row.id)}
+                          className="w-10 h-10 shrink-0 bg-zinc-950/80 hover:bg-zinc-900 rounded-lg flex items-center justify-center border border-zinc-800/50 hover:border-blue-500/50 text-zinc-700 hover:text-zinc-400 cursor-pointer transition-all duration-200"
+                        >
                           <Image size={18} />
                         </div>
                       )}
                     </div>
                   </td>
 
-                  <td className="px-3 py-2 w-[18%]">
+                  <td className="px-3 py-2 w-[15%]">
                     <input 
                       type="text" 
                       placeholder="Nome do Produto"
@@ -408,6 +501,41 @@ export default function MassEntryPage() {
                       onChange={e => updateRow(row.id, 'name', e.target.value)}
                       className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-3 py-2 text-sm text-white font-bold focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition-colors"
                     />
+                  </td>
+                  <td className="px-3 py-2 text-center w-[150px]">
+                    <div className="flex gap-1.5 items-center justify-center">
+                      <select
+                        value={row.volumeUnit || ''}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setRows(currentRows => currentRows.map(cr => {
+                            if (cr.id === row.id) {
+                              return { 
+                                ...cr, 
+                                volumeUnit: val,
+                                volumeCapacity: val ? cr.volumeCapacity || '' : ''
+                              };
+                            }
+                            return cr;
+                          }));
+                        }}
+                        className="bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-2 py-1.5 text-[11px] text-zinc-300 focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition-colors select-none w-full"
+                      >
+                        <option value="">Não</option>
+                        <option value="ML">ML</option>
+                        <option value="UN">UN</option>
+                      </select>
+
+                      {(row.volumeUnit === 'ML' || row.volumeUnit === 'UN') && (
+                        <input
+                          type="number"
+                          placeholder={row.volumeUnit === 'ML' ? 'ml' : 'un'}
+                          value={row.volumeCapacity}
+                          onChange={e => updateRow(row.id, 'volumeCapacity', e.target.value)}
+                          className="w-16 bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-2 py-1.5 text-xs text-indigo-400 font-bold focus:outline-none focus:border-indigo-500 focus:bg-zinc-900 transition-colors"
+                        />
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-2 w-[90px]">
                     <input 

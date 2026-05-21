@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, Patch, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards, Patch, Query, UseInterceptors, UploadedFile, Request, BadRequestException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ProductsService, TenantSettingsDto } from './products.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -36,6 +37,16 @@ export class ProductsController {
     return this.productsService.create(body);
   }
 
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadPhoto(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req: any,
+  ) {
+    if (!file) throw new BadRequestException('Arquivo não enviado.');
+    return this.productsService.uploadPhoto(req.user.tenantId, file);
+  }
+
   @Post('bulk')
   bulkEntry(@Body('items') items: any[]) {
     return this.productsService.bulkEntry(items);
@@ -61,6 +72,11 @@ export class ProductsController {
   @Patch('settings')
   saveSettings(@Body() body: { allowNegativeStock: boolean }): Promise<TenantSettingsDto> {
     return this.productsService.saveSettings(body);
+  }
+
+  @Get(':id/composition')
+  getComposition(@Param('id') id: string) {
+    return this.productsService.getComposition(id);
   }
 
   @Patch(':id')

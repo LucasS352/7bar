@@ -86,6 +86,9 @@ export declare class CashRegistersController {
                         ncm: string | null;
                         cest: string | null;
                         origem: number;
+                        isComposite: boolean;
+                        volumeUnit: string | null;
+                        volumeCapacity: import("@prisma/client/runtime/library").Decimal | null;
                     };
                 } & {
                     id: string;

@@ -79,7 +79,33 @@ class NfceEmissor
         $xmlAssinado = $tools->signNFe($xml);
 
         // ── Enviar à SEFAZ (indSinc = 1 para envio síncrono — exigido para lote de 1 nota) ──
-        $response    = $tools->sefazEnviaLote([$xmlAssinado], (string) $nota['numero'], 1);
+        $maxAttempts = 3;
+        $attempt = 1;
+        $response = null;
+
+        while ($attempt <= $maxAttempts) {
+            try {
+                $response = $tools->sefazEnviaLote([$xmlAssinado], (string) $nota['numero'], 1);
+                break; // Sucesso, sai do loop
+            } catch (\Exception $e) {
+                $msg = $e->getMessage();
+                $isNetworkError = stripos($msg, 'SSL_ERROR_SYSCALL') !== false
+                    || stripos($msg, 'SSL_connect') !== false
+                    || stripos($msg, 'connection') !== false
+                    || stripos($msg, 'timeout') !== false
+                    || stripos($msg, 'couldn\'t connect') !== false
+                    || stripos($msg, 'resolved') !== false;
+
+                if ($isNetworkError && $attempt < $maxAttempts) {
+                    error_log("NfceEmissor: Falha de rede temporária na tentativa {$attempt} de {$maxAttempts}. Erro: {$msg}. Retentando em 500ms...");
+                    usleep(500000); // 500ms
+                    $attempt++;
+                    continue;
+                }
+                throw $e;
+            }
+        }
+
         $responseArr = $this->parseResponse($response);
 
         // ── Processar retorno ─────────────────────────────────────────────────

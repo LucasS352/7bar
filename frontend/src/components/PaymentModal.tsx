@@ -39,6 +39,19 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   const { user } = useAuthStore();
   const { cashRegister, operator } = useShift();
 
+  const modules = (() => {
+    try {
+      if (tenantConfig?.modulos) {
+        return typeof tenantConfig.modulos === 'string' ? JSON.parse(tenantConfig.modulos) : tenantConfig.modulos;
+      }
+    } catch (e) {
+      console.error("Erro ao ler módulos no PaymentModal:", e);
+    }
+    return { estoque: true, nfce: true, dashboardMobile: true };
+  })();
+
+  const isNfceEnabled = modules.nfce !== false;
+
   const [payments, setPayments] = useState<{ id: string; method: string; value: number; given: number }[]>([]);
   const [method, setMethod] = useState<'dinheiro' | 'pix' | 'credito' | 'debito'>('dinheiro');
   const [inputValue, setInputValue] = useState('');
@@ -237,14 +250,14 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
       if (e.key === 'Enter' && remaining <= 0) {
         e.preventDefault();
-        if (isOnline) handleConfirm(autoNfce ? 'nfce' : 'simple');
+        if (isOnline) handleConfirm(isNfceEnabled && autoNfce ? 'nfce' : 'simple');
         else handleSaveOffline();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, remaining, saleResult, savedOffline, isOnline, autoNfce]);
+  }, [isOpen, remaining, saleResult, savedOffline, isOnline, autoNfce, isNfceEnabled]);
 
   useEffect(() => {
     if (!nfcePolling || !saleResult?.id) return;
@@ -365,20 +378,30 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
   const handleConfirm = async (mode: PayMode) => {
     if (remaining > 0) { toast.error(`Falta R$ ${remaining.toFixed(2)} para finalizar.`); return; }
-    setLoading(true); setPayMode(mode);
+    setLoading(true);
+    const actualMode = isNfceEnabled ? mode : 'simple';
+    setPayMode(actualMode);
     try {
       const body = {
-        items: items.map(i => ({ productId: i.id, quantity: i.quantity, priceUnit: i.priceSell })),
+        items: items.map(i => ({ 
+          productId: i.id, 
+          quantity: i.quantity, 
+          priceUnit: i.effectivePriceSell ?? i.priceSell,
+          modifiers: i.modifiers ? i.modifiers.map(m => ({
+            optionId: m.optionId,
+            componentProductId: m.componentProductId,
+          })) : undefined
+        })),
         payments: payments.map(p => ({ method: p.method, value: p.value, troco: Math.max(0, p.given - p.value) })),
         discount: discountValue,
         cashRegisterId: cashRegister?.id,
         operatorId: operator?.id ?? user?.id,
-        emitirNfce: mode === 'nfce',
-        ...(mode === 'nfce' ? { customerCpf: customerCpf || undefined, customerName: customerName || undefined } : {}),
+        emitirNfce: actualMode === 'nfce',
+        ...(actualMode === 'nfce' ? { customerCpf: customerCpf || undefined, customerName: customerName || undefined } : {}),
       };
       const res = await api.post('/sales/checkout', body);
       setSaleResult(res.data); clearCart();
-      if (mode === 'nfce') { toast.info('NFC-e em processamento...', { duration: 3000 }); setNfcePolling(true); }
+      if (actualMode === 'nfce') { toast.info('NFC-e em processamento...', { duration: 3000 }); setNfcePolling(true); }
       else toast.success('Venda finalizada!');
       // Impressão automática do cupom
       if (autoPrint) {
@@ -683,19 +706,21 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         {/* Footer */}
         <div className="p-6 border-t border-zinc-800 bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex-1 flex flex-col gap-2">
-             <label className={`flex items-center gap-2 font-medium transition ${isOnline ? 'cursor-pointer text-zinc-300 hover:text-white' : 'cursor-not-allowed text-zinc-600'}`}>
-                <input 
-                  type="checkbox" 
-                  className="w-5 h-5 rounded border-zinc-700 bg-zinc-950 text-blue-500 focus:ring-blue-500 accent-blue-600 disabled:opacity-50" 
-                  checked={autoNfce} 
-                  onChange={(e) => {
-                     setAutoNfce(e.target.checked);
-                     localStorage.setItem('7bar_auto_nfce', String(e.target.checked));
-                  }} 
-                  disabled={!isOnline}
-                />
-                Emitir NFC-e automaticamente
-             </label>
+             {isNfceEnabled && (
+               <label className={`flex items-center gap-2 font-medium transition ${isOnline ? 'cursor-pointer text-zinc-300 hover:text-white' : 'cursor-not-allowed text-zinc-600'}`}>
+                  <input 
+                    type="checkbox" 
+                    className="w-5 h-5 rounded border-zinc-700 bg-zinc-950 text-blue-500 focus:ring-blue-500 accent-blue-600 disabled:opacity-50" 
+                    checked={autoNfce} 
+                    onChange={(e) => {
+                       setAutoNfce(e.target.checked);
+                       localStorage.setItem('7bar_auto_nfce', String(e.target.checked));
+                    }} 
+                    disabled={!isOnline}
+                  />
+                  Emitir NFC-e automaticamente
+               </label>
+             )}
              <label className="flex items-center gap-2 font-medium cursor-pointer text-zinc-300 hover:text-white transition">
                 <input 
                   type="checkbox" 
@@ -709,12 +734,12 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                 <Printer size={15} className="text-emerald-400" />
                 Imprimir Cupom automaticamente
              </label>
-             {!isOnline && <span className="text-xs text-orange-400 font-bold bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded-lg w-fit">NFC-e Indisponível Offline</span>}
+             {!isOnline && isNfceEnabled && <span className="text-xs text-orange-400 font-bold bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded-lg w-fit">NFC-e Indisponível Offline</span>}
           </div>
           
           <div className="w-full sm:w-auto">
             {isOnline ? (
-              <button onClick={() => handleConfirm(autoNfce ? 'nfce' : 'simple')} disabled={loading || remaining > 0}
+              <button onClick={() => handleConfirm(isNfceEnabled && autoNfce ? 'nfce' : 'simple')} disabled={loading || remaining > 0}
                 className="w-full sm:w-64 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(37,99,235,0.2)] disabled:shadow-none relative">
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <ShoppingBag size={20} />}
                 Finalizar Venda

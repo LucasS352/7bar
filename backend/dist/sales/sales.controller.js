@@ -32,8 +32,9 @@ let SalesController = class SalesController {
     getNfceStatus(id) {
         return this.salesService.getNfceStatus(id);
     }
-    emitNfce(id) {
-        return this.salesService.emitNfce(id);
+    emitNfce(id, body) {
+        const forceNewNumber = body?.forceNewNumber === true;
+        return this.salesService.emitNfce(id, forceNewNumber);
     }
     async exportXmls(startDate, endDate, res) {
         if (!startDate || !endDate) {
@@ -81,8 +82,9 @@ __decorate([
 __decorate([
     (0, common_1.Post)(':id/emit-nfce'),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], SalesController.prototype, "emitNfce", null);
 __decorate([

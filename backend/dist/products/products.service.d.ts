@@ -1,5 +1,18 @@
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
+import { Prisma } from '@prisma/client';
+interface ModifierOptionInputDto {
+    name: string;
+    componentProductId: string;
+    quantity: number;
+    priceAdjustment?: number;
+}
+interface ModifierGroupInputDto {
+    name: string;
+    minSelected?: number;
+    maxSelected?: number;
+    options: ModifierOptionInputDto[];
+}
 interface ProductCreateDto {
     name: string;
     shortCode?: string | null;
@@ -14,6 +27,10 @@ interface ProductCreateDto {
     cest?: string | null;
     origem?: number;
     imageUrl?: string | null;
+    isComposite?: boolean;
+    volumeUnit?: string | null;
+    volumeCapacity?: number | null;
+    modifierGroups?: ModifierGroupInputDto[];
 }
 interface ProductUpdateDto {
     name?: string;
@@ -30,6 +47,10 @@ interface ProductUpdateDto {
     origem?: number;
     active?: boolean;
     imageUrl?: string | null;
+    isComposite?: boolean;
+    volumeUnit?: string | null;
+    volumeCapacity?: number | null;
+    modifierGroups?: ModifierGroupInputDto[];
 }
 interface BulkItem {
     name: string;
@@ -44,6 +65,9 @@ interface BulkItem {
     cest?: string | null;
     origem?: number;
     imageUrl?: string | null;
+    isComposite?: boolean;
+    volumeUnit?: string | null;
+    volumeCapacity?: number | null;
 }
 export interface TenantSettingsDto {
     allowNegativeStock: boolean;
@@ -53,6 +77,9 @@ export declare class ProductsService {
     private tenantManager;
     private tenantContext;
     private heartPrisma;
+    private catalogCache;
+    private readonly CACHE_TTL;
+    private invalidateCache;
     constructor(tenantManager: TenantConnectionManager, tenantContext: TenantContextService, heartPrisma: HeartPrismaService);
     private getPrisma;
     private nextShortCode;
@@ -71,13 +98,16 @@ export declare class ProductsService {
             unit: string;
             active: boolean;
             imageUrl: string | null;
-            priceCost: import("@prisma/client/runtime/library").Decimal;
-            priceSell: import("@prisma/client/runtime/library").Decimal;
-            stock: import("@prisma/client/runtime/library").Decimal;
+            priceCost: Prisma.Decimal;
+            priceSell: Prisma.Decimal;
+            stock: Prisma.Decimal;
             salesCount: number;
             ncm: string | null;
             cest: string | null;
             origem: number;
+            isComposite: boolean;
+            volumeUnit: string | null;
+            volumeCapacity: Prisma.Decimal | null;
         };
     } | {
         source: string;
@@ -92,58 +122,47 @@ export declare class ProductsService {
             masterCategory: string | null;
         };
     }>;
-    findAll(page?: number, limit?: number): Promise<{
-        data: ({
-            grupoTributacao: {
-                id: string;
-                nome: string;
-                ativo: boolean;
-                csosn: string | null;
-                cstIcms: string | null;
-                cfop: string;
-                aliqIcms: import("@prisma/client/runtime/library").Decimal;
-                redBcIcms: import("@prisma/client/runtime/library").Decimal;
-                cstPis: string;
-                aliqPis: import("@prisma/client/runtime/library").Decimal;
-                cstCofins: string;
-                aliqCofins: import("@prisma/client/runtime/library").Decimal;
-                cstIpi: string | null;
-                aliqIpi: import("@prisma/client/runtime/library").Decimal;
-                createdAt: Date;
-                updatedAt: Date;
-            } | null;
-            category: {
+    findAll(page?: number, limit?: number): Promise<any>;
+    getComposition(id: string): Promise<({
+        options: ({
+            componentProduct: {
                 name: string;
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
+                categoryId: string;
+                grupoTributacaoId: string | null;
+                shortCode: string | null;
+                barcode: string | null;
+                unit: string;
+                active: boolean;
+                imageUrl: string | null;
+                priceCost: Prisma.Decimal;
+                priceSell: Prisma.Decimal;
+                stock: Prisma.Decimal;
+                salesCount: number;
+                ncm: string | null;
+                cest: string | null;
+                origem: number;
+                isComposite: boolean;
+                volumeUnit: string | null;
+                volumeCapacity: Prisma.Decimal | null;
             };
         } & {
             name: string;
             id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            categoryId: string;
-            grupoTributacaoId: string | null;
-            shortCode: string | null;
-            barcode: string | null;
-            unit: string;
-            active: boolean;
-            imageUrl: string | null;
-            priceCost: import("@prisma/client/runtime/library").Decimal;
-            priceSell: import("@prisma/client/runtime/library").Decimal;
-            stock: import("@prisma/client/runtime/library").Decimal;
-            salesCount: number;
-            ncm: string | null;
-            cest: string | null;
-            origem: number;
+            quantity: Prisma.Decimal;
+            groupId: string;
+            componentProductId: string;
+            priceAdjustment: Prisma.Decimal;
         })[];
-        meta: {
-            total: number;
-            page: number;
-            lastPage: number;
-        };
-    }>;
+    } & {
+        name: string;
+        id: string;
+        productId: string;
+        minSelected: number;
+        maxSelected: number;
+    })[]>;
     create(data: ProductCreateDto): Promise<{
         name: string;
         id: string;
@@ -156,13 +175,16 @@ export declare class ProductsService {
         unit: string;
         active: boolean;
         imageUrl: string | null;
-        priceCost: import("@prisma/client/runtime/library").Decimal;
-        priceSell: import("@prisma/client/runtime/library").Decimal;
-        stock: import("@prisma/client/runtime/library").Decimal;
+        priceCost: Prisma.Decimal;
+        priceSell: Prisma.Decimal;
+        stock: Prisma.Decimal;
         salesCount: number;
         ncm: string | null;
         cest: string | null;
         origem: number;
+        isComposite: boolean;
+        volumeUnit: string | null;
+        volumeCapacity: Prisma.Decimal | null;
     }>;
     update(id: string, data: ProductUpdateDto): Promise<{
         name: string;
@@ -176,34 +198,18 @@ export declare class ProductsService {
         unit: string;
         active: boolean;
         imageUrl: string | null;
-        priceCost: import("@prisma/client/runtime/library").Decimal;
-        priceSell: import("@prisma/client/runtime/library").Decimal;
-        stock: import("@prisma/client/runtime/library").Decimal;
+        priceCost: Prisma.Decimal;
+        priceSell: Prisma.Decimal;
+        stock: Prisma.Decimal;
         salesCount: number;
         ncm: string | null;
         cest: string | null;
         origem: number;
+        isComposite: boolean;
+        volumeUnit: string | null;
+        volumeCapacity: Prisma.Decimal | null;
     }>;
-    remove(id: string): Promise<{
-        name: string;
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        categoryId: string;
-        grupoTributacaoId: string | null;
-        shortCode: string | null;
-        barcode: string | null;
-        unit: string;
-        active: boolean;
-        imageUrl: string | null;
-        priceCost: import("@prisma/client/runtime/library").Decimal;
-        priceSell: import("@prisma/client/runtime/library").Decimal;
-        stock: import("@prisma/client/runtime/library").Decimal;
-        salesCount: number;
-        ncm: string | null;
-        cest: string | null;
-        origem: number;
-    }>;
+    remove(id: string): Promise<any>;
     addStock(productId: string, quantity: number, reason?: string): Promise<{
         product: {
             name: string;
@@ -217,13 +223,16 @@ export declare class ProductsService {
             unit: string;
             active: boolean;
             imageUrl: string | null;
-            priceCost: import("@prisma/client/runtime/library").Decimal;
-            priceSell: import("@prisma/client/runtime/library").Decimal;
-            stock: import("@prisma/client/runtime/library").Decimal;
+            priceCost: Prisma.Decimal;
+            priceSell: Prisma.Decimal;
+            stock: Prisma.Decimal;
             salesCount: number;
             ncm: string | null;
             cest: string | null;
             origem: number;
+            isComposite: boolean;
+            volumeUnit: string | null;
+            volumeCapacity: Prisma.Decimal | null;
         };
         quantityAdded: number;
     }>;
@@ -235,5 +244,8 @@ export declare class ProductsService {
     }>;
     getSettings(): Promise<TenantSettingsDto>;
     saveSettings(data: TenantSettingsDto): Promise<TenantSettingsDto>;
+    uploadPhoto(tenantId: string, file: Express.Multer.File): Promise<{
+        imageUrl: string;
+    }>;
 }
 export {};

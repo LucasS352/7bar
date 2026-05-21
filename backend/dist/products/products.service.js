@@ -13,12 +13,22 @@ exports.ProductsService = void 0;
 const common_1 = require("@nestjs/common");
 const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
 const tenant_context_service_1 = require("../prisma/tenant-context.service");
+const client_1 = require("@prisma/client");
 const heart_prisma_service_1 = require("../prisma/heart-prisma.service");
 let ProductsService = class ProductsService {
+    invalidateCache(tenantId) {
+        for (const key of this.catalogCache.keys()) {
+            if (key.startsWith(tenantId)) {
+                this.catalogCache.delete(key);
+            }
+        }
+    }
     constructor(tenantManager, tenantContext, heartPrisma) {
         this.tenantManager = tenantManager;
         this.tenantContext = tenantContext;
         this.heartPrisma = heartPrisma;
+        this.catalogCache = new Map();
+        this.CACHE_TTL = 10 * 60 * 1000;
     }
     async getPrisma() {
         const { tenantId, databaseUrl } = this.tenantContext.get();
@@ -48,6 +58,14 @@ let ProductsService = class ProductsService {
             data.imageUrl = null;
         if (data.origem !== undefined)
             data.origem = parseInt(String(data.origem)) || 0;
+        if ('volumeUnit' in data && data.volumeUnit === '')
+            data.volumeUnit = null;
+        if ('volumeCapacity' in data && !data.volumeCapacity && data.volumeCapacity !== 0) {
+            data.volumeCapacity = null;
+        }
+        else if ('volumeCapacity' in data && data.volumeCapacity != null) {
+            data.volumeCapacity = Number(data.volumeCapacity);
+        }
         return data;
     }
     async lookupBarcode(barcode) {
@@ -85,19 +103,37 @@ let ProductsService = class ProductsService {
         throw new common_1.NotFoundException('Produto não encontrado em nenhum catálogo.');
     }
     async findAll(page = 1, limit = 50) {
+        const { tenantId } = this.tenantContext.get();
+        const cacheKey = `${tenantId}_p_${page}_l_${limit}`;
+        const cached = this.catalogCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
+            return cached.data;
+        }
         const prisma = await this.getPrisma();
         const skip = (page - 1) * limit;
         const [total, data] = await Promise.all([
             prisma.product.count({ where: { active: true } }),
             prisma.product.findMany({
                 where: { active: true },
-                include: { category: true, grupoTributacao: true },
+                include: {
+                    category: true,
+                    grupoTributacao: true,
+                    modifierGroups: {
+                        include: {
+                            options: {
+                                include: {
+                                    componentProduct: true
+                                }
+                            }
+                        }
+                    }
+                },
                 orderBy: { name: 'asc' },
                 skip,
                 take: limit,
             }),
         ]);
-        return {
+        const result = {
             data,
             meta: {
                 total,
@@ -105,10 +141,26 @@ let ProductsService = class ProductsService {
                 lastPage: Math.ceil(total / limit),
             },
         };
+        this.catalogCache.set(cacheKey, { data: result, timestamp: Date.now() });
+        return result;
+    }
+    async getComposition(id) {
+        const prisma = await this.getPrisma();
+        return prisma.productModifierGroup.findMany({
+            where: { productId: id },
+            include: {
+                options: {
+                    include: {
+                        componentProduct: true,
+                    },
+                },
+            },
+        });
     }
     async create(data) {
         const prisma = await this.getPrisma();
-        const sanitized = this.sanitize(data);
+        const { modifierGroups, ...rest } = data;
+        const sanitized = this.sanitize(rest);
         if (!sanitized.name?.trim()) {
             throw new common_1.BadRequestException('Nome da Mercadoria é obrigatório.');
         }
@@ -133,7 +185,46 @@ let ProductsService = class ProductsService {
         }
         if (!sanitized.unit)
             sanitized.unit = 'UN';
-        const product = await prisma.product.create({ data: sanitized });
+        const isComposite = data.isComposite ?? false;
+        const volumeUnit = data.volumeUnit || null;
+        const volumeCapacity = data.volumeCapacity !== undefined && data.volumeCapacity !== null ? new client_1.Prisma.Decimal(data.volumeCapacity) : null;
+        const product = await prisma.product.create({
+            data: {
+                name: sanitized.name,
+                shortCode: sanitized.shortCode,
+                barcode: sanitized.barcode,
+                unit: sanitized.unit,
+                priceCost: sanitized.priceCost !== undefined ? new client_1.Prisma.Decimal(sanitized.priceCost) : new client_1.Prisma.Decimal(0),
+                priceSell: new client_1.Prisma.Decimal(sanitized.priceSell),
+                stock: sanitized.stock !== undefined ? new client_1.Prisma.Decimal(sanitized.stock) : new client_1.Prisma.Decimal(0),
+                categoryId: sanitized.categoryId,
+                grupoTributacaoId: sanitized.grupoTributacaoId,
+                ncm: sanitized.ncm,
+                cest: sanitized.cest,
+                origem: sanitized.origem,
+                imageUrl: sanitized.imageUrl,
+                isComposite,
+                volumeUnit,
+                volumeCapacity,
+                ...(isComposite && modifierGroups && modifierGroups.length > 0 ? {
+                    modifierGroups: {
+                        create: modifierGroups.map(group => ({
+                            name: group.name,
+                            minSelected: group.minSelected ?? 1,
+                            maxSelected: group.maxSelected ?? 1,
+                            options: {
+                                create: group.options.map(opt => ({
+                                    name: opt.name,
+                                    componentProductId: opt.componentProductId,
+                                    quantity: new client_1.Prisma.Decimal(opt.quantity),
+                                    priceAdjustment: new client_1.Prisma.Decimal(opt.priceAdjustment ?? 0),
+                                }))
+                            }
+                        }))
+                    }
+                } : {})
+            }
+        });
         if (sanitized.stock && Number(sanitized.stock) > 0) {
             await prisma.inventoryLog.create({
                 data: {
@@ -145,18 +236,79 @@ let ProductsService = class ProductsService {
                 },
             });
         }
+        this.invalidateCache(this.tenantContext.get().tenantId);
         return product;
     }
     async update(id, data) {
-        const sanitized = this.sanitize(data);
+        const { modifierGroups, ...rest } = data;
+        const sanitized = this.sanitize(rest);
         const prisma = await this.getPrisma();
         const oldProduct = await prisma.product.findUnique({ where: { id } });
         if (!oldProduct)
             throw new common_1.NotFoundException('Produto não encontrado.');
         const { shortCode: _ignored, ...updateData } = sanitized;
         void _ignored;
-        return prisma.$transaction(async (tx) => {
-            const product = await tx.product.update({ where: { id }, data: updateData });
+        const updatedProduct = await prisma.$transaction(async (tx) => {
+            const productPayload = {};
+            if (updateData.name !== undefined)
+                productPayload.name = updateData.name;
+            if (updateData.barcode !== undefined)
+                productPayload.barcode = updateData.barcode;
+            if (updateData.unit !== undefined)
+                productPayload.unit = updateData.unit;
+            if (updateData.priceCost !== undefined)
+                productPayload.priceCost = new client_1.Prisma.Decimal(updateData.priceCost);
+            if (updateData.priceSell !== undefined)
+                productPayload.priceSell = new client_1.Prisma.Decimal(updateData.priceSell);
+            if (updateData.stock !== undefined)
+                productPayload.stock = new client_1.Prisma.Decimal(updateData.stock);
+            if (updateData.categoryId !== undefined)
+                productPayload.categoryId = updateData.categoryId;
+            if (updateData.grupoTributacaoId !== undefined)
+                productPayload.grupoTributacaoId = updateData.grupoTributacaoId;
+            if (updateData.ncm !== undefined)
+                productPayload.ncm = updateData.ncm;
+            if (updateData.cest !== undefined)
+                productPayload.cest = updateData.cest;
+            if (updateData.origem !== undefined)
+                productPayload.origem = updateData.origem;
+            if (updateData.imageUrl !== undefined)
+                productPayload.imageUrl = updateData.imageUrl;
+            if (updateData.active !== undefined)
+                productPayload.active = updateData.active;
+            productPayload.isComposite = data.isComposite ?? oldProduct.isComposite;
+            productPayload.volumeUnit = data.volumeUnit !== undefined ? data.volumeUnit : oldProduct.volumeUnit;
+            productPayload.volumeCapacity = data.volumeCapacity !== undefined
+                ? (data.volumeCapacity !== null ? new client_1.Prisma.Decimal(data.volumeCapacity) : null)
+                : oldProduct.volumeCapacity;
+            const product = await tx.product.update({
+                where: { id },
+                data: productPayload
+            });
+            if (productPayload.isComposite === false) {
+                await tx.productModifierGroup.deleteMany({ where: { productId: id } });
+            }
+            else if (modifierGroups !== undefined) {
+                await tx.productModifierGroup.deleteMany({ where: { productId: id } });
+                for (const group of modifierGroups) {
+                    await tx.productModifierGroup.create({
+                        data: {
+                            productId: id,
+                            name: group.name,
+                            minSelected: group.minSelected ?? 1,
+                            maxSelected: group.maxSelected ?? 1,
+                            options: {
+                                create: group.options.map(opt => ({
+                                    name: opt.name,
+                                    componentProductId: opt.componentProductId,
+                                    quantity: new client_1.Prisma.Decimal(opt.quantity),
+                                    priceAdjustment: new client_1.Prisma.Decimal(opt.priceAdjustment ?? 0),
+                                }))
+                            }
+                        }
+                    });
+                }
+            }
             if (sanitized.stock !== undefined && Number(sanitized.stock) !== Number(oldProduct.stock)) {
                 const diff = Number(sanitized.stock) - Number(oldProduct.stock);
                 await tx.inventoryLog.create({
@@ -170,6 +322,8 @@ let ProductsService = class ProductsService {
             }
             return product;
         });
+        this.invalidateCache(this.tenantContext.get().tenantId);
+        return updatedProduct;
     }
     async remove(id) {
         const prisma = await this.getPrisma();
@@ -177,14 +331,19 @@ let ProductsService = class ProductsService {
             prisma.saleItem.count({ where: { productId: id } }),
             prisma.inventoryLog.count({ where: { productId: id } }),
         ]);
+        let result;
         if (saleCount > 0 || logCount > 0) {
-            return prisma.product.update({
+            result = await prisma.product.update({
                 where: { id },
                 data: { active: false },
             });
         }
-        await prisma.inventoryLog.deleteMany({ where: { productId: id } });
-        return prisma.product.delete({ where: { id } });
+        else {
+            await prisma.inventoryLog.deleteMany({ where: { productId: id } });
+            result = await prisma.product.delete({ where: { id } });
+        }
+        this.invalidateCache(this.tenantContext.get().tenantId);
+        return result;
     }
     async addStock(productId, quantity, reason) {
         if (quantity <= 0) {
@@ -197,7 +356,7 @@ let ProductsService = class ProductsService {
                 throw new common_1.NotFoundException('Produto não encontrado.');
             const updated = await tx.product.update({
                 where: { id: productId },
-                data: { stock: { increment: quantity } },
+                data: { stock: { increment: new client_1.Prisma.Decimal(quantity) } },
             });
             await tx.inventoryLog.create({
                 data: {
@@ -251,13 +410,16 @@ let ProductsService = class ProductsService {
                             data: {
                                 priceCost: item.priceCost ?? existing.priceCost,
                                 priceSell: item.priceSell ?? existing.priceSell,
-                                stock: { increment: stockToAdd },
+                                stock: { increment: new client_1.Prisma.Decimal(stockToAdd) },
                                 ...(item.categoryId && { categoryId: item.categoryId }),
                                 ...(item.grupoTributacaoId && { grupoTributacaoId: item.grupoTributacaoId }),
                                 ...(item.ncm && { ncm: item.ncm }),
                                 ...(item.cest && { cest: item.cest }),
                                 ...(item.origem !== undefined && { origem: parseInt(String(item.origem)) || 0 }),
                                 ...(item.imageUrl && { imageUrl: item.imageUrl }),
+                                ...(item.isComposite !== undefined && { isComposite: item.isComposite }),
+                                ...(item.volumeUnit !== undefined && { volumeUnit: item.volumeUnit === '' ? null : item.volumeUnit }),
+                                ...(item.volumeCapacity !== undefined && { volumeCapacity: item.volumeCapacity ? new client_1.Prisma.Decimal(item.volumeCapacity) : null }),
                             },
                         });
                         if (stockToAdd > 0) {
@@ -288,6 +450,9 @@ let ProductsService = class ProductsService {
                                 cest: item.cest || null,
                                 origem: item.origem !== undefined ? parseInt(String(item.origem)) || 0 : 0,
                                 imageUrl: item.imageUrl || null,
+                                isComposite: item.isComposite !== undefined ? !!item.isComposite : false,
+                                volumeUnit: item.volumeUnit === '' ? null : (item.volumeUnit || null),
+                                volumeCapacity: item.volumeCapacity ? new client_1.Prisma.Decimal(item.volumeCapacity) : null,
                             },
                         });
                         byName.set(item.name.trim().toLowerCase(), created);
@@ -303,6 +468,7 @@ let ProductsService = class ProductsService {
                 }
             });
         }
+        this.invalidateCache(this.tenantContext.get().tenantId);
         return {
             success: true,
             processed: importedCount,
@@ -327,6 +493,21 @@ let ProductsService = class ProductsService {
             create: { id: 'singleton', allowNegativeStock: data.allowNegativeStock },
         });
         return { allowNegativeStock: settings.allowNegativeStock };
+    }
+    async uploadPhoto(tenantId, file) {
+        const fs = require('fs');
+        const crypto = require('crypto');
+        const path = require('path');
+        const dir = path.join(process.cwd(), 'uploads', 'products');
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        const ext = path.extname(file.originalname);
+        const filename = `${tenantId}_${crypto.randomBytes(8).toString('hex')}${ext}`;
+        const filePath = path.join(dir, filename);
+        fs.writeFileSync(filePath, file.buffer);
+        const imageUrl = `/api/products/uploads/images/${filename}`;
+        return { imageUrl };
     }
 };
 exports.ProductsService = ProductsService;

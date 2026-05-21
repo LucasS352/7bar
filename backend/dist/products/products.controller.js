@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProductsController = void 0;
 const common_1 = require("@nestjs/common");
+const platform_express_1 = require("@nestjs/platform-express");
 const products_service_1 = require("./products.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let ProductsController = class ProductsController {
@@ -29,6 +30,11 @@ let ProductsController = class ProductsController {
     create(body) {
         return this.productsService.create(body);
     }
+    async uploadPhoto(file, req) {
+        if (!file)
+            throw new common_1.BadRequestException('Arquivo não enviado.');
+        return this.productsService.uploadPhoto(req.user.tenantId, file);
+    }
     bulkEntry(items) {
         return this.productsService.bulkEntry(items);
     }
@@ -40,6 +46,9 @@ let ProductsController = class ProductsController {
     }
     saveSettings(body) {
         return this.productsService.saveSettings(body);
+    }
+    getComposition(id) {
+        return this.productsService.getComposition(id);
     }
     update(id, body) {
         return this.productsService.update(id, body);
@@ -72,6 +81,15 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "create", null);
 __decorate([
+    (0, common_1.Post)('upload'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file')),
+    __param(0, (0, common_1.UploadedFile)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], ProductsController.prototype, "uploadPhoto", null);
+__decorate([
     (0, common_1.Post)('bulk'),
     __param(0, (0, common_1.Body)('items')),
     __metadata("design:type", Function),
@@ -100,6 +118,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ProductsController.prototype, "saveSettings", null);
+__decorate([
+    (0, common_1.Get)(':id/composition'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "getComposition", null);
 __decorate([
     (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),

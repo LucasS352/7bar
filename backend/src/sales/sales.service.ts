@@ -57,18 +57,29 @@ export class SalesService {
       const allowNegativeStock = tenantSettings?.allowNegativeStock ?? false;
 
       // ─── 1. Validar estoque e montar snapshot fiscal de cada item ───────────
-      // OTIMIZAÇÃO CRÍTICA (Fase 1): Buscamos todos os produtos em lote (Batch Fetching)
       const productIds = data.items.map((item: any) => item.productId);
+      
+      const modifierComponentIds = data.items
+        .filter((i: any) => i.modifiers && i.modifiers.length > 0)
+        .flatMap((i: any) => i.modifiers.map((m: any) => m.componentProductId));
+
+      const allProductIds = Array.from(new Set([...productIds, ...modifierComponentIds]));
+
       const productsInDb = await tx.product.findMany({
-        where: { id: { in: productIds } },
-        include: { grupoTributacao: true },
+        where: { id: { in: allProductIds } },
+        include: { 
+          grupoTributacao: true,
+          modifierGroups: {
+            include: {
+              options: true
+            }
+          }
+        },
       });
 
-      // Cria um mapa para acesso rápido em memória O(1)
       const productMap = new Map(productsInDb.map((p: any) => [p.id, p]));
 
       const inventoryLogsToCreate: any[] = [];
-      const productUpdatesPromises: any[] = [];
 
       for (const item of data.items) {
         const product = productMap.get(item.productId) as any;
@@ -78,33 +89,117 @@ export class SalesService {
         }
 
         const qty = Number(item.quantity);
+        const itemModifiersDataToCreate: any[] = [];
 
-        // Valida estoque apenas se a flag estiver desativada (Validação em memória, zero queries extras)
-        if (!allowNegativeStock && Number(product.stock) < qty) {
-          throw new BadRequestException(`Estoque insuficiente para o produto: ${product.name} (disponível: ${product.stock}, tentado: ${qty})`);
-        }
-
-        // Prepara a query de atualização de estoque para execução paralela futura
-        productUpdatesPromises.push(
-          tx.product.update({
+        if (product.isComposite) {
+          // Increment parent composite product salesCount
+          await tx.product.update({
             where: { id: item.productId },
             data: { 
-              stock: { decrement: new Prisma.Decimal(qty) },
               salesCount: { increment: qty }
             },
-          })
-        );
+          });
+
+          const chosenModifiers = item.modifiers || [];
+          for (const chosenMod of chosenModifiers) {
+            let foundOption: any = null;
+            for (const group of product.modifierGroups || []) {
+              foundOption = (group.options || []).find(
+                (opt: any) => opt.id === chosenMod.optionId || opt.componentProductId === chosenMod.componentProductId
+              );
+              if (foundOption) break;
+            }
+
+            if (!foundOption) {
+              throw new BadRequestException(`Opção de adicional inválida para o produto composto: ${product.name}`);
+            }
+
+            const componentProduct = productMap.get(foundOption.componentProductId) as any;
+            if (!componentProduct) {
+              throw new BadRequestException(`Produto ingrediente ${foundOption.name} não encontrado.`);
+            }
+
+            const optionQty = Number(foundOption.quantity);
+            const capacity = Number(componentProduct.volumeCapacity) || 1;
+            const fractionToDecrement = qty * (optionQty / capacity);
+
+            if (!allowNegativeStock) {
+              const updateResult = await tx.product.updateMany({
+                where: {
+                  id: componentProduct.id,
+                  stock: { gte: new Prisma.Decimal(fractionToDecrement) }
+                },
+                data: {
+                  stock: { decrement: new Prisma.Decimal(fractionToDecrement) }
+                }
+              });
+              if (updateResult.count === 0) {
+                throw new BadRequestException(`Estoque insuficiente para o ingrediente: ${componentProduct.name} (disponível: ${componentProduct.stock}, necessário: ${fractionToDecrement.toFixed(3)})`);
+              }
+            } else {
+              await tx.product.update({
+                where: { id: componentProduct.id },
+                data: {
+                  stock: { decrement: new Prisma.Decimal(fractionToDecrement) }
+                }
+              });
+            }
+
+            inventoryLogsToCreate.push({
+              productId: componentProduct.id,
+              type: 'OUT',
+              quantity: fractionToDecrement,
+              reason: `Venda PDV (Combo: ${product.name})`,
+            });
+
+            itemModifiersDataToCreate.push({
+              componentProductId: componentProduct.id,
+              name: foundOption.name,
+              quantity: new Prisma.Decimal(optionQty),
+              priceAdjustment: new Prisma.Decimal(foundOption.priceAdjustment),
+            });
+          }
+        } else {
+          if (!allowNegativeStock) {
+            const updateResult = await tx.product.updateMany({
+              where: {
+                id: item.productId,
+                stock: { gte: new Prisma.Decimal(qty) }
+              },
+              data: {
+                stock: { decrement: new Prisma.Decimal(qty) },
+                salesCount: { increment: qty }
+              }
+            });
+            if (updateResult.count === 0) {
+              throw new BadRequestException(`Estoque insuficiente para o produto: ${product.name} (disponível: ${product.stock}, tentado: ${qty})`);
+            }
+          } else {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { 
+                stock: { decrement: new Prisma.Decimal(qty) },
+                salesCount: { increment: qty }
+              },
+            });
+          }
+
+          inventoryLogsToCreate.push({
+            productId: product.id,
+            type: 'SALE',
+            quantity: qty,
+            reason: 'Venda PDV',
+          });
+        }
 
         const priceUnit = new Prisma.Decimal(item.priceUnit);
         const qtyDecimal = new Prisma.Decimal(qty);
         const itemSubtotal = priceUnit.mul(qtyDecimal).toDecimalPlaces(2);
         
-        // Accumulate subtotal (requires subtotal to be Prisma.Decimal as well)
         subtotal = subtotal.add(itemSubtotal);
 
         const gt = product.grupoTributacao;
 
-        // Snapshot fiscal IMUTÁVEL — congelado no momento da venda
         saleItemsData.push({
           productId: product.id,
           productName: item.fiscalSnapshot?.productName ?? product.name,
@@ -113,7 +208,6 @@ export class SalesService {
           priceUnit,
           discount: item.fiscalSnapshot?.discount ?? 0,
           subtotal: item.fiscalSnapshot?.subtotal ?? itemSubtotal,
-          // Fiscal
           ncm:        item.fiscalSnapshot?.ncm ?? product.ncm   ?? null,
           cest:       item.fiscalSnapshot?.cest ?? product.cest  ?? null,
           cfop:       item.fiscalSnapshot?.cfop ?? gt?.cfop      ?? '5102',
@@ -121,29 +215,24 @@ export class SalesService {
           csosn:      item.fiscalSnapshot?.csosn ?? gt?.csosn     ?? null,
           cstIcms:    item.fiscalSnapshot?.cstIcms ?? gt?.cstIcms   ?? null,
           aliqIcms:   item.fiscalSnapshot?.aliqIcms ?? Number(gt?.aliqIcms ?? 0),
-          valorIcms:  0, // calculado pelo PHP no momento da emissão
+          valorIcms:  0,
           cstPis:     item.fiscalSnapshot?.cstPis ?? gt?.cstPis    ?? '99',
           aliqPis:    item.fiscalSnapshot?.aliqPis ?? Number(gt?.aliqPis ?? 0),
           valorPis:   0,
           cstCofins:  item.fiscalSnapshot?.cstCofins ?? gt?.cstCofins ?? '99',
           aliqCofins: item.fiscalSnapshot?.aliqCofins ?? Number(gt?.aliqCofins ?? 0),
           valorCofins: 0,
-        });
-
-        // Prepara Log de Inventário para bulk insert (createMany)
-        inventoryLogsToCreate.push({
-          productId: product.id,
-          type: 'SALE',
-          quantity: qty,
-          reason: 'Venda PDV',
+          ...(itemModifiersDataToCreate.length > 0 ? {
+            modifiers: {
+              create: itemModifiersDataToCreate
+            }
+          } : {})
         });
       }
 
-      // Dispara todas as atualizações de estoque e cria todos os logs PARALELAMENTE
-      await Promise.all([
-        ...productUpdatesPromises,
-        tx.inventoryLog.createMany({ data: inventoryLogsToCreate })
-      ]);
+      if (inventoryLogsToCreate.length > 0) {
+        await tx.inventoryLog.createMany({ data: inventoryLogsToCreate });
+      }
 
       const discount = new Prisma.Decimal(data.discount || 0);
       const total = subtotal.sub(discount).toDecimalPlaces(2);
@@ -356,6 +445,7 @@ export class SalesService {
           payments: true,
           items: { include: { product: true } },
           customer: true,
+          operator: true,
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -425,7 +515,7 @@ export class SalesService {
   }
 
   /** Emissão manual / Reemissão de NFC-e para vendas já salvas */
-  async emitNfce(saleId: string) {
+  async emitNfce(saleId: string, forceNewNumber = false) {
     const prisma = await this.getPrisma();
     
     const sale = await prisma.sale.findUnique({
@@ -436,14 +526,63 @@ export class SalesService {
     if (!sale) throw new NotFoundException('Venda não encontrada');
     if (sale.nfceStatus === 'autorizada') throw new BadRequestException('NFC-e já autorizada para esta venda');
 
+    // 1. Atualizar informações fiscais dos itens da venda com os dados mais recentes dos produtos
+    for (const item of sale.items) {
+      if (item.productId) {
+        const currentProduct = await prisma.product.findUnique({
+          where: { id: item.productId },
+          include: { grupoTributacao: true }
+        });
+        if (currentProduct) {
+          const gt = currentProduct.grupoTributacao;
+          const updatedFields = {
+            productName: currentProduct.name,
+            unit: currentProduct.unit || 'UN',
+            ncm: currentProduct.ncm ?? null,
+            cest: currentProduct.cest ?? null,
+            cfop: gt?.cfop ?? '5102',
+            origem: currentProduct.origem ?? 0,
+            csosn: gt?.csosn ?? null,
+            cstIcms: gt?.cstIcms ?? null,
+            aliqIcms: Number(gt?.aliqIcms ?? 0),
+            cstPis: gt?.cstPis ?? '99',
+            aliqPis: Number(gt?.aliqPis ?? 0),
+            cstCofins: gt?.cstCofins ?? '99',
+            aliqCofins: Number(gt?.aliqCofins ?? 0),
+          };
+
+          await prisma.saleItem.update({
+            where: { id: item.id },
+            data: updatedFields
+          });
+
+          // Atualizar objeto em memória para a emissão em background
+          Object.assign(item, {
+            ...updatedFields,
+            aliqIcms: new Prisma.Decimal(updatedFields.aliqIcms),
+            aliqPis: new Prisma.Decimal(updatedFields.aliqPis),
+            aliqCofins: new Prisma.Decimal(updatedFields.aliqCofins),
+          });
+        }
+      }
+    }
+
+    const { tenantId, databaseUrl } = this.tenantContext.get();
+    const tenant = await this.heartPrisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
+    const configuredSerie = tenant?.nfceSerie || 1;
+
     let nfceNumero = sale.nfceNumero;
     let nfceSerie = sale.nfceSerie;
-    if (!nfceNumero) {
-       nfceSerie = 1;
+
+    // Se não tinha número, ou se forçamos um novo número
+    if (!nfceNumero || forceNewNumber) {
+       nfceSerie = configuredSerie;
        const numeracao = await prisma.numeracaoNfce.upsert({
-          where: { serie: nfceSerie },
+          where: { serie: configuredSerie },
           update: { ultimo: { increment: 1 } },
-          create: { serie: nfceSerie, ultimo: 1 },
+          create: { serie: configuredSerie, ultimo: 1 },
        });
        nfceNumero = numeracao.ultimo;
     }
@@ -457,7 +596,6 @@ export class SalesService {
     sale.nfceNumero = nfceNumero;
     sale.nfceSerie = nfceSerie;
 
-    const { tenantId, databaseUrl } = this.tenantContext.get();
     setImmediate(() => this.dispararNfce(tenantId, databaseUrl, sale));
 
     return { message: 'Emissão de NFC-e solicitada com sucesso', status: 'pendente' };

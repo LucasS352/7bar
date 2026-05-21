@@ -102,8 +102,15 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  saleItems     SaleItem[]
-  inventoryLogs InventoryLog[]
+  isComposite    Boolean  @default(false)
+  volumeUnit     String?  // ML, UN
+  volumeCapacity Decimal? @db.Decimal(10, 3)
+
+  saleItems           SaleItem[]
+  inventoryLogs       InventoryLog[]
+  modifierGroups      ProductModifierGroup[]  @relation("ProductModifiers")
+  modifierOptionsUsed ProductModifierOption[] @relation("ComponentProduct")
+  saleItemModifiers   SaleItemModifier[]      @relation("ComponentProduct")
 
   @@map("products")
 }
@@ -239,6 +246,8 @@ model SaleItem {
   aliqCofins Decimal @default(0) @db.Decimal(5, 2)
   valorCofins Decimal @default(0) @db.Decimal(10, 2)
 
+  modifiers SaleItemModifier[]
+
   @@map("sale_items")
 }
 
@@ -340,4 +349,51 @@ model TenantSettings {
   discountPin        String? 
 
   @@map("tenant_settings")
+}
+
+// ------------------------------------------------------------
+//  ProductModifierGroup — grupos de adicionais (ex: "Escolha o Gelo")
+// ------------------------------------------------------------
+model ProductModifierGroup {
+  id          String                  @id @default(uuid())
+  productId   String
+  product     Product                 @relation("ProductModifiers", fields: [productId], references: [id], onDelete: Cascade)
+  name        String                  // ex: "Escolha o Energético"
+  minSelected Int                     @default(1)
+  maxSelected Int                     @default(1)
+  options     ProductModifierOption[]
+
+  @@map("product_modifier_groups")
+}
+
+// ------------------------------------------------------------
+//  ProductModifierOption — opções de adicionais vinculadas a produtos reais
+// ------------------------------------------------------------
+model ProductModifierOption {
+  id                 String               @id @default(uuid())
+  groupId            String
+  group              ProductModifierGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name               String               // ex: "TNT"
+  componentProductId String
+  componentProduct   Product              @relation("ComponentProduct", fields: [componentProductId], references: [id], onDelete: Restrict)
+  quantity           Decimal              @db.Decimal(10, 3) // ex: 100.000 para ML, 1.000 para UN
+  priceAdjustment    Decimal              @default(0) @db.Decimal(10, 2)
+
+  @@map("product_modifier_options")
+}
+
+// ------------------------------------------------------------
+//  SaleItemModifier — persistência das opções escolhidas na venda
+// ------------------------------------------------------------
+model SaleItemModifier {
+  id                 String   @id @default(uuid())
+  saleItemId         String
+  saleItem           SaleItem @relation(fields: [saleItemId], references: [id], onDelete: Cascade)
+  componentProductId String
+  componentProduct   Product  @relation("ComponentProduct", fields: [componentProductId], references: [id])
+  name               String   // ex: "TNT"
+  quantity           Decimal  @db.Decimal(10, 3)
+  priceAdjustment    Decimal  @db.Decimal(10, 2)
+
+  @@map("sale_item_modifiers")
 }

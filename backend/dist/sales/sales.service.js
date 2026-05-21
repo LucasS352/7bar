@@ -56,29 +56,123 @@ let SalesService = SalesService_1 = class SalesService {
             const tenantSettings = await tx.tenantSettings.findUnique({ where: { id: 'singleton' } });
             const allowNegativeStock = tenantSettings?.allowNegativeStock ?? false;
             const productIds = data.items.map((item) => item.productId);
+            const modifierComponentIds = data.items
+                .filter((i) => i.modifiers && i.modifiers.length > 0)
+                .flatMap((i) => i.modifiers.map((m) => m.componentProductId));
+            const allProductIds = Array.from(new Set([...productIds, ...modifierComponentIds]));
             const productsInDb = await tx.product.findMany({
-                where: { id: { in: productIds } },
-                include: { grupoTributacao: true },
+                where: { id: { in: allProductIds } },
+                include: {
+                    grupoTributacao: true,
+                    modifierGroups: {
+                        include: {
+                            options: true
+                        }
+                    }
+                },
             });
             const productMap = new Map(productsInDb.map((p) => [p.id, p]));
             const inventoryLogsToCreate = [];
-            const productUpdatesPromises = [];
             for (const item of data.items) {
                 const product = productMap.get(item.productId);
                 if (!product) {
                     throw new common_1.BadRequestException(`Produto ${item.productId} não encontrado no banco de dados.`);
                 }
                 const qty = Number(item.quantity);
-                if (!allowNegativeStock && Number(product.stock) < qty) {
-                    throw new common_1.BadRequestException(`Estoque insuficiente para o produto: ${product.name} (disponível: ${product.stock}, tentado: ${qty})`);
+                const itemModifiersDataToCreate = [];
+                if (product.isComposite) {
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: {
+                            salesCount: { increment: qty }
+                        },
+                    });
+                    const chosenModifiers = item.modifiers || [];
+                    for (const chosenMod of chosenModifiers) {
+                        let foundOption = null;
+                        for (const group of product.modifierGroups || []) {
+                            foundOption = (group.options || []).find((opt) => opt.id === chosenMod.optionId || opt.componentProductId === chosenMod.componentProductId);
+                            if (foundOption)
+                                break;
+                        }
+                        if (!foundOption) {
+                            throw new common_1.BadRequestException(`Opção de adicional inválida para o produto composto: ${product.name}`);
+                        }
+                        const componentProduct = productMap.get(foundOption.componentProductId);
+                        if (!componentProduct) {
+                            throw new common_1.BadRequestException(`Produto ingrediente ${foundOption.name} não encontrado.`);
+                        }
+                        const optionQty = Number(foundOption.quantity);
+                        const capacity = Number(componentProduct.volumeCapacity) || 1;
+                        const fractionToDecrement = qty * (optionQty / capacity);
+                        if (!allowNegativeStock) {
+                            const updateResult = await tx.product.updateMany({
+                                where: {
+                                    id: componentProduct.id,
+                                    stock: { gte: new client_1.Prisma.Decimal(fractionToDecrement) }
+                                },
+                                data: {
+                                    stock: { decrement: new client_1.Prisma.Decimal(fractionToDecrement) }
+                                }
+                            });
+                            if (updateResult.count === 0) {
+                                throw new common_1.BadRequestException(`Estoque insuficiente para o ingrediente: ${componentProduct.name} (disponível: ${componentProduct.stock}, necessário: ${fractionToDecrement.toFixed(3)})`);
+                            }
+                        }
+                        else {
+                            await tx.product.update({
+                                where: { id: componentProduct.id },
+                                data: {
+                                    stock: { decrement: new client_1.Prisma.Decimal(fractionToDecrement) }
+                                }
+                            });
+                        }
+                        inventoryLogsToCreate.push({
+                            productId: componentProduct.id,
+                            type: 'OUT',
+                            quantity: fractionToDecrement,
+                            reason: `Venda PDV (Combo: ${product.name})`,
+                        });
+                        itemModifiersDataToCreate.push({
+                            componentProductId: componentProduct.id,
+                            name: foundOption.name,
+                            quantity: new client_1.Prisma.Decimal(optionQty),
+                            priceAdjustment: new client_1.Prisma.Decimal(foundOption.priceAdjustment),
+                        });
+                    }
                 }
-                productUpdatesPromises.push(tx.product.update({
-                    where: { id: item.productId },
-                    data: {
-                        stock: { decrement: qty },
-                        salesCount: { increment: qty }
-                    },
-                }));
+                else {
+                    if (!allowNegativeStock) {
+                        const updateResult = await tx.product.updateMany({
+                            where: {
+                                id: item.productId,
+                                stock: { gte: new client_1.Prisma.Decimal(qty) }
+                            },
+                            data: {
+                                stock: { decrement: new client_1.Prisma.Decimal(qty) },
+                                salesCount: { increment: qty }
+                            }
+                        });
+                        if (updateResult.count === 0) {
+                            throw new common_1.BadRequestException(`Estoque insuficiente para o produto: ${product.name} (disponível: ${product.stock}, tentado: ${qty})`);
+                        }
+                    }
+                    else {
+                        await tx.product.update({
+                            where: { id: item.productId },
+                            data: {
+                                stock: { decrement: new client_1.Prisma.Decimal(qty) },
+                                salesCount: { increment: qty }
+                            },
+                        });
+                    }
+                    inventoryLogsToCreate.push({
+                        productId: product.id,
+                        type: 'SALE',
+                        quantity: qty,
+                        reason: 'Venda PDV',
+                    });
+                }
                 const priceUnit = new client_1.Prisma.Decimal(item.priceUnit);
                 const qtyDecimal = new client_1.Prisma.Decimal(qty);
                 const itemSubtotal = priceUnit.mul(qtyDecimal).toDecimalPlaces(2);
@@ -106,18 +200,16 @@ let SalesService = SalesService_1 = class SalesService {
                     cstCofins: item.fiscalSnapshot?.cstCofins ?? gt?.cstCofins ?? '99',
                     aliqCofins: item.fiscalSnapshot?.aliqCofins ?? Number(gt?.aliqCofins ?? 0),
                     valorCofins: 0,
-                });
-                inventoryLogsToCreate.push({
-                    productId: product.id,
-                    type: 'SALE',
-                    quantity: qty,
-                    reason: 'Venda PDV',
+                    ...(itemModifiersDataToCreate.length > 0 ? {
+                        modifiers: {
+                            create: itemModifiersDataToCreate
+                        }
+                    } : {})
                 });
             }
-            await Promise.all([
-                ...productUpdatesPromises,
-                tx.inventoryLog.createMany({ data: inventoryLogsToCreate })
-            ]);
+            if (inventoryLogsToCreate.length > 0) {
+                await tx.inventoryLog.createMany({ data: inventoryLogsToCreate });
+            }
             const discount = new client_1.Prisma.Decimal(data.discount || 0);
             const total = subtotal.sub(discount).toDecimalPlaces(2);
             const paymentsData = data.payments.map((pay) => ({
@@ -303,6 +395,7 @@ let SalesService = SalesService_1 = class SalesService {
                     payments: true,
                     items: { include: { product: true } },
                     customer: true,
+                    operator: true,
                 },
                 orderBy: { createdAt: 'desc' },
                 skip,
@@ -364,7 +457,7 @@ let SalesService = SalesService_1 = class SalesService {
             },
         });
     }
-    async emitNfce(saleId) {
+    async emitNfce(saleId, forceNewNumber = false) {
         const prisma = await this.getPrisma();
         const sale = await prisma.sale.findUnique({
             where: { id: saleId },
@@ -374,14 +467,55 @@ let SalesService = SalesService_1 = class SalesService {
             throw new common_1.NotFoundException('Venda não encontrada');
         if (sale.nfceStatus === 'autorizada')
             throw new common_1.BadRequestException('NFC-e já autorizada para esta venda');
+        for (const item of sale.items) {
+            if (item.productId) {
+                const currentProduct = await prisma.product.findUnique({
+                    where: { id: item.productId },
+                    include: { grupoTributacao: true }
+                });
+                if (currentProduct) {
+                    const gt = currentProduct.grupoTributacao;
+                    const updatedFields = {
+                        productName: currentProduct.name,
+                        unit: currentProduct.unit || 'UN',
+                        ncm: currentProduct.ncm ?? null,
+                        cest: currentProduct.cest ?? null,
+                        cfop: gt?.cfop ?? '5102',
+                        origem: currentProduct.origem ?? 0,
+                        csosn: gt?.csosn ?? null,
+                        cstIcms: gt?.cstIcms ?? null,
+                        aliqIcms: Number(gt?.aliqIcms ?? 0),
+                        cstPis: gt?.cstPis ?? '99',
+                        aliqPis: Number(gt?.aliqPis ?? 0),
+                        cstCofins: gt?.cstCofins ?? '99',
+                        aliqCofins: Number(gt?.aliqCofins ?? 0),
+                    };
+                    await prisma.saleItem.update({
+                        where: { id: item.id },
+                        data: updatedFields
+                    });
+                    Object.assign(item, {
+                        ...updatedFields,
+                        aliqIcms: new client_1.Prisma.Decimal(updatedFields.aliqIcms),
+                        aliqPis: new client_1.Prisma.Decimal(updatedFields.aliqPis),
+                        aliqCofins: new client_1.Prisma.Decimal(updatedFields.aliqCofins),
+                    });
+                }
+            }
+        }
+        const { tenantId, databaseUrl } = this.tenantContext.get();
+        const tenant = await this.heartPrisma.tenant.findUnique({
+            where: { id: tenantId },
+        });
+        const configuredSerie = tenant?.nfceSerie || 1;
         let nfceNumero = sale.nfceNumero;
         let nfceSerie = sale.nfceSerie;
-        if (!nfceNumero) {
-            nfceSerie = 1;
+        if (!nfceNumero || forceNewNumber) {
+            nfceSerie = configuredSerie;
             const numeracao = await prisma.numeracaoNfce.upsert({
-                where: { serie: nfceSerie },
+                where: { serie: configuredSerie },
                 update: { ultimo: { increment: 1 } },
-                create: { serie: nfceSerie, ultimo: 1 },
+                create: { serie: configuredSerie, ultimo: 1 },
             });
             nfceNumero = numeracao.ultimo;
         }
@@ -392,7 +526,6 @@ let SalesService = SalesService_1 = class SalesService {
         sale.emitirNfce = true;
         sale.nfceNumero = nfceNumero;
         sale.nfceSerie = nfceSerie;
-        const { tenantId, databaseUrl } = this.tenantContext.get();
         setImmediate(() => this.dispararNfce(tenantId, databaseUrl, sale));
         return { message: 'Emissão de NFC-e solicitada com sucesso', status: 'pendente' };
     }

@@ -1,17 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, BarChart2, Package, User, LogOut, X } from 'lucide-react';
+import { BarChart2, Package, User, LogOut, X, History } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth';
 
 const navItems = [
   {
-    label: 'PDV',
-    to: '/',
-    icon: Home,
-    exact: true,
-  },
-  {
-    label: 'Vendas',
+    label: 'Analytics',
     to: '/dashboard',
     icon: BarChart2,
     exact: true,
@@ -22,9 +16,19 @@ const navItems = [
     icon: Package,
     exact: false,
   },
+  {
+    label: 'Caixas',
+    to: '/dashboard/registers',
+    icon: History,
+    exact: false,
+  },
 ];
 
-export function BottomNavigation() {
+interface BottomNavigationProps {
+  tenantConfig?: any;
+}
+
+export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -34,6 +38,24 @@ export function BottomNavigation() {
     navigate('/login');
     setProfileOpen(false);
   };
+
+  const modules = (() => {
+    try {
+      if (tenantConfig?.modulos) {
+        return typeof tenantConfig.modulos === 'string' ? JSON.parse(tenantConfig.modulos) : tenantConfig.modulos;
+      }
+    } catch (e) {
+      console.error("Erro ao ler módulos no BottomNavigation:", e);
+    }
+    return { estoque: true, nfce: true, dashboardMobile: true };
+  })();
+
+  const activeNavItems = navItems.filter((item) => {
+    if (item.to === '/dashboard/inventory' && modules.estoque === false) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <>
@@ -50,7 +72,7 @@ export function BottomNavigation() {
         "
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        {navItems.map((item) => (
+        {activeNavItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

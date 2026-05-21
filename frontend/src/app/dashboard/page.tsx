@@ -1,11 +1,13 @@
 "use client";
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { ExportXmlModal } from '@/components/ExportXmlModal';
+import { ReemitNfceModal } from '@/components/ReemitNfceModal';
 import { 
   DollarSign, TrendingUp, Package, Loader2, CheckCircle2, 
   XCircle, Clock, Receipt, Download, Calendar, ArrowUpRight, 
-  ArrowDownRight, CreditCard, Banknote, QrCode, Search, ChevronLeft, ChevronRight
+  ArrowDownRight, CreditCard, Banknote, QrCode, Search, ChevronLeft, ChevronRight,
+  Printer
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -88,12 +90,65 @@ const getMethodName = (method: string) => {
   }
 };
 
+class ErrorBoundary extends React.Component<{ children?: React.ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-zinc-900 border border-red-500/50 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl p-6 space-y-4 animate-in zoom-in-95">
+            <h2 className="text-lg font-bold text-red-400 flex items-center gap-2">
+              ⚠️ Falha ao Renderizar Modal
+            </h2>
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl space-y-2 font-mono text-[11px] text-zinc-300 max-h-60 overflow-auto">
+              <p className="font-bold text-red-405">{this.state.error?.name}: {this.state.error?.message}</p>
+              <pre className="whitespace-pre-wrap">{this.state.error?.stack}</pre>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => {
+                  this.setState({ hasError: false, error: null });
+                  window.location.reload();
+                }}
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl transition text-xs font-semibold border border-zinc-700"
+              >
+                Recarregar Página
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export default function SalesDashboard() {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [emittingId, setEmittingId] = useState<string | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isReemitModalOpen, setIsReemitModalOpen] = useState(false);
+  const [saleToReemit, setSaleToReemit] = useState<Sale | null>(null);
+  const [tenantConfig, setTenantConfig] = useState<any>(null);
+
+  useEffect(() => {
+    api.get(`/tenants/me?_t=${Date.now()}`).then(res => setTenantConfig(res.data)).catch(console.error);
+  }, []);
 
   // Filtros de data
   const [preset, setPreset] = useState<'today' | 'week' | 'month' | 'custom'>('today');
@@ -155,10 +210,10 @@ export default function SalesDashboard() {
     return () => clearInterval(intervalId);
   }, [preset, startDate, endDate]);
 
-  const handleEmitNfce = async (saleId: string) => {
+  const handleEmitNfce = async (saleId: string, forceNewNumber = false) => {
     setEmittingId(saleId);
     try {
-      await api.post(`/sales/${saleId}/emit-nfce`);
+      await api.post(`/sales/${saleId}/emit-nfce`, { forceNewNumber });
       toast.success('Emissão solicitada com sucesso!');
       fetchDashboardData();
     } catch (err: unknown) {
@@ -167,6 +222,136 @@ export default function SalesDashboard() {
     } finally {
       setEmittingId(null);
     }
+  };
+
+  const triggerEmitNfce = (sale: Sale) => {
+    if (sale.nfceStatus === 'rejeitada') {
+      setSaleToReemit(sale);
+      setIsReemitModalOpen(true);
+    } else {
+      handleEmitNfce(sale.id, false);
+    }
+  };
+
+  const handleReemitConfirm = async (forceNewNumber: boolean) => {
+    if (saleToReemit) {
+      await handleEmitNfce(saleToReemit.id, forceNewNumber);
+    }
+  };
+
+  // ── Impressão de cupom 80mm ────────────────────────────────────────────
+  const printReceipt = (sale: Sale) => {
+    const saleDate = new Date(sale.createdAt);
+    const dateStr = saleDate.toLocaleDateString('pt-BR');
+    const timeStr = saleDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    const companyName = tenantConfig?.name || tenantConfig?.razaoSocial || 'Estabelecimento';
+    const cnpj        = tenantConfig?.cnpj  || '';
+    const address     = tenantConfig?.address || tenantConfig?.endereco || '';
+    const phone       = tenantConfig?.phone  || tenantConfig?.telefone  || '';
+    const footerMsg   = tenantConfig?.receiptFooter || 'Obrigado pela preferência! Volte sempre!';
+
+    const itemsHtml = sale.items.map((item, idx) => `
+      <div class="item">
+        <div class="item-header">
+          <span class="item-num">${String(idx + 1).padStart(2, '0')}</span>
+          <span class="item-name">${item.product?.name || 'Desconhecido'}</span>
+          <span class="item-total">R$ ${Number(item.subtotal || 0).toFixed(2)}</span>
+        </div>
+        <div class="item-detail">
+          ${item.quantity} UN x R$ ${Number(item.priceUnit || 0).toFixed(2)}
+        </div>
+      </div>
+    `).join('');
+
+    const paymentsHtml = sale.payments.map(p => `
+      <div class="payment-row">
+        <span>${{ dinheiro: 'DINHEIRO', pix: 'PIX', credito: 'CRÉDITO', debito: 'DÉBITO' }[p.method] || p.method.toUpperCase()}</span>
+        <span>R$ ${Number(p.value || 0).toFixed(2)}</span>
+      </div>
+    `).join('');
+
+    const subtotalVal = Number(sale.subtotal || sale.total || 0);
+    const discountVal = Number(sale.discount || 0);
+    const totalVal    = Number(sale.total || 0);
+
+    const receiptHtml = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cupom</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @page { size: 80mm auto; margin: 4mm 3mm; }
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      width: 74mm;
+      color: #000;
+      background: #fff;
+    }
+    .center  { text-align: center; }
+    .bold    { font-weight: bold; }
+    .divider { border-top: 1px dashed #000; margin: 5px 0; }
+    .header  { text-align: center; margin-bottom: 6px; }
+    .header .company { font-size: 14px; font-weight: bold; text-transform: uppercase; }
+    .header .subtitle { font-size: 10px; }
+    .meta { display: flex; justify-content: space-between; font-size: 10px; margin: 3px 0; }
+    .label-row { text-align: center; font-weight: bold; font-size: 12px; margin: 4px 0; letter-spacing: 1px; }
+    .item { margin: 4px 0; }
+    .item-header { display: flex; justify-content: space-between; font-weight: bold; }
+    .item-num   { min-width: 18px; }
+    .item-name  { flex: 1; margin: 0 4px; word-break: break-word; }
+    .item-total { white-space: nowrap; }
+    .item-detail { font-size: 10px; color: #555; padding-left: 22px; margin-top: 1px; }
+    .totals { margin-top: 4px; }
+    .totals-row { display: flex; justify-content: space-between; margin: 2px 0; }
+    .totals-row.grand { font-size: 14px; font-weight: bold; margin-top: 4px; }
+    .payment-row { display: flex; justify-content: space-between; margin: 2px 0; }
+    .footer { text-align: center; font-size: 10px; margin-top: 8px; line-height: 1.5; }
+    @media print {
+      html, body { width: 80mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="company">${companyName}</div>
+    ${cnpj    ? `<div class="subtitle">CNPJ: ${cnpj}</div>` : ''}
+    ${address ? `<div class="subtitle">${address}</div>`  : ''}
+    ${phone   ? `<div class="subtitle">Tel: ${phone}</div>` : ''}
+  </div>
+  <div class="divider"></div>
+  <div class="label-row">REIMPRESSÃO DE CUPOM</div>
+  <div class="meta"><span>${dateStr} ${timeStr}</span><span>Venda #${sale.id.slice(0, 8)}</span></div>
+  <div class="meta"><span>Operador: ${sale.operator?.name || 'Operador'}</span></div>
+  <div class="divider"></div>
+  ${itemsHtml}
+  <div class="divider"></div>
+  <div class="totals">
+    <div class="totals-row"><span>SUBTOTAL:</span><span>R$ ${subtotalVal.toFixed(2)}</span></div>
+    ${ discountVal > 0 ? `<div class="totals-row"><span>DESCONTO:</span><span>-R$ ${discountVal.toFixed(2)}</span></div>` : '' }
+    <div class="totals-row grand"><span>TOTAL:</span><span>R$ ${totalVal.toFixed(2)}</span></div>
+  </div>
+  <div class="divider"></div>
+  ${paymentsHtml}
+  <div class="divider"></div>
+  <div class="footer">${footerMsg}</div>
+  <br/><br/>
+</body>
+</html>`;
+
+    const printWin = window.open('', '_blank', 'width=340,height=600,toolbar=0,menubar=0,scrollbars=0');
+    if (!printWin) { toast.error('Popup bloqueado. Permita pop-ups para imprimir.'); return; }
+    printWin.document.open();
+    printWin.document.write(receiptHtml);
+    printWin.document.close();
+    printWin.onload = () => {
+      setTimeout(() => {
+        printWin.print();
+        setTimeout(() => printWin.close(), 800);
+      }, 300);
+    };
   };
 
   // --- Renderização de Dados ---
@@ -496,6 +681,7 @@ export default function SalesDashboard() {
                   <th className="px-6 py-4 font-semibold">Pagamento</th>
                   <th className="px-6 py-4 font-semibold text-center">NFC-e</th>
                   <th className="px-6 py-4 font-semibold text-right">Total</th>
+                  <th className="px-6 py-4 font-semibold text-center w-[80px]">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
@@ -542,7 +728,7 @@ export default function SalesDashboard() {
                                   </div>
                                 )}
                               </div>
-                              <button onClick={() => handleEmitNfce(sale.id)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 p-1 rounded bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-50" title="Tentar Novamente">
+                              <button onClick={() => triggerEmitNfce(sale)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 p-1 rounded bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-50" title="Tentar Novamente">
                                 {emittingId === sale.id ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />}
                               </button>
                             </div>
@@ -554,7 +740,7 @@ export default function SalesDashboard() {
                         </div>
                       ) : (
                         <div className="flex items-center justify-center gap-2">
-                          <button onClick={() => handleEmitNfce(sale.id)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 disabled:opacity-50 transition-colors">
+                          <button onClick={() => triggerEmitNfce(sale)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 disabled:opacity-50 transition-colors">
                             {emittingId === sale.id ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />} Gerar
                           </button>
                         </div>
@@ -563,11 +749,20 @@ export default function SalesDashboard() {
                     <td className="px-6 py-4 text-right whitespace-nowrap">
                       <span className="text-emerald-400 font-black text-base">{formatCurrency(sale.total)}</span>
                     </td>
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                      <button
+                        onClick={() => printReceipt(sale)}
+                        className="text-zinc-400 hover:text-blue-400 p-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-850 border border-zinc-700 transition-colors"
+                        title="Reimprimir Cupom"
+                      >
+                        <Printer size={16} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {currentSales.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-zinc-500 italic">
+                    <td colSpan={6} className="px-6 py-12 text-center text-zinc-500 italic">
                       Nenhuma venda encontrada.
                     </td>
                   </tr>
@@ -602,7 +797,15 @@ export default function SalesDashboard() {
                     ))}
                   </div>
 
-                  <div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => printReceipt(sale)}
+                      className="text-zinc-400 hover:text-blue-400 p-1 rounded bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 transition-colors"
+                      title="Reimprimir Cupom"
+                    >
+                      <Printer size={12} className="m-0.5" />
+                    </button>
+
                     {sale.emitirNfce ? (
                       <div className="flex flex-col items-center justify-center gap-1">
                         {sale.nfceStatus === 'autorizada' ? (
@@ -623,7 +826,7 @@ export default function SalesDashboard() {
                                 </div>
                               )}
                             </div>
-                            <button onClick={() => handleEmitNfce(sale.id)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 p-1 rounded bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-50" title="Tentar Novamente">
+                            <button onClick={() => triggerEmitNfce(sale)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 p-1 rounded bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-50" title="Tentar Novamente">
                               {emittingId === sale.id ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />}
                             </button>
                           </div>
@@ -635,7 +838,7 @@ export default function SalesDashboard() {
                       </div>
                     ) : (
                       <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => handleEmitNfce(sale.id)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 disabled:opacity-50 transition-colors">
+                        <button onClick={() => triggerEmitNfce(sale)} disabled={emittingId === sale.id} className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 disabled:opacity-50 transition-colors">
                           {emittingId === sale.id ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />} Gerar
                         </button>
                       </div>
@@ -678,6 +881,17 @@ export default function SalesDashboard() {
       </div>
 
       <ExportXmlModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
+      <ErrorBoundary>
+        <ReemitNfceModal 
+          isOpen={isReemitModalOpen} 
+          onClose={() => {
+            setIsReemitModalOpen(false);
+            setSaleToReemit(null);
+          }} 
+          sale={saleToReemit} 
+          onConfirm={handleReemitConfirm}
+        />
+      </ErrorBoundary>
     </div>
   );
 }

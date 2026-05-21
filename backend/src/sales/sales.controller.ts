@@ -43,8 +43,9 @@ export class SalesController {
 
   /** Solicitar emissão manual de NFC-e para uma venda já existente */
   @Post(':id/emit-nfce')
-  emitNfce(@Param('id') id: string) {
-    return this.salesService.emitNfce(id);
+  emitNfce(@Param('id') id: string, @Body() body?: { forceNewNumber?: boolean }) {
+    const forceNewNumber = body?.forceNewNumber === true;
+    return this.salesService.emitNfce(id, forceNewNumber);
   }
 
   /** Exportar XMLs em lote para contabilidade */

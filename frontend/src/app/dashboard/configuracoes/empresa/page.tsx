@@ -31,7 +31,7 @@ export default function EmpresaConfigPage() {
     logradouro: '', numero: '', complemento: '', bairro: '',
     municipio: '', codMunicipio: '', uf: '', cep: '', telefone: '',
     // NFC-e
-    nfceAtivo: false, nfceSerie: 1, nfceAmbiente: 2, nfceCsc: '', nfceIdCsc: '',
+    nfceAtivo: false, nfceSerie: 1, nfceAmbiente: 2, nfceCsc: '', nfceIdCsc: '', proximaNota: 1,
     // Certificado (apenas leitura — upload separado)
     certValidade: '',
     // Integrações
@@ -43,6 +43,7 @@ export default function EmpresaConfigPage() {
   const [showCosmosKey, setShowCosmosKey] = useState(false);
   const [testingCosmos, setTestingCosmos] = useState(false);
   const [masterCount, setMasterCount] = useState<{ total: number; withNcm: number } | null>(null);
+  const [modules, setModules] = useState({ nfce: true, estoque: true, dashboardMobile: true });
 
   useEffect(() => {
     api.get('/tenants/me')
@@ -60,7 +61,18 @@ export default function EmpresaConfigPage() {
           nfceAmbiente: d.nfceAmbiente ?? 2, nfceCsc: d.nfceCsc ?? '',
           nfceIdCsc: d.nfceIdCsc ?? '', certValidade: d.certValidade ?? '',
           cosmosApiKey: d.cosmosApiKey ?? '',
+          proximaNota: d.proximaNota ?? 1,
         }));
+
+        let parsedModules = { nfce: true, estoque: true, dashboardMobile: true };
+        try {
+          if (d.modulos) {
+            parsedModules = typeof d.modulos === 'string' ? JSON.parse(d.modulos) : d.modulos;
+          }
+        } catch (e) {
+          console.error("Erro ao ler módulos do tenant:", e);
+        }
+        setModules(parsedModules);
       })
       .catch(() => toast.error('Erro ao carregar dados da empresa.'))
       .finally(() => setLoading(false));
@@ -100,7 +112,18 @@ export default function EmpresaConfigPage() {
         certValidade: d.certValidade ?? '',
         nfceAtivo: d.nfceAtivo ?? false,
         cosmosApiKey: d.cosmosApiKey ?? '',
+        proximaNota: d.proximaNota ?? 1,
       }));
+
+      let parsedModules = { nfce: true, estoque: true, dashboardMobile: true };
+      try {
+        if (d.modulos) {
+          parsedModules = typeof d.modulos === 'string' ? JSON.parse(d.modulos) : d.modulos;
+        }
+      } catch (e) {
+        console.error("Erro ao ler módulos do tenant:", e);
+      }
+      setModules(parsedModules);
 
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Erro ao salvar configurações.');
@@ -138,6 +161,19 @@ export default function EmpresaConfigPage() {
   const inputCls = 'w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors';
   const labelCls = 'text-sm font-semibold text-zinc-400 mb-1.5 block';
 
+  const activeTabs = TABS.filter(tab => {
+    if (modules.nfce === false && (tab.id === 'nfce' || tab.id === 'certificado')) {
+      return false;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (modules.nfce === false && (activeTab === 'nfce' || activeTab === 'certificado')) {
+      setActiveTab('dados');
+    }
+  }, [modules, activeTab]);
+
   if (loading) return (
     <div className="flex items-center justify-center h-full">
       <Loader2 className="animate-spin text-blue-500" size={40} />
@@ -163,7 +199,7 @@ export default function EmpresaConfigPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-2xl p-1 overflow-x-auto">
-        {TABS.map(tab => (
+        {activeTabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -301,6 +337,13 @@ export default function EmpresaConfigPage() {
                 <label className={labelCls}>Série</label>
                 <input className={inputCls} type="number" min={1} max={999} value={form.nfceSerie} onChange={e => f('nfceSerie', parseInt(e.target.value))} />
               </div>
+
+              <div>
+                <label className={labelCls}>Número da Próxima Nota</label>
+                <input className={inputCls} type="number" min={1} value={form.proximaNota} onChange={e => f('proximaNota', parseInt(e.target.value) || 1)} />
+              </div>
+
+              <div className="hidden md:block" />
 
               <div>
                 <label className={labelCls}>CSC — Código de Segurança do Contribuinte</label>

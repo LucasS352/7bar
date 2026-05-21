@@ -38,6 +38,18 @@ export class TenantsService {
     
     // Remover o certificado (blob) por segurança
     const { certPfx, ...safeTenant } = tenant as any;
+
+    try {
+      const tenantPrisma = await this.tenantManager.getTenantClient(tenantId, tenant.databaseUrl);
+      const numeracao = await tenantPrisma.numeracaoNfce.findUnique({
+        where: { serie: tenant.nfceSerie || 1 }
+      });
+      safeTenant.proximaNota = (numeracao?.ultimo ?? 0) + 1;
+    } catch (e: any) {
+      this.logger.warn(`Não foi possível carregar a numeração da NFC-e para o tenant ${tenantId}: ${e.message}`);
+      safeTenant.proximaNota = 1;
+    }
+
     return safeTenant;
   }
 
@@ -76,6 +88,29 @@ export class TenantsService {
         delete safeData.cnpj;
       } else {
         safeData.cnpj = cleanCnpj;
+      }
+    }
+
+    // Atualizar proximaNota no banco específico do tenant se fornecido
+    if (data.proximaNota !== undefined) {
+      const proxima = Number(data.proximaNota);
+      if (!isNaN(proxima) && proxima > 0) {
+        try {
+          const tenant = await this.heartPrisma.tenant.findUnique({
+            where: { id: tenantId },
+          });
+          if (tenant) {
+            const serie = safeData.nfceSerie !== undefined ? Number(safeData.nfceSerie) : (tenant.nfceSerie || 1);
+            const tenantPrisma = await this.tenantManager.getTenantClient(tenantId, tenant.databaseUrl);
+            await tenantPrisma.numeracaoNfce.upsert({
+              where: { serie },
+              update: { ultimo: proxima - 1 },
+              create: { serie, ultimo: proxima - 1 }
+            });
+          }
+        } catch (dbErr: any) {
+          this.logger.error(`Erro ao atualizar proximaNota para tenant ${tenantId}: ${dbErr.message}`);
+        }
       }
     }
 
@@ -130,6 +165,63 @@ export class TenantsService {
     const setupPin = process.env.SETUP_PIN;
     if (!setupPin) throw new BadRequestException('SETUP_PIN não configurado no servidor.');
     return pin === setupPin;
+  }
+
+  async migrateTenants(tenantIds: string[]): Promise<any[]> {
+    const results: any[] = [];
+    const tenants = await this.heartPrisma.tenant.findMany({
+      where: { id: { in: tenantIds } }
+    });
+
+    for (const tenant of tenants) {
+      this.logger.log(`[Migracao] Iniciando atualizacao de schema do tenant: ${tenant.name} (${tenant.databaseName})`);
+      
+      // 1. Limpeza de chaves orfas pre-migracao
+      const TenantPrismaClient = require('@prisma/client').PrismaClient;
+      const tenantPrisma = new TenantPrismaClient({
+        datasources: { db: { url: tenant.databaseUrl } }
+      });
+
+      try {
+        await tenantPrisma.$executeRawUnsafe(`UPDATE sales SET operatorId = NULL`).catch(() => {});
+        await tenantPrisma.$executeRawUnsafe(`UPDATE cash_registers SET operatorId = NULL`).catch(() => {});
+      } catch (e: any) {
+        this.logger.warn(`Aviso na limpeza pre-migracao de ${tenant.name}: ${e.message}`);
+      } finally {
+        await tenantPrisma.$disconnect();
+      }
+
+      // 2. Executar db push
+      try {
+        const prismaSchemaPath = path.resolve(process.cwd(), 'prisma', 'schema.prisma');
+        const { stdout, stderr } = await execAsync(`npx prisma db push --schema="${prismaSchemaPath}" --skip-generate --accept-data-loss`, {
+          env: {
+            ...process.env,
+            DATABASE_URL_TENANT: tenant.databaseUrl,
+          },
+          timeout: 60000,
+        });
+
+        results.push({
+          tenantId: tenant.id,
+          name: tenant.name,
+          databaseName: tenant.databaseName,
+          status: 'success',
+          output: stdout || 'Schema atualizado com sucesso.'
+        });
+      } catch (err: any) {
+        this.logger.error(`Erro ao rodar migracao em ${tenant.name}: ${err.message}`);
+        results.push({
+          tenantId: tenant.id,
+          name: tenant.name,
+          databaseName: tenant.databaseName,
+          status: 'error',
+          output: `Erro na migracao:\n${err.stderr || err.message}\n${err.stdout || ''}`
+        });
+      }
+    }
+
+    return results;
   }
 
   async provisionTenant(dto: ProvisionTenantDto) {

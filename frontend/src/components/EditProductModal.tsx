@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { Edit3, X, Loader2, Save, DollarSign, FileText, Tag, PackageOpen } from 'lucide-react';
+import { Edit3, X, Loader2, Save, DollarSign, FileText, Tag, PackageOpen, Upload, Trash2 } from 'lucide-react';
+import { ProductSearchSelect } from './ProductSearchSelect';
 
 const UNIT_OPTIONS = ['UN', 'KG', 'LT', 'CX', 'DZ', 'PCT', 'FD', 'ML', 'GR'];
 const ORIGEM_OPTIONS = [
@@ -28,6 +29,11 @@ interface ProductData {
   cest?: string | null;
   origem?: number;
   grupoTributacaoId?: string | null;
+  imageUrl?: string | null;
+  isComposite?: boolean;
+  volumeUnit?: string | null;
+  volumeCapacity?: number | null;
+  modifierGroups?: any[];
 }
 
 export function EditProductModal({
@@ -41,11 +47,20 @@ export function EditProductModal({
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [grupos, setGrupos] = useState<GrupoTributacao[]>([]);
   const [loading, setLoading] = useState(false);
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [modifierGroups, setModifierGroups] = useState<any[]>([]);
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  
+  // ── Image Upload states & handlers ────────────────────────
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '', barcode: '', unit: 'UN',
     priceCost: '', priceSell: '', stock: '', categoryId: '',
-    ncm: '', cest: '', origem: 0, grupoTributacaoId: '',
+    ncm: '', cest: '', origem: 0, grupoTributacaoId: '', imageUrl: '',
+    isComposite: false, volumeUnit: '', volumeCapacity: '',
   });
 
   useEffect(() => {
@@ -56,27 +71,141 @@ export function EditProductModal({
         unit:               product.unit           || 'UN',
         priceCost:          product.priceCost?.toString()  || '0',
         priceSell:          product.priceSell?.toString()  || '0',
-        stock:              product.stock ? Math.round(Number(product.stock)).toString() : '0',
+        stock:              product.stock != null ? Number(product.stock).toString() : '0',
         categoryId:         product.categoryId     || '',
         ncm:                product.ncm            || '',
         cest:               product.cest           || '',
         origem:             product.origem         ?? 0,
         grupoTributacaoId:  product.grupoTributacaoId || '',
+        imageUrl:           product.imageUrl       || '',
+        isComposite:        product.isComposite    ?? false,
+        volumeUnit:         product.volumeUnit     || '',
+        volumeCapacity:     product.volumeCapacity?.toString() || '',
       });
+
+      // Carregar composição atual
+      if (product.modifierGroups && product.modifierGroups.length > 0) {
+        const loadedGroups = product.modifierGroups.map((g: any) => ({
+          id: g.id || Math.random().toString(),
+          name: g.name,
+          minSelected: g.minSelected,
+          maxSelected: g.maxSelected,
+          options: g.options.map((o: any) => ({
+            id: o.id || Math.random().toString(),
+            name: o.name,
+            componentProductId: o.componentProductId,
+            quantity: Number(o.quantity),
+            priceAdjustment: Number(o.priceAdjustment)
+          }))
+        }));
+        setModifierGroups(loadedGroups);
+      } else {
+        setModifierGroups([]);
+      }
 
       Promise.all([
         api.get('/categories'),
         api.get('/tributacao'),
-      ]).then(([catRes, grupRes]) => {
+        api.get('/products?limit=10000'),
+      ]).then(([catRes, grupRes, prodRes]) => {
         setCategories(catRes.data);
         setGrupos(grupRes.data);
+        setAllProducts(prodRes.data.data || []);
       }).catch(() => toast.error('Falha ao carregar dados auxiliares'));
     }
   }, [isOpen, product]);
 
+  const addGroup = () => {
+    setModifierGroups(prev => [
+      ...prev,
+      { id: Math.random().toString(), name: '', minSelected: 1, maxSelected: 1, options: [] }
+    ]);
+  };
+
+  const removeGroup = (groupId: string) => setModifierGroups(prev => prev.filter(g => g.id !== groupId));
+
+  const updateGroupName = (groupId: string, name: string) =>
+    setModifierGroups(prev => prev.map(g => g.id === groupId ? { ...g, name } : g));
+
+  const addOption = (groupId: string) => {
+    setModifierGroups(prev => prev.map(g => {
+      if (g.id !== groupId) return g;
+      return { ...g, options: [...g.options, { id: Math.random().toString(), name: '', componentProductId: '', quantity: 1, priceAdjustment: 0 }] };
+    }));
+  };
+
+  const removeOption = (groupId: string, optionId: string) => {
+    setModifierGroups(prev => prev.map(g => {
+      if (g.id !== groupId) return g;
+      return { ...g, options: g.options.filter((o: any) => o.id !== optionId) };
+    }));
+  };
+
+  const updateOption = (groupId: string, optionId: string, fields: any) => {
+    setModifierGroups(prev => prev.map(g => {
+      if (g.id !== groupId) return g;
+      return { ...g, options: g.options.map((o: any) => o.id === optionId ? { ...o, ...fields } : o) };
+    }));
+  };
+
   if (!isOpen || !product) return null;
 
   const f = (key: string, val: unknown) => setFormData(prev => ({ ...prev, [key]: val }));
+
+  const uploadFile = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 5MB.');
+      return;
+    }
+
+    const formDataObj = new FormData();
+    formDataObj.append('file', file);
+
+    setIsUploading(true);
+    try {
+      const res = await api.post('/products/upload', formDataObj, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      f('imageUrl', res.data.imageUrl);
+      toast.success('Foto enviada com sucesso!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao enviar a foto.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      await uploadFile(file);
+    } else {
+      toast.error('Selecione apenas arquivos de imagem.');
+    }
+  };
+
+  const removePhoto = () => {
+    f('imageUrl', '');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const cost   = parseFloat(formData.priceCost) || 0;
   const sell   = parseFloat(formData.priceSell) || 0;
@@ -88,21 +217,49 @@ export function EditProductModal({
       toast.error('Nome e Categoria são obrigatórios.');
       return;
     }
+
+    if (formData.isComposite) {
+      for (const g of modifierGroups) {
+        if (!g.name.trim()) { toast.error('Preencha o nome de todos os grupos.'); return; }
+        if (g.options.length === 0) { toast.error(`O grupo "${g.name}" precisa de pelo menos uma opção.`); return; }
+        for (const o of g.options) {
+          if (!o.componentProductId) { toast.error(`Selecione um ingrediente em "${g.name}".`); return; }
+          if (!o.quantity || parseFloat(o.quantity) <= 0) { toast.error(`Quantidade inválida em "${g.name}".`); return; }
+        }
+      }
+    }
+
     setLoading(true);
     try {
+      const payloadGroups = modifierGroups.map(g => ({
+        name: g.name,
+        minSelected: g.minSelected,
+        maxSelected: g.maxSelected,
+        options: g.options.map((o: any) => ({
+          name: o.name,
+          componentProductId: o.componentProductId,
+          quantity: parseFloat(o.quantity) || 0,
+          priceAdjustment: parseFloat(o.priceAdjustment) || 0
+        }))
+      }));
+
       await api.patch(`/products/${product.id}`, {
         name:               formData.name.trim(),
         barcode:            formData.barcode || undefined,
         unit:               formData.unit || 'UN',
         priceCost:          parseFloat(formData.priceCost) || 0,
         priceSell:          parseFloat(formData.priceSell) || 0,
-        stock:              parseInt(formData.stock, 10) || 0,
+        stock:              formData.isComposite ? undefined : (parseFloat(formData.stock) || 0),
         categoryId:         formData.categoryId,
         ncm:                formData.ncm || undefined,
         cest:               formData.cest || undefined,
         origem:             formData.origem,
         grupoTributacaoId:  formData.grupoTributacaoId || undefined,
-        // shortCode é gerado automaticamente pelo sistema — não enviado pelo usuário
+        imageUrl:           formData.imageUrl || null,
+        isComposite:        formData.isComposite,
+        volumeUnit:         formData.volumeUnit || null,
+        volumeCapacity:     formData.volumeCapacity ? parseFloat(formData.volumeCapacity) : null,
+        modifierGroups:     formData.isComposite ? payloadGroups : [],
       });
       toast.success('Produto atualizado com sucesso!');
       onSuccess();
@@ -141,6 +298,73 @@ export function EditProductModal({
 
         {/* Form — único scroll, sem abas */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar">
+
+          {/* ── FOTO DO PRODUTO ──────────────────────────────── */}
+          <div className={sect}>
+            <h3 className="text-sm font-bold text-zinc-300 flex items-center gap-2">
+              <Upload size={16} className="text-blue-400" /> Foto do Produto
+            </h3>
+            
+            <div className="flex flex-col items-center justify-center">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+              />
+              
+              {formData.imageUrl ? (
+                <div className="w-full relative group rounded-xl overflow-hidden border border-zinc-800 bg-zinc-950 flex items-center justify-center p-4">
+                  <img
+                    src={formData.imageUrl}
+                    alt="Preview"
+                    className="max-h-48 rounded-lg object-contain bg-white p-2"
+                  />
+                  <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-3 transition-opacity duration-200">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Upload size={14} /> Alterar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={removePhoto}
+                      className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Trash2 size={14} /> Remover
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`w-full py-8 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 ${
+                    isDragging
+                      ? 'border-blue-500 bg-blue-500/5'
+                      : 'border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-950/30'
+                  }`}
+                >
+                  {isUploading ? (
+                    <Loader2 size={32} className="animate-spin text-blue-500" />
+                  ) : (
+                    <Upload size={32} className="text-zinc-500 group-hover:text-blue-400 transition-colors" />
+                  )}
+                  <span className="text-xs font-bold text-zinc-400">
+                    {isUploading ? 'Enviando foto...' : 'Adicionar Foto'}
+                  </span>
+                  <span className="text-[10px] text-zinc-600 text-center px-4">
+                    Arraste uma imagem ou clique para selecionar (PNG, JPG, máx. 5MB)
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* ── Dados Principais ──────────────────────────────── */}
           <div className={sect}>
@@ -210,9 +434,177 @@ export function EditProductModal({
                 Estoque Físico Atual
                 <span className="ml-1 text-zinc-600 normal-case font-normal">(ajuste manual — use Entrada de Estoque para repor)</span>
               </label>
-              <input type="number" step="1" min="0" className={`${inp} text-blue-400 font-bold`} value={formData.stock} onChange={e => f('stock', e.target.value)} />
+              <input
+                type="number" step="0.001" min="0"
+                disabled={formData.isComposite}
+                className={`${inp} text-blue-400 font-bold disabled:opacity-50`}
+                placeholder={formData.isComposite ? 'Produto composto' : '0'}
+                value={formData.isComposite ? '' : formData.stock}
+                onChange={e => f('stock', e.target.value)}
+              />
             </div>
           </div>
+
+          {/* ── Fracionamento & Composição ───────────────────── */}
+          <div className={sect}>
+            <h3 className="text-sm font-bold text-zinc-300 flex items-center gap-2">
+              Fracionamento &amp; Composição
+            </h3>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={lbl}>Fracionamento Interno</label>
+                <select className={inp} value={formData.volumeUnit || ''} onChange={e => f('volumeUnit', e.target.value)}>
+                  <option value="">Não Fracionado</option>
+                  <option value="ML">ML (Mililitros)</option>
+                  <option value="UN">UN (Unidades)</option>
+                </select>
+              </div>
+              {formData.volumeUnit && (
+                <div>
+                  <label className={lbl}>
+                    {formData.volumeUnit === 'ML' ? 'Capacidade (ml)' : 'Unidades por Caixa'}
+                  </label>
+                  <input
+                    type="number" step="0.001"
+                    className={inp}
+                    placeholder={formData.volumeUnit === 'ML' ? 'Ex: 950' : 'Ex: 20'}
+                    value={formData.volumeCapacity || ''}
+                    onChange={e => f('volumeCapacity', e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between py-2 border-t border-zinc-800/50">
+              <span className="text-xs font-bold text-zinc-300">Produto Composto / Com adicionais</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" checked={formData.isComposite} onChange={e => f('isComposite', e.target.checked)} />
+                <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-600 after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white"></div>
+              </label>
+            </div>
+
+            {formData.isComposite && (
+              <div className="space-y-3 pt-2 border-t border-zinc-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-zinc-400">Grupos de Adicionais</span>
+                  <div className="flex gap-3">
+                    {allProducts.some(p => p.isComposite && p.id !== product?.id) && (
+                      <button type="button" onClick={() => setShowCopyModal(true)} className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition">Copiar Adicionais</button>
+                    )}
+                    <button type="button" onClick={addGroup} className="text-xs font-bold text-blue-400 hover:text-blue-300 transition">+ Adicionar Grupo</button>
+                  </div>
+                </div>
+
+                {modifierGroups.length === 0 ? (
+                  <p className="text-xs text-zinc-500 text-center py-4 bg-zinc-950/30 rounded-xl border border-zinc-800/50">Nenhum grupo configurado.</p>
+                ) : (
+                  modifierGroups.map((g, gIdx) => (
+                    <div key={g.id || gIdx} className="bg-zinc-950/40 border border-zinc-800/80 rounded-xl p-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          className="bg-transparent border-b border-zinc-800 focus:border-blue-500 text-sm font-bold text-white focus:outline-none transition py-0.5 px-1 flex-1 placeholder-zinc-600"
+                          value={g.name}
+                          onChange={e => updateGroupName(g.id, e.target.value)}
+                          placeholder="Nome do Grupo (ex: Escolha o Gelo)"
+                        />
+                        <button type="button" onClick={() => removeGroup(g.id)} className="text-xs text-rose-500 hover:text-rose-400 font-bold transition">Remover</button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-12 gap-1.5 text-[10px] font-black tracking-widest text-zinc-600 uppercase px-1">
+                          <div className="col-span-5">Ingrediente</div>
+                          <div className="col-span-4">Qtd Baixa</div>
+                          <div className="col-span-2 text-right">Preço+</div>
+                          <div className="col-span-1"></div>
+                        </div>
+
+                        {g.options.map((opt: any, oIdx: number) => {
+                          const compProd = allProducts.find((p: any) => p.id === opt.componentProductId);
+                          const unitLabel = compProd?.volumeUnit || compProd?.unit || 'UN';
+                          return (
+                            <div key={opt.id || oIdx} className="grid grid-cols-12 gap-1.5 items-center">
+                              <div className="col-span-5">
+                                <ProductSearchSelect
+                                  products={allProducts.filter((p: any) => !p.isComposite && p.active !== false)}
+                                  value={opt.componentProductId}
+                                  onChange={(productId) => {
+                                    const selected = allProducts.find((p: any) => p.id === productId);
+                                    updateOption(g.id, opt.id, { componentProductId: productId, name: opt.name || selected?.name || '' });
+                                  }}
+                                />
+                              </div>
+                              <div className="col-span-4 flex items-center gap-1">
+                                <input
+                                  type="number" step="0.001"
+                                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition"
+                                  value={opt.quantity}
+                                  onChange={e => updateOption(g.id, opt.id, { quantity: e.target.value })}
+                                />
+                                <span className="text-[10px] text-zinc-500 font-bold">{unitLabel}</span>
+                              </div>
+                              <div className="col-span-2">
+                                <input
+                                  type="number" step="0.01"
+                                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-emerald-400 text-right font-bold focus:outline-none focus:border-blue-500 transition"
+                                  value={opt.priceAdjustment}
+                                  onChange={e => updateOption(g.id, opt.id, { priceAdjustment: e.target.value })}
+                                />
+                              </div>
+                              <div className="col-span-1 flex justify-center">
+                                <button type="button" onClick={() => removeOption(g.id, opt.id)} className="text-rose-500 hover:text-rose-400 transition"><X size={13} /></button>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        <button type="button" onClick={() => addOption(g.id)} className="w-full py-1.5 border border-dashed border-zinc-800 hover:border-zinc-700 text-zinc-500 hover:text-zinc-300 rounded-lg text-xs font-bold transition">
+                          + Adicionar Opção
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {showCopyModal && (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
+                <h3 className="text-sm font-bold text-white">Copiar Adicionais</h3>
+                <p className="text-xs text-zinc-500">Selecione o produto composto de origem:</p>
+                <select
+                  className={inp}
+                  onChange={e => {
+                    const source = allProducts.find(p => p.id === e.target.value);
+                    if (source && source.modifierGroups) {
+                      const cloned = source.modifierGroups.map((g: any) => ({
+                        id: Math.random().toString(), name: g.name,
+                        minSelected: g.minSelected, maxSelected: g.maxSelected,
+                        options: g.options.map((o: any) => ({
+                          id: Math.random().toString(), name: o.name,
+                          componentProductId: o.componentProductId,
+                          quantity: Number(o.quantity), priceAdjustment: Number(o.priceAdjustment)
+                        }))
+                      }));
+                      setModifierGroups(cloned);
+                      toast.success(`Ficha copiada de "${source.name}"!`);
+                    }
+                    setShowCopyModal(false);
+                  }}
+                >
+                  <option value="">-- Escolha --</option>
+                  {allProducts.filter(p => p.isComposite && p.id !== product?.id).map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <div className="flex justify-end">
+                  <button type="button" onClick={() => setShowCopyModal(false)} className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg text-xs font-bold transition">Cancelar</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Fiscal / NFC-e ────────────────────────────────── */}
           <div className={sect}>

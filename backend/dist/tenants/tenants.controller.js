@@ -11,7 +11,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var TenantsController_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TenantsController = void 0;
 const common_1 = require("@nestjs/common");
@@ -21,7 +20,7 @@ const platform_express_1 = require("@nestjs/platform-express");
 const tenants_service_1 = require("./tenants.service");
 const provision_tenant_dto_1 = require("./provision-tenant.dto");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
-let TenantsController = TenantsController_1 = class TenantsController {
+let TenantsController = class TenantsController {
     constructor(tenantsService) {
         this.tenantsService = tenantsService;
     }
@@ -38,28 +37,15 @@ let TenantsController = TenantsController_1 = class TenantsController {
             throw new common_1.UnauthorizedException('PIN inválido.');
         return this.tenantsService.findAll();
     }
-    async syncCosmos(req) {
+    async migrateTenants(req, body) {
         const pin = req.headers['x-setup-pin'];
         const valid = await this.tenantsService.validatePin(pin);
         if (!valid)
             throw new common_1.UnauthorizedException('PIN inválido.');
-        if (TenantsController_1.isSyncingCosmos) {
-            throw new common_1.BadRequestException('Uma sincronização já está em andamento. Aguarde a conclusão.');
+        if (!body.tenantIds || !Array.isArray(body.tenantIds) || body.tenantIds.length === 0) {
+            throw new common_1.BadRequestException('Nenhum tenant selecionado para migração.');
         }
-        const { execFile } = require('child_process');
-        const path = require('path');
-        const scriptPath = path.join(process.cwd(), 'scripts', 'etl', 'cosmos-auto-sync.js');
-        TenantsController_1.isSyncingCosmos = true;
-        execFile('node', [scriptPath], (error, stdout, stderr) => {
-            TenantsController_1.isSyncingCosmos = false;
-            if (error)
-                console.error(`Erro no sync: ${error.message}`);
-            if (stderr)
-                console.error(`Stderr sync: ${stderr}`);
-            if (stdout)
-                console.log(`Stdout sync: ${stdout}`);
-        });
-        return { message: 'Sincronização iniciada em background com sucesso.' };
+        return this.tenantsService.migrateTenants(body.tenantIds);
     }
     getMe(req) {
         return this.tenantsService.findById(req.user.tenantId);
@@ -151,7 +137,6 @@ let TenantsController = TenantsController_1 = class TenantsController {
     }
 };
 exports.TenantsController = TenantsController;
-TenantsController.isSyncingCosmos = false;
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)(),
@@ -168,12 +153,13 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], TenantsController.prototype, "listByPin", null);
 __decorate([
-    (0, common_1.Post)('setup/sync-cosmos'),
+    (0, common_1.Post)('setup/migrate'),
     __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
-], TenantsController.prototype, "syncCosmos", null);
+], TenantsController.prototype, "migrateTenants", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('me'),
@@ -291,7 +277,7 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], TenantsController.prototype, "verifyDiscountPin", null);
-exports.TenantsController = TenantsController = TenantsController_1 = __decorate([
+exports.TenantsController = TenantsController = __decorate([
     (0, common_1.Controller)('tenants'),
     __metadata("design:paramtypes", [tenants_service_1.TenantsService])
 ], TenantsController);

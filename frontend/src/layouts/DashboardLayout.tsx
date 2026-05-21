@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Users, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { api } from '@/lib/api';
 import { getFullUrl } from '@/lib/getFullUrl';
@@ -30,16 +30,35 @@ export function DashboardLayout() {
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
+  const modules = (() => {
+    try {
+      if (tenantConfig?.modulos) {
+        return typeof tenantConfig.modulos === 'string' ? JSON.parse(tenantConfig.modulos) : tenantConfig.modulos;
+      }
+    } catch (e) {
+      console.error("Erro ao ler módulos do tenant:", e);
+    }
+    return { estoque: true, nfce: true, dashboardMobile: true };
+  })();
+
   const navItems = [
     { name: 'Analytics',          to: '/dashboard',                       icon: LayoutDashboard },
-    { name: 'Catálogo e Estoque', to: '/dashboard/inventory',             icon: Package },
+    ...(modules.estoque !== false ? [
+      { name: 'Catálogo e Estoque', to: '/dashboard/inventory',             icon: Package }
+    ] : []),
     { name: 'Histórico de Caixas',to: '/dashboard/registers',             icon: History },
   ];
   const configItems = [
     { name: 'Empresa',            to: '/dashboard/configuracoes/empresa',    icon: Building2 },
-    { name: 'Grupos Tributários', to: '/dashboard/configuracoes/tributacao', icon: FileText },
+    ...(modules.nfce !== false ? [
+      { name: 'Grupos Tributários', to: '/dashboard/configuracoes/tributacao', icon: FileText }
+    ] : []),
     { name: 'Gestão de Equipe',   to: '/dashboard/equipe',                   icon: Users },
   ];
+
+  const pathname = window.location.pathname;
+  const isEstoqueBlocked = modules.estoque === false && pathname.startsWith('/dashboard/inventory');
+  const isNfceBlocked = modules.nfce === false && pathname.startsWith('/dashboard/configuracoes/tributacao');
 
   return (
     <div className="flex h-screen bg-zinc-950 text-white font-sans overflow-hidden">
@@ -103,11 +122,24 @@ export function DashboardLayout() {
 
       {/* Main — pb-20 on mobile to clear BottomNav, p-3 on mobile */}
       <main className="flex-1 overflow-y-auto bg-zinc-950 p-3 md:p-8 pb-20 md:pb-8 custom-scrollbar">
-        <Outlet />
+        {(isEstoqueBlocked || isNfceBlocked) ? (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 bg-zinc-900/50 border border-zinc-800 rounded-3xl backdrop-blur-md animate-[fadeIn_0.3s_ease]">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-6 text-amber-500 shadow-lg shadow-amber-500/10">
+              <AlertTriangle size={32} />
+            </div>
+            <h2 className="text-2xl font-bold text-zinc-100">Módulo Desativado</h2>
+            <p className="text-zinc-400 mt-2 max-w-md">Este recurso não está habilitado para o plano da sua empresa. Entre em contato com o suporte para ativá-lo.</p>
+            <button onClick={() => navigate('/dashboard')} className="mt-6 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-2 px-5 rounded-xl transition-all">
+              Ir para o Analytics
+            </button>
+          </div>
+        ) : (
+          <Outlet />
+        )}
       </main>
 
       {/* Bottom Navigation — mobile only (md:hidden inside component) */}
-      <BottomNavigation />
+      <BottomNavigation tenantConfig={tenantConfig} />
     </div>
   );
 }

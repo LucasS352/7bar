@@ -138,6 +138,7 @@ export declare class TenantsService {
         message: string;
     }>;
     validatePin(pin: string): Promise<boolean>;
+    migrateTenants(tenantIds: string[]): Promise<any[]>;
     provisionTenant(dto: ProvisionTenantDto): Promise<{
         message: string;
         tenant: {

@@ -1,3 +1,4 @@
+import { Response } from 'express';
 export declare class AppController {
     healthCheck(): {
         status: string;
@@ -5,4 +6,5 @@ export declare class AppController {
         uptime: number;
         timestamp: string;
     };
+    serveProductImage(filename: string, res: Response): void;
 }

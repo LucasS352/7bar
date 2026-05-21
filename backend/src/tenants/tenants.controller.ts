@@ -33,34 +33,18 @@ export class TenantsController {
     return this.tenantsService.findAll();
   }
 
-  private static isSyncingCosmos = false;
-
-  /** Aciona a sincronização automática da Cosmos (via script) protegido por PIN */
-  @Post('setup/sync-cosmos')
-  async syncCosmos(@Request() req: any) {
+  /** Executa migração de banco de dados para os tenants selecionados (protegido por PIN) */
+  @Post('setup/migrate')
+  async migrateTenants(@Request() req: any, @Body() body: { tenantIds: string[] }) {
     const pin = req.headers['x-setup-pin'] as string;
     const valid = await this.tenantsService.validatePin(pin);
     if (!valid) throw new UnauthorizedException('PIN inválido.');
 
-    if (TenantsController.isSyncingCosmos) {
-      throw new BadRequestException('Uma sincronização já está em andamento. Aguarde a conclusão.');
+    if (!body.tenantIds || !Array.isArray(body.tenantIds) || body.tenantIds.length === 0) {
+      throw new BadRequestException('Nenhum tenant selecionado para migração.');
     }
 
-    const { execFile } = require('child_process');
-    const path = require('path');
-    const scriptPath = path.join(process.cwd(), 'scripts', 'etl', 'cosmos-auto-sync.js');
-    
-    TenantsController.isSyncingCosmos = true;
-
-    // Executa em background com controle de trava
-    execFile('node', [scriptPath], (error, stdout, stderr) => {
-      TenantsController.isSyncingCosmos = false;
-      if (error) console.error(`Erro no sync: ${error.message}`);
-      if (stderr) console.error(`Stderr sync: ${stderr}`);
-      if (stdout) console.log(`Stdout sync: ${stdout}`);
-    });
-
-    return { message: 'Sincronização iniciada em background com sucesso.' };
+    return this.tenantsService.migrateTenants(body.tenantIds);
   }
 
   /**

@@ -102,10 +102,9 @@ export declare class TenantsController {
         certValidade: Date | null;
         cosmosApiKey: string | null;
     })[]>;
-    private static isSyncingCosmos;
-    syncCosmos(req: any): Promise<{
-        message: string;
-    }>;
+    migrateTenants(req: any, body: {
+        tenantIds: string[];
+    }): Promise<any[]>;
     getMe(req: any): Promise<any>;
     updateMe(req: any, body: any): Promise<{
         name: string;

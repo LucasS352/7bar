@@ -27,6 +27,14 @@ export declare class SalesService {
                 address: string | null;
                 reference: string | null;
             } | null;
+            operator: {
+                name: string;
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                active: boolean;
+                pin: string;
+            } | null;
             items: ({
                 product: {
                     name: string;
@@ -47,6 +55,9 @@ export declare class SalesService {
                     ncm: string | null;
                     cest: string | null;
                     origem: number;
+                    isComposite: boolean;
+                    volumeUnit: string | null;
+                    volumeCapacity: Prisma.Decimal | null;
                 };
             } & {
                 id: string;
@@ -144,6 +155,9 @@ export declare class SalesService {
                     ncm: string | null;
                     cest: string | null;
                     origem: number;
+                    isComposite: boolean;
+                    volumeUnit: string | null;
+                    volumeCapacity: Prisma.Decimal | null;
                 };
             } & {
                 id: string;
@@ -221,7 +235,7 @@ export declare class SalesService {
         nfceCodRejeicao: string | null;
         nfceMotivoRejeicao: string | null;
     } | null>;
-    emitNfce(saleId: string): Promise<{
+    emitNfce(saleId: string, forceNewNumber?: boolean): Promise<{
         message: string;
         status: string;
     }>;

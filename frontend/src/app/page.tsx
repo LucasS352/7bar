@@ -1,15 +1,16 @@
 "use client";
 import { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '@/store/auth';
-import { useCartStore, Product } from '@/store/cart';
+import { useCartStore, Product, CartItemModifier } from '@/store/cart';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
-import { Search, ShoppingCart, LogOut, PackageOpen, Minus, Plus, Trash2, LayoutDashboard, FileText, ArrowDownUp, X } from 'lucide-react';
+import { Search, ShoppingCart, LogOut, PackageOpen, Minus, Plus, Trash2, LayoutDashboard, FileText, ArrowDownUp, X, Layers } from 'lucide-react';
 import { PaymentModal } from '@/components/PaymentModal';
 import { CloseRegisterModal } from '@/components/CloseRegisterModal';
 import { CashMovementModal } from '@/components/CashMovementModal';
 import { OperatorLoginModal } from '@/components/OperatorLoginModal';
 import { OpenShiftModal } from '@/components/OpenShiftModal';
+import { CompositeModifierModal } from '@/components/CompositeModifierModal';
 import { ShiftProvider, useShift } from '@/contexts/ShiftContext';
 
 function PosPageContent() {
@@ -23,7 +24,8 @@ function PosPageContent() {
   const [isCloseRegisterOpen, setIsCloseRegisterOpen] = useState(false);
   const [isMovementOpen, setIsMovementOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCartOpen, setIsCartOpen] = useState(false); // For mobile cart drawer
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [compositeProduct, setCompositeProduct] = useState<Product | null>(null);
 
   // Shift Management
   const { operator, cashRegister, isLoading: isShiftLoading, logoutOperator } = useShift();
@@ -61,14 +63,22 @@ function PosPageContent() {
     navigate('/login');
   };
 
+  const handleClickProduct = (product: Product) => {
+    if (product.isComposite && product.modifierGroups && product.modifierGroups.length > 0) {
+      setCompositeProduct(product);
+    } else {
+      addItem(product);
+    }
+  };
+
   const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && search.trim() !== '') {
       const match = products.find(p => p.shortCode?.toLowerCase() === search.toLowerCase().trim() || p.barcode === search.trim());
       if (match) {
-        addItem(match);
+        handleClickProduct(match);
         setSearch('');
       } else if (filtered.length === 1) {
-        addItem(filtered[0]);
+        handleClickProduct(filtered[0]);
         setSearch('');
       }
     }
@@ -160,13 +170,22 @@ function PosPageContent() {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 pb-12">
-              {filtered.map(product => (
+                              {filtered.map(product => (
                 <div key={product.id} className="group relative bg-zinc-900 border border-zinc-800 p-3 md:p-4 rounded-2xl hover:border-blue-500 transition-all flex flex-col items-center justify-between min-h-[160px] overflow-hidden shadow-sm hover:shadow-md">
                   {/* Fundo gradiente leve no hover */}
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
                   
-                  {/* Área principal do botão (Adiciona 1 un) */}
-                  <button onClick={() => addItem(product)} className="w-full flex-1 flex flex-col items-center justify-center z-10 active:scale-95 transition-transform">
+                  {/* Indicador de produto composto */}
+                  {product.isComposite && (
+                    <div className="absolute top-3 left-3 z-10">
+                      <div className="bg-indigo-500/15 border border-indigo-500/30 rounded-full p-1" title="Produto Composto">
+                        <Layers size={10} className="text-indigo-400" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Área principal do botão */}
+                  <button onClick={() => handleClickProduct(product)} className="w-full flex-1 flex flex-col items-center justify-center z-10 active:scale-95 transition-transform">
                     {product.shortCode && (
                        <span className="absolute top-3 right-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 font-extrabold text-[11px] px-2 py-0.5 rounded shadow-sm">
                          {product.shortCode}
@@ -180,23 +199,29 @@ function PosPageContent() {
                     <span className="font-semibold text-[1.1rem] text-center leading-snug z-10 line-clamp-2 px-1 text-zinc-100">{product.name}</span>
                     <span className="text-blue-400 font-bold mt-2 text-xl z-10">R$ {Number(product.priceSell).toFixed(2)}</span>
                     <div className="text-xs text-zinc-500 mt-2 z-10 border border-zinc-700 px-2 py-0.5 rounded-full bg-zinc-950 flex items-center gap-1 font-medium">
-                       Estoque: {Math.round(Number(product.stock))}
+                       {product.isComposite ? (
+                         <span className="text-indigo-400">Composto</span>
+                       ) : (
+                         <>Estoque: {Number(product.stock).toLocaleString('pt-BR', { maximumFractionDigits: 3 })}</>
+                       )}
                     </div>
                   </button>
 
-                  {/* Multiplicadores (Caixa, Fardo) */}
-                  <div className="w-full flex justify-center gap-1 mt-3 z-20 md:opacity-0 md:group-hover:opacity-100 transition-all md:translate-y-2 md:group-hover:translate-y-0 opacity-100 translate-y-0 overflow-x-auto custom-scrollbar pb-1">
-                    {[4, 6, 12, 16, 24].map(qt => (
-                      <button 
-                        key={qt}
-                        onClick={(e) => { e.stopPropagation(); addItem(product, qt); }}
-                        className="bg-zinc-800 hover:bg-blue-600 text-zinc-300 hover:text-white font-bold text-[10px] sm:text-xs py-1.5 px-2 rounded-lg transition-colors active:scale-90 flex-shrink-0"
-                        title={`Adicionar fardo de ${qt}`}
-                      >
-                        +{qt}
-                      </button>
-                    ))}
-                  </div>
+                  {/* Multiplicadores — ocultar em compostos */}
+                  {!product.isComposite && (
+                    <div className="w-full flex justify-center gap-1 mt-3 z-20 md:opacity-0 md:group-hover:opacity-100 transition-all md:translate-y-2 md:group-hover:translate-y-0 opacity-100 translate-y-0 overflow-x-auto custom-scrollbar pb-1">
+                      {[4, 6, 12, 16, 24].map(qt => (
+                        <button 
+                          key={qt}
+                          onClick={(e) => { e.stopPropagation(); addItem(product, qt); }}
+                          className="bg-zinc-800 hover:bg-blue-600 text-zinc-300 hover:text-white font-bold text-[10px] sm:text-xs py-1.5 px-2 rounded-lg transition-colors active:scale-90 flex-shrink-0"
+                          title={`Adicionar fardo de ${qt}`}
+                        >
+                          +{qt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -256,8 +281,8 @@ function PosPageContent() {
                 <p>Adicione produtos para vender.</p>
               </div>
             ) : (
-              items.map(item => (
-                <div key={item.id} className="flex flex-col p-4 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-sm hover:border-zinc-700 transition-colors group">
+                            items.map(item => (
+                <div key={item.cartKey} className="flex flex-col p-4 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-sm hover:border-zinc-700 transition-colors group">
                   <div className="flex gap-3 mb-3">
                     {item.imageUrl && (
                       <div className="w-12 h-12 flex-shrink-0 bg-white/5 rounded-lg flex items-center justify-center p-1 border border-white/5">
@@ -265,7 +290,18 @@ function PosPageContent() {
                       </div>
                     )}
                     <div className="flex-1 flex justify-between items-start">
-                      <div className="font-semibold text-zinc-200 line-clamp-2 pr-2 leading-tight">{item.name}</div>
+                      <div className="flex-1 pr-2">
+                        <div className="font-semibold text-zinc-200 line-clamp-2 leading-tight">{item.name}</div>
+                        {item.modifiers && item.modifiers.length > 0 && (
+                          <div className="mt-1 space-y-0.5">
+                            {item.modifiers.map((mod, idx) => (
+                              <div key={idx} className="text-[11px] text-indigo-400 font-medium">
+                                {mod.groupName}: <span className="text-zinc-300">{mod.optionName}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <div className="font-bold text-lg text-emerald-400 whitespace-nowrap pl-2">
                         R$ {item.subtotal.toFixed(2)}
                       </div>
@@ -273,15 +309,15 @@ function PosPageContent() {
                   </div>
                   
                   <div className="flex justify-between items-center bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800">
-                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-3 md:p-2 hover:bg-zinc-800 text-zinc-400 hover:text-white transition group-hover:text-blue-400">
+                    <button onClick={() => updateQuantity(item.cartKey, item.quantity - 1)} className="p-3 md:p-2 hover:bg-zinc-800 text-zinc-400 hover:text-white transition group-hover:text-blue-400">
                       <Minus size={18} />
                     </button>
                     <span className="font-bold w-12 text-center text-lg md:text-base">{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-3 md:p-2 hover:bg-zinc-800 text-zinc-400 hover:text-white transition group-hover:text-blue-400">
+                    <button onClick={() => updateQuantity(item.cartKey, item.quantity + 1)} className="p-3 md:p-2 hover:bg-zinc-800 text-zinc-400 hover:text-white transition group-hover:text-blue-400">
                       <Plus size={18} />
                     </button>
                     <div className="w-px h-6 bg-zinc-800 mx-1"></div>
-                    <button onClick={() => removeItem(item.id)} className="p-3 md:p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition w-full flex justify-center">
+                    <button onClick={() => removeItem(item.cartKey)} className="p-3 md:p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition w-full flex justify-center">
                       <Trash2 size={18} />
                     </button>
                   </div>
@@ -310,6 +346,25 @@ function PosPageContent() {
         </div>
       </div>
 
+            <CompositeModifierModal
+        product={compositeProduct as any}
+        isOpen={!!compositeProduct}
+        onClose={() => setCompositeProduct(null)}
+        onConfirm={(product, selectedModifiers) => {
+          const modifiers: CartItemModifier[] = selectedModifiers.map(({ group, option }) => ({
+            groupId: group.id,
+            groupName: group.name,
+            optionId: option.id,
+            optionName: option.name,
+            componentProductId: option.componentProductId,
+            quantity: Number(option.quantity || 1),
+            priceAdjustment: Number(option.priceAdjustment || 0),
+          }));
+          addItem(product as any, 1, modifiers);
+          setCompositeProduct(null);
+        }}
+      />
+
       {/* ─── MODAIS DE GESTÃO DE OPERADOR E TURNO ─── */}
       {!isShiftLoading && !operator && (
         <OperatorLoginModal onSuccess={() => {}} />
@@ -324,11 +379,9 @@ function PosPageContent() {
         isOpen={isCloseRegisterOpen} 
         registerId={cashRegister?.id} 
         onClose={async (closed) => {
-          const salesRes = await api.get('/sales?limit=50'); 
-          setSales(salesRes.data.data || []);
           setIsCloseRegisterOpen(false);
           if (closed) {
-            logoutOperator(); // Quando fecha o caixa, precisa sair do operador atual
+            logoutOperator();
           }
         }} 
       />

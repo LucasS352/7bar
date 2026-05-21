@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { PackagePlus, X, Loader2, Save, DollarSign, Barcode, CheckCircle2, HelpCircle } from 'lucide-react';
+import { PackagePlus, X, Loader2, Save, DollarSign, Barcode, CheckCircle2, HelpCircle, Upload, Image, Trash2 } from 'lucide-react';
+import { ProductSearchSelect } from './ProductSearchSelect';
 
 const UNIT_OPTIONS = ['UN', 'KG', 'LT', 'CX', 'DZ', 'PCT', 'FD', 'ML', 'GR'];
 const ORIGEM_OPTIONS = [
@@ -26,26 +27,152 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
   const [eanLookupInfo, setEanLookupInfo] = useState<string | null>(null);
   const eanDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Image Upload states & handlers ────────────────────────
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const uploadFile = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 5MB.');
+      return;
+    }
+
+    const formDataObj = new FormData();
+    formDataObj.append('file', file);
+
+    setIsUploading(true);
+    try {
+      const res = await api.post('/products/upload', formDataObj, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      f('imageUrl', res.data.imageUrl);
+      toast.success('Foto enviada com sucesso!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao enviar a foto.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      await uploadFile(file);
+    } else {
+      toast.error('Selecione apenas arquivos de imagem.');
+    }
+  };
+
+  const removePhoto = () => {
+    f('imageUrl', '');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const emptyForm = {
     name: '', barcode: '', unit: 'UN',
     priceCost: '', priceSell: '', stock: '', categoryId: '',
     ncm: '', cest: '', origem: 0, grupoTributacaoId: '', imageUrl: '',
+    isComposite: false,
+    volumeUnit: '',
+    volumeCapacity: '',
   };
 
   const [formData, setFormData] = useState(emptyForm);
+  const [modifierGroups, setModifierGroups] = useState<any[]>([]);
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [showCopyModal, setShowCopyModal] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     setFormData(emptyForm);
+    setModifierGroups([]);
     Promise.all([
       api.get('/categories'),
       api.get('/tributacao'),
-    ]).then(([catRes, grupRes]) => {
+      api.get('/products?limit=10000'),
+    ]).then(([catRes, grupRes, prodRes]) => {
       setCategories(catRes.data);
       setGrupos(grupRes.data);
+      setAllProducts(prodRes.data.data);
       if (catRes.data.length > 0) setFormData(f => ({ ...f, categoryId: catRes.data[0].id }));
     }).catch(() => toast.error('Erro ao carregar dados auxiliares'));
   }, [isOpen]);
+
+  const addGroup = () => {
+    setModifierGroups(prev => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        name: '',
+        minSelected: 1,
+        maxSelected: 1,
+        options: []
+      }
+    ]);
+  };
+
+  const removeGroup = (groupId: string) => {
+    setModifierGroups(prev => prev.filter(g => g.id !== groupId));
+  };
+
+  const updateGroupName = (groupId: string, name: string) => {
+    setModifierGroups(prev => prev.map(g => g.id === groupId ? { ...g, name } : g));
+  };
+
+  const addOption = (groupId: string) => {
+    setModifierGroups(prev => prev.map(g => {
+      if (g.id !== groupId) return g;
+      return {
+        ...g,
+        options: [
+          ...g.options,
+          {
+            id: Math.random().toString(),
+            name: '',
+            componentProductId: '',
+            quantity: 1,
+            priceAdjustment: 0
+          }
+        ]
+      };
+    }));
+  };
+
+  const removeOption = (groupId: string, optionId: string) => {
+    setModifierGroups(prev => prev.map(g => {
+      if (g.id !== groupId) return g;
+      return { ...g, options: g.options.filter((o: any) => o.id !== optionId) };
+    }));
+  };
+
+  const updateOption = (groupId: string, optionId: string, fields: any) => {
+    setModifierGroups(prev => prev.map(g => {
+      if (g.id !== groupId) return g;
+      return {
+        ...g,
+        options: g.options.map((o: any) => o.id === optionId ? { ...o, ...fields } : o)
+      };
+    }));
+  };
 
   // ── EAN Lookup handler ───────────────────────────────────
   const handleEanChange = useCallback((value: string) => {
@@ -106,22 +233,60 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
     if (!formData.categoryId) { toast.error('Selecione uma Categoria.'); return; }
     if (!formData.priceSell) { toast.error('Preço de Venda é obrigatório.'); return; }
 
+    if (formData.isComposite) {
+      for (const g of modifierGroups) {
+        if (!g.name.trim()) {
+          toast.error("Por favor, preencha o nome de todos os grupos de adicionais.");
+          return;
+        }
+        if (g.options.length === 0) {
+          toast.error(`O grupo "${g.name}" deve ter pelo menos uma opção.`);
+          return;
+        }
+        for (const o of g.options) {
+          if (!o.componentProductId) {
+            toast.error(`Por favor, selecione um ingrediente para todas as opções no grupo "${g.name}".`);
+            return;
+          }
+          if (!o.quantity || parseFloat(o.quantity) <= 0) {
+            toast.error(`A quantidade do ingrediente deve ser maior que zero no grupo "${g.name}".`);
+            return;
+          }
+        }
+      }
+    }
+
     setLoading(true);
     try {
+      const payloadGroups = modifierGroups.map(g => ({
+        name: g.name,
+        minSelected: g.minSelected,
+        maxSelected: g.maxSelected,
+        options: g.options.map((o: any) => ({
+          name: o.name,
+          componentProductId: o.componentProductId,
+          quantity: parseFloat(o.quantity) || 0,
+          priceAdjustment: parseFloat(o.priceAdjustment) || 0
+        }))
+      }));
+
       await api.post('/products', {
         name:              formData.name,
-        // shortCode omitido — gerado automaticamente pelo sistema
         barcode:           formData.barcode   || undefined,
         unit:              formData.unit       || 'UN',
         priceCost:         parseFloat(formData.priceCost)  || 0,
         priceSell:         parseFloat(formData.priceSell)  || 0,
-        stock:             parseInt(formData.stock, 10)    || 0,
+        stock:             formData.isComposite ? 0 : (parseFloat(formData.stock) || 0),
         categoryId:        formData.categoryId,
         ncm:               formData.ncm       || undefined,
         cest:              formData.cest      || undefined,
         origem:            formData.origem,
         grupoTributacaoId: formData.grupoTributacaoId || undefined,
         imageUrl:          formData.imageUrl  || undefined,
+        isComposite:       formData.isComposite,
+        volumeUnit:        formData.volumeUnit || undefined,
+        volumeCapacity:    formData.volumeCapacity ? parseFloat(formData.volumeCapacity) : undefined,
+        modifierGroups:    formData.isComposite ? payloadGroups : undefined,
       });
       toast.success('Produto cadastrado com sucesso!');
       onSuccess();
@@ -161,6 +326,71 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
 
         {/* Form — único, scrollável */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5 space-y-5">
+
+          {/* ── FOTO DO PRODUTO ──────────────────────────────── */}
+          <div className={sectionCls}>
+            <p className="text-[11px] font-black uppercase tracking-widest text-blue-400 border-b border-zinc-800 pb-2 mb-1">Foto do Produto</p>
+            
+            <div className="flex flex-col items-center justify-center">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+              />
+              
+              {formData.imageUrl ? (
+                <div className="w-full relative group rounded-xl overflow-hidden border border-zinc-800 bg-zinc-950 flex items-center justify-center p-4">
+                  <img
+                    src={formData.imageUrl}
+                    alt="Preview"
+                    className="max-h-48 rounded-lg object-contain bg-white p-2"
+                  />
+                  <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-3 transition-opacity duration-200">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Upload size={14} /> Alterar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={removePhoto}
+                      className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Trash2 size={14} /> Remover
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`w-full py-8 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 ${
+                    isDragging
+                      ? 'border-blue-500 bg-blue-500/5'
+                      : 'border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-950/30'
+                  }`}
+                >
+                  {isUploading ? (
+                    <Loader2 size={32} className="animate-spin text-blue-500" />
+                  ) : (
+                    <Upload size={32} className="text-zinc-500 group-hover:text-blue-400 transition-colors" />
+                  )}
+                  <span className="text-xs font-bold text-zinc-400">
+                    {isUploading ? 'Enviando foto...' : 'Adicionar Foto'}
+                  </span>
+                  <span className="text-[10px] text-zinc-600 text-center px-4">
+                    Arraste uma imagem ou clique para selecionar (PNG, JPG, máx. 5MB)
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* ── DADOS PRINCIPAIS ──────────────────────────────── */}
           <div className={sectionCls}>
@@ -274,10 +504,11 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
               <div>
                 <label className={labelCls}>Estoque Inicial</label>
                 <input
-                  type="number" step="1" min="0"
-                  className={`${inputCls} text-blue-400 font-bold`}
-                  placeholder="0"
-                  value={formData.stock}
+                  type="number" step="0.001" min="0"
+                  disabled={formData.isComposite}
+                  className={`${inputCls} text-blue-400 font-bold disabled:opacity-50`}
+                  placeholder={formData.isComposite ? "Composto" : "0"}
+                  value={formData.isComposite ? "" : formData.stock}
                   onChange={e => f('stock', e.target.value)}
                 />
               </div>
@@ -295,6 +526,230 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
               </div>
             )}
           </div>
+
+          {/* ── FRACIONAMENTO & COMPOSIÇÃO ────────────────────── */}
+          <div className={sectionCls}>
+            <p className="text-[11px] font-black uppercase tracking-widest text-indigo-400 border-b border-zinc-800 pb-2 mb-1">Fracionamento &amp; Composição</p>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Fracionamento Interno</label>
+                <select 
+                  className={inputCls} 
+                  value={formData.volumeUnit || ''} 
+                  onChange={e => f('volumeUnit', e.target.value)}
+                >
+                  <option value="">Não Fracionado</option>
+                  <option value="ML">ML (Mililitros)</option>
+                  <option value="UN">UN (Unidades)</option>
+                </select>
+              </div>
+              {formData.volumeUnit && (
+                <div>
+                  <label className={labelCls}>
+                    {formData.volumeUnit === 'ML' ? 'Capacidade Garrafa (ml)' : 'Unidades por Caixa'}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    required
+                    className={inputCls}
+                    placeholder={formData.volumeUnit === 'ML' ? 'Ex: 950' : 'Ex: 20'}
+                    value={formData.volumeCapacity || ''}
+                    onChange={e => f('volumeCapacity', e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between py-2 border-t border-zinc-800/50 mt-2">
+              <span className="text-xs font-bold text-zinc-300">Produto Composto / Com adicionais</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={formData.isComposite}
+                  onChange={e => f('isComposite', e.target.checked)}
+                />
+                <div className="w-11 h-6 bg-zinc-850 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-650 after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-checked:after:bg-white"></div>
+              </label>
+            </div>
+
+            {formData.isComposite && (
+              <div className="space-y-4 pt-3 border-t border-zinc-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-zinc-400">Grupos de Adicionais</span>
+                  <div className="flex gap-3">
+                    {allProducts.some(p => p.isComposite) && (
+                      <button
+                        type="button"
+                        onClick={() => setShowCopyModal(true)}
+                        className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition"
+                      >
+                        Copiar Adicionais
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={addGroup}
+                      className="text-xs font-bold text-blue-400 hover:text-blue-300 transition"
+                    >
+                      + Adicionar Grupo
+                    </button>
+                  </div>
+                </div>
+
+                {modifierGroups.length === 0 ? (
+                  <p className="text-xs text-zinc-500 text-center py-4 bg-zinc-950/30 rounded-xl border border-zinc-800/50">
+                    Nenhum grupo configurado.
+                  </p>
+                ) : (
+                  modifierGroups.map((g, gIdx) => (
+                    <div key={g.id || gIdx} className="bg-zinc-950/40 border border-zinc-800/80 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <input
+                          className="bg-transparent border-b border-zinc-800 hover:border-zinc-700 focus:border-blue-500 text-sm font-bold text-white focus:outline-none transition py-0.5 px-1 flex-1 placeholder-zinc-600"
+                          value={g.name}
+                          onChange={e => updateGroupName(g.id, e.target.value)}
+                          placeholder="Nome do Grupo (ex: Escolha o Gelo)"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeGroup(g.id)}
+                          className="text-xs font-bold text-rose-500 hover:text-rose-400 transition"
+                        >
+                          Remover Grupo
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-12 gap-2 text-[10px] font-black tracking-widest text-zinc-500 uppercase px-1">
+                          <div className="col-span-5">Ingrediente</div>
+                          <div className="col-span-4">Qtd Baixa</div>
+                          <div className="col-span-2 text-right">Preço +</div>
+                          <div className="col-span-1"></div>
+                        </div>
+
+                        {g.options.map((opt: any, oIdx: number) => {
+                          const compProd = allProducts.find(p => p.id === opt.componentProductId);
+                          const unitLabel = compProd?.volumeUnit || compProd?.unit || 'UN';
+
+                          return (
+                            <div key={opt.id || oIdx} className="grid grid-cols-12 gap-2 items-center">
+                              <div className="col-span-5">
+                                <ProductSearchSelect
+                                  products={allProducts.filter(p => !p.isComposite && p.active !== false)}
+                                  value={opt.componentProductId}
+                                  onChange={(productId) => {
+                                    const selected = allProducts.find(p => p.id === productId);
+                                    updateOption(g.id, opt.id, {
+                                      componentProductId: productId,
+                                      name: opt.name || selected?.name || ''
+                                    });
+                                  }}
+                                />
+                              </div>
+                              <div className="col-span-4 flex items-center gap-1.5">
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  required
+                                  className="w-full bg-zinc-950 border border-zinc-855 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition"
+                                  placeholder="Qtd"
+                                  value={opt.quantity}
+                                  onChange={e => updateOption(g.id, opt.id, { quantity: e.target.value })}
+                                />
+                                <span className="text-[10px] text-zinc-500 font-bold">{unitLabel}</span>
+                              </div>
+                              <div className="col-span-2">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  className="w-full bg-zinc-950 border border-zinc-855 rounded-lg px-2 py-1.5 text-xs text-emerald-400 text-right font-bold focus:outline-none focus:border-blue-500 transition"
+                                  placeholder="0.00"
+                                  value={opt.priceAdjustment}
+                                  onChange={e => updateOption(g.id, opt.id, { priceAdjustment: e.target.value })}
+                                />
+                              </div>
+                              <div className="col-span-1 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => removeOption(g.id, opt.id)}
+                                  className="text-rose-500 hover:text-rose-400 transition"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        <button
+                          type="button"
+                          onClick={() => addOption(g.id)}
+                          className="w-full py-1.5 border border-dashed border-zinc-800 hover:border-zinc-700 bg-zinc-950/20 text-zinc-400 hover:text-zinc-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          + Adicionar Opção
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {showCopyModal && (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
+                <h3 className="text-sm font-bold text-white">Copiar Adicionais</h3>
+                <p className="text-xs text-zinc-500">Selecione o produto composto para copiar todos os adicionais e ingredientes:</p>
+                
+                <select
+                  className={inputCls}
+                  onChange={e => {
+                    const source = allProducts.find(p => p.id === e.target.value);
+                    if (source && source.modifierGroups) {
+                      const clonedGroups = source.modifierGroups.map((g: any) => ({
+                        id: Math.random().toString(),
+                        name: g.name,
+                        minSelected: g.minSelected,
+                        maxSelected: g.maxSelected,
+                        options: g.options.map((o: any) => ({
+                          id: Math.random().toString(),
+                          name: o.name,
+                          componentProductId: o.componentProductId,
+                          quantity: parseFloat(o.quantity) || 0,
+                          priceAdjustment: parseFloat(o.priceAdjustment) || 0
+                        }))
+                      }));
+                      setModifierGroups(clonedGroups);
+                      toast.success(`Ficha técnica copiada de "${source.name}"!`);
+                    }
+                    setShowCopyModal(false);
+                  }}
+                >
+                  <option value="">-- Escolha um Copão / Combo --</option>
+                  {allProducts
+                    .filter(p => p.isComposite)
+                    .map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))
+                  }
+                </select>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCopyModal(false)}
+                    className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg text-xs font-bold transition"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── FISCAL ─────────────────────────────────────────── */}
           <div className={sectionCls}>

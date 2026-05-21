@@ -2,58 +2,7 @@ import { ProductsService, TenantSettingsDto } from './products.service';
 export declare class ProductsController {
     private readonly productsService;
     constructor(productsService: ProductsService);
-    findAll(page?: number, limit?: number): Promise<{
-        data: ({
-            grupoTributacao: {
-                id: string;
-                nome: string;
-                ativo: boolean;
-                csosn: string | null;
-                cstIcms: string | null;
-                cfop: string;
-                aliqIcms: import("@prisma/client/runtime/library").Decimal;
-                redBcIcms: import("@prisma/client/runtime/library").Decimal;
-                cstPis: string;
-                aliqPis: import("@prisma/client/runtime/library").Decimal;
-                cstCofins: string;
-                aliqCofins: import("@prisma/client/runtime/library").Decimal;
-                cstIpi: string | null;
-                aliqIpi: import("@prisma/client/runtime/library").Decimal;
-                createdAt: Date;
-                updatedAt: Date;
-            } | null;
-            category: {
-                name: string;
-                id: string;
-                createdAt: Date;
-                updatedAt: Date;
-            };
-        } & {
-            name: string;
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            categoryId: string;
-            grupoTributacaoId: string | null;
-            shortCode: string | null;
-            barcode: string | null;
-            unit: string;
-            active: boolean;
-            imageUrl: string | null;
-            priceCost: import("@prisma/client/runtime/library").Decimal;
-            priceSell: import("@prisma/client/runtime/library").Decimal;
-            stock: import("@prisma/client/runtime/library").Decimal;
-            salesCount: number;
-            ncm: string | null;
-            cest: string | null;
-            origem: number;
-        })[];
-        meta: {
-            total: number;
-            page: number;
-            lastPage: number;
-        };
-    }>;
+    findAll(page?: number, limit?: number): Promise<any>;
     lookupBarcode(barcode: string): Promise<{
         source: string;
         data: {
@@ -75,6 +24,9 @@ export declare class ProductsController {
             ncm: string | null;
             cest: string | null;
             origem: number;
+            isComposite: boolean;
+            volumeUnit: string | null;
+            volumeCapacity: import("@prisma/client/runtime/library").Decimal | null;
         };
     } | {
         source: string;
@@ -108,6 +60,12 @@ export declare class ProductsController {
         ncm: string | null;
         cest: string | null;
         origem: number;
+        isComposite: boolean;
+        volumeUnit: string | null;
+        volumeCapacity: import("@prisma/client/runtime/library").Decimal | null;
+    }>;
+    uploadPhoto(file: Express.Multer.File, req: any): Promise<{
+        imageUrl: string;
     }>;
     bulkEntry(items: any[]): Promise<{
         success: boolean;
@@ -135,6 +93,9 @@ export declare class ProductsController {
             ncm: string | null;
             cest: string | null;
             origem: number;
+            isComposite: boolean;
+            volumeUnit: string | null;
+            volumeCapacity: import("@prisma/client/runtime/library").Decimal | null;
         };
         quantityAdded: number;
     }>;
@@ -142,6 +103,46 @@ export declare class ProductsController {
     saveSettings(body: {
         allowNegativeStock: boolean;
     }): Promise<TenantSettingsDto>;
+    getComposition(id: string): Promise<({
+        options: ({
+            componentProduct: {
+                name: string;
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                categoryId: string;
+                grupoTributacaoId: string | null;
+                shortCode: string | null;
+                barcode: string | null;
+                unit: string;
+                active: boolean;
+                imageUrl: string | null;
+                priceCost: import("@prisma/client/runtime/library").Decimal;
+                priceSell: import("@prisma/client/runtime/library").Decimal;
+                stock: import("@prisma/client/runtime/library").Decimal;
+                salesCount: number;
+                ncm: string | null;
+                cest: string | null;
+                origem: number;
+                isComposite: boolean;
+                volumeUnit: string | null;
+                volumeCapacity: import("@prisma/client/runtime/library").Decimal | null;
+            };
+        } & {
+            name: string;
+            id: string;
+            quantity: import("@prisma/client/runtime/library").Decimal;
+            groupId: string;
+            componentProductId: string;
+            priceAdjustment: import("@prisma/client/runtime/library").Decimal;
+        })[];
+    } & {
+        name: string;
+        id: string;
+        productId: string;
+        minSelected: number;
+        maxSelected: number;
+    })[]>;
     update(id: string, body: any): Promise<{
         name: string;
         id: string;
@@ -161,25 +162,9 @@ export declare class ProductsController {
         ncm: string | null;
         cest: string | null;
         origem: number;
+        isComposite: boolean;
+        volumeUnit: string | null;
+        volumeCapacity: import("@prisma/client/runtime/library").Decimal | null;
     }>;
-    remove(id: string): Promise<{
-        name: string;
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        categoryId: string;
-        grupoTributacaoId: string | null;
-        shortCode: string | null;
-        barcode: string | null;
-        unit: string;
-        active: boolean;
-        imageUrl: string | null;
-        priceCost: import("@prisma/client/runtime/library").Decimal;
-        priceSell: import("@prisma/client/runtime/library").Decimal;
-        stock: import("@prisma/client/runtime/library").Decimal;
-        salesCount: number;
-        ncm: string | null;
-        cest: string | null;
-        origem: number;
-    }>;
+    remove(id: string): Promise<any>;
 }
