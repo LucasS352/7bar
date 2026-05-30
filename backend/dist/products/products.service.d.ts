@@ -79,7 +79,7 @@ export declare class ProductsService {
     private heartPrisma;
     private catalogCache;
     private readonly CACHE_TTL;
-    private invalidateCache;
+    invalidateCache(tenantId: string): void;
     constructor(tenantManager: TenantConnectionManager, tenantContext: TenantContextService, heartPrisma: HeartPrismaService);
     private getPrisma;
     private nextShortCode;

@@ -35,15 +35,16 @@ model Tenant {
   crt          Int     @default(1) // 1=Simples Nacional, 2=SN Excesso, 3=Regime Normal
 
   // Endereço
-  logradouro   String?
-  numero       String?
-  complemento  String?
-  bairro       String?
-  municipio    String?
-  codMunicipio String? // Código IBGE (7 dígitos) ex: "3506003" para Bauru-SP
-  uf           String?
-  cep          String?
-  telefone     String?
+  logradouro    String?
+  numero        String?
+  complemento   String?
+  bairro        String?
+  municipio     String?
+  codMunicipio  String? // Código IBGE (7 dígitos) ex: "3506003" para Bauru-SP
+  uf            String?
+  cep           String?
+  telefone      String?
+  emailContador String?
 
   // NFC-e — configurações de emissão
   nfceAtivo    Boolean @default(false) // habilita emissão NFC-e

@@ -47,6 +47,12 @@ let SalesController = class SalesController {
         });
         stream.getStream().pipe(res);
     }
+    async exportXmlsAndSendEmail(startDate, endDate, email) {
+        if (!startDate || !endDate) {
+            throw new common_1.BadRequestException('As datas inicial e final são obrigatórias.');
+        }
+        return this.salesService.exportNfceXmlsAndSendEmail(startDate, endDate, email);
+    }
 };
 exports.SalesController = SalesController;
 __decorate([
@@ -96,6 +102,15 @@ __decorate([
     __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", Promise)
 ], SalesController.prototype, "exportXmls", null);
+__decorate([
+    (0, common_1.Post)('export/xmls/send-email'),
+    __param(0, (0, common_1.Body)('startDate')),
+    __param(1, (0, common_1.Body)('endDate')),
+    __param(2, (0, common_1.Body)('email')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", Promise)
+], SalesController.prototype, "exportXmlsAndSendEmail", null);
 exports.SalesController = SalesController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('sales'),

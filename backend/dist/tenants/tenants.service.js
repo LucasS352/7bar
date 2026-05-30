@@ -93,7 +93,7 @@ let TenantsService = TenantsService_1 = class TenantsService {
             'logradouro', 'numero', 'complemento', 'bairro',
             'municipio', 'codMunicipio', 'uf', 'cep', 'telefone',
             'nfceAtivo', 'nfceSerie', 'nfceAmbiente', 'nfceCsc', 'nfceIdCsc',
-            'modulos', 'status'
+            'modulos', 'status', 'emailContador'
         ];
         const safeData = Object.fromEntries(Object.entries(data).filter(([k]) => allowed.includes(k)));
         if (safeData.crt != null)

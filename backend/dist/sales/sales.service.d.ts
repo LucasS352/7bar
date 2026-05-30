@@ -3,14 +3,18 @@ import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { NfceService } from '../nfce/nfce.service';
+import { ProductsService } from '../products/products.service';
 import { Prisma } from '@prisma/client';
+import { MailService } from '../mail/mail.service';
 export declare class SalesService {
     private tenantManager;
     private heartPrisma;
     private nfceService;
     private tenantContext;
+    private productsService;
+    private mailService;
     private readonly logger;
-    constructor(tenantManager: TenantConnectionManager, heartPrisma: HeartPrismaService, nfceService: NfceService, tenantContext: TenantContextService);
+    constructor(tenantManager: TenantConnectionManager, heartPrisma: HeartPrismaService, nfceService: NfceService, tenantContext: TenantContextService, productsService: ProductsService, mailService: MailService);
     private getPrisma;
     checkout(data: any): Promise<any>;
     dispararNfce(tenantId: string, databaseUrl: string, sale: any): Promise<void>;
@@ -240,4 +244,8 @@ export declare class SalesService {
         status: string;
     }>;
     exportNfceXmls(startDate: string, endDate: string): Promise<StreamableFile>;
+    private generateZipBuffer;
+    exportNfceXmlsAndSendEmail(startDate: string, endDate: string, targetEmail?: string): Promise<{
+        message: string;
+    }>;
 }

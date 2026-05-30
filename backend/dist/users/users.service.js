@@ -124,11 +124,32 @@ let UsersService = class UsersService {
         });
         if (!user)
             throw new common_1.NotFoundException('Usuário não encontrado.');
-        const updateData = {
-            name: data.name,
-            email: data.email,
-            role: data.role,
-        };
+        if (user.role === 'admin' && data.role && data.role !== 'admin') {
+            throw new common_1.BadRequestException('Não é possível alterar a função do Administrador principal.');
+        }
+        if (data.role === 'admin' && user.role !== 'admin') {
+            const adminCount = await this.heartPrisma.user.count({
+                where: { tenantId, role: 'admin' }
+            });
+            if (adminCount >= 1) {
+                throw new common_1.BadRequestException('Limite atingido: Já existe 1 Administrador neste sistema.');
+            }
+        }
+        if (data.email && data.email !== user.email) {
+            const existingUser = await this.heartPrisma.user.findUnique({
+                where: { email: data.email }
+            });
+            if (existingUser) {
+                throw new common_1.BadRequestException('Já existe um usuário cadastrado com este e-mail.');
+            }
+        }
+        const updateData = {};
+        if (data.name)
+            updateData.name = data.name;
+        if (data.email)
+            updateData.email = data.email;
+        if (data.role)
+            updateData.role = data.role;
         if (data.password) {
             updateData.password = await bcrypt.hash(data.password, 10);
         }

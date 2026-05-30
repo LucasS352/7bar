@@ -3,6 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { ExportXmlModal } from '@/components/ExportXmlModal';
 import { ReemitNfceModal } from '@/components/ReemitNfceModal';
+import { PeriodReportModal } from '@/components/PeriodReportModal';
 import { 
   DollarSign, TrendingUp, Package, Loader2, CheckCircle2, 
   XCircle, Clock, Receipt, Download, Calendar, ArrowUpRight, 
@@ -33,7 +34,11 @@ type SummaryData = {
     avgTicket: number;
     byPaymentMethod: Record<string, number>;
     byHour: Record<number, number>;
+    byDay?: Record<string, number>;
+    byWeek?: Record<string, number>;
+    byMonth?: Record<string, number>;
     topProducts: Array<{ name: string; qty: number; revenue: number; pct: number }>;
+    productsSold?: Array<{ name: string; qty: number; revenue: number }>;
   };
 };
 
@@ -154,6 +159,8 @@ export default function SalesDashboard() {
   const [preset, setPreset] = useState<'today' | 'week' | 'month' | 'custom'>('today');
   const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [chartGrouping, setChartGrouping] = useState<'hour' | 'day' | 'week' | 'month'>('hour');
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Paginação e busca na tabela
   const [searchTerm, setSearchTerm] = useState('');
@@ -358,15 +365,75 @@ export default function SalesDashboard() {
   const isCustomOrPast = preset === 'custom' || preset === 'month' || preset === 'week'; // Define se o card de "Caixa Atual" deve estar cinza
 
   // Dados para gráficos
-  const chartDataHour = useMemo(() => {
-    if (!summary?.period.byHour) return [];
-    const peak = Object.values(summary.period.byHour).reduce((a, b) => Math.max(a, b), 0);
-    return Object.entries(summary.period.byHour).map(([hour, value]) => ({
-      name: `${hour}h`,
-      value,
-      isPeak: value > 0 && value === peak,
-    }));
-  }, [summary]);
+  const chartData = useMemo(() => {
+    if (!summary?.period) return [];
+
+    if (chartGrouping === 'hour') {
+      const byHour = summary.period.byHour || {};
+      const peak = Object.values(byHour).reduce((a, b) => Math.max(a, b), 0);
+      return Object.entries(byHour).map(([hour, value]) => ({
+        name: `${hour}h`,
+        value,
+        isPeak: value > 0 && value === peak,
+      }));
+    }
+
+    if (chartGrouping === 'day') {
+      const byDay = summary.period.byDay || {};
+      const sortedKeys = Object.keys(byDay).sort();
+      const peak = Object.values(byDay).reduce((a, b) => Math.max(a, b), 0);
+      return sortedKeys.map(key => {
+        const value = byDay[key];
+        const parts = key.split('-');
+        const label = parts.length === 3 ? `${parts[2]}/${parts[1]}` : key;
+        return {
+          name: label,
+          value,
+          isPeak: value > 0 && value === peak,
+        };
+      });
+    }
+
+    if (chartGrouping === 'week') {
+      const byWeek = summary.period.byWeek || {};
+      const sortedKeys = Object.keys(byWeek).sort();
+      const peak = Object.values(byWeek).reduce((a, b) => Math.max(a, b), 0);
+      return sortedKeys.map(key => {
+        const value = byWeek[key];
+        const parts = key.split('-');
+        const label = parts.length === 3 ? `Sem. ${parts[2]}/${parts[1]}` : key;
+        return {
+          name: label,
+          value,
+          isPeak: value > 0 && value === peak,
+        };
+      });
+    }
+
+    if (chartGrouping === 'month') {
+      const byMonth = summary.period.byMonth || {};
+      const sortedKeys = Object.keys(byMonth).sort();
+      const peak = Object.values(byMonth).reduce((a, b) => Math.max(a, b), 0);
+      const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      return sortedKeys.map(key => {
+        const value = byMonth[key];
+        const parts = key.split('-');
+        let label = key;
+        if (parts.length === 2) {
+          const monthIdx = parseInt(parts[1]) - 1;
+          const monthLabel = monthNames[monthIdx] || parts[1];
+          label = `${monthLabel}/${parts[0].slice(-2)}`;
+        }
+        return {
+          name: label,
+          value,
+          isPeak: value > 0 && value === peak,
+        };
+      });
+    }
+
+    return [];
+  }, [summary, chartGrouping]);
 
   const chartDataPayment = useMemo(() => {
     if (!summary?.period.byPaymentMethod) return [];
@@ -439,6 +506,15 @@ export default function SalesDashboard() {
           </div>
           
           <div className="w-px h-8 bg-zinc-800 mx-1 hidden lg:block"></div>
+
+          {preset === 'custom' && (
+            <button 
+              onClick={() => setIsReportModalOpen(true)} 
+              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-3 sm:py-2 rounded-xl transition-colors font-bold w-full sm:w-auto mt-2 sm:mt-0 shadow-lg shadow-blue-500/10"
+            >
+              <TrendingUp size={18} /> <span>Relatório de Vendas</span>
+            </button>
+          )}
 
           <button onClick={() => setIsExportModalOpen(true)} className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-3 sm:py-2 rounded-xl transition-colors font-medium border border-zinc-700 w-full sm:w-auto mt-2 sm:mt-0">
             <Download size={18} /> <span className="sm:hidden md:inline">Exportar XML</span>
@@ -544,14 +620,32 @@ export default function SalesDashboard() {
       {/* --- GRÁFICOS & TOP PRODUTOS --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Gráfico: Vendas por Hora */}
+        {/* Gráfico: Vendas por Período */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl lg:col-span-2">
-          <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-            <Clock size={20} className="text-amber-400"/> Vendas por Hora (Período Selecionado)
-          </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Clock size={20} className="text-amber-400"/> Vendas por {chartGrouping === 'hour' ? 'Hora' : chartGrouping === 'day' ? 'Dia' : chartGrouping === 'week' ? 'Semana' : 'Mês'} (Período Selecionado)
+            </h3>
+            
+            <div className="flex bg-zinc-950 border border-zinc-800 p-0.5 rounded-xl self-start sm:self-auto">
+              {(['hour', 'day', 'week', 'month'] as const).map((group) => (
+                <button
+                  key={group}
+                  onClick={() => setChartGrouping(group)}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    chartGrouping === group
+                      ? 'bg-blue-600 text-white shadow'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                  }`}
+                >
+                  {group === 'hour' ? 'Hora' : group === 'day' ? 'Dia' : group === 'week' ? 'Semana' : 'Mês'}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="h-[200px] md:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartDataHour} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <XAxis dataKey="name" stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `R$${val}`} />
                 <Tooltip 
@@ -561,7 +655,7 @@ export default function SalesDashboard() {
                   formatter={(value: number) => [formatCurrency(value), 'Faturamento']}
                 />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                  {chartDataHour.map((entry, index) => (
+                  {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.isPeak ? '#fbbf24' : '#3b82f6'} />
                   ))}
                 </Bar>
@@ -881,6 +975,15 @@ export default function SalesDashboard() {
       </div>
 
       <ExportXmlModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
+      {isReportModalOpen && (
+        <PeriodReportModal 
+          isOpen={isReportModalOpen} 
+          onClose={() => setIsReportModalOpen(false)} 
+          startDate={startDate} 
+          endDate={endDate} 
+          summary={summary} 
+        />
+      )}
       <ErrorBoundary>
         <ReemitNfceModal 
           isOpen={isReemitModalOpen} 

@@ -117,19 +117,42 @@ export class DashboardService {
       });
     });
 
-    // Agrega vendas por hora
+    // Agrega faturamento por recortes temporais (Hora, Dia, Semana, Mês)
     const byHour: Record<number, number> = {};
     for (let h = 0; h < 24; h++) byHour[h] = 0;
-    periodSales.forEach(sale => {
-      // Ajusta para o fuso horário de Brasília (-3) para o gráfico de horas
-      const saleDate = new Date((sale as any).createdAt);
-      const brHour = new Date(saleDate.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })).getHours();
-      byHour[brHour] = (byHour[brHour] ?? 0) + Number((sale as any).total);
-    });
 
-    // Top 8 produtos
+    const byDay: Record<string, number> = {};
+    const byWeek: Record<string, number> = {};
+    const byMonth: Record<string, number> = {};
+
     const productMap: Record<string, { name: string; qty: number; revenue: number }> = {};
+
     periodSales.forEach(sale => {
+      const saleDate = new Date((sale as any).createdAt);
+      const brDate = new Date(saleDate.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+      const saleTotal = Number((sale as any).total || 0);
+
+      // 1. Agregação por Hora
+      const brHour = brDate.getHours();
+      byHour[brHour] = (byHour[brHour] ?? 0) + saleTotal;
+
+      // 2. Agregação por Dia (YYYY-MM-DD)
+      const dayKey = `${brDate.getFullYear()}-${String(brDate.getMonth() + 1).padStart(2, '0')}-${String(brDate.getDate()).padStart(2, '0')}`;
+      byDay[dayKey] = (byDay[dayKey] ?? 0) + saleTotal;
+
+      // 3. Agregação por Semana (YYYY-MM-DD da segunda-feira correspondente)
+      const monday = new Date(brDate);
+      const dayOfWeek = monday.getDay();
+      const diffToMonday = monday.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      monday.setDate(diffToMonday);
+      const weekKey = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+      byWeek[weekKey] = (byWeek[weekKey] ?? 0) + saleTotal;
+
+      // 4. Agregação por Mês (YYYY-MM)
+      const monthKey = `${brDate.getFullYear()}-${String(brDate.getMonth() + 1).padStart(2, '0')}`;
+      byMonth[monthKey] = (byMonth[monthKey] ?? 0) + saleTotal;
+
+      // Agregação de produtos vendidos
       sale.items.forEach(item => {
         const key = item.productId as string;
         const name = (item.productName as string) || 'Desconhecido';
@@ -141,15 +164,22 @@ export class DashboardService {
 
     const periodRevenue = periodSales.reduce((acc, s) => acc + Number((s as any).total), 0);
 
-    const topProducts = Object.values(productMap)
+    // Lista total de produtos vendidos ordenados por faturamento decrescente
+    const productsSold = Object.values(productMap)
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 8)
       .map(p => ({
         name: p.name,
         qty: p.qty,
         revenue: p.revenue,
-        pct: periodRevenue > 0 ? (p.revenue / periodRevenue) * 100 : 0,
       }));
+
+    // Top 8 produtos para a widget lateral clássica
+    const topProducts = productsSold.slice(0, 8).map(p => ({
+      name: p.name,
+      qty: p.qty,
+      revenue: p.revenue,
+      pct: periodRevenue > 0 ? (p.revenue / periodRevenue) * 100 : 0,
+    }));
 
     const avgTicket = periodSales.length > 0
       ? periodRevenue / periodSales.length
@@ -181,7 +211,11 @@ export class DashboardService {
         avgTicket,
         byPaymentMethod,
         byHour,
+        byDay,
+        byWeek,
+        byMonth,
         topProducts,
+        productsSold,
       },
     };
   }

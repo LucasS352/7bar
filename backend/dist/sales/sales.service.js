@@ -16,8 +16,10 @@ const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
 const tenant_context_service_1 = require("../prisma/tenant-context.service");
 const heart_prisma_service_1 = require("../prisma/heart-prisma.service");
 const nfce_service_1 = require("../nfce/nfce.service");
+const products_service_1 = require("../products/products.service");
 const client_1 = require("@prisma/client");
 const archiver = require("archiver");
+const mail_service_1 = require("../mail/mail.service");
 const TPAG_MAP = {
     dinheiro: '01',
     credito: '03',
@@ -26,11 +28,13 @@ const TPAG_MAP = {
     outros: '99',
 };
 let SalesService = SalesService_1 = class SalesService {
-    constructor(tenantManager, heartPrisma, nfceService, tenantContext) {
+    constructor(tenantManager, heartPrisma, nfceService, tenantContext, productsService, mailService) {
         this.tenantManager = tenantManager;
         this.heartPrisma = heartPrisma;
         this.nfceService = nfceService;
         this.tenantContext = tenantContext;
+        this.productsService = productsService;
+        this.mailService = mailService;
         this.logger = new common_1.Logger(SalesService_1.name);
     }
     async getPrisma() {
@@ -38,10 +42,10 @@ let SalesService = SalesService_1 = class SalesService {
         return this.tenantManager.getTenantClient(tenantId, databaseUrl);
     }
     async checkout(data) {
-        const { userId } = this.tenantContext.get();
+        const { userId, tenantId } = this.tenantContext.get();
         let operatorId = data.operatorId || userId;
         const prisma = await this.getPrisma();
-        return prisma.$transaction(async (tx) => {
+        const sale = await prisma.$transaction(async (tx) => {
             let subtotal = new client_1.Prisma.Decimal(0);
             const saleItemsData = [];
             if (!data.cashRegisterId) {
@@ -267,6 +271,13 @@ let SalesService = SalesService_1 = class SalesService {
             }
             return sale;
         });
+        try {
+            this.productsService.invalidateCache(tenantId);
+        }
+        catch (err) {
+            this.logger.error(`Erro ao invalidar cache de produtos do tenant ${tenantId}: ${err.message}`);
+        }
+        return sale;
     }
     async dispararNfce(tenantId, databaseUrl, sale) {
         try {
@@ -553,6 +564,86 @@ let SalesService = SalesService_1 = class SalesService {
         archive.finalize();
         return new common_1.StreamableFile(archive);
     }
+    generateZipBuffer(sales) {
+        return new Promise((resolve, reject) => {
+            const archive = archiver('zip', { zlib: { level: 9 } });
+            const buffers = [];
+            archive.on('data', (data) => buffers.push(data));
+            archive.on('end', () => resolve(Buffer.concat(buffers)));
+            archive.on('error', (err) => reject(err));
+            sales.forEach((sale) => {
+                archive.append(sale.nfceXml, { name: `${sale.nfceChave}-nfe.xml` });
+            });
+            archive.finalize();
+        });
+    }
+    async exportNfceXmlsAndSendEmail(startDate, endDate, targetEmail) {
+        const { tenantId } = this.tenantContext.get();
+        const tenant = await this.heartPrisma.tenant.findUnique({
+            where: { id: tenantId }
+        });
+        if (!tenant) {
+            throw new common_1.NotFoundException('Empresa não encontrada.');
+        }
+        const emailToUse = targetEmail || tenant.emailContador;
+        if (!emailToUse) {
+            throw new common_1.BadRequestException('E-mail do contador não configurado para esta empresa. Por favor, configure nas configurações ou informe um e-mail.');
+        }
+        const prisma = await this.getPrisma();
+        const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+        const start = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
+        const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+        const end = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
+        const sales = await prisma.sale.findMany({
+            where: {
+                createdAt: { gte: start, lte: end },
+                nfceStatus: 'autorizada',
+                nfceXml: { not: null },
+            },
+            select: { nfceChave: true, nfceXml: true },
+        });
+        if (sales.length === 0) {
+            throw new common_1.NotFoundException('Nenhum XML encontrado neste período.');
+        }
+        const zipBuffer = await this.generateZipBuffer(sales);
+        const razaoSocial = tenant.razaoSocial || tenant.name || 'Empresa';
+        const cnpj = tenant.cnpj ? tenant.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : 'Não informado';
+        const subject = `XMLs de NFC-e — ${razaoSocial} — Período ${startDate} a ${endDate}`;
+        const text = `Prezado(a) Contador(a),\n\nSegue em anexo o arquivo ZIP contendo os XMLs das notas fiscais emitidas no período de ${startDate} a ${endDate}.\n\nDados do emitente:\nRazão Social: ${razaoSocial}\nCNPJ: ${cnpj}\n\nEste é um e-mail automático gerado pelo sistema PDV 7bar.`;
+        const html = `
+      <div style="font-family: sans-serif; color: #333; line-height: 1.6;">
+        <h2 style="color: #6366f1;">Exportação de XMLs de NFC-e</h2>
+        <p>Prezado(a) Contador(a),</p>
+        <p>Segue em anexo o arquivo comprimido (ZIP) contendo os arquivos XML das Notas Fiscais do Consumidor Eletrônicas (NFC-e) referentes ao período de <strong>${startDate}</strong> a <strong>${endDate}</strong>.</p>
+        
+        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #4b5563;">Dados da Empresa Emitente</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 4px 0; font-weight: bold; width: 120px;">Razão Social:</td>
+              <td style="padding: 4px 0;">${razaoSocial}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 0; font-weight: bold;">CNPJ:</td>
+              <td style="padding: 4px 0;">${cnpj}</td>
+            </tr>
+            ${tenant.telefone ? `<tr><td style="padding: 4px 0; font-weight: bold;">Contato:</td><td style="padding: 4px 0;">${tenant.telefone}</td></tr>` : ''}
+          </table>
+        </div>
+        
+        <p style="font-size: 0.9em; color: #6b7280; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 10px;">
+          Este é um e-mail automático gerado pelo sistema PDV 7bar. Por favor, não responda a esta mensagem.
+        </p>
+      </div>
+    `;
+        await this.mailService.sendMail(emailToUse, subject, text, html, [
+            {
+                filename: `xmls_${startDate}_a_${endDate}.zip`,
+                content: zipBuffer,
+            }
+        ]);
+        return { message: 'XMLs exportados e enviados com sucesso para a contabilidade.' };
+    }
 };
 exports.SalesService = SalesService;
 exports.SalesService = SalesService = SalesService_1 = __decorate([
@@ -560,6 +651,8 @@ exports.SalesService = SalesService = SalesService_1 = __decorate([
     __metadata("design:paramtypes", [tenant_prisma_service_1.TenantConnectionManager,
         heart_prisma_service_1.HeartPrismaService,
         nfce_service_1.NfceService,
-        tenant_context_service_1.TenantContextService])
+        tenant_context_service_1.TenantContextService,
+        products_service_1.ProductsService,
+        mail_service_1.MailService])
 ], SalesService);
 //# sourceMappingURL=sales.service.js.map

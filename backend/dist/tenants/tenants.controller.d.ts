@@ -43,6 +43,7 @@ export declare class TenantsController {
         uf: string | null;
         cep: string | null;
         telefone: string | null;
+        emailContador: string | null;
         nfceAtivo: boolean;
         nfceAutoSync: boolean;
         nfceAmbiente: number;
@@ -92,6 +93,7 @@ export declare class TenantsController {
         uf: string | null;
         cep: string | null;
         telefone: string | null;
+        emailContador: string | null;
         nfceAtivo: boolean;
         nfceAutoSync: boolean;
         nfceAmbiente: number;
@@ -132,6 +134,7 @@ export declare class TenantsController {
         uf: string | null;
         cep: string | null;
         telefone: string | null;
+        emailContador: string | null;
         nfceAtivo: boolean;
         nfceAutoSync: boolean;
         nfceAmbiente: number;
@@ -168,6 +171,7 @@ export declare class TenantsController {
         uf: string | null;
         cep: string | null;
         telefone: string | null;
+        emailContador: string | null;
         nfceAtivo: boolean;
         nfceAutoSync: boolean;
         nfceAmbiente: number;
@@ -204,6 +208,7 @@ export declare class TenantsController {
         uf: string | null;
         cep: string | null;
         telefone: string | null;
+        emailContador: string | null;
         nfceAtivo: boolean;
         nfceAutoSync: boolean;
         nfceAmbiente: number;
@@ -252,6 +257,7 @@ export declare class TenantsController {
         uf: string | null;
         cep: string | null;
         telefone: string | null;
+        emailContador: string | null;
         nfceAtivo: boolean;
         nfceAutoSync: boolean;
         nfceAmbiente: number;

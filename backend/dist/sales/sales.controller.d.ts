@@ -231,4 +231,7 @@ export declare class SalesController {
         status: string;
     }>;
     exportXmls(startDate: string, endDate: string, res: Response): Promise<void>;
+    exportXmlsAndSendEmail(startDate: string, endDate: string, email?: string): Promise<{
+        message: string;
+    }>;
 }
