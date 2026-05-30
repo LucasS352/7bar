@@ -16,6 +16,7 @@ import { InventoryPage } from './pages/dashboard/InventoryPage';
 import { RegistersPage } from './pages/dashboard/RegistersPage';
 import { EmpresaPage } from './pages/dashboard/EmpresaPage';
 import { TributacaoPage } from './pages/dashboard/TributacaoPage';
+import { ComandasPage } from './pages/dashboard/ComandasPage';
 import UsersPage from './app/dashboard/users/page';
 import CategoriesPage from './app/dashboard/inventory/categories/page';
 import MassEntryPage from './app/dashboard/inventory/purchases/page';
@@ -96,6 +97,7 @@ function App() {
           <Route path="configuracoes/empresa" element={<EmpresaPage />} />
           <Route path="configuracoes/tributacao" element={<TributacaoPage />} />
           <Route path="equipe" element={<UsersPage />} />
+          <Route path="comandas" element={<ComandasPage />} />
         </Route>
 
         {/* Fallback */}

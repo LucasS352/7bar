@@ -45,16 +45,21 @@ export class SalesService {
       const saleItemsData: any[] = [];
 
       // ─── 0. Ler configurações do tenant e validar caixa ────────────────────
-      if (!data.cashRegisterId) {
+      const isConsumption = !!data.consumedByOperatorId;
+
+      if (!isConsumption && !data.cashRegisterId) {
         throw new BadRequestException('Não é possível realizar venda: Caixa não informado.');
       }
 
-      const cashRegister = await tx.cashRegister.findUnique({
-        where: { id: data.cashRegisterId }
-      });
+      let cashRegister: any = null;
+      if (data.cashRegisterId) {
+        cashRegister = await tx.cashRegister.findUnique({
+          where: { id: data.cashRegisterId }
+        });
 
-      if (!cashRegister || cashRegister.status !== 'open') {
-        throw new BadRequestException('O caixa selecionado está fechado ou é inválido. Abra o caixa primeiro.');
+        if (!cashRegister || cashRegister.status !== 'open') {
+          throw new BadRequestException('O caixa selecionado está fechado ou é inválido. Abra o caixa primeiro.');
+        }
       }
 
       const tenantSettings = await tx.tenantSettings.findUnique({ where: { id: 'singleton' } });
@@ -277,7 +282,7 @@ export class SalesService {
         data: {
           customerId:     data.customerId || null,
           operatorId,
-          cashRegisterId: data.cashRegisterId,
+          cashRegisterId: data.cashRegisterId || null,
           subtotal,
           discount,
           total,
@@ -299,6 +304,16 @@ export class SalesService {
           customer: true,
         },
       });
+
+      if (data.consumedByOperatorId) {
+        await tx.operatorConsumption.create({
+          data: {
+            operatorId: data.consumedByOperatorId,
+            saleId: sale.id,
+            settled: false,
+          }
+        });
+      }
 
       // ─── 5. Disparar emissão NFC-e (se solicitada) — fora da transação principal ──
       // A emissão é feita após o commit para não bloquear a transação se o PHP demorar

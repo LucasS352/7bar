@@ -20,11 +20,12 @@ const METHOD_CONFIG = [
   { id: 'pix',     icon: QrCode,     label: 'Pix',      color: 'bg-teal-500/10 text-teal-400 border-teal-500/20 ring-teal-500 hover:border-teal-500' },
   { id: 'credito', icon: CreditCard, label: 'Crédito',  color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 ring-indigo-500 hover:border-indigo-500' },
   { id: 'debito',  icon: CreditCard, label: 'Débito',   color: 'bg-sky-500/10 text-sky-400 border-sky-500/20 ring-sky-500 hover:border-sky-500' },
+  { id: 'consumo_funcionario', icon: User, label: 'Consumo Colaborador', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20 ring-amber-500 hover:border-amber-500' }
 ];
 
-const METHOD_NAMES: Record<string, string> = { dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito' };
+const METHOD_NAMES: Record<string, string> = { dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito', consumo_funcionario: 'Consumo Colaborador' };
 
-const TPAG_MAP: Record<string, string> = { dinheiro: '01', credito: '03', debito: '04', pix: '17', outros: '99' };
+const TPAG_MAP: Record<string, string> = { dinheiro: '01', credito: '03', debito: '04', pix: '17', consumo_funcionario: '99', outros: '99' };
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -53,7 +54,9 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   const isNfceEnabled = modules.nfce !== false;
 
   const [payments, setPayments] = useState<{ id: string; method: string; value: number; given: number }[]>([]);
-  const [method, setMethod] = useState<'dinheiro' | 'pix' | 'credito' | 'debito'>('dinheiro');
+  const [method, setMethod] = useState<'dinheiro' | 'pix' | 'credito' | 'debito' | 'consumo_funcionario'>('dinheiro');
+  const [operatorsList, setOperatorsList] = useState<{ id: string; name: string }[]>([]);
+  const [selectedOperatorId, setSelectedOperatorId] = useState('');
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [payMode, setPayMode] = useState<PayMode>('simple');
@@ -212,6 +215,12 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
       setPayMode('simple'); setShowConsumerForm(false); setCustomerCpf(''); setCustomerName('');
       setSaleResult(null); setNfcePolling(false); setSavedOffline(false);
       setDiscountValue(0); setDiscountPinInput(''); setPinVerified(false); setPendingDiscountStr('');
+      setSelectedOperatorId('');
+      
+      api.get('/operators')
+        .then(res => setOperatorsList(res.data || []))
+        .catch(console.error);
+
       // Remove focus from the background search bar to prevent accidental typing
       setTimeout(() => {
         if (document.activeElement instanceof HTMLElement) {
@@ -378,8 +387,15 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
   const handleConfirm = async (mode: PayMode) => {
     if (remaining > 0) { toast.error(`Falta R$ ${remaining.toFixed(2)} para finalizar.`); return; }
+    
+    const isConsumo = payments.some(p => p.method === 'consumo_funcionario');
+    if (isConsumo && !selectedOperatorId) {
+      toast.error('Por favor, selecione o funcionário que está consumindo.');
+      return;
+    }
+
     setLoading(true);
-    const actualMode = isNfceEnabled ? mode : 'simple';
+    const actualMode = isConsumo ? 'simple' : (isNfceEnabled ? mode : 'simple');
     setPayMode(actualMode);
     try {
       const body = {
@@ -396,7 +412,8 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         discount: discountValue,
         cashRegisterId: cashRegister?.id,
         operatorId: operator?.id ?? user?.id,
-        emitirNfce: actualMode === 'nfce',
+        consumedByOperatorId: isConsumo ? selectedOperatorId : undefined,
+        emitirNfce: isConsumo ? false : (actualMode === 'nfce'),
         ...(actualMode === 'nfce' ? { customerCpf: customerCpf || undefined, customerName: customerName || undefined } : {}),
       };
       const res = await api.post('/sales/checkout', body);
@@ -612,6 +629,22 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                   </button>
                 ))}
               </div>
+
+              {method === 'consumo_funcionario' && (
+                <div className="mt-3 p-3 bg-zinc-950 border border-zinc-800 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <label className="text-zinc-400 text-xs font-semibold block">Qual colaborador está consumindo?</label>
+                  <select
+                    value={selectedOperatorId}
+                    onChange={e => setSelectedOperatorId(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Selecione o colaborador...</option>
+                    {operatorsList.map(op => (
+                      <option key={op.id} value={op.id}>{op.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div>
@@ -677,7 +710,9 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                 {payments.map(p => (
                   <div key={p.id} className="flex justify-between items-center p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm group">
                     <span className="font-semibold text-zinc-300 flex items-center gap-2">
-                      {p.method === 'dinheiro' ? <Banknote size={14} className="text-emerald-500" /> : <CreditCard size={14} className="text-blue-500" />}
+                      {p.method === 'dinheiro' ? <Banknote size={14} className="text-emerald-500" /> :
+                       p.method === 'consumo_funcionario' ? <User size={14} className="text-amber-400" /> :
+                       <CreditCard size={14} className="text-blue-500" />}
                       {METHOD_NAMES[p.method]}
                     </span>
                     <div className="flex items-center gap-3">

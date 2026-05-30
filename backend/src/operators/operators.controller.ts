@@ -12,6 +12,31 @@ export class OperatorsController {
     return this.operatorsService.create(req.user.tenantId, body);
   }
 
+  @Get('consumptions')
+  getConsumptions(@Request() req: any) {
+    return this.operatorsService.getConsumptions(req.user.tenantId);
+  }
+
+  @Post('consumptions/manual')
+  createManualConsumption(@Request() req: any, @Body() body: { operatorId: string; productId: string; quantity: number }) {
+    return this.operatorsService.createManualConsumption(req.user.tenantId, body);
+  }
+
+  @Get('consumptions/:operatorId')
+  getOperatorConsumptionHistory(@Request() req: any, @Param('operatorId') operatorId: string) {
+    return this.operatorsService.getOperatorConsumptionHistory(req.user.tenantId, operatorId);
+  }
+
+  @Post('consumptions/:operatorId/settle')
+  settleConsumptions(@Request() req: any, @Param('operatorId') operatorId: string) {
+    return this.operatorsService.settleConsumptions(req.user.tenantId, operatorId);
+  }
+
+  @Delete('consumptions/:id')
+  deleteConsumption(@Request() req: any, @Param('id') id: string) {
+    return this.operatorsService.deleteConsumption(req.user.tenantId, id);
+  }
+
   @Get()
   findAll(@Request() req: any) {
     return this.operatorsService.findAll(req.user.tenantId);

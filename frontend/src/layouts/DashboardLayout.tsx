@@ -47,6 +47,7 @@ export function DashboardLayout() {
       { name: 'Catálogo e Estoque', to: '/dashboard/inventory',             icon: Package }
     ] : []),
     { name: 'Histórico de Caixas',to: '/dashboard/registers',             icon: History },
+    { name: 'Comandas / Consumo', to: '/dashboard/comandas',              icon: Users },
   ];
   const configItems = [
     { name: 'Empresa',            to: '/dashboard/configuracoes/empresa',    icon: Building2 },

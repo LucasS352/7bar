@@ -95,4 +95,202 @@ export class OperatorsService {
       throw new NotFoundException('Operador não encontrado');
     }
   }
+
+  async getConsumptions(tenantId: string) {
+    const prisma = await this.getPrisma(tenantId);
+    
+    const operators = await prisma.operator.findMany({
+      where: { active: true },
+      select: {
+        id: true,
+        name: true,
+        consumptions: {
+          where: { settled: false },
+          select: {
+            sale: {
+              select: {
+                total: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    return operators.map(op => {
+      const pendingBalance = op.consumptions.reduce((sum, c) => sum + Number(c.sale.total), 0);
+      return {
+        id: op.id,
+        name: op.name,
+        pendingBalance,
+      };
+    });
+  }
+
+  async getOperatorConsumptionHistory(tenantId: string, operatorId: string) {
+    const prisma = await this.getPrisma(tenantId);
+    
+    const consumptions = await prisma.operatorConsumption.findMany({
+      where: { operatorId },
+      include: {
+        sale: {
+          include: {
+            items: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return consumptions.map(c => ({
+      id: c.id,
+      saleId: c.sale.id,
+      total: Number(c.sale.total),
+      settled: c.settled,
+      settledAt: c.settledAt,
+      createdAt: c.createdAt,
+      items: c.sale.items.map(item => ({
+        id: item.id,
+        name: item.productName,
+        quantity: Number(item.quantity),
+        priceUnit: Number(item.priceUnit),
+        subtotal: Number(item.subtotal)
+      }))
+    }));
+  }
+
+  async settleConsumptions(tenantId: string, operatorId: string) {
+    const prisma = await this.getPrisma(tenantId);
+    
+    await prisma.operatorConsumption.updateMany({
+      where: { operatorId, settled: false },
+      data: {
+        settled: true,
+        settledAt: new Date()
+      }
+    });
+
+    return { success: true };
+  }
+
+  async createManualConsumption(tenantId: string, data: { operatorId: string; productId: string; quantity: number }) {
+    const prisma = await this.getPrisma(tenantId);
+    
+    return prisma.$transaction(async (tx) => {
+      const product = await tx.product.findUnique({
+        where: { id: data.productId },
+        include: { grupoTributacao: true }
+      });
+      if (!product) throw new NotFoundException('Produto não encontrado');
+      
+      const qty = Number(data.quantity);
+      const priceSell = Number(product.priceSell);
+      const subtotal = priceSell * qty;
+      
+      // Stock update
+      await tx.product.update({
+        where: { id: product.id },
+        data: {
+          stock: { decrement: qty },
+          salesCount: { increment: qty }
+        }
+      });
+      
+      // Create Sale
+      const sale = await tx.sale.create({
+        data: {
+          subtotal: subtotal,
+          discount: 0,
+          total: subtotal,
+          status: 'completed',
+          items: {
+            create: [
+              {
+                productId: product.id,
+                productName: product.name,
+                unit: product.unit,
+                quantity: qty,
+                priceUnit: product.priceSell,
+                subtotal: subtotal,
+                ncm: product.ncm,
+                cest: product.cest,
+                origem: product.origem,
+                csosn: product.grupoTributacao?.csosn,
+                cstIcms: product.grupoTributacao?.cstIcms,
+                aliqIcms: product.grupoTributacao?.aliqIcms ?? 0,
+                cstPis: product.grupoTributacao?.cstPis ?? '99',
+                aliqPis: product.grupoTributacao?.aliqPis ?? 0,
+                cstCofins: product.grupoTributacao?.cstCofins ?? '99',
+                aliqCofins: product.grupoTributacao?.aliqCofins ?? 0,
+              }
+            ]
+          },
+          payments: {
+            create: [
+              {
+                tPag: '99',
+                method: 'consumo_funcionario',
+                value: subtotal,
+                troco: 0
+              }
+            ]
+          }
+        }
+      });
+      
+      // Create OperatorConsumption
+      const consumption = await tx.operatorConsumption.create({
+        data: {
+          operatorId: data.operatorId,
+          saleId: sale.id,
+          settled: false,
+        },
+        include: {
+          sale: {
+            include: {
+              items: true
+            }
+          }
+        }
+      });
+      
+      return consumption;
+    });
+  }
+
+  async deleteConsumption(tenantId: string, id: string) {
+    const prisma = await this.getPrisma(tenantId);
+    
+    const consumption = await prisma.operatorConsumption.findUnique({
+      where: { id },
+      include: {
+        sale: {
+          include: {
+            items: true
+          }
+        }
+      }
+    });
+
+    if (!consumption) throw new NotFoundException('Registro de consumo não encontrado');
+
+    return prisma.$transaction(async (tx) => {
+      for (const item of consumption.sale.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: { increment: item.quantity },
+            salesCount: { decrement: Math.round(Number(item.quantity)) }
+          }
+        });
+      }
+
+      await tx.sale.delete({
+        where: { id: consumption.saleId }
+      });
+
+      return { success: true };
+    });
+  }
 }
