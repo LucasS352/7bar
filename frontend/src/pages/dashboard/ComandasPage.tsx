@@ -18,6 +18,8 @@ interface ConsumptionItem {
   quantity: number;
   priceUnit: number;
   subtotal: number;
+  settled?: boolean;
+  settledAt?: string | null;
 }
 
 interface ConsumptionRecord {
@@ -48,6 +50,11 @@ export function ComandasPage() {
   const [history, setHistory] = useState<ConsumptionRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showOnlyPending, setShowOnlyPending] = useState(true);
+
+  // Settle Modal state
+  const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+  const [selectedItemsToSettle, setSelectedItemsToSettle] = useState<string[]>([]);
+  const [settling, setSettling] = useState(false);
 
   // Manual Launch Modal state
   const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
@@ -106,20 +113,29 @@ export function ComandasPage() {
     }
   }, [selectedOperator]);
 
-  // Handle Quitar / Settle Balance
-  const handleSettle = async (operatorId: string) => {
-    if (!window.confirm('Tem certeza que deseja liquidar todo o saldo devedor deste colaborador?')) return;
+  const handleSettle = async (operatorId: string, itemIds?: string[]) => {
+    setSettling(true);
     try {
-      await api.post(`/operators/consumptions/${operatorId}/settle`);
-      toast.success('Comanda liquidada com sucesso!');
+      await api.post(`/operators/consumptions/${operatorId}/settle`, { itemIds });
+      toast.success('Consumo quitado com sucesso!');
+      setIsSettleModalOpen(false);
       fetchOperators();
       if (selectedOperator && selectedOperator.id === operatorId) {
-        setSelectedOperator(prev => prev ? { ...prev, pendingBalance: 0 } : null);
+        // Refresh operator balance from server
+        const res = await api.get('/operators/consumptions');
+        const updatedOp = (res.data || []).find((o: any) => o.id === operatorId);
+        if (updatedOp) {
+          setSelectedOperator(updatedOp);
+        } else {
+          setSelectedOperator(prev => prev ? { ...prev, pendingBalance: 0 } : null);
+        }
         fetchOperatorHistory(operatorId);
       }
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao liquidar comanda.');
+      toast.error('Erro ao liquidar consumo.');
+    } finally {
+      setSettling(false);
     }
   };
 
@@ -206,10 +222,48 @@ export function ComandasPage() {
   // Filter history items by status checkbox
   const filteredHistory = useMemo(() => {
     if (showOnlyPending) {
-      return history.filter(h => !h.settled);
+      return history
+        .map(h => ({
+          ...h,
+          items: h.items.filter(item => !item.settled)
+        }))
+        .filter(h => h.items.length > 0);
     }
     return history;
   }, [history, showOnlyPending]);
+
+  // Compute all pending items of the selected operator
+  const pendingItems = useMemo(() => {
+    const items: Array<{ id: string; name: string; quantity: number; priceUnit: number; subtotal: number; date: string }> = [];
+    history.forEach(rec => {
+      rec.items.forEach(item => {
+        if (!item.settled) {
+          items.push({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            priceUnit: item.priceUnit,
+            subtotal: item.subtotal,
+            date: rec.createdAt
+          });
+        }
+      });
+    });
+    return items;
+  }, [history]);
+
+  // Sync selected items to settle when modal opens
+  useEffect(() => {
+    if (isSettleModalOpen) {
+      setSelectedItemsToSettle(pendingItems.map(item => item.id));
+    }
+  }, [isSettleModalOpen, pendingItems]);
+
+  const selectedTotal = useMemo(() => {
+    return pendingItems
+      .filter(item => selectedItemsToSettle.includes(item.id))
+      .reduce((sum, item) => sum + item.subtotal, 0);
+  }, [pendingItems, selectedItemsToSettle]);
 
   return (
     <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
@@ -346,8 +400,8 @@ export function ComandasPage() {
 
               {selectedOperator.pendingBalance > 0 && (
                 <button
-                  onClick={() => handleSettle(selectedOperator.id)}
-                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition text-xs font-bold"
+                  onClick={() => setIsSettleModalOpen(true)}
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition text-xs font-bold active:scale-[0.98]"
                 >
                   Quitar Saldo (R$ {selectedOperator.pendingBalance.toFixed(2)})
                 </button>
@@ -417,10 +471,13 @@ export function ComandasPage() {
                       {rec.items.map(item => (
                         <div key={item.id} className="flex justify-between items-center py-2 text-sm">
                           <div>
-                            <span className="font-semibold text-zinc-200">{item.name}</span>
-                            <span className="text-xs text-zinc-500 block">{item.quantity} UN x R$ {item.priceUnit.toFixed(2)}</span>
+                            <span className={`font-semibold ${item.settled ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>{item.name}</span>
+                            <span className="text-xs text-zinc-500 block">
+                              {item.quantity} UN x R$ {item.priceUnit.toFixed(2)}
+                              {item.settled && <span className="ml-2 text-emerald-500 font-bold">(Quitado)</span>}
+                            </span>
                           </div>
-                          <span className="font-bold text-zinc-100">R$ {item.subtotal.toFixed(2)}</span>
+                          <span className={`font-bold ${item.settled ? 'text-zinc-500 line-through' : 'text-zinc-100'}`}>R$ {item.subtotal.toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
@@ -534,6 +591,103 @@ export function ComandasPage() {
               </div>
 
             </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* Settle Modal / Quitação Seletiva */}
+      {isSettleModalOpen && selectedOperator && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
+              <div>
+                <h4 className="font-bold text-xl text-white">Quitar Consumos de {selectedOperator.name}</h4>
+                <p className="text-xs text-zinc-400 mt-1">Selecione quais itens deseja abater ou quitar.</p>
+              </div>
+              <button 
+                onClick={() => setIsSettleModalOpen(false)} 
+                className="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-full text-zinc-400 hover:text-white transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 space-y-4 custom-scrollbar">
+              {pendingItems.length === 0 ? (
+                <div className="text-center py-8 text-zinc-500">
+                  <p>Nenhum item pendente de acerto.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-zinc-400 font-bold uppercase tracking-wider pb-2 border-b border-zinc-800 font-medium">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedItemsToSettle.length === pendingItems.length}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setSelectedItemsToSettle(pendingItems.map(item => item.id));
+                          } else {
+                            setSelectedItemsToSettle([]);
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-blue-600 accent-blue-500"
+                      />
+                      Selecionar Todos
+                    </label>
+                    <span>Item / Subtotal</span>
+                  </div>
+
+                  <div className="divide-y divide-zinc-800/50 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    {pendingItems.map(item => {
+                      const isChecked = selectedItemsToSettle.includes(item.id);
+                      return (
+                        <div key={item.id} className="flex items-center justify-between py-3 text-sm group">
+                          <label className="flex items-center gap-3 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                if (isChecked) {
+                                  setSelectedItemsToSettle(prev => prev.filter(id => id !== item.id));
+                                } else {
+                                  setSelectedItemsToSettle(prev => [...prev, item.id]);
+                                }
+                              }}
+                              className="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-blue-600 accent-blue-500"
+                            />
+                            <div>
+                              <span className="font-semibold text-zinc-200 block leading-tight">{item.name}</span>
+                              <span className="text-xs text-zinc-500 mt-1 block">
+                                {item.quantity} UN x R$ {item.priceUnit.toFixed(2)} — {new Date(item.date).toLocaleString('pt-BR')}
+                              </span>
+                            </div>
+                          </label>
+                          <span className="font-bold text-zinc-100">R$ {item.subtotal.toFixed(2)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-zinc-800 bg-zinc-900/50 flex flex-col sm:flex-row gap-4 items-center justify-between">
+              <div className="text-center sm:text-left">
+                <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Total Selecionado</span>
+                <div className="text-2xl font-black text-amber-500">R$ {selectedTotal.toFixed(2)}</div>
+              </div>
+              <button
+                onClick={() => handleSettle(selectedOperator.id, selectedItemsToSettle)}
+                disabled={settling || selectedItemsToSettle.length === 0}
+                className="w-full sm:w-auto px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition active:scale-95 flex items-center justify-center gap-2"
+              >
+                {settling ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                Confirmar Quitação
+              </button>
+            </div>
 
           </div>
         </div>

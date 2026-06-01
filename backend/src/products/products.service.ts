@@ -330,6 +330,15 @@ export class ProductsService {
     });
 
     if (sanitized.stock && Number(sanitized.stock) > 0) {
+      await prisma.stockLot.create({
+        data: {
+          productId: product.id,
+          costPrice: sanitized.priceCost !== undefined ? new Prisma.Decimal(sanitized.priceCost) : new Prisma.Decimal(0),
+          quantity: new Prisma.Decimal(sanitized.stock),
+          remaining: new Prisma.Decimal(sanitized.stock),
+        }
+      });
+
       await prisma.inventoryLog.create({
         data: {
           productId: product.id,
@@ -462,21 +471,34 @@ export class ProductsService {
    * Adiciona quantidade ao estoque de forma segura usando Prisma increment.
    * Executado dentro de uma transaction para evitar condições de corrida.
    */
-  async addStock(productId: string, quantity: number, reason?: string) {
+  async addStock(productId: string, quantity: number, costPrice?: number, reason?: string) {
     if (quantity <= 0) {
       throw new BadRequestException('A quantidade de entrada deve ser maior que zero.');
     }
 
     const prisma = await this.getPrisma();
 
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const product = await tx.product.findUnique({ where: { id: productId } });
       if (!product) throw new NotFoundException('Produto não encontrado.');
 
-      // Usa increment nativo do Prisma — atômico, sem condição de corrida
+      const finalCost = costPrice !== undefined ? new Prisma.Decimal(costPrice) : product.priceCost;
+
       const updated = await tx.product.update({
         where: { id: productId },
-        data: { stock: { increment: new Prisma.Decimal(quantity) } },
+        data: { 
+          stock: { increment: new Prisma.Decimal(quantity) },
+          priceCost: finalCost
+        },
+      });
+
+      await tx.stockLot.create({
+        data: {
+          productId,
+          costPrice: finalCost,
+          quantity: new Prisma.Decimal(quantity),
+          remaining: new Prisma.Decimal(quantity),
+        }
       });
 
       await tx.inventoryLog.create({
@@ -484,12 +506,16 @@ export class ProductsService {
           productId,
           type: 'IN',
           quantity,
+          costPrice: finalCost,
           reason: reason || 'Entrada de Estoque — Reposição',
         },
       });
 
       return { product: updated, quantityAdded: quantity };
     });
+
+    this.invalidateCache(this.tenantContext.get().tenantId);
+    return result;
   }
 
   // ── Importação em Lote (Fast Grid) ────────────────────────────────────────
@@ -562,8 +588,18 @@ export class ProductsService {
             });
 
             if (stockToAdd > 0) {
+              const finalCost = item.priceCost !== undefined && item.priceCost !== null ? new Prisma.Decimal(item.priceCost) : existing.priceCost;
+              await tx.stockLot.create({
+                data: {
+                  productId: existing.id,
+                  costPrice: finalCost,
+                  quantity: new Prisma.Decimal(stockToAdd),
+                  remaining: new Prisma.Decimal(stockToAdd),
+                }
+              });
+
               await tx.inventoryLog.create({
-                data: { productId: existing.id, type: 'IN', quantity: stockToAdd, costPrice: item.priceCost, reason: 'Entrada Lote/Fornecedor' },
+                data: { productId: existing.id, type: 'IN', quantity: stockToAdd, costPrice: Number(finalCost), reason: 'Entrada Lote/Fornecedor' },
               });
             }
             importedCount++;
@@ -602,6 +638,15 @@ export class ProductsService {
             if (created.shortCode) byShortCode.set(created.shortCode, created as any);
 
             if (stockToAdd > 0) {
+              await tx.stockLot.create({
+                data: {
+                  productId: created.id,
+                  costPrice: new Prisma.Decimal(item.priceCost || 0),
+                  quantity: new Prisma.Decimal(stockToAdd),
+                  remaining: new Prisma.Decimal(stockToAdd),
+                }
+              });
+
               await tx.inventoryLog.create({
                 data: { productId: created.id, type: 'IN', quantity: stockToAdd, costPrice: item.priceCost, reason: 'Cadastro e Entrada Lote Inicial' },
               });
@@ -665,5 +710,22 @@ export class ProductsService {
     const imageUrl = `/api/products/uploads/images/${filename}`;
 
     return { imageUrl };
+  }
+
+  async getProductLots(productId: string) {
+    const prisma = await this.getPrisma();
+    
+    const lots = await prisma.stockLot.findMany({
+      where: { productId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return lots.map(lot => ({
+      id: lot.id,
+      costPrice: Number(lot.costPrice),
+      quantity: Number(lot.quantity),
+      remaining: Number(lot.remaining),
+      createdAt: lot.createdAt
+    }));
   }
 }

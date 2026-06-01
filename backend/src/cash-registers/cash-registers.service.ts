@@ -101,6 +101,7 @@ export class CashRegistersService {
     let totalDebito = new Prisma.Decimal(0);
 
     sales.forEach(sale => {
+      if (sale.status === 'cancelled') return;
       sale.payments.forEach(p => {
         const v = new Prisma.Decimal(p.value as any);
         if (p.method === 'dinheiro')      totalDinheiro = totalDinheiro.add(v);
@@ -144,7 +145,7 @@ export class CashRegistersService {
         totalVendas: totalVendas.toNumber(),
         totalSuprimentos: totalSuprimentos.toNumber(),
         totalSangrias: totalSangrias.toNumber(),
-        countSales: sales.length,
+        countSales: sales.filter(s => s.status !== 'cancelled').length,
         expectedDinheiro: expectedDinheiro.toNumber(),
         salesDetails: sales,
         movements

@@ -111,6 +111,7 @@ model Product {
   modifierGroups      ProductModifierGroup[]  @relation("ProductModifiers")
   modifierOptionsUsed ProductModifierOption[] @relation("ComponentProduct")
   saleItemModifiers   SaleItemModifier[]      @relation("ComponentProduct")
+  lots                StockLot[]
 
   @@map("products")
 }
@@ -215,6 +216,9 @@ model Sale {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  cancelReason        String?       @db.Text
+  cancelledAt         DateTime?
+
   items               SaleItem[]
   payments            Payment[]
   operatorConsumption OperatorConsumption?
@@ -265,7 +269,11 @@ model SaleItem {
   aliqCofins Decimal @default(0) @db.Decimal(5, 2)
   valorCofins Decimal @default(0) @db.Decimal(10, 2)
 
-  modifiers SaleItemModifier[]
+  modifiers           SaleItemModifier[]
+  lotConsumptions     StockLotConsumption[]
+  priceCost           Decimal               @default(0) @db.Decimal(10, 4)
+  settled             Boolean               @default(false)
+  settledAt           DateTime?
 
   @@map("sale_items")
 }
@@ -416,3 +424,35 @@ model SaleItemModifier {
 
   @@map("sale_item_modifiers")
 }
+
+// ------------------------------------------------------------
+//  StockLot — lotes de estoque para custeio PEPS/FIFO
+// ------------------------------------------------------------
+model StockLot {
+  id           String                @id @default(uuid())
+  productId    String
+  product      Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  costPrice    Decimal               @db.Decimal(10, 4) // Custo de aquisição unitário
+  quantity     Decimal               @db.Decimal(10, 3) // Quantidade comprada originalmente
+  remaining    Decimal               @db.Decimal(10, 3) // Quantidade restante no lote
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  consumptions StockLotConsumption[]
+
+  @@map("stock_lots")
+}
+
+// ------------------------------------------------------------
+//  StockLotConsumption — consumo detalhado de cada lote
+// ------------------------------------------------------------
+model StockLotConsumption {
+  id         String   @id @default(uuid())
+  saleItemId String
+  saleItem   SaleItem @relation(fields: [saleItemId], references: [id], onDelete: Cascade)
+  lotId      String
+  lot        StockLot @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  quantity   Decimal  @db.Decimal(10, 3)
+
+  @@map("stock_lot_consumptions")
+}
+

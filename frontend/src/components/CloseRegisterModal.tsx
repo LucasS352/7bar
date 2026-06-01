@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { FileText, Loader2, X, AlertOctagon, Receipt } from 'lucide-react';
+import { FileText, Loader2, X, AlertOctagon, Receipt, Trash2 } from 'lucide-react';
+import { useAuthStore } from '@/store/auth';
 
 export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: boolean, onClose: (closed: boolean) => void, registerId: string | undefined }) {
   const [data, setData] = useState<any>(null);
@@ -11,9 +12,42 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
   const [submitting, setSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+
+  const [cancelSaleId, setCancelSaleId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState<string>('');
+  const [cancelling, setCancelling] = useState<boolean>(false);
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleInitiateCancel = (saleId: string) => {
+    setCancelSaleId(saleId);
+    setCancelReason('');
+  };
+
+  const handleCancelSale = async () => {
+    if (!cancelReason.trim()) {
+      toast.error('Informe o motivo do cancelamento.');
+      return;
+    }
+    setCancelling(true);
+    try {
+      await api.post(`/sales/${cancelSaleId}/cancel`, { reason: cancelReason });
+      toast.success('Venda cancelada com sucesso. Estoque e caixa atualizados.');
+      
+      const res = await api.get(`/cash-registers/${registerId}/report`);
+      setData(res.data);
+      setClosingValue(res.data.report.expectedDinheiro);
+      setCancelSaleId(null);
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Erro ao cancelar venda.');
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || !registerId) return;
@@ -220,11 +254,11 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                  </div>
               </div>
               
-              <div className="flex-1 h-auto lg:h-full overflow-y-visible lg:overflow-y-auto custom-scrollbar p-6 space-y-4">
+              <div className="flex-1 h-auto lg:h-full overflow-y-visible lg:overflow-y-auto custom-scrollbar p-6 space-y-4 animate-fade-in">
                 {data.report.salesDetails && data.report.salesDetails.length > 0 ? (
                   data.report.salesDetails.map((s: any) => (
-                    <div key={s.id} className="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-5 hover:border-zinc-700 transition-colors group relative overflow-hidden">
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-zinc-800 group-hover:bg-blue-500 transition-colors"></div>
+                    <div key={s.id} className={`bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-5 hover:border-zinc-700 transition-all group relative overflow-hidden ${s.status === 'cancelled' ? 'opacity-40 border-red-900/20' : ''}`}>
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 ${s.status === 'cancelled' ? 'bg-red-500/40' : 'bg-zinc-800 group-hover:bg-blue-500'} transition-colors`}></div>
                       
                       <div className="flex justify-between items-start mb-4 border-b border-zinc-800/50 pb-4">
                         <div className="flex items-center gap-3">
@@ -232,15 +266,33 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                              {new Date(s.createdAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit', second:'2-digit'})}
                           </span>
                           <span className="text-zinc-600 text-xs font-mono bg-zinc-950 px-2 py-1 rounded">ID: {s.id.split('-')[0]}</span>
+                          {s.status === 'cancelled' && (
+                            <span className="bg-red-500/10 text-red-500 text-[10px] uppercase font-bold px-2.5 py-1 rounded border border-red-500/20 animate-pulse">
+                              Cancelada
+                            </span>
+                          )}
                         </div>
-                        <span className="text-emerald-400 font-extrabold text-xl">R$ {Number(s.total).toFixed(2)}</span>
+                        <div className="flex items-center gap-3">
+                          <span className={`font-extrabold text-xl ${s.status === 'cancelled' ? 'text-zinc-500 line-through decoration-red-500/50 decoration-2' : 'text-emerald-400'}`}>
+                            R$ {Number(s.total).toFixed(2)}
+                          </span>
+                          {isAdmin && s.status !== 'cancelled' && data.register.status === 'open' && (
+                            <button
+                              onClick={() => handleInitiateCancel(s.id)}
+                              className="p-1.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all border border-red-500/20 shadow-lg active:scale-95 cursor-pointer ml-1"
+                              title="Cancelar Venda"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       
                       <ul className="text-zinc-400 text-sm space-y-2 mb-5 ml-1">
                         {s.items.map((i: any) => (
                           <li key={i.id} className="flex items-center gap-3 p-2 hover:bg-zinc-800/40 rounded-lg transition-colors">
                              <span className="text-white font-bold bg-zinc-800 px-2 py-0.5 rounded text-xs">{i.quantity}x</span> 
-                             <span className="flex-1 font-medium">{i.product?.name || 'Item Removido/Desconhecido'}</span>
+                             <span className={`flex-1 font-medium ${s.status === 'cancelled' ? 'line-through text-zinc-500' : ''}`}>{i.product?.name || 'Item Removido/Desconhecido'}</span>
                              <span className="text-zinc-500 font-mono text-xs">R$ {(Number(i.priceUnit) * Number(i.quantity)).toFixed(2)}</span>
                           </li>
                         ))}
@@ -253,6 +305,17 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                           </span>
                         ))}
                       </div>
+
+                      {s.status === 'cancelled' && s.cancelReason && (
+                        <div className="mt-3 p-3 bg-red-500/5 rounded-xl border border-red-500/10 text-xs text-red-400 animate-in fade-in slide-in-from-top-1 duration-200">
+                          <strong>Motivo do Cancelamento:</strong> {s.cancelReason}
+                          {s.cancelledAt && (
+                            <span className="block mt-1 text-[10px] text-zinc-500">
+                              Cancelado em: {new Date(s.cancelledAt).toLocaleString('pt-BR')}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -269,6 +332,39 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
           </div>
         )}
       </div>
+
+      {/* Modal de Justificativa de Cancelamento */}
+      {cancelSaleId && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 transition-all">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-[2rem] w-full max-w-md p-6 text-center shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-bold text-red-400 mb-3">Justificar Cancelamento</h3>
+            <p className="text-zinc-400 text-sm mb-4">Insira o motivo pelo qual esta venda está sendo cancelada. Esta ação estornará os itens ao estoque.</p>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Ex: Lançamento incorreto, desistência..."
+              rows={3}
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 transition-colors text-sm mb-4 resize-none"
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setCancelSaleId(null)}
+                disabled={cancelling}
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-xl text-sm transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCancelSale}
+                disabled={cancelling || !cancelReason.trim()}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-sm transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {cancelling ? <Loader2 size={16} className="animate-spin" /> : 'Confirmar Estorno'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 

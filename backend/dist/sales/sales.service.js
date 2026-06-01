@@ -41,21 +41,81 @@ let SalesService = SalesService_1 = class SalesService {
         const { tenantId, databaseUrl } = this.tenantContext.get();
         return this.tenantManager.getTenantClient(tenantId, databaseUrl);
     }
+    async consumeLotsFIFO(tx, productId, quantityToConsume, fallbackCostPrice) {
+        const activeLots = await tx.stockLot.findMany({
+            where: { productId, remaining: { gt: 0 } },
+            orderBy: { createdAt: 'asc' }
+        });
+        const consumptions = [];
+        let quantityNeeded = new client_1.Prisma.Decimal(quantityToConsume);
+        for (const lot of activeLots) {
+            if (quantityNeeded.lte(0))
+                break;
+            const lotRemaining = new client_1.Prisma.Decimal(lot.remaining);
+            const consumed = client_1.Prisma.Decimal.min(quantityNeeded, lotRemaining);
+            await tx.stockLot.update({
+                where: { id: lot.id },
+                data: { remaining: { decrement: consumed } }
+            });
+            consumptions.push({
+                lotId: lot.id,
+                quantity: consumed,
+                costPrice: new client_1.Prisma.Decimal(lot.costPrice)
+            });
+            quantityNeeded = quantityNeeded.sub(consumed);
+        }
+        if (quantityNeeded.gt(0)) {
+            const latestLot = await tx.stockLot.findFirst({
+                where: { productId },
+                orderBy: { createdAt: 'desc' }
+            });
+            if (latestLot) {
+                await tx.stockLot.update({
+                    where: { id: latestLot.id },
+                    data: { remaining: { decrement: quantityNeeded } }
+                });
+                consumptions.push({
+                    lotId: latestLot.id,
+                    quantity: quantityNeeded,
+                    costPrice: new client_1.Prisma.Decimal(latestLot.costPrice)
+                });
+            }
+            else {
+                const fallbackLot = await tx.stockLot.create({
+                    data: {
+                        productId,
+                        costPrice: fallbackCostPrice !== undefined && fallbackCostPrice !== null ? new client_1.Prisma.Decimal(fallbackCostPrice) : new client_1.Prisma.Decimal(0),
+                        quantity: 0,
+                        remaining: new client_1.Prisma.Decimal(0).sub(quantityNeeded)
+                    }
+                });
+                consumptions.push({
+                    lotId: fallbackLot.id,
+                    quantity: quantityNeeded,
+                    costPrice: new client_1.Prisma.Decimal(fallbackLot.costPrice)
+                });
+            }
+        }
+        return consumptions;
+    }
     async checkout(data) {
         const { userId, tenantId } = this.tenantContext.get();
         let operatorId = data.operatorId || userId;
         const prisma = await this.getPrisma();
         const sale = await prisma.$transaction(async (tx) => {
             let subtotal = new client_1.Prisma.Decimal(0);
-            const saleItemsData = [];
-            if (!data.cashRegisterId) {
+            const isConsumption = !!data.consumedByOperatorId;
+            if (!isConsumption && !data.cashRegisterId) {
                 throw new common_1.BadRequestException('Não é possível realizar venda: Caixa não informado.');
             }
-            const cashRegister = await tx.cashRegister.findUnique({
-                where: { id: data.cashRegisterId }
-            });
-            if (!cashRegister || cashRegister.status !== 'open') {
-                throw new common_1.BadRequestException('O caixa selecionado está fechado ou é inválido. Abra o caixa primeiro.');
+            let cashRegister = null;
+            if (data.cashRegisterId) {
+                cashRegister = await tx.cashRegister.findUnique({
+                    where: { id: data.cashRegisterId }
+                });
+                if (!cashRegister || cashRegister.status !== 'open') {
+                    throw new common_1.BadRequestException('O caixa selecionado está fechado ou é inválido. Abra o caixa primeiro.');
+                }
             }
             const tenantSettings = await tx.tenantSettings.findUnique({ where: { id: 'singleton' } });
             const allowNegativeStock = tenantSettings?.allowNegativeStock ?? false;
@@ -78,18 +138,69 @@ let SalesService = SalesService_1 = class SalesService {
             const productMap = new Map(productsInDb.map((p) => [p.id, p]));
             const inventoryLogsToCreate = [];
             for (const item of data.items) {
+                const qty = Number(item.quantity);
+                const priceUnit = new client_1.Prisma.Decimal(item.priceUnit);
+                const itemSubtotal = priceUnit.mul(new client_1.Prisma.Decimal(qty)).toDecimalPlaces(2);
+                subtotal = subtotal.add(itemSubtotal);
+            }
+            const discount = new client_1.Prisma.Decimal(data.discount || 0);
+            const total = subtotal.sub(discount).toDecimalPlaces(2);
+            const paymentsData = data.payments.map((pay) => ({
+                tPag: TPAG_MAP[pay.method] ?? '99',
+                method: pay.method,
+                value: Number(pay.value),
+                troco: Number(pay.troco || 0),
+            }));
+            let nfceNumero = null;
+            const emitirNfce = Boolean(data.emitirNfce);
+            if (emitirNfce) {
+                const serie = data.nfceSerie ?? 1;
+                const numeracao = await tx.numeracaoNfce.upsert({
+                    where: { serie },
+                    update: { ultimo: { increment: 1 } },
+                    create: { serie, ultimo: 1 },
+                });
+                nfceNumero = numeracao.ultimo;
+            }
+            if (operatorId) {
+                const opExists = await tx.operator.findUnique({ where: { id: operatorId } });
+                if (!opExists) {
+                    this.logger.warn(`Operador ${operatorId} não encontrado no banco — venda será criada sem operador.`);
+                    operatorId = null;
+                }
+            }
+            const sale = await tx.sale.create({
+                data: {
+                    customerId: data.customerId || null,
+                    operatorId,
+                    cashRegisterId: data.cashRegisterId || null,
+                    subtotal,
+                    discount,
+                    total,
+                    status: 'completed',
+                    emitirNfce,
+                    nfceStatus: emitirNfce ? 'pendente' : null,
+                    nfceNumero,
+                    nfceSerie: emitirNfce ? (data.nfceSerie ?? 1) : null,
+                    consumidorCpf: data.customerCpf || null,
+                    consumidorNome: data.customerName || null,
+                    ...(data.offlineContingency && data.offlineCreatedAt ? { createdAt: new Date(data.offlineCreatedAt) } : {}),
+                    payments: { create: paymentsData },
+                }
+            });
+            for (const item of data.items) {
                 const product = productMap.get(item.productId);
                 if (!product) {
                     throw new common_1.BadRequestException(`Produto ${item.productId} não encontrado no banco de dados.`);
                 }
                 const qty = Number(item.quantity);
                 const itemModifiersDataToCreate = [];
+                const itemLotConsumptions = [];
+                let totalCostOfLots = new client_1.Prisma.Decimal(0);
                 if (product.isComposite) {
                     await tx.product.update({
                         where: { id: item.productId },
-                        data: {
-                            salesCount: { increment: qty }
-                        },
+                        data: { salesCount: { increment: qty } },
                     });
                     const chosenModifiers = item.modifiers || [];
                     for (const chosenMod of chosenModifiers) {
@@ -143,6 +254,15 @@ let SalesService = SalesService_1 = class SalesService {
                             quantity: new client_1.Prisma.Decimal(optionQty),
                             priceAdjustment: new client_1.Prisma.Decimal(foundOption.priceAdjustment),
                         });
+                        const ingredientConsumptions = await this.consumeLotsFIFO(tx, componentProduct.id, fractionToDecrement, componentProduct.priceCost);
+                        for (const cons of ingredientConsumptions) {
+                            itemLotConsumptions.push({
+                                lotId: cons.lotId,
+                                quantity: cons.quantity,
+                                costPrice: cons.costPrice
+                            });
+                            totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
+                        }
                     }
                 }
                 else {
@@ -176,100 +296,87 @@ let SalesService = SalesService_1 = class SalesService {
                         quantity: qty,
                         reason: 'Venda PDV',
                     });
+                    const productConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost);
+                    for (const cons of productConsumptions) {
+                        itemLotConsumptions.push({
+                            lotId: cons.lotId,
+                            quantity: cons.quantity,
+                            costPrice: cons.costPrice
+                        });
+                        totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
+                    }
                 }
                 const priceUnit = new client_1.Prisma.Decimal(item.priceUnit);
-                const qtyDecimal = new client_1.Prisma.Decimal(qty);
-                const itemSubtotal = priceUnit.mul(qtyDecimal).toDecimalPlaces(2);
-                subtotal = subtotal.add(itemSubtotal);
+                const itemSubtotal = priceUnit.mul(new client_1.Prisma.Decimal(qty)).toDecimalPlaces(2);
                 const gt = product.grupoTributacao;
-                saleItemsData.push({
-                    productId: product.id,
-                    productName: item.fiscalSnapshot?.productName ?? product.name,
-                    unit: item.fiscalSnapshot?.unit ?? (product.unit || 'UN'),
-                    quantity: qty,
-                    priceUnit,
-                    discount: item.fiscalSnapshot?.discount ?? 0,
-                    subtotal: item.fiscalSnapshot?.subtotal ?? itemSubtotal,
-                    ncm: item.fiscalSnapshot?.ncm ?? product.ncm ?? null,
-                    cest: item.fiscalSnapshot?.cest ?? product.cest ?? null,
-                    cfop: item.fiscalSnapshot?.cfop ?? gt?.cfop ?? '5102',
-                    origem: item.fiscalSnapshot?.origem ?? product.origem ?? 0,
-                    csosn: item.fiscalSnapshot?.csosn ?? gt?.csosn ?? null,
-                    cstIcms: item.fiscalSnapshot?.cstIcms ?? gt?.cstIcms ?? null,
-                    aliqIcms: item.fiscalSnapshot?.aliqIcms ?? Number(gt?.aliqIcms ?? 0),
-                    valorIcms: 0,
-                    cstPis: item.fiscalSnapshot?.cstPis ?? gt?.cstPis ?? '99',
-                    aliqPis: item.fiscalSnapshot?.aliqPis ?? Number(gt?.aliqPis ?? 0),
-                    valorPis: 0,
-                    cstCofins: item.fiscalSnapshot?.cstCofins ?? gt?.cstCofins ?? '99',
-                    aliqCofins: item.fiscalSnapshot?.aliqCofins ?? Number(gt?.aliqCofins ?? 0),
-                    valorCofins: 0,
-                    ...(itemModifiersDataToCreate.length > 0 ? {
+                const priceCost = qty > 0 ? totalCostOfLots.div(new client_1.Prisma.Decimal(qty)) : new client_1.Prisma.Decimal(0);
+                await tx.saleItem.create({
+                    data: {
+                        saleId: sale.id,
+                        productId: product.id,
+                        productName: item.fiscalSnapshot?.productName ?? product.name,
+                        unit: item.fiscalSnapshot?.unit ?? (product.unit || 'UN'),
+                        quantity: qty,
+                        priceUnit,
+                        discount: item.fiscalSnapshot?.discount ?? 0,
+                        subtotal: item.fiscalSnapshot?.subtotal ?? itemSubtotal,
+                        ncm: item.fiscalSnapshot?.ncm ?? product.ncm ?? null,
+                        cest: item.fiscalSnapshot?.cest ?? product.cest ?? null,
+                        cfop: item.fiscalSnapshot?.cfop ?? gt?.cfop ?? '5102',
+                        origem: item.fiscalSnapshot?.origem ?? product.origem ?? 0,
+                        csosn: item.fiscalSnapshot?.csosn ?? gt?.csosn ?? null,
+                        cstIcms: item.fiscalSnapshot?.cstIcms ?? gt?.cstIcms ?? null,
+                        aliqIcms: item.fiscalSnapshot?.aliqIcms ?? Number(gt?.aliqIcms ?? 0),
+                        valorIcms: 0,
+                        cstPis: item.fiscalSnapshot?.cstPis ?? gt?.cstPis ?? '99',
+                        aliqPis: item.fiscalSnapshot?.aliqPis ?? Number(gt?.aliqPis ?? 0),
+                        valorPis: 0,
+                        cstCofins: item.fiscalSnapshot?.cstCofins ?? gt?.cstCofins ?? '99',
+                        aliqCofins: item.fiscalSnapshot?.aliqCofins ?? Number(gt?.aliqCofins ?? 0),
+                        valorCofins: 0,
+                        priceCost,
                         modifiers: {
                             create: itemModifiersDataToCreate
+                        },
+                        lotConsumptions: {
+                            create: itemLotConsumptions.map(lc => ({
+                                lotId: lc.lotId,
+                                quantity: lc.quantity
+                            }))
                         }
-                    } : {})
+                    }
                 });
             }
             if (inventoryLogsToCreate.length > 0) {
                 await tx.inventoryLog.createMany({ data: inventoryLogsToCreate });
             }
-            const discount = new client_1.Prisma.Decimal(data.discount || 0);
-            const total = subtotal.sub(discount).toDecimalPlaces(2);
-            const paymentsData = data.payments.map((pay) => ({
-                tPag: TPAG_MAP[pay.method] ?? '99',
-                method: pay.method,
-                value: Number(pay.value),
-                troco: Number(pay.troco || 0),
-            }));
-            let nfceNumero = null;
-            const emitirNfce = Boolean(data.emitirNfce);
-            if (emitirNfce) {
-                const serie = data.nfceSerie ?? 1;
-                const numeracao = await tx.numeracaoNfce.upsert({
-                    where: { serie },
-                    update: { ultimo: { increment: 1 } },
-                    create: { serie, ultimo: 1 },
+            if (data.consumedByOperatorId) {
+                await tx.operatorConsumption.create({
+                    data: {
+                        operatorId: data.consumedByOperatorId,
+                        saleId: sale.id,
+                        settled: false,
+                    }
                 });
-                nfceNumero = numeracao.ultimo;
             }
-            if (operatorId) {
-                const opExists = await tx.operator.findUnique({ where: { id: operatorId } });
-                if (!opExists) {
-                    this.logger.warn(`Operador ${operatorId} não encontrado no banco — venda será criada sem operador.`);
-                    operatorId = null;
-                }
-            }
-            const sale = await tx.sale.create({
-                data: {
-                    customerId: data.customerId || null,
-                    operatorId,
-                    cashRegisterId: data.cashRegisterId,
-                    subtotal,
-                    discount,
-                    total,
-                    status: 'completed',
-                    emitirNfce,
-                    nfceStatus: emitirNfce ? 'pendente' : null,
-                    nfceNumero,
-                    nfceSerie: emitirNfce ? (data.nfceSerie ?? 1) : null,
-                    consumidorCpf: data.customerCpf || null,
-                    consumidorNome: data.customerName || null,
-                    ...(data.offlineContingency && data.offlineCreatedAt ? { createdAt: new Date(data.offlineCreatedAt) } : {}),
-                    items: { create: saleItemsData },
-                    payments: { create: paymentsData },
-                },
+            const fullSale = await tx.sale.findUnique({
+                where: { id: sale.id },
                 include: {
-                    items: true,
+                    items: {
+                        include: {
+                            modifiers: true,
+                            lotConsumptions: true
+                        }
+                    },
                     payments: true,
-                    customer: true,
-                },
+                    customer: true
+                }
             });
             if (emitirNfce) {
                 const { tenantId, databaseUrl } = this.tenantContext.get();
-                setImmediate(() => this.dispararNfce(tenantId, databaseUrl, sale));
+                setImmediate(() => this.dispararNfce(tenantId, databaseUrl, fullSale));
             }
-            return sale;
+            return fullSale;
         });
         try {
             this.productsService.invalidateCache(tenantId);
@@ -643,6 +750,77 @@ let SalesService = SalesService_1 = class SalesService {
             }
         ]);
         return { message: 'XMLs exportados e enviados com sucesso para a contabilidade.' };
+    }
+    async cancel(saleId, reason) {
+        const { tenantId } = this.tenantContext.get();
+        const prisma = await this.getPrisma();
+        const sale = await prisma.$transaction(async (tx) => {
+            const existingSale = await tx.sale.findUnique({
+                where: { id: saleId },
+                include: {
+                    items: {
+                        include: {
+                            lotConsumptions: {
+                                include: {
+                                    lot: true
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            if (!existingSale) {
+                throw new common_1.NotFoundException('Venda não encontrada.');
+            }
+            if (existingSale.status === 'cancelled') {
+                throw new common_1.BadRequestException('Esta venda já está cancelada.');
+            }
+            for (const item of existingSale.items) {
+                await tx.product.update({
+                    where: { id: item.productId },
+                    data: { salesCount: { decrement: item.quantity } }
+                });
+                for (const consumption of item.lotConsumptions) {
+                    await tx.stockLot.update({
+                        where: { id: consumption.lotId },
+                        data: { remaining: { increment: consumption.quantity } }
+                    });
+                    await tx.product.update({
+                        where: { id: consumption.lot.productId },
+                        data: { stock: { increment: consumption.quantity } }
+                    });
+                    await tx.inventoryLog.create({
+                        data: {
+                            productId: consumption.lot.productId,
+                            type: 'IN',
+                            quantity: Number(consumption.quantity),
+                            costPrice: Number(consumption.lot.costPrice),
+                            reason: `Estorno Venda Cancelada (Venda: ${existingSale.id})`
+                        }
+                    });
+                }
+            }
+            const updatedSale = await tx.sale.update({
+                where: { id: saleId },
+                data: {
+                    status: 'cancelled',
+                    cancelReason: reason,
+                    cancelledAt: new Date()
+                },
+                include: {
+                    items: true,
+                    payments: true
+                }
+            });
+            return updatedSale;
+        });
+        try {
+            this.productsService.invalidateCache(tenantId);
+        }
+        catch (err) {
+            this.logger.error(`Erro ao invalidar cache de produtos do tenant ${tenantId}: ${err.message}`);
+        }
+        return sale;
     }
 };
 exports.SalesService = SalesService;

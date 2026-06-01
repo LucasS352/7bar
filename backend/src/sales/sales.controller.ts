@@ -74,4 +74,16 @@ export class SalesController {
     }
     return this.salesService.exportNfceXmlsAndSendEmail(startDate, endDate, email);
   }
+
+  @Post(':id/cancel')
+  async cancelSale(
+    @Param('id') id: string,
+    @Body('reason') reason: string,
+  ) {
+    if (!reason || reason.trim() === '') {
+      throw new BadRequestException('O motivo do cancelamento é obrigatório.');
+    }
+    return this.salesService.cancel(id, reason);
+  }
 }
+

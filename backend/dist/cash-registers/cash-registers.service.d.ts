@@ -107,6 +107,7 @@ export declare class CashRegistersService {
                     cstCofins: string;
                     aliqCofins: Prisma.Decimal;
                     unit: string;
+                    priceCost: Prisma.Decimal;
                     ncm: string | null;
                     cest: string | null;
                     origem: number;
@@ -153,6 +154,8 @@ export declare class CashRegistersService {
                 nfceMotivoRejeicao: string | null;
                 consumidorCpf: string | null;
                 consumidorNome: string | null;
+                cancelReason: string | null;
+                cancelledAt: Date | null;
             })[];
             movements: {
                 id: string;

@@ -53,7 +53,7 @@ export class DashboardService {
     let currentRegisterRevenue = 0;
     if (openRegister) {
       const regSales = await prisma.sale.aggregate({
-        where: { cashRegisterId: openRegister.id },
+        where: { cashRegisterId: openRegister.id, NOT: { status: 'cancelled' } },
         _sum: { total: true },
       });
       currentRegisterRevenue = Number(regSales._sum.total ?? 0);
@@ -61,19 +61,19 @@ export class DashboardService {
 
     // ── 2. Faturamento de Hoje ─────────────────────────────────────────────
     const todayAgg = await prisma.sale.aggregate({
-      where: { createdAt: { gte: todayStart, lte: todayEnd } },
+      where: { createdAt: { gte: todayStart, lte: todayEnd }, NOT: { status: 'cancelled' } },
       _sum: { total: true },
       _count: { id: true },
     });
 
     // ── 3. Faturamento da Semana ───────────────────────────────────────────
     const weekAgg = await prisma.sale.aggregate({
-      where: { createdAt: { gte: weekStart, lte: todayEnd } },
+      where: { createdAt: { gte: weekStart, lte: todayEnd }, NOT: { status: 'cancelled' } },
       _sum: { total: true },
     });
 
     const prevWeekAgg = await prisma.sale.aggregate({
-      where: { createdAt: { gte: prevWeekStart, lte: prevWeekEnd } },
+      where: { createdAt: { gte: prevWeekStart, lte: prevWeekEnd }, NOT: { status: 'cancelled' } },
       _sum: { total: true },
     });
 
@@ -85,13 +85,13 @@ export class DashboardService {
 
     // ── 4. Faturamento do Mês ──────────────────────────────────────────────
     const monthAgg = await prisma.sale.aggregate({
-      where: { createdAt: { gte: monthStart, lte: todayEnd } },
+      where: { createdAt: { gte: monthStart, lte: todayEnd }, NOT: { status: 'cancelled' } },
       _sum: { total: true },
     });
 
     // ── 5. Dados do período filtrado ──────────────────────────────────────
     const periodSales = await prisma.sale.findMany({
-      where: { createdAt: { gte: periodStart, lte: periodEnd } },
+      where: { createdAt: { gte: periodStart, lte: periodEnd }, NOT: { status: 'cancelled' } },
       include: {
         payments: { select: { method: true, value: true } },
         items: {

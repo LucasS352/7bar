@@ -35,6 +35,75 @@ export class SalesService {
     return this.tenantManager.getTenantClient(tenantId, databaseUrl);
   }
 
+  private async consumeLotsFIFO(
+    tx: any,
+    productId: string,
+    quantityToConsume: number,
+    fallbackCostPrice: any
+  ): Promise<{ lotId: string; quantity: Prisma.Decimal; costPrice: Prisma.Decimal }[]> {
+    const activeLots = await tx.stockLot.findMany({
+      where: { productId, remaining: { gt: 0 } },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    const consumptions: { lotId: string; quantity: Prisma.Decimal; costPrice: Prisma.Decimal }[] = [];
+    let quantityNeeded = new Prisma.Decimal(quantityToConsume);
+
+    for (const lot of activeLots) {
+      if (quantityNeeded.lte(0)) break;
+      const lotRemaining = new Prisma.Decimal(lot.remaining);
+      const consumed = Prisma.Decimal.min(quantityNeeded, lotRemaining);
+
+      await tx.stockLot.update({
+        where: { id: lot.id },
+        data: { remaining: { decrement: consumed } }
+      });
+
+      consumptions.push({
+        lotId: lot.id,
+        quantity: consumed,
+        costPrice: new Prisma.Decimal(lot.costPrice)
+      });
+
+      quantityNeeded = quantityNeeded.sub(consumed);
+    }
+
+    if (quantityNeeded.gt(0)) {
+      const latestLot = await tx.stockLot.findFirst({
+        where: { productId },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (latestLot) {
+        await tx.stockLot.update({
+          where: { id: latestLot.id },
+          data: { remaining: { decrement: quantityNeeded } }
+        });
+        consumptions.push({
+          lotId: latestLot.id,
+          quantity: quantityNeeded,
+          costPrice: new Prisma.Decimal(latestLot.costPrice)
+        });
+      } else {
+        const fallbackLot = await tx.stockLot.create({
+          data: {
+            productId,
+            costPrice: fallbackCostPrice !== undefined && fallbackCostPrice !== null ? new Prisma.Decimal(fallbackCostPrice) : new Prisma.Decimal(0),
+            quantity: 0,
+            remaining: new Prisma.Decimal(0).sub(quantityNeeded)
+          }
+        });
+        consumptions.push({
+          lotId: fallbackLot.id,
+          quantity: quantityNeeded,
+          costPrice: new Prisma.Decimal(fallbackLot.costPrice)
+        });
+      }
+    }
+
+    return consumptions;
+  }
+
   async checkout(data: any) {
     const { userId, tenantId } = this.tenantContext.get();
     let operatorId = data.operatorId || userId;
@@ -42,7 +111,6 @@ export class SalesService {
 
     const sale = await prisma.$transaction(async (tx: any) => {
       let subtotal = new Prisma.Decimal(0);
-      const saleItemsData: any[] = [];
 
       // ─── 0. Ler configurações do tenant e validar caixa ────────────────────
       const isConsumption = !!data.consumedByOperatorId;
@@ -69,8 +137,8 @@ export class SalesService {
       const productIds = data.items.map((item: any) => item.productId);
       
       const modifierComponentIds = data.items
-        .filter((i: any) => i.modifiers && i.modifiers.length > 0)
-        .flatMap((i: any) => i.modifiers.map((m: any) => m.componentProductId));
+         .filter((i: any) => i.modifiers && i.modifiers.length > 0)
+         .flatMap((i: any) => i.modifiers.map((m: any) => m.componentProductId));
 
       const allProductIds = Array.from(new Set([...productIds, ...modifierComponentIds]));
 
@@ -91,22 +159,81 @@ export class SalesService {
       const inventoryLogsToCreate: any[] = [];
 
       for (const item of data.items) {
-        const product = productMap.get(item.productId) as any;
+        const qty = Number(item.quantity);
+        const priceUnit = new Prisma.Decimal(item.priceUnit);
+        const itemSubtotal = priceUnit.mul(new Prisma.Decimal(qty)).toDecimalPlaces(2);
+        subtotal = subtotal.add(itemSubtotal);
+      }
 
+      const discount = new Prisma.Decimal(data.discount || 0);
+      const total = subtotal.sub(discount).toDecimalPlaces(2);
+
+      // ─── 2. Montar pagamentos com tPag SEFAZ ────────────────────────────────
+      const paymentsData = data.payments.map((pay: any) => ({
+        tPag:   TPAG_MAP[pay.method] ?? '99',
+        method: pay.method,
+        value:  Number(pay.value),
+        troco:  Number(pay.troco || 0),
+      }));
+
+      // ─── 3. Numeração NFC-e (se solicitada) ─────────────────────────────────
+      let nfceNumero: number | null = null;
+      const emitirNfce = Boolean(data.emitirNfce);
+
+      if (emitirNfce) {
+        const serie = data.nfceSerie ?? 1;
+        const numeracao = await tx.numeracaoNfce.upsert({
+          where: { serie },
+          update: { ultimo: { increment: 1 } },
+          create: { serie, ultimo: 1 },
+        });
+        nfceNumero = numeracao.ultimo;
+      }
+
+      // ─── 4. Criar a venda ────────────────────────────────────────────────────
+      if (operatorId) {
+        const opExists = await tx.operator.findUnique({ where: { id: operatorId } });
+        if (!opExists) {
+          this.logger.warn(`Operador ${operatorId} não encontrado no banco — venda será criada sem operador.`);
+          operatorId = null;
+        }
+      }
+
+      const sale = await tx.sale.create({
+        data: {
+          customerId:     data.customerId || null,
+          operatorId,
+          cashRegisterId: data.cashRegisterId || null,
+          subtotal,
+          discount,
+          total,
+          status:         'completed',
+          emitirNfce,
+          nfceStatus:     emitirNfce ? 'pendente' : null,
+          nfceNumero,
+          nfceSerie:      emitirNfce ? (data.nfceSerie ?? 1) : null,
+          consumidorCpf:  data.customerCpf  || null,
+          consumidorNome: data.customerName || null,
+          ...(data.offlineContingency && data.offlineCreatedAt ? { createdAt: new Date(data.offlineCreatedAt) } : {}),
+          payments: { create: paymentsData },
+        }
+      });
+
+      for (const item of data.items) {
+        const product = productMap.get(item.productId) as any;
         if (!product) {
           throw new BadRequestException(`Produto ${item.productId} não encontrado no banco de dados.`);
         }
 
         const qty = Number(item.quantity);
         const itemModifiersDataToCreate: any[] = [];
+        const itemLotConsumptions: any[] = [];
+        let totalCostOfLots = new Prisma.Decimal(0);
 
         if (product.isComposite) {
-          // Increment parent composite product salesCount
           await tx.product.update({
             where: { id: item.productId },
-            data: { 
-              salesCount: { increment: qty }
-            },
+            data: { salesCount: { increment: qty } },
           });
 
           const chosenModifiers = item.modifiers || [];
@@ -167,6 +294,16 @@ export class SalesService {
               quantity: new Prisma.Decimal(optionQty),
               priceAdjustment: new Prisma.Decimal(foundOption.priceAdjustment),
             });
+
+            const ingredientConsumptions = await this.consumeLotsFIFO(tx, componentProduct.id, fractionToDecrement, componentProduct.priceCost);
+            for (const cons of ingredientConsumptions) {
+              itemLotConsumptions.push({
+                lotId: cons.lotId,
+                quantity: cons.quantity,
+                costPrice: cons.costPrice
+              });
+              totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
+            }
           }
         } else {
           if (!allowNegativeStock) {
@@ -199,111 +336,64 @@ export class SalesService {
             quantity: qty,
             reason: 'Venda PDV',
           });
+
+          const productConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost);
+          for (const cons of productConsumptions) {
+            itemLotConsumptions.push({
+              lotId: cons.lotId,
+              quantity: cons.quantity,
+              costPrice: cons.costPrice
+            });
+            totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
+          }
         }
 
         const priceUnit = new Prisma.Decimal(item.priceUnit);
-        const qtyDecimal = new Prisma.Decimal(qty);
-        const itemSubtotal = priceUnit.mul(qtyDecimal).toDecimalPlaces(2);
-        
-        subtotal = subtotal.add(itemSubtotal);
-
+        const itemSubtotal = priceUnit.mul(new Prisma.Decimal(qty)).toDecimalPlaces(2);
         const gt = product.grupoTributacao;
+        const priceCost = qty > 0 ? totalCostOfLots.div(new Prisma.Decimal(qty)) : new Prisma.Decimal(0);
 
-        saleItemsData.push({
-          productId: product.id,
-          productName: item.fiscalSnapshot?.productName ?? product.name,
-          unit: item.fiscalSnapshot?.unit ?? (product.unit || 'UN'),
-          quantity: qty,
-          priceUnit,
-          discount: item.fiscalSnapshot?.discount ?? 0,
-          subtotal: item.fiscalSnapshot?.subtotal ?? itemSubtotal,
-          ncm:        item.fiscalSnapshot?.ncm ?? product.ncm   ?? null,
-          cest:       item.fiscalSnapshot?.cest ?? product.cest  ?? null,
-          cfop:       item.fiscalSnapshot?.cfop ?? gt?.cfop      ?? '5102',
-          origem:     item.fiscalSnapshot?.origem ?? product.origem ?? 0,
-          csosn:      item.fiscalSnapshot?.csosn ?? gt?.csosn     ?? null,
-          cstIcms:    item.fiscalSnapshot?.cstIcms ?? gt?.cstIcms   ?? null,
-          aliqIcms:   item.fiscalSnapshot?.aliqIcms ?? Number(gt?.aliqIcms ?? 0),
-          valorIcms:  0,
-          cstPis:     item.fiscalSnapshot?.cstPis ?? gt?.cstPis    ?? '99',
-          aliqPis:    item.fiscalSnapshot?.aliqPis ?? Number(gt?.aliqPis ?? 0),
-          valorPis:   0,
-          cstCofins:  item.fiscalSnapshot?.cstCofins ?? gt?.cstCofins ?? '99',
-          aliqCofins: item.fiscalSnapshot?.aliqCofins ?? Number(gt?.aliqCofins ?? 0),
-          valorCofins: 0,
-          ...(itemModifiersDataToCreate.length > 0 ? {
+        await tx.saleItem.create({
+          data: {
+            saleId:      sale.id,
+            productId:   product.id,
+            productName: item.fiscalSnapshot?.productName ?? product.name,
+            unit:        item.fiscalSnapshot?.unit ?? (product.unit || 'UN'),
+            quantity:    qty,
+            priceUnit,
+            discount:    item.fiscalSnapshot?.discount ?? 0,
+            subtotal:    item.fiscalSnapshot?.subtotal ?? itemSubtotal,
+            ncm:         item.fiscalSnapshot?.ncm ?? product.ncm   ?? null,
+            cest:        item.fiscalSnapshot?.cest ?? product.cest  ?? null,
+            cfop:        item.fiscalSnapshot?.cfop ?? gt?.cfop      ?? '5102',
+            origem:      item.fiscalSnapshot?.origem ?? product.origem ?? 0,
+            csosn:       item.fiscalSnapshot?.csosn ?? gt?.csosn     ?? null,
+            cstIcms:     item.fiscalSnapshot?.cstIcms ?? gt?.cstIcms   ?? null,
+            aliqIcms:    item.fiscalSnapshot?.aliqIcms ?? Number(gt?.aliqIcms ?? 0),
+            valorIcms:   0,
+            cstPis:      item.fiscalSnapshot?.cstPis ?? gt?.cstPis    ?? '99',
+            aliqPis:     item.fiscalSnapshot?.aliqPis ?? Number(gt?.aliqPis ?? 0),
+            valorPis:    0,
+            cstCofins:   item.fiscalSnapshot?.cstCofins ?? gt?.cstCofins ?? '99',
+            aliqCofins:  item.fiscalSnapshot?.aliqCofins ?? Number(gt?.aliqCofins ?? 0),
+            valorCofins: 0,
+            priceCost,
             modifiers: {
               create: itemModifiersDataToCreate
+            },
+            lotConsumptions: {
+              create: itemLotConsumptions.map(lc => ({
+                lotId: lc.lotId,
+                quantity: lc.quantity
+              }))
             }
-          } : {})
+          }
         });
       }
 
       if (inventoryLogsToCreate.length > 0) {
         await tx.inventoryLog.createMany({ data: inventoryLogsToCreate });
       }
-
-      const discount = new Prisma.Decimal(data.discount || 0);
-      const total = subtotal.sub(discount).toDecimalPlaces(2);
-
-      // ─── 2. Montar pagamentos com tPag SEFAZ ────────────────────────────────
-      const paymentsData = data.payments.map((pay: any) => ({
-        tPag:   TPAG_MAP[pay.method] ?? '99',
-        method: pay.method,
-        value:  Number(pay.value),
-        troco:  Number(pay.troco || 0),
-      }));
-
-      // ─── 3. Numeração NFC-e (se solicitada) ─────────────────────────────────
-      let nfceNumero: number | null = null;
-      const emitirNfce = Boolean(data.emitirNfce);
-
-      if (emitirNfce) {
-        const serie = data.nfceSerie ?? 1;
-        const numeracao = await tx.numeracaoNfce.upsert({
-          where: { serie },
-          update: { ultimo: { increment: 1 } },
-          create: { serie, ultimo: 1 },
-        });
-        nfceNumero = numeracao.ultimo;
-      }
-
-      // ─── 4. Criar a venda ────────────────────────────────────────────────────
-      // Valida se o operador existe para evitar erro de Foreign Key
-      if (operatorId) {
-        const opExists = await tx.operator.findUnique({ where: { id: operatorId } });
-        if (!opExists) {
-          this.logger.warn(`Operador ${operatorId} não encontrado no banco — venda será criada sem operador.`);
-          operatorId = null;
-        }
-      }
-
-      const sale = await tx.sale.create({
-        data: {
-          customerId:     data.customerId || null,
-          operatorId,
-          cashRegisterId: data.cashRegisterId || null,
-          subtotal,
-          discount,
-          total,
-          status:         'completed',
-          emitirNfce,
-          nfceStatus:     emitirNfce ? 'pendente' : null,
-          nfceNumero,
-          nfceSerie:      emitirNfce ? (data.nfceSerie ?? 1) : null,
-          consumidorCpf:  data.customerCpf  || null,
-          consumidorNome: data.customerName || null,
-          // Se for offline contingency, usa a data original (caso contrário Prisma cria now())
-          ...(data.offlineContingency && data.offlineCreatedAt ? { createdAt: new Date(data.offlineCreatedAt) } : {}),
-          items:    { create: saleItemsData },
-          payments: { create: paymentsData },
-        },
-        include: {
-          items:    true,
-          payments: true,
-          customer: true,
-        },
-      });
 
       if (data.consumedByOperatorId) {
         await tx.operatorConsumption.create({
@@ -315,14 +405,26 @@ export class SalesService {
         });
       }
 
-      // ─── 5. Disparar emissão NFC-e (se solicitada) — fora da transação principal ──
-      // A emissão é feita após o commit para não bloquear a transação se o PHP demorar
+      const fullSale = await tx.sale.findUnique({
+        where: { id: sale.id },
+        include: {
+          items: {
+            include: {
+              modifiers: true,
+              lotConsumptions: true
+            }
+          },
+          payments: true,
+          customer: true
+        }
+      });
+
       if (emitirNfce) {
         const { tenantId, databaseUrl } = this.tenantContext.get();
-        setImmediate(() => this.dispararNfce(tenantId, databaseUrl, sale));
+        setImmediate(() => this.dispararNfce(tenantId, databaseUrl, fullSale));
       }
 
-      return sale;
+      return fullSale;
     });
 
     try {
@@ -770,4 +872,93 @@ export class SalesService {
 
     return { message: 'XMLs exportados e enviados com sucesso para a contabilidade.' };
   }
+
+  async cancel(saleId: string, reason: string) {
+    const { tenantId } = this.tenantContext.get();
+    const prisma = await this.getPrisma();
+
+    const sale = await prisma.$transaction(async (tx: any) => {
+      const existingSale = await tx.sale.findUnique({
+        where: { id: saleId },
+        include: {
+          items: {
+            include: {
+              lotConsumptions: {
+                include: {
+                  lot: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!existingSale) {
+        throw new NotFoundException('Venda não encontrada.');
+      }
+
+      if (existingSale.status === 'cancelled') {
+        throw new BadRequestException('Esta venda já está cancelada.');
+      }
+
+      // Estornar cada item consumido de volta aos lotes e produtos
+      for (const item of existingSale.items) {
+        // Reduzir contagem de vendas do produto pai
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { salesCount: { decrement: item.quantity } }
+        });
+
+        for (const consumption of item.lotConsumptions) {
+          // 1. Estornar quantidade restante do lote
+          await tx.stockLot.update({
+            where: { id: consumption.lotId },
+            data: { remaining: { increment: consumption.quantity } }
+          });
+
+          // 2. Incrementar estoque consolidado do produto pertencente ao lote
+          await tx.product.update({
+            where: { id: consumption.lot.productId },
+            data: { stock: { increment: consumption.quantity } }
+          });
+
+          // 3. Registrar log de inventário para auditoria
+          await tx.inventoryLog.create({
+            data: {
+              productId: consumption.lot.productId,
+              type: 'IN',
+              quantity: Number(consumption.quantity),
+              costPrice: Number(consumption.lot.costPrice),
+              reason: `Estorno Venda Cancelada (Venda: ${existingSale.id})`
+            }
+          });
+        }
+      }
+
+      // Marcar venda como cancelada
+      const updatedSale = await tx.sale.update({
+        where: { id: saleId },
+        data: {
+          status: 'cancelled',
+          cancelReason: reason,
+          cancelledAt: new Date()
+        },
+        include: {
+          items: true,
+          payments: true
+        }
+      });
+
+      return updatedSale;
+    });
+
+    try {
+      this.productsService.invalidateCache(tenantId);
+    } catch (err) {
+      this.logger.error(`Erro ao invalidar cache de produtos do tenant ${tenantId}: ${err.message}`);
+    }
+
+    return sale;
+  }
 }
+

@@ -20,6 +20,7 @@ interface Product {
 interface StockRow {
   product: Product;
   qty: string;   // Controlled como string para o input
+  costPrice: string; // Controlled como string para o input
   saving: boolean;
   saved: boolean;
 }
@@ -67,12 +68,16 @@ export default function StockEntryPage() {
   /** Adiciona produto à lista de entrada se não estiver lá */
   const addToEntry = (product: Product) => {
     if (rows.find(r => r.product.id === product.id)) return; // já na lista
-    setRows(prev => [...prev, { product, qty: '', saving: false, saved: false }]);
+    setRows(prev => [...prev, { product, qty: '', costPrice: product.priceCost?.toString() || '', saving: false, saved: false }]);
     setSearch(''); // limpa busca ao adicionar
   };
 
   const updateQty = (productId: string, qty: string) => {
     setRows(prev => prev.map(r => r.product.id === productId ? { ...r, qty, saved: false } : r));
+  };
+
+  const updateCostPrice = (productId: string, costPrice: string) => {
+    setRows(prev => prev.map(r => r.product.id === productId ? { ...r, costPrice, saved: false } : r));
   };
 
   const removeRow = (productId: string) => {
@@ -90,11 +95,18 @@ export default function StockEntryPage() {
       return;
     }
 
+    const costNum = parseFloat(row.costPrice);
+    if (isNaN(costNum) || costNum < 0) {
+      toast.error('Informe um preço de custo válido.');
+      return;
+    }
+
     setRows(prev => prev.map(r => r.product.id === productId ? { ...r, saving: true } : r));
 
     try {
       await api.post(`/products/add-stock/${productId}`, {
         quantity: qty,
+        costPrice: costNum,
         reason: 'Entrada de Estoque — Reposição via App',
       });
 
@@ -102,13 +114,23 @@ export default function StockEntryPage() {
 
       setRows(prev => prev.map(r =>
         r.product.id === productId
-          ? { ...r, saving: false, saved: true, qty: '' }
+          ? { 
+              ...r, 
+              saving: false, 
+              saved: true, 
+              qty: '', 
+              product: { 
+                ...r.product, 
+                stock: Number(r.product.stock) + qty,
+                priceCost: costNum
+              } 
+            }
           : r
       ));
 
-      // Atualiza o estoque local imediatamente
+      // Atualiza o estoque local e custo imediatamente
       setProducts(prev => prev.map(p =>
-        p.id === productId ? { ...p, stock: Number(p.stock) + qty } : p
+        p.id === productId ? { ...p, stock: Number(p.stock) + qty, priceCost: costNum } : p
       ));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -222,24 +244,45 @@ export default function StockEntryPage() {
                   </p>
                 </div>
 
-                {/* Campo de quantidade */}
-                <div className="flex items-center gap-2">
-                  <label className="text-zinc-500 text-sm font-semibold whitespace-nowrap">Qtd. a Adicionar:</label>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="0"
-                    value={row.qty}
-                    onChange={e => {
-                      // Aceita apenas inteiros — remove qualquer decimal digitado
-                      const val = e.target.value.replace(/[^0-9]/g, '');
-                      updateQty(row.product.id, val);
-                    }}
-                    onKeyDown={e => e.key === 'Enter' && confirmEntry(row.product.id)}
-                    disabled={row.saving || row.saved}
-                    className="w-28 bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-emerald-400 font-black text-lg text-center focus:outline-none transition-colors disabled:opacity-50"
-                  />
+                {/* Inputs de Entrada (Quantidade e Custo) */}
+                <div className="flex flex-wrap items-center gap-4">
+                  {/* Campo de quantidade */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-zinc-500 text-sm font-semibold whitespace-nowrap">Qtd. a Adicionar:</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="0"
+                      value={row.qty}
+                      onChange={e => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        updateQty(row.product.id, val);
+                      }}
+                      onKeyDown={e => e.key === 'Enter' && confirmEntry(row.product.id)}
+                      disabled={row.saving || row.saved}
+                      className="w-24 bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 rounded-xl px-2 py-2 text-emerald-400 font-black text-lg text-center focus:outline-none transition-colors disabled:opacity-50"
+                    />
+                  </div>
+
+                  {/* Campo de custo de aquisição */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-zinc-500 text-sm font-semibold whitespace-nowrap">Custo Unitário:</label>
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-bold">R$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={row.costPrice}
+                        onChange={e => updateCostPrice(row.product.id, e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && confirmEntry(row.product.id)}
+                        disabled={row.saving || row.saved}
+                        className="w-28 bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 rounded-xl pl-7 pr-2 py-2 text-rose-400 font-black text-lg text-center focus:outline-none transition-colors disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Botão confirmar */}

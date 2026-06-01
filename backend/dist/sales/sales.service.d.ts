@@ -16,6 +16,7 @@ export declare class SalesService {
     private readonly logger;
     constructor(tenantManager: TenantConnectionManager, heartPrisma: HeartPrismaService, nfceService: NfceService, tenantContext: TenantContextService, productsService: ProductsService, mailService: MailService);
     private getPrisma;
+    private consumeLotsFIFO;
     checkout(data: any): Promise<any>;
     dispararNfce(tenantId: string, databaseUrl: string, sale: any): Promise<void>;
     private atualizarStatusNfce;
@@ -74,6 +75,7 @@ export declare class SalesService {
                 cstCofins: string;
                 aliqCofins: Prisma.Decimal;
                 unit: string;
+                priceCost: Prisma.Decimal;
                 ncm: string | null;
                 cest: string | null;
                 origem: number;
@@ -120,6 +122,8 @@ export declare class SalesService {
             nfceMotivoRejeicao: string | null;
             consumidorCpf: string | null;
             consumidorNome: string | null;
+            cancelReason: string | null;
+            cancelledAt: Date | null;
         })[];
         meta: {
             total: number;
@@ -174,6 +178,7 @@ export declare class SalesService {
                 cstCofins: string;
                 aliqCofins: Prisma.Decimal;
                 unit: string;
+                priceCost: Prisma.Decimal;
                 ncm: string | null;
                 cest: string | null;
                 origem: number;
@@ -220,6 +225,8 @@ export declare class SalesService {
             nfceMotivoRejeicao: string | null;
             consumidorCpf: string | null;
             consumidorNome: string | null;
+            cancelReason: string | null;
+            cancelledAt: Date | null;
         })[];
         meta: {
             total: number;
@@ -248,4 +255,5 @@ export declare class SalesService {
     exportNfceXmlsAndSendEmail(startDate: string, endDate: string, targetEmail?: string): Promise<{
         message: string;
     }>;
+    cancel(saleId: string, reason: string): Promise<any>;
 }

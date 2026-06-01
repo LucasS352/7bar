@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback, useDeferredValue, useMemo } from 'react';
 import { api } from '@/lib/api';
-import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert } from 'lucide-react';
+import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { AddProductModal } from '@/components/AddProductModal';
@@ -41,6 +41,24 @@ export default function InventoryDashboard() {
   const [allowNegativeStock,  setAllowNegativeStock]  = useState(false);
   const [savingSettings,      setSavingSettings]      = useState(false);
   const [showLowStockAlert,   setShowLowStockAlert]   = useState(false);
+
+  const [lotModalProduct, setLotModalProduct] = useState<Product | null>(null);
+  const [productLots, setProductLots] = useState<any[]>([]);
+  const [loadingLots, setLoadingLots] = useState(false);
+
+  const handleOpenLotsModal = async (product: Product) => {
+    setLotModalProduct(product);
+    setLoadingLots(true);
+    setProductLots([]);
+    try {
+      const res = await api.get(`/products/${product.id}/lots`);
+      setProductLots(res.data || []);
+    } catch {
+      toast.error('Erro ao carregar lotes de estoque.');
+    } finally {
+      setLoadingLots(false);
+    }
+  };
 
   const fetchProducts = useCallback(() => {
     setLoading(true);
@@ -330,9 +348,15 @@ export default function InventoryDashboard() {
                     </button>
                   </td>
                   <td className="px-6 py-5 text-center">
-                    <span className={`inline-flex items-center justify-center min-w-[3rem] px-2 py-1 rounded text-sm font-bold border ${Number(product.stock) <= 0 ? 'bg-red-500/10 text-red-500 border-red-500/20' : Number(product.stock) <= 10 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700'}`}>
-                      {Math.round(Number(product.stock))}
-                    </span>
+                    <button
+                      onClick={() => handleOpenLotsModal(product)}
+                      className="group/lots flex items-center gap-1.5 mx-auto cursor-pointer focus:outline-none"
+                      title="Ver Detalhamento de Lotes"
+                    >
+                      <span className={`inline-flex items-center justify-center min-w-[3rem] px-2 py-1 rounded text-sm font-bold border transition-colors ${Number(product.stock) <= 0 ? 'bg-red-500/10 text-red-500 border-red-500/20 group-hover/lots:bg-red-500/20' : Number(product.stock) <= 10 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 group-hover/lots:bg-amber-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700 group-hover/lots:bg-zinc-750'}`}>
+                        {Math.round(Number(product.stock))}
+                      </span>
+                    </button>
                   </td>
                   <td className="px-8 py-5 text-center">
                     <button
@@ -393,9 +417,12 @@ export default function InventoryDashboard() {
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <span className={`inline-flex items-center justify-center min-w-[3rem] px-2 py-1 rounded text-sm font-bold border ${Number(product.stock) <= 0 ? 'bg-red-500/10 text-red-500 border-red-500/20' : Number(product.stock) <= 10 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700'}`}>
+                  <button
+                    onClick={() => handleOpenLotsModal(product)}
+                    className={`inline-flex items-center justify-center min-w-[3rem] px-2 py-1 rounded text-sm font-bold border transition-colors cursor-pointer ${Number(product.stock) <= 0 ? 'bg-red-500/10 text-red-500 border-red-500/20' : Number(product.stock) <= 10 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700'}`}
+                  >
                     Estoque: {Math.round(Number(product.stock))}
-                  </span>
+                  </button>
                   
                   <button
                     onClick={() => setEditingProduct(product)}
@@ -417,6 +444,105 @@ export default function InventoryDashboard() {
 
       <AddProductModal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} onSuccess={fetchProducts} />
       <EditProductModal product={editingProduct} isOpen={!!editingProduct} onClose={() => setEditingProduct(null)} onSuccess={fetchProducts} />
+
+      {/* Modal de Detalhamento de Lotes (FIFO) */}
+      {lotModalProduct && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 transition-all">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-[2rem] w-full max-w-2xl shadow-[0_0_80px_rgba(59,130,246,0.08)] overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+            <div className="flex justify-between items-center p-6 border-b border-zinc-800 bg-zinc-900/50">
+              <div>
+                <h3 className="text-xl font-bold text-white tracking-tight">Rastreamento de Lotes PEPS</h3>
+                <p className="text-zinc-400 text-xs mt-1">{lotModalProduct.name}</p>
+              </div>
+              <button
+                onClick={() => setLotModalProduct(null)}
+                className="p-2 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
+              {loadingLots ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="animate-spin text-blue-500" size={32} />
+                </div>
+              ) : productLots.length === 0 ? (
+                <div className="text-center py-12 text-zinc-500">
+                  Nenhum lote registrado para este produto.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {productLots.map((lot) => {
+                    const isExhausted = Number(lot.remaining) <= 0;
+                    const isNegative = Number(lot.remaining) < 0;
+
+                    return (
+                      <div
+                        key={lot.id}
+                        className={`p-4 border rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-3 transition-colors ${
+                          isNegative
+                            ? 'bg-red-500/5 border-red-500/20'
+                            : isExhausted
+                            ? 'bg-zinc-900/40 border-zinc-800/80 opacity-50'
+                            : 'bg-zinc-900/60 border-zinc-850 hover:border-zinc-700'
+                        }`}
+                      >
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-xs text-zinc-400 font-bold bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800">
+                              Lote: {lot.id.split('-')[0].toUpperCase()}
+                            </span>
+                            <span className="text-[10px] text-zinc-500">
+                              {new Date(lot.createdAt).toLocaleString('pt-BR')}
+                            </span>
+                          </div>
+                          <div className="text-sm text-zinc-300 mt-1">
+                            Custo de Aquisição: <strong className="text-rose-400 font-extrabold ml-1">R$ {Number(lot.costPrice).toFixed(2)}</strong>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 self-end sm:self-auto">
+                          <div className="text-right">
+                            <div className="text-xs text-zinc-500">Saldo/Original</div>
+                            <div className="font-bold text-sm text-zinc-300">
+                              <span className={isNegative ? 'text-red-400' : isExhausted ? 'text-zinc-500' : 'text-emerald-400 font-extrabold'}>
+                                {Number(lot.remaining).toFixed(0)}
+                              </span>{' '}
+                              / {Number(lot.quantity).toFixed(0)} UN
+                            </div>
+                          </div>
+
+                          <span
+                            className={`px-2.5 py-1 rounded-lg text-[10px] uppercase font-bold tracking-wider border ${
+                              isNegative
+                                ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                : isExhausted
+                                ? 'bg-zinc-800 text-zinc-500 border-zinc-750'
+                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            }`}
+                          >
+                            {isNegative ? 'Estorno/Negativo' : isExhausted ? 'Esgotado' : 'Ativo'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-zinc-800 bg-zinc-900/30 flex justify-end">
+              <button
+                onClick={() => setLotModalProduct(null)}
+                className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl text-sm transition-colors cursor-pointer"
+              >
+                Fechar Detalhes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -779,28 +779,41 @@ export default function SalesDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
-                {currentSales.map(sale => (
-                  <tr key={sale.id} className="hover:bg-zinc-800/40 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-zinc-300 text-sm">
-                      {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(sale.createdAt))}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="max-h-20 overflow-y-auto custom-scrollbar pr-2 space-y-1">
-                        {sale.items.map(i => (
-                          <div key={i.id} className="text-xs flex gap-2 items-start">
-                            <span className="font-bold text-blue-400 bg-blue-500/10 px-1 rounded">{i.quantity}x</span>
-                            <span className="text-zinc-300 line-clamp-1">{i.product?.name || 'Desconhecido'}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sale.payments.map((p, idx) => (
-                        <span key={idx} className="inline-block text-[10px] uppercase font-bold text-zinc-400 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded mr-1">
-                          {p.method}
-                        </span>
-                      ))}
-                    </td>
+                {currentSales.map(sale => {
+                  const isCancelled = sale.status === 'cancelled';
+                  return (
+                    <tr key={sale.id} className={`hover:bg-zinc-800/40 transition-colors ${isCancelled ? 'opacity-55 line-through' : ''}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-zinc-300 text-sm">
+                        {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(sale.createdAt))}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="max-h-20 overflow-y-auto custom-scrollbar pr-2 space-y-1">
+                          {sale.items.map(i => (
+                            <div key={i.id} className="text-xs flex gap-2 items-start">
+                              <span className="font-bold text-blue-400 bg-blue-500/10 px-1 rounded">{i.quantity}x</span>
+                              <span className="text-zinc-300 line-clamp-1">{i.product?.name || 'Desconhecido'}</span>
+                            </div>
+                          ))}
+                          {isCancelled && sale.cancelReason && (
+                            <div className="text-[10px] text-red-400 mt-1 italic font-medium no-underline">
+                              Motivo: {sale.cancelReason}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {isCancelled ? (
+                          <span className="inline-block text-[10px] uppercase font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded mr-1 no-underline">
+                            CANCELADA
+                          </span>
+                        ) : (
+                          sale.payments.map((p, idx) => (
+                            <span key={idx} className="inline-block text-[10px] uppercase font-bold text-zinc-400 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded mr-1">
+                              {p.method}
+                            </span>
+                          ))
+                        )}
+                      </td>
                     <td className="px-6 py-4 align-middle text-center whitespace-nowrap">
                       {sale.emitirNfce ? (
                         <div className="flex flex-col items-center justify-center gap-1">
@@ -853,7 +866,8 @@ export default function SalesDashboard() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
                 {currentSales.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-zinc-500 italic">
@@ -867,29 +881,42 @@ export default function SalesDashboard() {
 
           {/* Cards para Mobile */}
           <div className="md:hidden flex flex-col divide-y divide-zinc-800/60">
-            {currentSales.map(sale => (
-              <div key={sale.id} className="p-4 flex flex-col gap-3">
-                <div className="flex justify-between items-start">
-                  <div className="text-zinc-300 text-sm font-medium">
-                    {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(sale.createdAt))}
+            {currentSales.map(sale => {
+              const isCancelled = sale.status === 'cancelled';
+              return (
+                <div key={sale.id} className={`p-4 flex flex-col gap-3 ${isCancelled ? 'opacity-55 line-through' : ''}`}>
+                  <div className="flex justify-between items-start">
+                    <div className="text-zinc-300 text-sm font-medium">
+                      {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(sale.createdAt))}
+                    </div>
+                    <div className="text-emerald-400 font-black text-lg">
+                      {formatCurrency(sale.total)}
+                    </div>
                   </div>
-                  <div className="text-emerald-400 font-black text-lg">
-                    {formatCurrency(sale.total)}
-                  </div>
-                </div>
 
-                <div className="text-sm text-zinc-400 line-clamp-2">
-                  {sale.items.map(i => `${i.quantity}x ${i.product?.name || 'Item'}`).join(', ')}
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div className="flex gap-1">
-                    {sale.payments.map((p, idx) => (
-                      <span key={idx} className="inline-block text-[10px] uppercase font-bold text-zinc-400 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded">
-                        {p.method}
-                      </span>
-                    ))}
+                  <div className="text-sm text-zinc-400 line-clamp-2">
+                    {sale.items.map(i => `${i.quantity}x ${i.product?.name || 'Item'}`).join(', ')}
+                    {isCancelled && sale.cancelReason && (
+                      <div className="text-[10px] text-red-400 mt-1 italic font-medium no-underline">
+                        Motivo: {sale.cancelReason}
+                      </div>
+                    )}
                   </div>
+
+                  <div className="flex justify-between items-center">
+                    <div className="flex gap-1">
+                      {isCancelled ? (
+                        <span className="inline-block text-[10px] uppercase font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded no-underline">
+                          CANCELADA
+                        </span>
+                      ) : (
+                        sale.payments.map((p, idx) => (
+                          <span key={idx} className="inline-block text-[10px] uppercase font-bold text-zinc-400 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded">
+                            {p.method}
+                          </span>
+                        ))
+                      )}
+                    </div>
 
                   <div className="flex items-center gap-2">
                     <button
@@ -940,7 +967,8 @@ export default function SalesDashboard() {
                   </div>
                 </div>
               </div>
-            ))}
+            );
+          })}
             {currentSales.length === 0 && (
               <div className="p-12 text-center text-zinc-500 italic">
                 Nenhuma venda encontrada.

@@ -97,6 +97,8 @@ let CashRegistersService = class CashRegistersService {
         let totalCredito = new client_1.Prisma.Decimal(0);
         let totalDebito = new client_1.Prisma.Decimal(0);
         sales.forEach(sale => {
+            if (sale.status === 'cancelled')
+                return;
             sale.payments.forEach(p => {
                 const v = new client_1.Prisma.Decimal(p.value);
                 if (p.method === 'dinheiro')

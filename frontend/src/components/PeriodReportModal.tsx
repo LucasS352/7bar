@@ -33,6 +33,8 @@ interface PeriodReportModalProps {
 
 export function PeriodReportModal({ isOpen, onClose, startDate, endDate, summary }: PeriodReportModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortField, setSortField] = useState<'name' | 'qty' | 'revenue'>('revenue');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   if (!isOpen) return null;
 
@@ -78,15 +80,47 @@ export function PeriodReportModal({ isOpen, onClose, startDate, endDate, summary
     return colors[method] || 'text-zinc-400';
   };
 
-  // Filtrar e pesquisar produtos
-  const filteredProducts = useMemo(() => {
-    const list = summary?.period?.productsSold || [];
-    if (!searchQuery) return list;
-    return list.filter(p => {
-      const name = p?.name || 'Desconhecido';
-      return name.toLowerCase().includes(searchQuery.toLowerCase());
+  const handleSort = (field: 'name' | 'qty' | 'revenue') => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  // Filtrar, pesquisar e ordenar produtos
+  const processedProducts = useMemo(() => {
+    let list = [...(summary?.period?.productsSold || [])];
+
+    // Filter
+    if (searchQuery) {
+      list = list.filter(p => {
+        const name = p?.name || 'Desconhecido';
+        return name.toLowerCase().includes(searchQuery.toLowerCase());
+      });
+    }
+
+    // Sort
+    list.sort((a, b) => {
+      let valA: any = a[sortField];
+      let valB: any = b[sortField];
+
+      if (sortField === 'name') {
+        valA = valA || '';
+        valB = valB || '';
+        return sortDirection === 'asc' 
+          ? valA.localeCompare(valB) 
+          : valB.localeCompare(valA);
+      } else {
+        const numA = Number(valA) || 0;
+        const numB = Number(valB) || 0;
+        return sortDirection === 'asc' ? numA - numB : numB - numA;
+      }
     });
-  }, [summary, searchQuery]);
+
+    return list;
+  }, [summary, searchQuery, sortField, sortDirection]);
 
   const totalRevenue = summary?.period?.revenue || 0;
 
@@ -202,21 +236,36 @@ export function PeriodReportModal({ isOpen, onClose, startDate, endDate, summary
             <div className="border border-zinc-800/80 rounded-xl overflow-y-auto overflow-x-auto bg-zinc-950/40 max-h-[320px] custom-scrollbar">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-bold uppercase tracking-wider">
-                    <th className="p-3">Produto</th>
-                    <th className="p-3 text-center w-28">Qtd. Vendida</th>
-                    <th className="p-3 text-right w-36">Total Vendido</th>
+                  <tr className="bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-bold uppercase tracking-wider select-none">
+                    <th 
+                      onClick={() => handleSort('name')} 
+                      className="p-3 cursor-pointer hover:text-white transition-colors"
+                    >
+                      Produto {sortField === 'name' ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : ''}
+                    </th>
+                    <th 
+                      onClick={() => handleSort('qty')} 
+                      className="p-3 text-center w-28 cursor-pointer hover:text-white transition-colors"
+                    >
+                      Qtd. Vendida {sortField === 'qty' ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : ''}
+                    </th>
+                    <th 
+                      onClick={() => handleSort('revenue')} 
+                      className="p-3 text-right w-36 cursor-pointer hover:text-white transition-colors"
+                    >
+                      Total Vendido {sortField === 'revenue' ? (sortDirection === 'asc' ? ' ▲' : ' ▼') : ''}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-850">
-                  {filteredProducts.map((p, idx) => (
+                  {processedProducts.map((p, idx) => (
                     <tr key={idx} className="hover:bg-zinc-900/30 text-zinc-300 font-medium transition-colors">
                       <td className="p-3 font-semibold text-white">{p?.name || 'Desconhecido'}</td>
                       <td className="p-3 text-center font-bold text-zinc-400">{p?.qty || 0}</td>
                       <td className="p-3 text-right font-black text-emerald-400">{formatCurrency(p?.revenue || 0)}</td>
                     </tr>
                   ))}
-                  {filteredProducts.length === 0 && (
+                  {processedProducts.length === 0 && (
                     <tr>
                       <td colSpan={3} className="p-8 text-center text-zinc-500 font-medium">
                         Nenhum produto com vendas encontrado no período.

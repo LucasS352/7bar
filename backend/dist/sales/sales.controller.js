@@ -53,6 +53,12 @@ let SalesController = class SalesController {
         }
         return this.salesService.exportNfceXmlsAndSendEmail(startDate, endDate, email);
     }
+    async cancelSale(id, reason) {
+        if (!reason || reason.trim() === '') {
+            throw new common_1.BadRequestException('O motivo do cancelamento é obrigatório.');
+        }
+        return this.salesService.cancel(id, reason);
+    }
 };
 exports.SalesController = SalesController;
 __decorate([
@@ -111,6 +117,14 @@ __decorate([
     __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", Promise)
 ], SalesController.prototype, "exportXmlsAndSendEmail", null);
+__decorate([
+    (0, common_1.Post)(':id/cancel'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)('reason')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], SalesController.prototype, "cancelSale", null);
 exports.SalesController = SalesController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('sales'),

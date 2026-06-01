@@ -57,9 +57,10 @@ export class ProductsController {
   addStock(
     @Param('id') id: string,
     @Body('quantity') quantity: number,
+    @Body('costPrice') costPrice?: number,
     @Body('reason') reason?: string,
   ) {
-    return this.productsService.addStock(id, Number(quantity), reason);
+    return this.productsService.addStock(id, Number(quantity), costPrice !== undefined ? Number(costPrice) : undefined, reason);
   }
 
   /** Lê configurações globais do tenant (ex: allowNegativeStock) */
@@ -82,6 +83,11 @@ export class ProductsController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: any) {
     return this.productsService.update(id, body);
+  }
+
+  @Get(':id/lots')
+  getProductLots(@Param('id') id: string) {
+    return this.productsService.getProductLots(id);
   }
 
   @Delete(':id')

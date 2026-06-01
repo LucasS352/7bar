@@ -1,13 +1,15 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
+import { ProductsService } from '../products/products.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class OperatorsService {
   constructor(
     private readonly tenantManager: TenantConnectionManager,
-    private readonly tenantContext: TenantContextService
+    private readonly tenantContext: TenantContextService,
+    private readonly productsService: ProductsService
   ) {}
 
   private async getPrisma(tenantId: string) {
@@ -109,7 +111,12 @@ export class OperatorsService {
           select: {
             sale: {
               select: {
-                total: true
+                items: {
+                  select: {
+                    subtotal: true,
+                    settled: true
+                  }
+                }
               }
             }
           }
@@ -119,7 +126,12 @@ export class OperatorsService {
     });
 
     return operators.map(op => {
-      const pendingBalance = op.consumptions.reduce((sum, c) => sum + Number(c.sale.total), 0);
+      const pendingBalance = op.consumptions.reduce((sum, c) => {
+        const unsettledItemsSum = c.sale.items
+          .filter(item => !item.settled)
+          .reduce((itemSum, item) => itemSum + Number(item.subtotal), 0);
+        return sum + unsettledItemsSum;
+      }, 0);
       return {
         id: op.id,
         name: op.name,
@@ -155,21 +167,83 @@ export class OperatorsService {
         name: item.productName,
         quantity: Number(item.quantity),
         priceUnit: Number(item.priceUnit),
-        subtotal: Number(item.subtotal)
+        subtotal: Number(item.subtotal),
+        settled: item.settled,
+        settledAt: item.settledAt
       }))
     }));
   }
 
-  async settleConsumptions(tenantId: string, operatorId: string) {
+  async settleConsumptions(tenantId: string, operatorId: string, itemIds?: string[]) {
     const prisma = await this.getPrisma(tenantId);
     
-    await prisma.operatorConsumption.updateMany({
-      where: { operatorId, settled: false },
-      data: {
-        settled: true,
-        settledAt: new Date()
+    if (itemIds && itemIds.length > 0) {
+      await prisma.saleItem.updateMany({
+        where: {
+          id: { in: itemIds },
+          sale: {
+            operatorConsumption: {
+              operatorId: operatorId
+            }
+          }
+        },
+        data: {
+          settled: true,
+          settledAt: new Date()
+        }
+      });
+
+      const unsettledConsumptions = await prisma.operatorConsumption.findMany({
+        where: {
+          operatorId,
+          settled: false
+        },
+        include: {
+          sale: {
+            include: {
+              items: true
+            }
+          }
+        }
+      });
+
+      for (const consumption of unsettledConsumptions) {
+        const allSettled = consumption.sale.items.every(item => item.settled);
+        if (allSettled) {
+          await prisma.operatorConsumption.update({
+            where: { id: consumption.id },
+            data: {
+              settled: true,
+              settledAt: new Date()
+            }
+          });
+        }
       }
-    });
+    } else {
+      await prisma.saleItem.updateMany({
+        where: {
+          settled: false,
+          sale: {
+            operatorConsumption: {
+              operatorId: operatorId,
+              settled: false
+            }
+          }
+        },
+        data: {
+          settled: true,
+          settledAt: new Date()
+        }
+      });
+
+      await prisma.operatorConsumption.updateMany({
+        where: { operatorId, settled: false },
+        data: {
+          settled: true,
+          settledAt: new Date()
+        }
+      });
+    }
 
     return { success: true };
   }
@@ -177,7 +251,7 @@ export class OperatorsService {
   async createManualConsumption(tenantId: string, data: { operatorId: string; productId: string; quantity: number }) {
     const prisma = await this.getPrisma(tenantId);
     
-    return prisma.$transaction(async (tx) => {
+    const consumption = await prisma.$transaction(async (tx) => {
       const product = await tx.product.findUnique({
         where: { id: data.productId },
         include: { grupoTributacao: true }
@@ -240,7 +314,7 @@ export class OperatorsService {
       });
       
       // Create OperatorConsumption
-      const consumption = await tx.operatorConsumption.create({
+      const consumptionRecord = await tx.operatorConsumption.create({
         data: {
           operatorId: data.operatorId,
           saleId: sale.id,
@@ -255,8 +329,16 @@ export class OperatorsService {
         }
       });
       
-      return consumption;
+      return consumptionRecord;
     });
+
+    try {
+      this.productsService.invalidateCache(tenantId);
+    } catch (err) {
+      // ignore
+    }
+
+    return consumption;
   }
 
   async deleteConsumption(tenantId: string, id: string) {
@@ -275,7 +357,7 @@ export class OperatorsService {
 
     if (!consumption) throw new NotFoundException('Registro de consumo não encontrado');
 
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       for (const item of consumption.sale.items) {
         await tx.product.update({
           where: { id: item.productId },
@@ -292,5 +374,13 @@ export class OperatorsService {
 
       return { success: true };
     });
+
+    try {
+      this.productsService.invalidateCache(tenantId);
+    } catch (err) {
+      // ignore
+    }
+
+    return result;
   }
 }

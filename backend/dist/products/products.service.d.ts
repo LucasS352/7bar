@@ -210,7 +210,7 @@ export declare class ProductsService {
         volumeCapacity: Prisma.Decimal | null;
     }>;
     remove(id: string): Promise<any>;
-    addStock(productId: string, quantity: number, reason?: string): Promise<{
+    addStock(productId: string, quantity: number, costPrice?: number, reason?: string): Promise<{
         product: {
             name: string;
             id: string;
@@ -247,5 +247,12 @@ export declare class ProductsService {
     uploadPhoto(tenantId: string, file: Express.Multer.File): Promise<{
         imageUrl: string;
     }>;
+    getProductLots(productId: string): Promise<{
+        id: string;
+        costPrice: number;
+        quantity: number;
+        remaining: number;
+        createdAt: Date;
+    }[]>;
 }
 export {};

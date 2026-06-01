@@ -59,6 +59,7 @@ export declare class SalesController {
                 cstCofins: string;
                 aliqCofins: import("@prisma/client/runtime/library").Decimal;
                 unit: string;
+                priceCost: import("@prisma/client/runtime/library").Decimal;
                 ncm: string | null;
                 cest: string | null;
                 origem: number;
@@ -105,6 +106,8 @@ export declare class SalesController {
             nfceMotivoRejeicao: string | null;
             consumidorCpf: string | null;
             consumidorNome: string | null;
+            cancelReason: string | null;
+            cancelledAt: Date | null;
         })[];
         meta: {
             total: number;
@@ -159,6 +162,7 @@ export declare class SalesController {
                 cstCofins: string;
                 aliqCofins: import("@prisma/client/runtime/library").Decimal;
                 unit: string;
+                priceCost: import("@prisma/client/runtime/library").Decimal;
                 ncm: string | null;
                 cest: string | null;
                 origem: number;
@@ -205,6 +209,8 @@ export declare class SalesController {
             nfceMotivoRejeicao: string | null;
             consumidorCpf: string | null;
             consumidorNome: string | null;
+            cancelReason: string | null;
+            cancelledAt: Date | null;
         })[];
         meta: {
             total: number;
@@ -234,4 +240,5 @@ export declare class SalesController {
     exportXmlsAndSendEmail(startDate: string, endDate: string, email?: string): Promise<{
         message: string;
     }>;
+    cancelSale(id: string, reason: string): Promise<any>;
 }

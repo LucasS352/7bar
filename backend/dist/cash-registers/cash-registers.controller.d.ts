@@ -101,6 +101,7 @@ export declare class CashRegistersController {
                     cstCofins: string;
                     aliqCofins: import("@prisma/client/runtime/library").Decimal;
                     unit: string;
+                    priceCost: import("@prisma/client/runtime/library").Decimal;
                     ncm: string | null;
                     cest: string | null;
                     origem: number;
@@ -147,6 +148,8 @@ export declare class CashRegistersController {
                 nfceMotivoRejeicao: string | null;
                 consumidorCpf: string | null;
                 consumidorNome: string | null;
+                cancelReason: string | null;
+                cancelledAt: Date | null;
             })[];
             movements: {
                 id: string;

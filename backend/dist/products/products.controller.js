@@ -38,8 +38,8 @@ let ProductsController = class ProductsController {
     bulkEntry(items) {
         return this.productsService.bulkEntry(items);
     }
-    addStock(id, quantity, reason) {
-        return this.productsService.addStock(id, Number(quantity), reason);
+    addStock(id, quantity, costPrice, reason) {
+        return this.productsService.addStock(id, Number(quantity), costPrice !== undefined ? Number(costPrice) : undefined, reason);
     }
     getSettings() {
         return this.productsService.getSettings();
@@ -52,6 +52,9 @@ let ProductsController = class ProductsController {
     }
     update(id, body) {
         return this.productsService.update(id, body);
+    }
+    getProductLots(id) {
+        return this.productsService.getProductLots(id);
     }
     remove(id) {
         return this.productsService.remove(id);
@@ -100,9 +103,10 @@ __decorate([
     (0, common_1.Post)('add-stock/:id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)('quantity')),
-    __param(2, (0, common_1.Body)('reason')),
+    __param(2, (0, common_1.Body)('costPrice')),
+    __param(3, (0, common_1.Body)('reason')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Number, String]),
+    __metadata("design:paramtypes", [String, Number, Number, String]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "addStock", null);
 __decorate([
@@ -133,6 +137,13 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "update", null);
+__decorate([
+    (0, common_1.Get)(':id/lots'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "getProductLots", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id')),

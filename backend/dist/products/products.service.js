@@ -226,6 +226,14 @@ let ProductsService = class ProductsService {
             }
         });
         if (sanitized.stock && Number(sanitized.stock) > 0) {
+            await prisma.stockLot.create({
+                data: {
+                    productId: product.id,
+                    costPrice: sanitized.priceCost !== undefined ? new client_1.Prisma.Decimal(sanitized.priceCost) : new client_1.Prisma.Decimal(0),
+                    quantity: new client_1.Prisma.Decimal(sanitized.stock),
+                    remaining: new client_1.Prisma.Decimal(sanitized.stock),
+                }
+            });
             await prisma.inventoryLog.create({
                 data: {
                     productId: product.id,
@@ -345,7 +353,7 @@ let ProductsService = class ProductsService {
         this.invalidateCache(this.tenantContext.get().tenantId);
         return result;
     }
-    async addStock(productId, quantity, reason) {
+    async addStock(productId, quantity, costPrice, reason) {
         if (quantity <= 0) {
             throw new common_1.BadRequestException('A quantidade de entrada deve ser maior que zero.');
         }
@@ -354,15 +362,28 @@ let ProductsService = class ProductsService {
             const product = await tx.product.findUnique({ where: { id: productId } });
             if (!product)
                 throw new common_1.NotFoundException('Produto não encontrado.');
+            const finalCost = costPrice !== undefined ? new client_1.Prisma.Decimal(costPrice) : product.priceCost;
             const updated = await tx.product.update({
                 where: { id: productId },
-                data: { stock: { increment: new client_1.Prisma.Decimal(quantity) } },
+                data: {
+                    stock: { increment: new client_1.Prisma.Decimal(quantity) },
+                    priceCost: finalCost
+                },
+            });
+            await tx.stockLot.create({
+                data: {
+                    productId,
+                    costPrice: finalCost,
+                    quantity: new client_1.Prisma.Decimal(quantity),
+                    remaining: new client_1.Prisma.Decimal(quantity),
+                }
             });
             await tx.inventoryLog.create({
                 data: {
                     productId,
                     type: 'IN',
                     quantity,
+                    costPrice: finalCost,
                     reason: reason || 'Entrada de Estoque — Reposição',
                 },
             });
@@ -423,8 +444,17 @@ let ProductsService = class ProductsService {
                             },
                         });
                         if (stockToAdd > 0) {
+                            const finalCost = item.priceCost !== undefined && item.priceCost !== null ? new client_1.Prisma.Decimal(item.priceCost) : existing.priceCost;
+                            await tx.stockLot.create({
+                                data: {
+                                    productId: existing.id,
+                                    costPrice: finalCost,
+                                    quantity: new client_1.Prisma.Decimal(stockToAdd),
+                                    remaining: new client_1.Prisma.Decimal(stockToAdd),
+                                }
+                            });
                             await tx.inventoryLog.create({
-                                data: { productId: existing.id, type: 'IN', quantity: stockToAdd, costPrice: item.priceCost, reason: 'Entrada Lote/Fornecedor' },
+                                data: { productId: existing.id, type: 'IN', quantity: stockToAdd, costPrice: Number(finalCost), reason: 'Entrada Lote/Fornecedor' },
                             });
                         }
                         importedCount++;
@@ -459,6 +489,14 @@ let ProductsService = class ProductsService {
                         if (created.shortCode)
                             byShortCode.set(created.shortCode, created);
                         if (stockToAdd > 0) {
+                            await tx.stockLot.create({
+                                data: {
+                                    productId: created.id,
+                                    costPrice: new client_1.Prisma.Decimal(item.priceCost || 0),
+                                    quantity: new client_1.Prisma.Decimal(stockToAdd),
+                                    remaining: new client_1.Prisma.Decimal(stockToAdd),
+                                }
+                            });
                             await tx.inventoryLog.create({
                                 data: { productId: created.id, type: 'IN', quantity: stockToAdd, costPrice: item.priceCost, reason: 'Cadastro e Entrada Lote Inicial' },
                             });
@@ -508,6 +546,20 @@ let ProductsService = class ProductsService {
         fs.writeFileSync(filePath, file.buffer);
         const imageUrl = `/api/products/uploads/images/${filename}`;
         return { imageUrl };
+    }
+    async getProductLots(productId) {
+        const prisma = await this.getPrisma();
+        const lots = await prisma.stockLot.findMany({
+            where: { productId },
+            orderBy: { createdAt: 'desc' }
+        });
+        return lots.map(lot => ({
+            id: lot.id,
+            costPrice: Number(lot.costPrice),
+            quantity: Number(lot.quantity),
+            remaining: Number(lot.remaining),
+            createdAt: lot.createdAt
+        }));
     }
 };
 exports.ProductsService = ProductsService;

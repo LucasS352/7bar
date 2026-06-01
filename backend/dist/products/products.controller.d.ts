@@ -73,7 +73,7 @@ export declare class ProductsController {
         duplicates: string[];
         hasDuplicates: boolean;
     }>;
-    addStock(id: string, quantity: number, reason?: string): Promise<{
+    addStock(id: string, quantity: number, costPrice?: number, reason?: string): Promise<{
         product: {
             name: string;
             id: string;
@@ -166,5 +166,12 @@ export declare class ProductsController {
         volumeUnit: string | null;
         volumeCapacity: import("@prisma/client/runtime/library").Decimal | null;
     }>;
+    getProductLots(id: string): Promise<{
+        id: string;
+        costPrice: number;
+        quantity: number;
+        remaining: number;
+        createdAt: Date;
+    }[]>;
     remove(id: string): Promise<any>;
 }
