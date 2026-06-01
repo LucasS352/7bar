@@ -62,6 +62,10 @@ model Tenant {
   // Integração Cosmos (Bluesoft) — lookup de EAN brasileiro
   cosmosApiKey   String?  // Token da API Cosmos do cliente para lookup de EAN
 
+  // Mensalidades
+  mensalidadeValor      Decimal?   @db.Decimal(10, 2) @default(0.00) @map("mensalidade_valor")
+  mensalidadeVencimento DateTime?  @map("mensalidade_vencimento")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

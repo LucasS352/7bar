@@ -6,4 +6,6 @@ export class ProvisionTenantDto {
   adminEmail: string;
   adminPassword: string;
   seedProducts?: boolean;
+  mensalidadeValor?: number;
+  mensalidadeVencimento?: string;
 }

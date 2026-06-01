@@ -8,7 +8,7 @@ import {
   ShieldCheck, Building2, User, Mail, Lock, Database, Loader2, CheckCircle2,
   AlertCircle, ArrowRight, Eye, EyeOff, Search, Edit, Image as ImageIcon,
   Settings, ToggleLeft, ToggleRight, AlertTriangle, Upload, X, Terminal,
-  ChevronDown, ChevronRight
+  ChevronDown, ChevronRight, Trash2, DollarSign
 } from "lucide-react";
 
 const PIN_LENGTH = 10;
@@ -57,6 +57,8 @@ export default function SysInitPage() {
   const [adminPasswordConfirm, setAdminPasswordConfirm] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [seedProducts, setSeedProducts] = useState(true);
+  const [mensalidadeValor, setMensalidadeValor] = useState("0.00");
+  const [mensalidadeVencimento, setMensalidadeVencimento] = useState("");
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
   const [successData, setSuccessData] = useState<any>(null);
@@ -177,6 +179,8 @@ export default function SysInitPage() {
         adminEmail,
         adminPassword,
         seedProducts,
+        mensalidadeValor: Number(mensalidadeValor) || 0,
+        mensalidadeVencimento: mensalidadeVencimento || null,
       });
       setSuccessData(data);
       setStep("success");
@@ -223,6 +227,8 @@ export default function SysInitPage() {
         status: editingTenant.status,
         nfceAmbiente: editingTenant.nfceAmbiente,
         modulos,
+        mensalidadeValor: Number(editingTenant.mensalidadeValor) || 0,
+        mensalidadeVencimento: editingTenant.mensalidadeVencimento || null,
       }, {
         headers: { 'x-setup-pin': pin },
       });
@@ -236,6 +242,45 @@ export default function SysInitPage() {
       toast.error(err.response?.data?.message || "Erro ao salvar alterações.");
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  const handleDeleteTenant = async (tenant: any) => {
+    const confirmName = window.prompt(
+      `ATENÇÃO: Isso excluirá PERMANENTEMENTE o banco de dados "${tenant.databaseName}" e todos os registros da empresa "${tenant.name || tenant.nomeFantasia}".\n\nEsta operação NÃO PODE SER DESFEITA.\n\nPara confirmar, digite o nome do banco de dados (${tenant.databaseName}):`
+    );
+    
+    if (confirmName !== tenant.databaseName) {
+      if (confirmName !== null) {
+        toast.error("Confirmação incorreta. A exclusão foi cancelada.");
+      }
+      return;
+    }
+
+    try {
+      const pin = pinDigits.join('');
+      await api.delete(`/tenants/setup/${tenant.id}`, {
+        headers: { 'x-setup-pin': pin },
+      });
+      toast.success("Tenant e banco de dados excluídos com sucesso!");
+      loadTenants();
+    } catch (err: any) {
+      console.error(err.response?.data || err);
+      toast.error(err.response?.data?.message || "Erro ao excluir tenant.");
+    }
+  };
+
+  const handleRegistrarPagamento = async (tenantId: string) => {
+    try {
+      const pin = pinDigits.join('');
+      await api.post(`/tenants/setup/${tenantId}/registrar-pagamento`, {}, {
+        headers: { 'x-setup-pin': pin },
+      });
+      toast.success("Pagamento registrado e vencimento avançado em 1 mês!");
+      loadTenants();
+    } catch (err: any) {
+      console.error(err.response?.data || err);
+      toast.error(err.response?.data?.message || "Erro ao registrar pagamento.");
     }
   };
 
@@ -288,6 +333,18 @@ export default function SysInitPage() {
     t.cnpj?.includes(searchTerm) ||
     t.databaseName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const faturamentoEstimado = tenants
+    .filter(t => t.status === 'active')
+    .reduce((acc, t) => acc + (Number(t.mensalidadeValor) || 0), 0);
+
+  const mensalidadesAtrasadas = tenants.filter(t => {
+    if (!t.mensalidadeVencimento || t.status !== 'active') return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const venc = new Date(t.mensalidadeVencimento);
+    return venc < today;
+  }).length;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col p-6">
@@ -367,17 +424,27 @@ export default function SysInitPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 flex items-center gap-4">
                 <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl"><Building2 size={24} /></div>
                 <div><p className="text-zinc-400 text-sm">Total de Clientes</p><p className="text-2xl font-bold">{tenants.length}</p></div>
               </div>
               <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 flex items-center gap-4">
-                <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><CheckCircle2 size={24} /></div>
-                <div><p className="text-zinc-400 text-sm">Ativos</p><p className="text-2xl font-bold">{tenants.filter(t => t.status === 'active').length}</p></div>
+                <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><DollarSign size={24} /></div>
+                <div>
+                  <p className="text-zinc-400 text-sm">Faturamento Mensal</p>
+                  <p className="text-2xl font-bold">R$ {faturamentoEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
               </div>
               <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 flex items-center gap-4">
-                <div className="p-3 bg-red-500/10 text-red-400 rounded-xl"><AlertTriangle size={24} /></div>
+                <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl"><AlertTriangle size={24} /></div>
+                <div>
+                  <p className="text-zinc-400 text-sm">Atrasados</p>
+                  <p className="text-2xl font-bold text-rose-400">{mensalidadesAtrasadas}</p>
+                </div>
+              </div>
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 flex items-center gap-4">
+                <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl"><AlertTriangle size={24} /></div>
                 <div>
                   <p className="text-zinc-400 text-sm">Certificados a Vencer</p>
                   <p className="text-2xl font-bold">{tenants.filter(t => isCertExpiringSoon(t.certValidade)).length}</p>
@@ -414,15 +481,16 @@ export default function SysInitPage() {
                       <th className="px-6 py-4 font-medium">Tenant</th>
                       <th className="px-6 py-4 font-medium">Banco / CNPJ</th>
                       <th className="px-6 py-4 font-medium">Status</th>
+                      <th className="px-6 py-4 font-medium">Mensalidade</th>
                       <th className="px-6 py-4 font-medium">Módulos</th>
                       <th className="px-6 py-4 font-medium text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/50">
                     {loadingTenants ? (
-                      <tr><td colSpan={6} className="px-6 py-12 text-center text-zinc-500"><Loader2 className="animate-spin inline-block mr-2" /> Carregando...</td></tr>
+                      <tr><td colSpan={7} className="px-6 py-12 text-center text-zinc-500"><Loader2 className="animate-spin inline-block mr-2" /> Carregando...</td></tr>
                     ) : filteredTenants.length === 0 ? (
-                      <tr><td colSpan={6} className="px-6 py-12 text-center text-zinc-500">Nenhum tenant encontrado.</td></tr>
+                      <tr><td colSpan={7} className="px-6 py-12 text-center text-zinc-500">Nenhum tenant encontrado.</td></tr>
                     ) : (
                       filteredTenants.map(t => {
                         const isSelected = selectedTenantIds.includes(t.id);
@@ -467,6 +535,39 @@ export default function SysInitPage() {
                               </span>
                             </td>
                             <td className="px-6 py-4">
+                              <div>
+                                <p className="font-semibold text-zinc-200">
+                                  R$ {Number(t.mensalidadeValor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                                {t.mensalidadeVencimento ? (() => {
+                                  const today = new Date();
+                                  today.setHours(0, 0, 0, 0);
+                                  const venc = new Date(t.mensalidadeVencimento);
+                                  const diffTime = venc.getTime() - today.getTime();
+                                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                  
+                                  let color = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+                                  let statusText = `Vence em ${venc.toLocaleDateString("pt-BR")}`;
+                                  
+                                  if (diffDays < 0) {
+                                    color = "text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse";
+                                    statusText = `Atrasado desde ${venc.toLocaleDateString("pt-BR")}`;
+                                  } else if (diffDays <= 5) {
+                                    color = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+                                    statusText = diffDays === 0 ? "Vence hoje!" : `Vence em ${diffDays} dias`;
+                                  }
+
+                                  return (
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${color} block w-max mt-1`}>
+                                      {statusText}
+                                    </span>
+                                  );
+                                })() : (
+                                  <span className="text-zinc-500 text-xs">Sem vencimento</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
                               <div className="flex gap-1">
                                 {(() => {
                                   let m = { nfce: true, estoque: true, dashboardMobile: true };
@@ -488,9 +589,17 @@ export default function SysInitPage() {
                               </div>
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <button onClick={() => openEdit(t)} className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition">
-                                <Edit size={18} />
-                              </button>
+                              <div className="flex justify-end gap-1">
+                                <button onClick={() => handleRegistrarPagamento(t.id)} className="p-2 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition" title="Registrar Pagamento">
+                                  <DollarSign size={18} />
+                                </button>
+                                <button onClick={() => openEdit(t)} className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition" title="Editar">
+                                  <Edit size={18} />
+                                </button>
+                                <button onClick={() => handleDeleteTenant(t)} className="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition" title="Excluir">
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -515,6 +624,16 @@ export default function SysInitPage() {
                  <div><label className="text-xs text-zinc-400 uppercase">Admin Email</label><input type="email" required value={adminEmail} onChange={e => setAdminEmail(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-xl mt-1 text-white" /></div>
                  <div><label className="text-xs text-zinc-400 uppercase">Senha</label><input type="password" required value={adminPassword} onChange={e => setAdminPassword(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-xl mt-1 text-white" /></div>
                  <div><label className="text-xs text-zinc-400 uppercase">Confirmar Senha</label><input type="password" required value={adminPasswordConfirm} onChange={e => setAdminPasswordConfirm(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-xl mt-1 text-white" /></div>
+                 <div className="grid grid-cols-2 gap-4">
+                   <div>
+                     <label className="text-xs text-zinc-400 uppercase">Mensalidade (R$)</label>
+                     <input type="number" step="0.01" value={mensalidadeValor} onChange={e => setMensalidadeValor(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-xl mt-1 text-white" />
+                   </div>
+                   <div>
+                     <label className="text-xs text-zinc-400 uppercase">1º Vencimento</label>
+                     <input type="date" value={mensalidadeVencimento} onChange={e => setMensalidadeVencimento(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-xl mt-1 text-white" />
+                   </div>
+                 </div>
                  <div className="flex items-center gap-3 mt-4 bg-zinc-950 p-4 rounded-xl border border-zinc-800">
                    <button type="button" onClick={() => setSeedProducts(!seedProducts)} className={`transition-colors ${seedProducts ? 'text-emerald-500' : 'text-zinc-600'}`}>
                      {seedProducts ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
@@ -549,6 +668,7 @@ export default function SysInitPage() {
                  <button onClick={() => setEditTab("identidade")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'identidade' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Identidade</button>
                  <button onClick={() => setEditTab("modulos")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'modulos' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Módulos</button>
                  <button onClick={() => setEditTab("fiscal")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'fiscal' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Fiscal</button>
+                 <button onClick={() => setEditTab("mensalidade")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'mensalidade' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Mensalidade</button>
                </div>
 
                <div className="p-6 flex-1">
@@ -613,6 +733,22 @@ export default function SysInitPage() {
                      <div className="grid grid-cols-2 gap-4">
                        <div><label className="text-xs text-zinc-400 uppercase">CNPJ</label><input type="text" value={editingTenant.cnpj || ''} onChange={e => setEditingTenant({...editingTenant, cnpj: e.target.value})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm" /></div>
                        <div><label className="text-xs text-zinc-400 uppercase">Ambiente NFC-e</label><select value={editingTenant.nfceAmbiente || 2} onChange={e => setEditingTenant({...editingTenant, nfceAmbiente: Number(e.target.value)})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm"><option value={1}>1 - Produção</option><option value={2}>2 - Homologação</option></select></div>
+                     </div>
+                   </div>
+                 )}
+
+                 {editTab === 'mensalidade' && (
+                   <div className="space-y-5">
+                     <p className="text-sm text-zinc-400 border-b border-zinc-800 pb-3">Configure as regras comerciais e datas de pagamento deste cliente.</p>
+                     <div className="grid grid-cols-2 gap-4">
+                       <div>
+                         <label className="text-xs text-zinc-400 uppercase">Valor da Mensalidade (R$)</label>
+                         <input type="number" step="0.01" value={editingTenant.mensalidadeValor || 0} onChange={e => setEditingTenant({...editingTenant, mensalidadeValor: e.target.value})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm" />
+                       </div>
+                       <div>
+                         <label className="text-xs text-zinc-400 uppercase">Próximo Vencimento</label>
+                         <input type="date" value={editingTenant.mensalidadeVencimento ? new Date(editingTenant.mensalidadeVencimento).toISOString().split('T')[0] : ''} onChange={e => setEditingTenant({...editingTenant, mensalidadeVencimento: e.target.value})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm" />
+                       </div>
                      </div>
                    </div>
                  )}

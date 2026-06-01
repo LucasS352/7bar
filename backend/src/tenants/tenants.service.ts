@@ -60,7 +60,7 @@ export class TenantsService {
       'logradouro', 'numero', 'complemento', 'bairro',
       'municipio', 'codMunicipio', 'uf', 'cep', 'telefone',
       'nfceAtivo', 'nfceSerie', 'nfceAmbiente', 'nfceCsc', 'nfceIdCsc',
-      'modulos', 'status', 'emailContador'
+      'modulos', 'status', 'emailContador', 'mensalidadeValor', 'mensalidadeVencimento'
     ];
     // Tipamos explicitamente como Record<string, any> para evitar erro TS no acesso de chaves dinâmicas
     const safeData: Record<string, any> = Object.fromEntries(
@@ -71,6 +71,12 @@ export class TenantsService {
     if (safeData.crt != null)          safeData.crt          = Number(safeData.crt);
     if (safeData.nfceSerie != null)    safeData.nfceSerie    = Number(safeData.nfceSerie);
     if (safeData.nfceAmbiente != null) safeData.nfceAmbiente = Number(safeData.nfceAmbiente);
+    if (safeData.mensalidadeValor != null) {
+      safeData.mensalidadeValor = Number(safeData.mensalidadeValor);
+    }
+    if (safeData.mensalidadeVencimento !== undefined) {
+      safeData.mensalidadeVencimento = safeData.mensalidadeVencimento ? new Date(safeData.mensalidadeVencimento) : null;
+    }
 
     // Normalizar CNPJ: remove pontuação e verifica duplicidade em outros tenants
     if (safeData.cnpj) {
@@ -225,7 +231,7 @@ export class TenantsService {
   }
 
   async provisionTenant(dto: ProvisionTenantDto) {
-    const { pin, tenantName, dbName, adminName, adminEmail, adminPassword, seedProducts } = dto;
+    const { pin, tenantName, dbName, adminName, adminEmail, adminPassword, seedProducts, mensalidadeValor, mensalidadeVencimento } = dto;
 
     // 1. Validar PIN
     const pinValid = await this.validatePin(pin);
@@ -298,6 +304,8 @@ export class TenantsService {
         databaseName: sanitizedDbName,
         databaseUrl: tenantDbUrl,
         status: 'active',
+        mensalidadeValor: mensalidadeValor != null ? Number(mensalidadeValor) : 0,
+        mensalidadeVencimento: mensalidadeVencimento ? new Date(mensalidadeVencimento) : null,
         users: {
           create: {
             name: adminName,
@@ -446,5 +454,48 @@ export class TenantsService {
     const settings = await prisma.tenantSettings.findUnique({ where: { id: 'singleton' } });
     if (!settings?.discountPin) return false;
     return bcrypt.compare(pin, settings.discountPin);
+  }
+
+  async deleteTenant(tenantId: string) {
+    const tenant = await this.heartPrisma.tenant.findUnique({
+      where: { id: tenantId }
+    });
+
+    if (!tenant) throw new NotFoundException('Empresa não encontrada');
+
+    // 1. Drop the tenant's database
+    try {
+      this.logger.log(`⚠️ Excluindo banco de dados: ${tenant.databaseName}`);
+      await this.heartPrisma.$executeRawUnsafe(`DROP DATABASE \`${tenant.databaseName}\``);
+      this.logger.log(`✅ Banco de dados ${tenant.databaseName} excluído com sucesso.`);
+    } catch (e: any) {
+      this.logger.error(`Falha ao excluir o banco de dados ${tenant.databaseName}: ${e.message}`);
+      // Continuamos a exclusão do registro mesmo se o banco já não existir para evitar bloqueios
+    }
+
+    // 2. Delete the tenant record in the heart database
+    await this.heartPrisma.tenant.delete({
+      where: { id: tenantId }
+    });
+
+    return { success: true };
+  }
+
+  async registrarPagamento(tenantId: string) {
+    const tenant = await this.heartPrisma.tenant.findUnique({
+      where: { id: tenantId }
+    });
+    if (!tenant) throw new NotFoundException('Empresa não encontrada');
+
+    let currentDueDate = tenant.mensalidadeVencimento ? new Date(tenant.mensalidadeVencimento) : new Date();
+    const nextDueDate = new Date(currentDueDate);
+    nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+
+    return this.heartPrisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        mensalidadeVencimento: nextDueDate
+      }
+    });
   }
 }

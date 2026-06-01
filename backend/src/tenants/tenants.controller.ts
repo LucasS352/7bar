@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch, Body, UseGuards, Param, Res,
+  Controller, Get, Post, Patch, Delete, Body, UseGuards, Param, Res,
   UnauthorizedException, Request, UseInterceptors,
   UploadedFile, BadRequestException, NotFoundException,
 } from '@nestjs/common';
@@ -200,5 +200,32 @@ export class TenantsController {
     const valid = await this.tenantsService.verifyDiscountPin(req.user.tenantId, body.pin);
     if (!valid) throw new UnauthorizedException('PIN de desconto inválido.');
     return { valid: true };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  async deleteTenant(@Request() req: any, @Param('id') id: string) {
+    if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+      throw new UnauthorizedException('Permissão negada.');
+    }
+    return this.tenantsService.deleteTenant(id);
+  }
+
+  /** Exclui tenant via sys-init (protegido por PIN) */
+  @Delete('setup/:id')
+  async deleteTenantSetup(@Request() req: any, @Param('id') id: string) {
+    const pin = req.headers['x-setup-pin'] as string;
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN inválido.');
+    return this.tenantsService.deleteTenant(id);
+  }
+
+  /** Registra pagamento de mensalidade via sys-init (protegido por PIN) */
+  @Post('setup/:id/registrar-pagamento')
+  async registrarPagamentoSetup(@Request() req: any, @Param('id') id: string) {
+    const pin = req.headers['x-setup-pin'] as string;
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN inválido.');
+    return this.tenantsService.registrarPagamento(id);
   }
 }
