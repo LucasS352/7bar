@@ -146,6 +146,11 @@ export class SalesService {
         where: { id: { in: allProductIds } },
         include: { 
           grupoTributacao: true,
+          category: {
+            include: {
+              grupoTributacao: true
+            }
+          },
           modifierGroups: {
             include: {
               options: true
@@ -350,7 +355,7 @@ export class SalesService {
 
         const priceUnit = new Prisma.Decimal(item.priceUnit);
         const itemSubtotal = priceUnit.mul(new Prisma.Decimal(qty)).toDecimalPlaces(2);
-        const gt = product.grupoTributacao;
+        const gt = product.grupoTributacao || product.category?.grupoTributacao;
         const priceCost = qty > 0 ? totalCostOfLots.div(new Prisma.Decimal(qty)) : new Prisma.Decimal(0);
 
         await tx.saleItem.create({
@@ -660,10 +665,17 @@ export class SalesService {
       if (item.productId) {
         const currentProduct = await prisma.product.findUnique({
           where: { id: item.productId },
-          include: { grupoTributacao: true }
+          include: { 
+            grupoTributacao: true,
+            category: {
+              include: {
+                grupoTributacao: true
+              }
+            }
+          }
         });
         if (currentProduct) {
-          const gt = currentProduct.grupoTributacao;
+          const gt = currentProduct.grupoTributacao || currentProduct.category?.grupoTributacao;
           const updatedFields = {
             productName: currentProduct.name,
             unit: currentProduct.unit || 'UN',

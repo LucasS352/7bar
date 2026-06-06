@@ -14,6 +14,8 @@ import { NfceModule } from './nfce/nfce.module';
 import { OperatorsModule } from './operators/operators.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { MasterProductsModule } from './master-products/master-products.module';
+import { SuppliersModule } from './suppliers/suppliers.module';
+import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TenantInterceptor } from './prisma/tenant-context.service';
@@ -36,6 +38,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     OperatorsModule,
     DashboardModule,
     MasterProductsModule,
+    SuppliersModule,
+    PurchaseOrdersModule,
   ],
   controllers: [AppController],
   providers: [

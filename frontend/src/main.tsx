@@ -22,6 +22,8 @@ import CategoriesPage from './app/dashboard/inventory/categories/page';
 import MassEntryPage from './app/dashboard/inventory/purchases/page';
 import StockEntryPage from './app/dashboard/inventory/stock-entry/page';
 import SysInitPage from './app/sys-init/page';
+import SuppliersPage from './app/dashboard/suppliers/page';
+import PurchaseOrdersPage from './app/dashboard/purchase-orders/page';
 
 // Stores
 import { useAuthStore } from './store/auth';
@@ -98,6 +100,8 @@ function App() {
           <Route path="configuracoes/tributacao" element={<TributacaoPage />} />
           <Route path="equipe" element={<UsersPage />} />
           <Route path="comandas" element={<ComandasPage />} />
+          <Route path="suppliers" element={<SuppliersPage />} />
+          <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
         </Route>
 
         {/* Fallback */}

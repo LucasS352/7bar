@@ -225,7 +225,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
   // Margem estimada
   const cost = parseFloat(formData.priceCost) || 0;
   const sell = parseFloat(formData.priceSell) || 0;
-  const markup = cost > 0 && sell > cost ? (((sell - cost) / cost) * 100).toFixed(1) : null;
+  const margin = sell > cost && sell > 0 ? (((sell - cost) / sell) * 100).toFixed(1) : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -514,14 +514,14 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
               </div>
             </div>
 
-            {/* Markup indicator */}
-            {markup !== null && (
-              <div className="flex items-center justify-between bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2">
-                <span className="text-xs font-semibold text-zinc-400 flex items-center gap-1.5">
-                  <DollarSign size={13} className="text-emerald-500" /> Markup Bruto Estimado
+            {/* Margin indicator */}
+            {margin !== null && (
+              <div className="flex justify-between items-center bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 rounded-xl mt-2">
+                <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+                  <DollarSign size={13} className="text-emerald-500" /> Margem de Lucro Estimada
                 </span>
-                <span className={`text-base font-black ${Number(markup) > 30 ? 'text-emerald-400' : 'text-yellow-500'}`}>
-                  {markup}%
+                <span className={`text-base font-black ${Number(margin) > 30 ? 'text-emerald-400' : 'text-yellow-500'}`}>
+                  {margin}%
                 </span>
               </div>
             )}
@@ -751,6 +751,8 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
             </div>
           )}
 
+
+
           {/* ── FISCAL ─────────────────────────────────────────── */}
           <div className={sectionCls}>
             <p className="text-[11px] font-black uppercase tracking-widest text-indigo-400 border-b border-zinc-800 pb-2 mb-1">Fiscal / NFC-e</p>
@@ -762,11 +764,14 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
                 value={formData.grupoTributacaoId}
                 onChange={e => f('grupoTributacaoId', e.target.value)}
               >
-                <option value="">— Sem Grupo Fiscal —</option>
+                <option value="">— Sem Grupo Fiscal (Herdar da Categoria) —</option>
                 {grupos.map(g => (
                   <option key={g.id} value={g.id}>{g.nome} (CFOP {g.cfop})</option>
                 ))}
               </select>
+              <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
+                ℹ️ Caso nenhum grupo seja selecionado, o produto herdará a tributação associada à categoria dele.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

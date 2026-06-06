@@ -47,6 +47,13 @@ export class TributacaoService {
     if (count > 0) {
       throw new BadRequestException(`Não é possível remover: ${count} produto(s) vinculados a este grupo.`);
     }
+    // Verificar se há categorias vinculadas
+    const countCategories = await prisma.category.count({
+      where: { grupoTributacaoId: id },
+    });
+    if (countCategories > 0) {
+      throw new BadRequestException(`Não é possível remover: ${countCategories} categoria(s) vinculadas a este grupo.`);
+    }
     return prisma.grupoTributacao.delete({ where: { id } });
   }
 }

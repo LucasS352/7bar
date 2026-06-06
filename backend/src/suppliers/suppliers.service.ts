@@ -1,0 +1,105 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
+import { TenantContextService } from '../prisma/tenant-context.service';
+
+@Injectable()
+export class SuppliersService {
+  constructor(
+    private readonly tenantManager: TenantConnectionManager,
+    private readonly tenantContext: TenantContextService
+  ) {}
+
+  private async getPrisma() {
+    const { tenantId, databaseUrl } = this.tenantContext.get();
+    return this.tenantManager.getTenantClient(tenantId, databaseUrl);
+  }
+
+  async createSupplier(data: any) {
+    const prisma = await this.getPrisma();
+    const { id, createdAt, updatedAt, products, purchaseOrders, ...createData } = data;
+    return prisma.supplier.create({
+      data: createData,
+    });
+  }
+
+  async getSuppliers() {
+    const prisma = await this.getPrisma();
+    return prisma.supplier.findMany({
+      orderBy: { name: 'asc' },
+      include: {
+        products: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+  }
+
+  async getSupplierById(supplierId: string) {
+    const prisma = await this.getPrisma();
+    const supplier = await prisma.supplier.findUnique({
+      where: { id: supplierId },
+      include: {
+        products: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+
+    if (!supplier) throw new NotFoundException('Fornecedor não encontrado.');
+    return supplier;
+  }
+
+  async updateSupplier(supplierId: string, data: any) {
+    const prisma = await this.getPrisma();
+    const { id, createdAt, updatedAt, products, purchaseOrders, ...updateData } = data;
+    return prisma.supplier.update({
+      where: { id: supplierId },
+      data: updateData,
+    });
+  }
+
+  async deleteSupplier(supplierId: string) {
+    const prisma = await this.getPrisma();
+    return prisma.supplier.delete({
+      where: { id: supplierId },
+    });
+  }
+
+  // --- Supplier Products ---
+
+  async addSupplierProduct(supplierId: string, productId: string, expectedCost?: number) {
+    const prisma = await this.getPrisma();
+    return prisma.supplierProduct.upsert({
+      where: {
+        supplierId_productId: {
+          supplierId,
+          productId,
+        },
+      },
+      create: {
+        supplierId,
+        productId,
+        expectedCost: expectedCost ? expectedCost : null,
+      },
+      update: {
+        expectedCost: expectedCost ? expectedCost : null,
+      },
+    });
+  }
+
+  async removeSupplierProduct(supplierId: string, productId: string) {
+    const prisma = await this.getPrisma();
+    return prisma.supplierProduct.delete({
+      where: {
+        supplierId_productId: {
+          supplierId,
+          productId,
+        },
+      },
+    });
+  }
+}

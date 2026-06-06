@@ -209,7 +209,7 @@ export function EditProductModal({
 
   const cost   = parseFloat(formData.priceCost) || 0;
   const sell   = parseFloat(formData.priceSell) || 0;
-  const markup = cost > 0 && sell > cost ? (((sell - cost) / cost) * 100).toFixed(1) : '0.0';
+  const margin = sell > cost && sell > 0 ? (((sell - cost) / sell) * 100).toFixed(1) : '0.0';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -422,10 +422,10 @@ export function EditProductModal({
               </div>
             </div>
 
-            {/* Markup badge */}
+            {/* Margin badge */}
             <div className="flex justify-between items-center py-2 border-t border-zinc-800/50">
-              <span className="text-xs font-semibold text-zinc-500">Markup bruto:</span>
-              <span className={`text-base font-black ${Number(markup) > 30 ? 'text-emerald-400' : 'text-yellow-400'}`}>{markup}%</span>
+              <span className="text-xs font-semibold text-zinc-500">Margem de Lucro:</span>
+              <span className={`text-base font-black ${Number(margin) > 30 ? 'text-emerald-400' : 'text-yellow-400'}`}>{margin}%</span>
             </div>
 
             <div>
@@ -613,12 +613,17 @@ export function EditProductModal({
               <span className="text-zinc-600 font-normal text-xs">(opcional)</span>
             </h3>
 
+
+
             <div>
               <label className={lbl}>Grupo Tributário</label>
               <select className={`${inp} border-indigo-500/20`} value={formData.grupoTributacaoId} onChange={e => f('grupoTributacaoId', e.target.value)}>
-                <option value="">— Sem grupo fiscal —</option>
+                <option value="">— Sem Grupo Fiscal (Herdar da Categoria) —</option>
                 {grupos.map(g => <option key={g.id} value={g.id}>{g.nome} (CFOP {g.cfop})</option>)}
               </select>
+              <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
+                ℹ️ Caso nenhum grupo seja selecionado, o produto herdará a tributação associada à categoria dele.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

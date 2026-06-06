@@ -6,11 +6,13 @@ import { Plus, Edit3, Trash2, Tag, Loader2, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<{id: string, name: string, _count?: { products: number }}[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [taxGroups, setTaxGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [name, setName] = useState('');
+  const [grupoTributacaoId, setGrupoTributacaoId] = useState('');
 
   const fetchCategories = () => {
     setLoading(true);
@@ -20,22 +22,35 @@ export default function CategoriesPage() {
       .finally(() => setLoading(false));
   };
 
+  const fetchTaxGroups = () => {
+    api.get('/tributacao')
+      .then(res => setTaxGroups(res.data))
+      .catch(() => {});
+  };
+
   useEffect(() => {
     fetchCategories();
+    fetchTaxGroups();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const payload = {
+        name,
+        grupoTributacaoId: grupoTributacaoId || null
+      };
+
       if (editingCategory) {
-        await api.patch(`/categories/${editingCategory.id}`, { name });
+        await api.patch(`/categories/${editingCategory.id}`, payload);
         toast.success('Categoria editada!');
       } else {
-        await api.post('/categories', { name });
+        await api.post('/categories', payload);
         toast.success('Categoria criada!');
       }
       setIsModalOpen(false);
       setName('');
+      setGrupoTributacaoId('');
       setEditingCategory(null);
       fetchCategories();
     } catch (err: any) {
@@ -65,11 +80,16 @@ export default function CategoriesPage() {
           <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
              <Tag className="text-blue-500" /> Categorias
           </h1>
-          <p className="text-zinc-400 text-sm mt-1">Gerencie as categorias de produtos (ex: Cervejas, Combos, Essências)</p>
+          <p className="text-zinc-400 text-sm mt-1">Gerencie as categorias de produtos e vincule regras tributárias para NFC-e simplificada</p>
         </div>
         
         <button 
-          onClick={() => { setEditingCategory(null); setName(''); setIsModalOpen(true); }} 
+          onClick={() => { 
+            setEditingCategory(null); 
+            setName(''); 
+            setGrupoTributacaoId('');
+            setIsModalOpen(true); 
+          }} 
           className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95 text-sm"
         >
           <Plus size={18} />
@@ -85,21 +105,36 @@ export default function CategoriesPage() {
             <thead className="bg-zinc-950 text-zinc-400 text-sm">
               <tr>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider">Nome da Categoria</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider">Tributação Padrão (NFC-e)</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/60">
               {categories.length === 0 && (
-                <tr><td colSpan={2} className="p-6 text-center text-zinc-500">Nenhuma categoria cadastrada.</td></tr>
+                <tr><td colSpan={3} className="p-6 text-center text-zinc-500">Nenhuma categoria cadastrada.</td></tr>
               )}
               {categories.map(cat => (
                 <tr key={cat.id} className="hover:bg-zinc-800/40 transition-colors">
                   <td className="px-6 py-5 font-bold text-white text-lg">
                     {cat.name}
                   </td>
+                  <td className="px-6 py-5 text-zinc-300">
+                    {cat.grupoTributacao ? (
+                      <span className="bg-blue-500/10 border border-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-xs font-semibold">
+                        {cat.grupoTributacao.nome}
+                      </span>
+                    ) : (
+                      <span className="text-zinc-600 text-xs">Padrão do produto (Fallback)</span>
+                    )}
+                  </td>
                   <td className="px-6 py-5 text-right space-x-2">
                     <button 
-                      onClick={() => { setEditingCategory(cat); setName(cat.name); setIsModalOpen(true); }}
+                      onClick={() => { 
+                        setEditingCategory(cat); 
+                        setName(cat.name); 
+                        setGrupoTributacaoId(cat.grupoTributacaoId || '');
+                        setIsModalOpen(true); 
+                      }}
                       className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors inline-block"
                       title="Editar"
                     >
@@ -139,6 +174,26 @@ export default function CategoriesPage() {
                   placeholder="Ex: Destilados"
                 />
               </div>
+
+              <div className="mb-4">
+                <label className="text-sm font-semibold text-zinc-400 mb-1.5 block">Tributação Padrão NFC-e (Opcional)</label>
+                <select
+                  value={grupoTributacaoId}
+                  onChange={e => setGrupoTributacaoId(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                >
+                  <option value="">Nenhuma (Usa imposto do produto)</option>
+                  {taxGroups.map(group => (
+                    <option key={group.id} value={group.id}>
+                      {group.nome} (CFOP {group.cfop} - {group.csosn ? `CSOSN ${group.csosn}` : `CST ${group.cstIcms}`})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-zinc-500 mt-2.5 leading-relaxed">
+                  💡 **Dica Fiscal:** Ao vincular um grupo aqui, todos os produtos dessa categoria sem tributação específica herdarão estas regras automaticamente. **Recomendamos fortemente confirmar com seu contador se as alíquotas configuradas estão corretas para a sua UF e regime fiscal.**
+                </p>
+              </div>
+
               <div className="flex gap-3 justify-end mt-6">
                 <button 
                   type="button" 

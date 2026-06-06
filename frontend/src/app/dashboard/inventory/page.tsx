@@ -282,6 +282,10 @@ export default function InventoryDashboard() {
               </button>
             </div>
           )}
+
+          <div className="flex items-center gap-2 bg-zinc-800/50 border border-zinc-700 px-4 py-2.5 rounded-xl text-zinc-300 font-bold text-sm whitespace-nowrap ml-auto">
+            Total Cadastrados: <span className="text-white">{products.length}</span>
+          </div>
         </div>
 
         {/* Tabela de Produtos (Desktop) */}
@@ -294,6 +298,7 @@ export default function InventoryDashboard() {
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-left">Cód. Barras</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-right">Custo</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-right">Varejo</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">% Lucro</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">Status</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">Físico</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">Ações</th>
@@ -337,6 +342,9 @@ export default function InventoryDashboard() {
                   </td>
                   <td className="px-6 py-5 text-emerald-400 font-bold text-right">
                     R$ {Number(product.priceSell).toFixed(2)}
+                  </td>
+                  <td className="px-6 py-5 text-amber-400 font-bold text-center">
+                    {Number(product.priceSell) > 0 ? (((Number(product.priceSell) - Number(product.priceCost)) / Number(product.priceSell)) * 100).toFixed(1) + '%' : '0.0%'}
                   </td>
                   <td className="px-6 py-5 text-center">
                     <button
@@ -412,8 +420,13 @@ export default function InventoryDashboard() {
 
               <div className="flex justify-between items-end border-t border-zinc-800 pt-3 mt-1">
                 <div className="flex flex-col gap-1">
-                  <span className="text-zinc-500 text-xs">Preço Varejo</span>
-                  <span className="text-emerald-400 font-bold text-lg">R$ {Number(product.priceSell).toFixed(2)}</span>
+                  <span className="text-zinc-500 text-xs">Preço Varejo / Lucro</span>
+                  <span className="text-emerald-400 font-bold text-lg">
+                    R$ {Number(product.priceSell).toFixed(2)}
+                    <span className="text-amber-400/80 text-xs ml-2 font-medium">
+                      ({Number(product.priceSell) > 0 ? (((Number(product.priceSell) - Number(product.priceCost)) / Number(product.priceSell)) * 100).toFixed(1) : '0.0'}%)
+                    </span>
+                  </span>
                 </div>
                 
                 <div className="flex items-center gap-3">

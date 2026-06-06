@@ -48,6 +48,7 @@ model GrupoTributacao {
   updatedAt DateTime @updatedAt
 
   products  Product[]
+  categories Category[]
 
   @@map("grupo_tributacao")
 }
@@ -56,10 +57,12 @@ model GrupoTributacao {
 //  Category — categorias de produto
 // ------------------------------------------------------------
 model Category {
-  id        String    @id @default(uuid())
-  name      String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id                 String           @id @default(uuid())
+  name               String           @unique
+  grupoTributacaoId  String?
+  grupoTributacao    GrupoTributacao? @relation(fields: [grupoTributacaoId], references: [id], onDelete: SetNull)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   products  Product[]
 
@@ -112,6 +115,9 @@ model Product {
   modifierOptionsUsed ProductModifierOption[] @relation("ComponentProduct")
   saleItemModifiers   SaleItemModifier[]      @relation("ComponentProduct")
   lots                StockLot[]
+
+  supplierProducts    SupplierProduct[]
+  purchaseOrderItems  PurchaseOrderItem[]
 
   @@map("products")
 }
@@ -456,3 +462,89 @@ model StockLotConsumption {
   @@map("stock_lot_consumptions")
 }
 
+// ------------------------------------------------------------
+//  Supplier — fornecedores
+// ------------------------------------------------------------
+model Supplier {
+  id        String   @id @default(uuid())
+  name      String
+  whatsapp  String?
+  cnpjCpf   String?
+  email     String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products       SupplierProduct[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+// ------------------------------------------------------------
+//  SupplierProduct — produtos fornecidos pelo fornecedor
+// ------------------------------------------------------------
+model SupplierProduct {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Preço estimado que o fornecedor cobra
+  expectedCost  Decimal? @db.Decimal(10, 4)
+
+  @@unique([supplierId, productId])
+  @@map("supplier_products")
+}
+
+// ------------------------------------------------------------
+//  Packaging — Tipos de Embalagem (Fardo, Caixa, etc.)
+// ------------------------------------------------------------
+model Packaging {
+  id         String   @id @default(uuid())
+  name       String
+  multiplier Int
+  createdAt  DateTime @default(now())
+
+  @@map("packagings")
+}
+
+// ------------------------------------------------------------
+//  PurchaseOrder — pedido de compra
+// ------------------------------------------------------------
+model PurchaseOrder {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  
+  status     String   @default("DRAFT") // DRAFT, SENT, COMPLETED, CANCELLED
+  
+  totalEstimated Decimal @default(0) @db.Decimal(10, 2)
+  totalReal      Decimal @default(0) @db.Decimal(10, 2)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  receivedAt DateTime?
+
+  items      PurchaseOrderItem[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(uuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+
+  quantity        Decimal @db.Decimal(10, 3)
+  unitMultiplier  Int     @default(1)
+  unitName        String  @default("UN")
+
+  expectedCost    Decimal @db.Decimal(10, 4)
+  realCost        Decimal? @db.Decimal(10, 4) // Preenchido no recebimento
+
+  @@map("purchase_order_items")
+}
