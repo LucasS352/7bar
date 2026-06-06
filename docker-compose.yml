@@ -45,7 +45,7 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_SECURE: ${SMTP_SECURE:-false}
     volumes:
-      - uploads_data:/app/uploads
+      - ./uploads:/app/uploads
     depends_on:
       mysql:
         condition: service_healthy
@@ -91,8 +91,6 @@ services:
 volumes:
   mysql_data:
     name: 7bar_mysql_data
-  uploads_data:
-    name: 7bar_uploads_data
 
 networks:
   7bar_network:
