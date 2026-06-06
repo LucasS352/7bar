@@ -697,7 +697,7 @@ export class ProductsService {
     // Salvar no banco em vez de disco
     const image = await prisma.image.create({
       data: {
-        data: file.buffer,
+        data: Buffer.from(file.buffer),
         mimeType: file.mimetype,
       }
     });
