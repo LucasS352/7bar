@@ -692,22 +692,18 @@ export class ProductsService {
   }
 
   async uploadPhoto(tenantId: string, file: Express.Multer.File) {
-    const fs = require('fs');
-    const crypto = require('crypto');
-    const path = require('path');
+    const prisma = await this.getPrisma();
+    
+    // Salvar no banco em vez de disco
+    const image = await prisma.image.create({
+      data: {
+        data: file.buffer,
+        mimeType: file.mimetype,
+      }
+    });
 
-    const dir = path.join(process.cwd(), 'uploads', 'products');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    const ext = path.extname(file.originalname);
-    const filename = `${tenantId}_${crypto.randomBytes(8).toString('hex')}${ext}`;
-    const filePath = path.join(dir, filename);
-
-    fs.writeFileSync(filePath, file.buffer);
-
-    const imageUrl = `/api/products/uploads/images/${filename}`;
+    // Retorna a URL que vai ser interceptada pelo app.controller.ts
+    const imageUrl = `/api/products/uploads/images/${image.id}`;
 
     return { imageUrl };
   }

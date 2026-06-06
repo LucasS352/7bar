@@ -1,7 +1,12 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import { Controller, Get, Param, Res, NotFoundException } from '@nestjs/common';
 import { Response } from 'express';
-import { createReadStream, existsSync } from 'fs';
-import { join } from 'path';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: { url: process.env.DATABASE_URL_TENANT }
+  }
+});
 
 @Controller()
 export class AppController {
@@ -15,14 +20,21 @@ export class AppController {
     };
   }
 
-  @Get('products/uploads/images/:filename')
-  serveProductImage(@Param('filename') filename: string, @Res() res: Response) {
-    const filePath = join(process.cwd(), 'uploads/products', filename);
-    if (!existsSync(filePath)) {
+  @Get('products/uploads/images/:id')
+  async serveProductImage(@Param('id') id: string, @Res() res: Response) {
+    try {
+      const image = await prisma.image.findUnique({
+        where: { id }
+      });
+
+      if (!image) {
+        throw new NotFoundException('Image not found');
+      }
+
+      res.setHeader('Content-Type', image.mimeType);
+      res.send(image.data);
+    } catch (err) {
       res.status(404).send('Product image not found');
-      return;
     }
-    const file = createReadStream(filePath);
-    file.pipe(res);
   }
 }
