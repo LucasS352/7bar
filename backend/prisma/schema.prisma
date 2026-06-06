@@ -484,15 +484,6 @@ model Supplier {
 // ------------------------------------------------------------
 //  Image — armazenamento de fotos no banco
 // ------------------------------------------------------------
-model Image {
-  id        String   @id @default(uuid())
-  data      Bytes    @db.LongBlob
-  mimeType  String
-  createdAt DateTime @default(now())
-
-  @@map("images")
-}
-
 // ------------------------------------------------------------
 //  SupplierProduct — produtos fornecidos pelo fornecedor
 // ------------------------------------------------------------

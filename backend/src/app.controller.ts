@@ -1,15 +1,11 @@
 import { Controller, Get, Param, Res, NotFoundException } from '@nestjs/common';
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient({
-  datasources: {
-    db: { url: process.env.DATABASE_URL_TENANT }
-  }
-});
+import { HeartPrismaService } from './prisma/heart-prisma.service';
 
 @Controller()
 export class AppController {
+  constructor(private readonly heartPrisma: HeartPrismaService) {}
+
   @Get()
   healthCheck() {
     return {
@@ -23,7 +19,7 @@ export class AppController {
   @Get('products/uploads/images/:id')
   async serveProductImage(@Param('id') id: string, @Res() res: Response) {
     try {
-      const image = await prisma.image.findUnique({
+      const image = await this.heartPrisma.image.findUnique({
         where: { id }
       });
 

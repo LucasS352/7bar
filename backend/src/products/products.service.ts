@@ -694,8 +694,8 @@ export class ProductsService {
   async uploadPhoto(tenantId: string, file: Express.Multer.File) {
     const prisma = await this.getPrisma();
     
-    // Salvar no banco em vez de disco
-    const image = await prisma.image.create({
+    // Salvar no banco heart (global) em vez do tenant local
+    const image = await this.heartPrisma.image.create({
       data: {
         data: Buffer.from(file.buffer),
         mimeType: file.mimetype,
