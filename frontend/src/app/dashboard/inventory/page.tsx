@@ -108,15 +108,18 @@ export default function InventoryDashboard() {
   };
 
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
 
   useEffect(() => {
+    setCurrentPage(1); // Resetar a paginação ao buscar
     const handler = setTimeout(() => {
       setDebouncedSearch(search);
     }, 300);
     return () => clearTimeout(handler);
   }, [search]);
 
-  const displayedProducts = useMemo(() => {
+  const { displayedProducts, totalPages } = useMemo(() => {
     const normalizeStr = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
     
     const searchTerms = normalizeStr(debouncedSearch).split(' ').filter(t => t.trim() !== '');
@@ -127,9 +130,12 @@ export default function InventoryDashboard() {
       return searchTerms.every(term => searchString.includes(term));
     });
     
-    // Limita a exibição da tabela para não travar o navegador com milhares de linhas de DOM
-    return filtered.slice(0, 100);
-  }, [products, debouncedSearch]);
+    const totalPagesCount = Math.ceil(filtered.length / itemsPerPage) || 1;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
+    
+    return { displayedProducts: paginated, totalPages: totalPagesCount };
+  }, [products, debouncedSearch, currentPage]);
 
   const { totalVarieties, totalItemsCount, totalGrossValue, totalCostValue, expectedProfit, lowStockProducts } = useMemo(() => {
     const totalVarieties  = products.length;
@@ -454,6 +460,29 @@ export default function InventoryDashboard() {
           )}
         </div>
       </div>
+
+      {/* Controles de Paginação */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-6 pb-6">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold text-sm transition border border-zinc-700"
+          >
+            Anterior
+          </button>
+          <span className="text-zinc-400 text-sm font-medium">
+            Página {currentPage} de {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold text-sm transition border border-zinc-700"
+          >
+            Próxima
+          </button>
+        </div>
+      )}
 
       <AddProductModal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} onSuccess={fetchProducts} />
       <EditProductModal product={editingProduct} isOpen={!!editingProduct} onClose={() => setEditingProduct(null)} onSuccess={fetchProducts} />

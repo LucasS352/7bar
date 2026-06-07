@@ -117,3 +117,15 @@ model MasterProduct {
   @@index([ean])
   @@map("master_products")
 }
+
+// ------------------------------------------------------------
+//  Image — armazenamento global de fotos no banco heart
+// ------------------------------------------------------------
+model Image {
+  id        String   @id @default(uuid())
+  data      Bytes    @db.LongBlob
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  @@map("images")
+}
