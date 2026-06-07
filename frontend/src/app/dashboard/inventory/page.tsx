@@ -71,9 +71,9 @@ function SupplierSelector({ product, suppliers, onToggle }: { product: Product, 
   return (
     <div className="flex items-center justify-center gap-2">
       {linkedSuppliers.length > 0 && (
-        <div className="flex flex-wrap items-center justify-end gap-1.5 max-w-[150px]">
+        <div className="flex flex-wrap items-center justify-end gap-1.5 max-w-[250px]">
           {linkedSuppliers.slice(0, 4).map(s => (
-            <span key={s.id} className="text-[10px] font-medium bg-zinc-800 border border-zinc-700/80 text-zinc-300 px-2 py-0.5 rounded-full truncate max-w-[70px] shadow-sm" title={s.name}>
+            <span key={s.id} className="text-[10px] font-medium bg-zinc-800 border border-zinc-700/80 text-zinc-300 px-2 py-0.5 rounded-full shadow-sm text-center" title={s.name}>
               {s.name}
             </span>
           ))}
