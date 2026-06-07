@@ -71,23 +71,32 @@ function SupplierSelector({ product, suppliers, onToggle }: { product: Product, 
   return (
     <div className="flex items-center justify-center gap-2">
       {linkedSuppliers.length > 0 && (
-        <div className="flex flex-col items-end text-[10px] text-zinc-400 gap-0.5 max-w-[80px]">
+        <div className="flex flex-wrap items-center justify-end gap-1.5 max-w-[150px]">
           {linkedSuppliers.slice(0, 4).map(s => (
-            <span key={s.id} className="truncate w-full text-right bg-zinc-800/50 px-1 rounded" title={s.name}>{s.name}</span>
+            <span key={s.id} className="text-[10px] font-medium bg-zinc-800 border border-zinc-700/80 text-zinc-300 px-2 py-0.5 rounded-full truncate max-w-[70px] shadow-sm" title={s.name}>
+              {s.name}
+            </span>
           ))}
           {linkedSuppliers.length > 4 && (
-            <span className="text-zinc-500 font-bold px-1">+{linkedSuppliers.length - 4}</span>
+            <span className="text-[10px] font-bold text-zinc-400 bg-zinc-800/50 border border-zinc-700/50 px-1.5 py-0.5 rounded-full">
+              +{linkedSuppliers.length - 4}
+            </span>
           )}
         </div>
       )}
       <div className="relative inline-block text-left">
         <button
           ref={buttonRef}
-        onClick={handleToggle}
-        className={`text-xs px-3 py-1.5 rounded-lg flex items-center justify-center min-w-[80px] border transition-colors ${linkedCount > 0 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-400'}`}
-      >
-        {linkedCount > 0 ? `${linkedCount} vinc.` : 'Vincular'}
-      </button>
+          onClick={handleToggle}
+          className={`h-7 px-2 rounded-lg flex items-center justify-center border transition-all ${
+            linkedCount > 0 
+              ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20' 
+              : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200'
+          }`}
+          title="Gerenciar Fornecedores"
+        >
+          {linkedCount > 0 ? <Edit3 size={14} /> : <Plus size={14} />}
+        </button>
 
       {isOpen && (
         <div 
