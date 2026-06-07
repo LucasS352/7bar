@@ -66,10 +66,23 @@ function SupplierSelector({ product, suppliers, onToggle }: { product: Product, 
     setIsOpen(!isOpen);
   };
 
+  const linkedSuppliers = suppliers.filter(s => product.supplierProducts?.some(sp => sp.supplierId === s.id));
+
   return (
-    <div className="relative inline-block text-left">
-      <button
-        ref={buttonRef}
+    <div className="flex items-center justify-center gap-2">
+      {linkedSuppliers.length > 0 && (
+        <div className="flex flex-col items-end text-[10px] text-zinc-400 gap-0.5 max-w-[80px]">
+          {linkedSuppliers.slice(0, 4).map(s => (
+            <span key={s.id} className="truncate w-full text-right bg-zinc-800/50 px-1 rounded" title={s.name}>{s.name}</span>
+          ))}
+          {linkedSuppliers.length > 4 && (
+            <span className="text-zinc-500 font-bold px-1">+{linkedSuppliers.length - 4}</span>
+          )}
+        </div>
+      )}
+      <div className="relative inline-block text-left">
+        <button
+          ref={buttonRef}
         onClick={handleToggle}
         className={`text-xs px-3 py-1.5 rounded-lg flex items-center justify-center min-w-[80px] border transition-colors ${linkedCount > 0 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-400'}`}
       >
@@ -112,6 +125,7 @@ function SupplierSelector({ product, suppliers, onToggle }: { product: Product, 
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
