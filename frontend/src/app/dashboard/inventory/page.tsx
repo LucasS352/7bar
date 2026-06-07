@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, useDeferredValue, useMemo } from 'react';
+import { useEffect, useState, useCallback, useDeferredValue, useMemo, useRef } from 'react';
 import { api } from '@/lib/api';
 import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -25,15 +25,103 @@ interface Product {
   grupoTributacaoId?: string | null;
   grupoTributacao?: GrupoTributacao | null;
   imageUrl?: string | null;
+  supplierProducts?: { supplierId: string }[];
+}
+
+interface Supplier {
+  id: string;
+  name: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+function SupplierSelector({ product, suppliers, onToggle }: { product: Product, suppliers: Supplier[], onToggle: (supplierId: string, isLinked: boolean) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [openUpwards, setOpenUpwards] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const linkedCount = product.supplierProducts?.length || 0;
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  const handleToggle = () => {
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setOpenUpwards(spaceBelow < 300);
+    }
+    setIsOpen(!isOpen);
+  };
+
+  return (
+    <div className="relative inline-block text-left">
+      <button
+        ref={buttonRef}
+        onClick={handleToggle}
+        className={`text-xs px-3 py-1.5 rounded-lg flex items-center justify-center min-w-[80px] border transition-colors ${linkedCount > 0 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-400'}`}
+      >
+        {linkedCount > 0 ? `${linkedCount} vinc.` : 'Vincular'}
+      </button>
+
+      {isOpen && (
+        <div 
+          ref={dropdownRef}
+          className="absolute z-50 w-56 rounded-xl bg-zinc-800 border border-zinc-700 shadow-xl text-left"
+          style={{ 
+            left: '50%', 
+            transform: 'translateX(-50%)',
+            ...(openUpwards ? { bottom: '100%', marginBottom: '8px' } : { top: '100%', marginTop: '8px' })
+          }}
+        >
+          <div className="p-2 max-h-60 overflow-y-auto custom-scrollbar">
+            <div className="flex justify-between items-center mb-2 px-2 pt-1">
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Fornecedores</span>
+              <button onClick={() => setIsOpen(false)} className="text-zinc-500 hover:text-white p-1 rounded-md hover:bg-zinc-700"><X size={14} /></button>
+            </div>
+            {suppliers.length === 0 ? (
+              <div className="text-xs text-zinc-500 p-2 text-center">Nenhum fornecedor cadastrado</div>
+            ) : (
+              suppliers.map(s => {
+                const isLinked = product.supplierProducts?.some(sp => sp.supplierId === s.id) || false;
+                return (
+                  <label key={s.id} className="flex items-center gap-3 p-2 hover:bg-zinc-700 rounded-lg cursor-pointer text-sm text-zinc-200 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={isLinked}
+                      onChange={() => onToggle(s.id, isLinked)}
+                      className="rounded border-zinc-600 bg-zinc-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-800 w-4 h-4"
+                    />
+                    <span className="truncate flex-1">{s.name}</span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function InventoryDashboard() {
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
 
   const [products,            setProducts]            = useState<Product[]>([]);
+  const [suppliers,           setSuppliers]           = useState<Supplier[]>([]);
   const [loading,             setLoading]             = useState(true);
   const [search,              setSearch]              = useState('');
   const [isAddOpen,           setIsAddOpen]           = useState(false);
@@ -71,9 +159,16 @@ export default function InventoryDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
+  const fetchSuppliers = useCallback(() => {
+    api.get('/suppliers')
+      .then(res => setSuppliers(res.data || []))
+      .catch(console.error);
+  }, []);
+
   // Busca configurações do tenant ao montar
   useEffect(() => {
     fetchProducts();
+    fetchSuppliers();
     if (isAdmin) {
       api.get<{ allowNegativeStock: boolean }>('/products/settings')
         .then(res => setAllowNegativeStock(res.data.allowNegativeStock))
@@ -104,6 +199,37 @@ export default function InventoryDashboard() {
       toast.success(currentStatus ? 'Produto inativado e oculto no PDV.' : 'Produto reativado no catálogo!');
     } catch {
       toast.error('Erro ao mudar status do produto');
+    }
+  };
+
+  const handleToggleSupplier = async (productId: string, supplierId: string, isLinked: boolean) => {
+    try {
+      if (isLinked) {
+        await api.delete(`/suppliers/${supplierId}/products/${productId}`);
+        setProducts(prev => prev.map(p => {
+          if (p.id === productId) {
+            return {
+              ...p,
+              supplierProducts: p.supplierProducts?.filter(sp => sp.supplierId !== supplierId) || []
+            };
+          }
+          return p;
+        }));
+      } else {
+        await api.post(`/suppliers/${supplierId}/products`, { productId });
+        setProducts(prev => prev.map(p => {
+          if (p.id === productId) {
+            return {
+              ...p,
+              supplierProducts: [...(p.supplierProducts || []), { supplierId }]
+            };
+          }
+          return p;
+        }));
+      }
+      toast.success(isLinked ? 'Desvinculado do fornecedor.' : 'Vinculado ao fornecedor.');
+    } catch {
+      toast.error('Erro ao atualizar fornecedor do produto.');
     }
   };
 
@@ -300,6 +426,7 @@ export default function InventoryDashboard() {
             <thead className="bg-zinc-950 text-zinc-400 text-sm">
               <tr>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-left">Produto</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">Fornecedores</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">Atalho</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-left">Cód. Barras</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-right">Custo</th>
@@ -334,6 +461,13 @@ export default function InventoryDashboard() {
                         )}
                       </div>
                     </div>
+                  </td>
+                  <td className="px-6 py-5 text-center">
+                    <SupplierSelector
+                      product={product}
+                      suppliers={suppliers}
+                      onToggle={(supplierId, isLinked) => handleToggleSupplier(product.id, supplierId, isLinked)}
+                    />
                   </td>
                   <td className="px-6 py-5 text-center">
                     {product.shortCode ? (

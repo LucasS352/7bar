@@ -192,6 +192,11 @@ export class ProductsService {
 
   // ── CRUD Padrão ───────────────────────────────────────────────────────────
 
+  clearCache() {
+    this.catalogCache.clear();
+  }
+
+
   async findAll(page = 1, limit = 50) {
     const { tenantId } = this.tenantContext.get();
     const cacheKey = `${tenantId}_p_${page}_l_${limit}`;
@@ -210,6 +215,9 @@ export class ProductsService {
         include: { 
           category: true, 
           grupoTributacao: true,
+          supplierProducts: {
+            select: { supplierId: true }
+          },
           modifierGroups: {
             include: {
               options: {

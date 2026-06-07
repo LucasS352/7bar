@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
+import { ProductsService } from '../products/products.service';
 
 @Injectable()
 export class SuppliersService {
   constructor(
     private readonly tenantManager: TenantConnectionManager,
-    private readonly tenantContext: TenantContextService
+    private readonly tenantContext: TenantContextService,
+    private readonly productsService: ProductsService
   ) {}
 
   private async getPrisma() {
@@ -73,7 +75,7 @@ export class SuppliersService {
 
   async addSupplierProduct(supplierId: string, productId: string, expectedCost?: number) {
     const prisma = await this.getPrisma();
-    return prisma.supplierProduct.upsert({
+    const result = await prisma.supplierProduct.upsert({
       where: {
         supplierId_productId: {
           supplierId,
@@ -89,11 +91,13 @@ export class SuppliersService {
         expectedCost: expectedCost ? expectedCost : null,
       },
     });
+    this.productsService.clearCache();
+    return result;
   }
 
   async removeSupplierProduct(supplierId: string, productId: string) {
     const prisma = await this.getPrisma();
-    return prisma.supplierProduct.delete({
+    const result = await prisma.supplierProduct.delete({
       where: {
         supplierId_productId: {
           supplierId,
@@ -101,5 +105,7 @@ export class SuppliersService {
         },
       },
     });
+    this.productsService.clearCache();
+    return result;
   }
 }
