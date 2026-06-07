@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback, useDeferredValue, useMemo, useRef } from 'react';
 import { api } from '@/lib/api';
-import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert, X } from 'lucide-react';
+import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert, X, Truck, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { AddProductModal } from '@/components/AddProductModal';
@@ -320,28 +320,40 @@ export default function InventoryDashboard() {
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
           <Package className="text-blue-500" size={32} /> Controle de Estoque
         </h1>
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <div className="flex overflow-x-auto w-full md:w-auto gap-2 pb-2 md:pb-0 custom-scrollbar snap-x">
           <Link
             to="/dashboard/inventory/categories"
-            className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-3 md:px-4 py-2 md:py-2.5 rounded-xl font-bold flex items-center gap-2 transition flex-1 md:flex-none justify-center text-sm md:text-base"
+            className="snap-start shrink-0 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm md:text-base"
           >
             Categorias
           </Link>
           <Link
+            to="/dashboard/suppliers"
+            className="snap-start shrink-0 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-600/30 text-indigo-400 px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm md:text-base"
+          >
+            <Truck size={20} /> Fornecedores
+          </Link>
+          <Link
+            to="/dashboard/purchase-orders"
+            className="snap-start shrink-0 bg-amber-600/10 hover:bg-amber-600/20 border border-amber-600/30 text-amber-400 px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm md:text-base"
+          >
+            <ShoppingCart size={20} /> Pedidos
+          </Link>
+          <Link
             to="/dashboard/inventory/stock-entry"
-            className="bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-600/30 text-emerald-400 px-3 md:px-5 py-2 md:py-2.5 rounded-xl font-bold flex items-center gap-2 transition flex-1 md:flex-none justify-center text-sm md:text-base"
+            className="snap-start shrink-0 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-600/30 text-emerald-400 px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm md:text-base"
           >
             <PackagePlus size={20} /> <span className="hidden sm:inline">Entrada de Estoque</span><span className="sm:hidden">Entrada</span>
           </Link>
           <Link
             to="/dashboard/inventory/purchases"
-            className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl font-bold flex items-center gap-2 transition flex-1 md:flex-none justify-center text-sm md:text-base whitespace-nowrap"
+            className="snap-start shrink-0 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm md:text-base whitespace-nowrap"
           >
             <Plus size={20} /> <span className="hidden sm:inline">Novos Produtos (Fast Grid)</span><span className="sm:hidden">Grid Lote</span>
           </Link>
           <button
             onClick={() => setIsAddOpen(true)}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl font-bold flex items-center gap-2 transition flex-1 md:flex-none justify-center text-sm md:text-base whitespace-nowrap"
+            className="snap-start shrink-0 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm md:text-base whitespace-nowrap"
           >
             <Plus size={20} /> Cadastrar Un.
           </button>
@@ -406,8 +418,8 @@ export default function InventoryDashboard() {
 
       {/* Busca + Toggle Admin */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
-        <div className="p-6 border-b border-zinc-800 bg-zinc-900/50 flex items-center gap-4 flex-wrap">
-          <div className="relative flex-1 max-w-md">
+        <div className="p-4 md:p-6 border-b border-zinc-800 bg-zinc-900/50 flex flex-col md:flex-row items-stretch md:items-center gap-4">
+          <div className="relative w-full md:flex-1 md:max-w-md">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search size={18} className="text-zinc-500" />
             </div>
@@ -420,9 +432,10 @@ export default function InventoryDashboard() {
             />
           </div>
 
+          <div className="flex flex-wrap items-center justify-between gap-3 md:ml-auto">
           {/* Toggle Vender sem Estoque — Exclusivo para Admin */}
           {isAdmin && (
-            <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-colors ${allowNegativeStock ? 'bg-amber-500/10 border-amber-500/30' : 'bg-zinc-950/50 border-zinc-700'}`}>
+            <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors ${allowNegativeStock ? 'bg-amber-500/10 border-amber-500/30' : 'bg-zinc-950/50 border-zinc-700'}`}>
               <ShieldAlert size={18} className={allowNegativeStock ? 'text-amber-400' : 'text-zinc-500'} />
               <span className={`text-sm font-bold ${allowNegativeStock ? 'text-amber-400' : 'text-zinc-500'}`}>
                 Vender sem estoque
@@ -438,8 +451,9 @@ export default function InventoryDashboard() {
             </div>
           )}
 
-          <div className="flex items-center gap-2 bg-zinc-800/50 border border-zinc-700 px-4 py-2.5 rounded-xl text-zinc-300 font-bold text-sm whitespace-nowrap ml-auto">
+          <div className="flex items-center gap-2 bg-zinc-800/50 border border-zinc-700 px-4 py-2 rounded-xl text-zinc-300 font-bold text-sm whitespace-nowrap">
             Total Cadastrados: <span className="text-white">{products.length}</span>
+          </div>
           </div>
         </div>
 
@@ -580,31 +594,44 @@ export default function InventoryDashboard() {
                   <span className="text-indigo-400/80">{product.grupoTributacao?.nome || 'Fiscal OK'}</span>
                 )}
               </div>
+              
+              <div className="flex justify-between items-center bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/80">
+                 <span className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">Fornecedores:</span>
+                 <SupplierSelector
+                    product={product}
+                    suppliers={suppliers}
+                    onToggle={(supplierId, isLinked) => handleToggleSupplier(product.id, supplierId, isLinked)}
+                  />
+              </div>
 
-              <div className="flex justify-between items-end border-t border-zinc-800 pt-3 mt-1">
-                <div className="flex flex-col gap-1">
-                  <span className="text-zinc-500 text-xs">Preço Varejo / Lucro</span>
-                  <span className="text-emerald-400 font-bold text-lg">
-                    R$ {Number(product.priceSell).toFixed(2)}
-                    <span className="text-amber-400/80 text-xs ml-2 font-medium">
-                      ({Number(product.priceSell) > 0 ? (((Number(product.priceSell) - Number(product.priceCost)) / Number(product.priceSell)) * 100).toFixed(1) : '0.0'}%)
+              <div className="flex justify-between items-end border-t border-zinc-800 pt-3 mt-1 gap-2">
+                <div className="flex flex-col gap-1 flex-1">
+                  <span className="text-zinc-500 text-xs">Varejo / Margem de Lucro</span>
+                  <div className="flex items-center flex-wrap gap-2">
+                    <span className="text-emerald-400 font-bold text-lg">
+                      R$ {Number(product.priceSell).toFixed(2)}
                     </span>
-                  </span>
+                    <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${Number(product.priceSell) > Number(product.priceCost) ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                      {Number(product.priceSell) > 0 ? (((Number(product.priceSell) - Number(product.priceCost)) / Number(product.priceSell)) * 100).toFixed(1) : '0.0'}%
+                    </span>
+                  </div>
                 </div>
                 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => handleOpenLotsModal(product)}
-                    className={`inline-flex items-center justify-center min-w-[3rem] px-2 py-1 rounded text-sm font-bold border transition-colors cursor-pointer ${Number(product.stock) <= 0 ? 'bg-red-500/10 text-red-500 border-red-500/20' : Number(product.stock) <= 10 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700'}`}
+                    className={`flex flex-col items-center justify-center min-w-[4rem] px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors cursor-pointer ${Number(product.stock) <= 0 ? 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20' : Number(product.stock) <= 10 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700'}`}
+                    title="Ver detalhes de lotes físicos e virtuais"
                   >
-                    Estoque: {Math.round(Number(product.stock))}
+                    <span className="text-[10px] uppercase tracking-wider opacity-70">Físico</span>
+                    <span className="text-lg leading-none mt-0.5">{Math.round(Number(product.stock))}</span>
                   </button>
                   
                   <button
                     onClick={() => setEditingProduct(product)}
-                    className="p-2 text-zinc-400 hover:text-blue-400 bg-zinc-800 hover:bg-blue-500/10 rounded-lg transition-colors border border-zinc-700"
+                    className="p-3 text-zinc-400 hover:text-blue-400 bg-zinc-800 hover:bg-blue-500/10 rounded-lg transition-colors border border-zinc-700 self-stretch flex items-center"
                   >
-                    <Edit3 size={18} />
+                    <Edit3 size={20} />
                   </button>
                 </div>
               </div>
