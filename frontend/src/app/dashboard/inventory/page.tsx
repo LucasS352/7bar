@@ -347,7 +347,7 @@ export default function InventoryDashboard() {
           </Link>
           <Link
             to="/dashboard/inventory/purchases"
-            className="snap-start shrink-0 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm md:text-base whitespace-nowrap"
+            className="hidden md:flex snap-start shrink-0 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-4 py-2.5 rounded-xl font-bold items-center gap-2 transition text-sm md:text-base whitespace-nowrap"
           >
             <Plus size={20} /> <span className="hidden sm:inline">Novos Produtos (Fast Grid)</span><span className="sm:hidden">Grid Lote</span>
           </Link>

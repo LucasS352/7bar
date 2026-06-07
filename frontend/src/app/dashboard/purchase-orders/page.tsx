@@ -259,30 +259,30 @@ export default function PurchaseOrdersPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-white flex items-center gap-3">
             <ShoppingCart className="text-emerald-500" /> Pedidos de Compra
           </h1>
-          <p className="text-zinc-400 mt-1 text-sm">Crie pedidos, envie pelo WhatsApp e dê entrada no estoque automaticamente.</p>
+          <p className="text-zinc-400 mt-1 text-sm">Crie pedidos, envie pelo WhatsApp e dê entrada no estoque.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex overflow-x-auto gap-2 pb-2 md:pb-0 custom-scrollbar w-full md:w-auto snap-x">
           <button
             onClick={() => setShowPackagingsModal(true)}
-            className="bg-zinc-800 hover:bg-zinc-700 text-white px-5 py-2.5 rounded-xl font-bold transition border border-zinc-700"
+            className="snap-start shrink-0 bg-zinc-800 hover:bg-zinc-700 text-white px-5 py-2.5 rounded-xl font-bold transition border border-zinc-700 text-sm whitespace-nowrap"
           >
             Gerenciar Embalagens
           </button>
           <button
             onClick={() => setShowNewModal(true)}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition"
+            className="snap-start shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm whitespace-nowrap"
           >
             <Plus size={18} /> Novo Pedido
           </button>
         </div>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+      <div className="hidden md:block bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-zinc-900/50 border-b border-zinc-800">
@@ -455,6 +455,163 @@ export default function PurchaseOrdersPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Visão Mobile dos Pedidos */}
+      <div className="md:hidden flex flex-col space-y-3">
+        {loading ? (
+          <div className="p-8 text-center text-zinc-500">Carregando...</div>
+        ) : orders.length === 0 ? (
+          <div className="p-8 text-center text-zinc-500 bg-zinc-900 rounded-2xl border border-zinc-800">Nenhum pedido de compra encontrado.</div>
+        ) : (
+          orders.map(order => (
+            <div key={order.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-3 relative overflow-hidden">
+              <div className="flex justify-between items-start gap-2">
+                <div className="flex-1">
+                  <div className="text-xs text-zinc-500 mb-1">{new Date(order.createdAt).toLocaleDateString('pt-BR')}</div>
+                  <strong className="block text-base text-zinc-100">{order.supplier.name}</strong>
+                  <span className="text-xs text-zinc-500">{order.supplier.whatsapp}</span>
+                </div>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  {order.status === 'DRAFT' && <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold bg-zinc-800 text-zinc-400 border border-zinc-700 uppercase"><Clock size={10}/> Rascunho</span>}
+                  {order.status === 'SENT' && <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30 uppercase"><Phone size={10}/> Enviado</span>}
+                  {order.status === 'COMPLETED' && <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 uppercase"><Check size={10}/> Recebido</span>}
+                  
+                  <div className="text-right mt-1">
+                    {order.status === 'COMPLETED' ? (
+                      <div className="text-emerald-400 font-bold text-lg leading-none">R$ {Number(order.totalReal).toFixed(2)}</div>
+                    ) : (
+                      <div className="text-zinc-300 font-bold text-lg leading-none">R$ {Number(order.totalEstimated).toFixed(2)}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => toggleExpand(order.id)}
+                className="bg-zinc-950/50 hover:bg-zinc-950 border border-zinc-800/60 rounded-xl p-3 flex justify-between items-center transition"
+              >
+                <span className="text-sm font-medium text-emerald-400">{order.items.length} produto(s)</span>
+                <span className="text-xs font-bold text-zinc-500 flex items-center gap-1">{expandedOrderId === order.id ? 'Ocultar itens' : 'Ver itens'}</span>
+              </button>
+
+              {expandedOrderId === order.id && (
+                <div className="bg-zinc-950 p-3 rounded-xl border border-zinc-800/50 shadow-inner space-y-2 mt-1">
+                  {order.items.map((item: any) => (
+                    <div key={item.id} className="flex flex-col text-sm bg-zinc-900/80 border border-zinc-800 p-3 rounded-lg">
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <span className="text-zinc-200 font-medium leading-tight">{item.product.name}</span>
+                        {order.status !== 'COMPLETED' && (
+                          <div className="flex gap-1 shrink-0">
+                             <button
+                               onClick={() => { setEditingItemId(item.id); setEditingQuantity(item.quantity); }}
+                               className="text-zinc-400 hover:text-blue-400 p-1 bg-zinc-800 rounded"
+                             >
+                               <Edit2 size={14} />
+                             </button>
+                             <button
+                               onClick={() => handleDeleteOrderItem(order.id, item.id)}
+                               className="text-zinc-400 hover:text-red-400 p-1 bg-zinc-800 rounded"
+                             >
+                               <Trash size={14} />
+                             </button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {editingItemId === item.id ? (
+                        <div className="flex items-center gap-2 bg-zinc-800/50 p-2 rounded mb-2">
+                          <input
+                            type="number"
+                            min="1"
+                            value={editingQuantity}
+                            onChange={(e) => setEditingQuantity(Number(e.target.value))}
+                            className="w-16 bg-zinc-900 border border-zinc-700 text-white px-2 py-1 text-sm rounded outline-none focus:border-emerald-500"
+                          />
+                          <button
+                            onClick={() => handleUpdateItemQuantity(order.id, item.id)}
+                            className="text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 px-3 py-1 rounded font-bold text-xs"
+                          >
+                            Salvar
+                          </button>
+                          <button
+                            onClick={() => setEditingItemId(null)}
+                            className="text-zinc-400 hover:text-zinc-300 bg-zinc-800 px-3 py-1 rounded font-bold text-xs"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-end text-xs">
+                          <span className="text-zinc-400">
+                            Qtd: <strong className="text-zinc-200">{item.quantity} {item.unitName || item.product.unit || 'UN'}</strong>
+                            {item.unitMultiplier > 1 && ` (${Number(item.quantity) * Number(item.unitMultiplier)} un)`}
+                          </span>
+                          <span className="text-zinc-400">Est: <strong className="text-white">R$ {Number(item.expectedCost).toFixed(2)}</strong></span>
+                        </div>
+                      )}
+                      
+                      {order.status === 'COMPLETED' && item.realCost && (
+                         <div className="mt-2 flex justify-end">
+                           <span className="text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded text-xs">Real: R$ {Number(item.realCost).toFixed(2)}</span>
+                         </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-zinc-800">
+                {(order.status === 'DRAFT' || order.status === 'SENT') && (
+                  <button 
+                    onClick={() => handleSendWhatsapp(order)}
+                    className="flex-1 bg-blue-600 hover:bg-blue-500 py-2 rounded-xl text-xs font-bold text-white transition flex justify-center items-center gap-1.5"
+                  >
+                    <Phone size={14} /> WhatsApp
+                  </button>
+                )}
+                {order.status === 'DRAFT' && (
+                  <button 
+                    onClick={() => handleMarkAsSent(order.id)}
+                    className="flex-1 bg-zinc-800 hover:bg-zinc-700 py-2 rounded-xl text-xs font-bold text-zinc-300 transition flex justify-center items-center gap-1.5 border border-zinc-700"
+                  >
+                    <Check size={14} /> Marcar Enviado
+                  </button>
+                )}
+                {order.status === 'SENT' && (
+                  <button 
+                    onClick={() => {
+                      setReceivingOrder({
+                        ...order,
+                        items: order.items.map((i: any) => ({...i, realCost: Number(i.expectedCost)}))
+                      });
+                      setShowReceiveModal(true);
+                    }}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 py-2 rounded-xl text-xs font-bold text-white transition flex justify-center items-center gap-1.5"
+                  >
+                    <Check size={14} /> Receber
+                  </button>
+                )}
+                <div className="flex gap-2 w-full mt-1">
+                  {(order.status === 'DRAFT' || order.status === 'SENT') && (
+                    <button 
+                      onClick={() => handleDelete(order.id)}
+                      className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 py-2 rounded-xl text-xs font-bold transition flex justify-center items-center gap-1.5 border border-red-500/20"
+                    >
+                      <Trash size={14} /> Excluir
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDuplicateOrder(order)}
+                    className="flex-1 bg-zinc-800 hover:bg-zinc-700 py-2 rounded-xl text-xs font-bold text-zinc-300 transition flex justify-center items-center gap-1.5 border border-zinc-700"
+                  >
+                    <Copy size={14} /> Duplicar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* MODAL GERENCIAR EMBALAGENS */}
