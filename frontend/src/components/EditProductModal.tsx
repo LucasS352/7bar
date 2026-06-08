@@ -648,7 +648,7 @@ export function EditProductModal({
         </form>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-zinc-800 bg-zinc-950 shrink-0">
+        <div className="px-5 pt-4 pb-28 md:py-4 border-t border-zinc-800 bg-zinc-950 shrink-0">
           <button
             onClick={handleSubmit as React.MouseEventHandler}
             disabled={loading}

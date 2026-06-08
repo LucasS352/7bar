@@ -310,8 +310,8 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
   const sectionCls = 'bg-zinc-950/60 border border-zinc-800 rounded-2xl p-5 space-y-4';
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-end bg-black/60 backdrop-blur-sm">
-      <div className="bg-zinc-900 border-l border-zinc-800 w-full max-w-lg h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm">
+      <div className="bg-zinc-900 border-l border-zinc-800 w-full max-w-lg h-full shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col">
 
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-5 border-b border-zinc-800 bg-zinc-950/70 shrink-0">
@@ -812,7 +812,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
         </form>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-zinc-800 bg-zinc-950/70 shrink-0">
+        <div className="px-6 pt-4 pb-28 md:py-4 border-t border-zinc-800 bg-zinc-950/70 shrink-0">
           <button
             onClick={handleSubmit as unknown as React.MouseEventHandler}
             disabled={loading}
