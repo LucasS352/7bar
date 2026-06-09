@@ -185,6 +185,21 @@ export class DashboardService {
       ? periodRevenue / periodSales.length
       : 0;
 
+    // ── 6. Alertas de Contas a Pagar ─────────────────────────────────────────
+    const alertThreshold = new Date(todayEnd);
+    alertThreshold.setDate(alertThreshold.getDate() + 3); // Próximos 3 dias
+
+    const payablesAlerts = await prisma.payable.findMany({
+      where: {
+        status: 'PENDING',
+        dueDate: { lte: alertThreshold }
+      },
+      orderBy: { dueDate: 'asc' }
+    });
+
+    const overduePayables = payablesAlerts.filter(p => p.dueDate < todayStart);
+    const upcomingPayables = payablesAlerts.filter(p => p.dueDate >= todayStart);
+
     return {
       currentRegister: openRegister
         ? {
@@ -217,6 +232,10 @@ export class DashboardService {
         topProducts,
         productsSold,
       },
+      alerts: {
+        overduePayables,
+        upcomingPayables,
+      }
     };
   }
 }

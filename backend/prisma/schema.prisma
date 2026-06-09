@@ -477,6 +477,7 @@ model Supplier {
 
   products       SupplierProduct[]
   purchaseOrders PurchaseOrder[]
+  payables       Payable[]
 
   @@map("suppliers")
 }
@@ -550,4 +551,30 @@ model PurchaseOrderItem {
   realCost        Decimal? @db.Decimal(10, 4) // Preenchido no recebimento
 
   @@map("purchase_order_items")
+}
+
+// ------------------------------------------------------------
+//  Payable — Contas a pagar (Fixas e Variáveis)
+// ------------------------------------------------------------
+model Payable {
+  id          String   @id @default(uuid())
+  description String
+  amount      Decimal  @db.Decimal(10, 2)
+  dueDate     DateTime
+  status      String   @default("PENDING") // PENDING, PAID, CANCELLED
+  type        String   @default("VARIABLE") // FIXED, VARIABLE
+  isRecurring Boolean  @default(false)
+  category    String?  // agua, luz, internet, aluguel, funcionario, boleto, impostos...
+  
+  supplierId  String?
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+  
+  paidAt      DateTime?
+  notes       String?  @db.Text
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status, dueDate])
+  @@map("payables")
 }

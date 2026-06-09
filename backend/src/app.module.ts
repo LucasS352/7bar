@@ -16,6 +16,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { MasterProductsModule } from './master-products/master-products.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
+import { PayablesModule } from './payables/payables.module';
 
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TenantInterceptor } from './prisma/tenant-context.service';
@@ -40,6 +41,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     MasterProductsModule,
     SuppliersModule,
     PurchaseOrdersModule,
+    PayablesModule,
   ],
   controllers: [AppController],
   providers: [

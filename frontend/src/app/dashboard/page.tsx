@@ -40,6 +40,10 @@ type SummaryData = {
     topProducts: Array<{ name: string; qty: number; revenue: number; pct: number }>;
     productsSold?: Array<{ name: string; qty: number; revenue: number }>;
   };
+  alerts?: {
+    overduePayables: Array<{ id: string; description: string; amount: string; dueDate: string }>;
+    upcomingPayables: Array<{ id: string; description: string; amount: string; dueDate: string }>;
+  };
 };
 
 type SaleItem = {
@@ -522,6 +526,28 @@ export default function SalesDashboard() {
         </div>
       </div>
       
+      {/* --- ALERTAS --- */}
+      {summary?.alerts && (summary.alerts.overduePayables.length > 0 || summary.alerts.upcomingPayables.length > 0) && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-red-500/20 rounded-full shrink-0">
+              <Banknote size={24} className="text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-lg">Atenção: Contas a Pagar!</h3>
+              <p className="text-zinc-400 text-sm">
+                Você tem {summary.alerts.overduePayables.length > 0 && <strong className="text-red-400">{summary.alerts.overduePayables.length} conta(s) vencida(s)</strong>}
+                {summary.alerts.overduePayables.length > 0 && summary.alerts.upcomingPayables.length > 0 && ' e '}
+                {summary.alerts.upcomingPayables.length > 0 && <strong className="text-amber-400">{summary.alerts.upcomingPayables.length} conta(s) vencendo em breve</strong>}.
+              </p>
+            </div>
+          </div>
+          <a href="/dashboard/finance/payables" className="shrink-0 bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition text-sm">
+            Ver Contas a Pagar
+          </a>
+        </div>
+      )}
+
       {/* --- KPI CARDS --- */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         

@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Users, ChevronLeft, ChevronRight, AlertTriangle, Truck, ShoppingCart } from 'lucide-react';
+import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Users, ChevronLeft, ChevronRight, AlertTriangle, Truck, ShoppingCart, Banknote } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { api } from '@/lib/api';
 import { getFullUrl } from '@/lib/getFullUrl';
@@ -43,6 +43,7 @@ export function DashboardLayout() {
 
   const navItems = [
     { name: 'Analytics',          to: '/dashboard',                       icon: LayoutDashboard },
+    { name: 'Contas a Pagar',     to: '/dashboard/finance/payables',      icon: Banknote },
     ...(modules.estoque !== false ? [
       { name: 'Catálogo e Estoque', to: '/dashboard/inventory',             icon: Package },
       { name: 'Fornecedores',       to: '/dashboard/suppliers',             icon: Truck },

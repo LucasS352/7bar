@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2 } from 'lucide-react';
+import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Banknote } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -16,6 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navItems = [
     { name: 'Analytics', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Contas a Pagar', href: '/dashboard/finance/payables', icon: Banknote },
     { name: 'Catálogo e Estoque', href: '/dashboard/inventory', icon: Package },
     { name: 'Histórico de Caixas', href: '/dashboard/registers', icon: History },
   ];

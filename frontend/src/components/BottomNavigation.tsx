@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { BarChart2, Package, User, LogOut, X, History } from 'lucide-react';
+import { BarChart2, Package, User, LogOut, X, History, Banknote } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth';
 
@@ -20,6 +20,12 @@ const navItems = [
     label: 'Caixas',
     to: '/dashboard/registers',
     icon: History,
+    exact: false,
+  },
+  {
+    label: 'Despesas',
+    to: '/dashboard/finance/payables',
+    icon: Banknote,
     exact: false,
   },
 ];
