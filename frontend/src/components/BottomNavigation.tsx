@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { BarChart2, Package, User, LogOut, X, History, Banknote } from 'lucide-react';
+import { BarChart2, Package, User, LogOut, X, History, Banknote, Store } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth';
 
@@ -187,6 +187,13 @@ export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
             )}
 
             <div className="space-y-2">
+              <button
+                onClick={() => { setProfileOpen(false); navigate('/'); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 font-semibold text-left active:scale-[0.98] transition-all"
+              >
+                <Store size={20} />
+                Frente de Caixa (PDV)
+              </button>
               <button
                 onClick={() => { setProfileOpen(false); navigate('/dashboard/comandas'); }}
                 className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-semibold text-left active:scale-[0.98] transition-all"
