@@ -194,6 +194,11 @@ function PosPageContent() {
             
             <div className="flex items-center gap-1.5 md:hidden">
                 <ConnectionStatus syncState={syncState} />
+                {cashRegister?.id && (
+                  <button onClick={() => setIsMovementOpen(true)} className="p-2 text-zinc-400 hover:text-emerald-400 bg-zinc-900 rounded-xl transition">
+                    <ArrowDownUp size={18} />
+                  </button>
+                )}
                 <button onClick={() => setIsCloseRegisterOpen(true)} className="p-2 text-zinc-400 hover:text-amber-400 bg-zinc-900 rounded-xl transition">
                   <FileText size={18} />
                 </button>
