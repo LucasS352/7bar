@@ -14,7 +14,7 @@ import { CashMovementModal } from '@/components/CashMovementModal';
 import { CompositeModifierModal } from '@/components/CompositeModifierModal';
 import { ShiftProvider, useShift } from '@/contexts/ShiftContext';
 import {
-  Search, ShoppingCart, LogOut, PackageOpen, Minus, Plus, Trash2,
+  Search, ShoppingCart, X, LogOut, PackageOpen, Minus, Plus, Trash2,
   LayoutDashboard, FileText, ArrowDownUp, Database, Layers
 } from 'lucide-react';
 import { getFullUrl } from '@/lib/getFullUrl';
@@ -30,6 +30,7 @@ function PosPageContent() {
   const [search,             setSearch]             = useState('');
   const [isPaymentOpen,      setIsPaymentOpen]      = useState(false);
   const [isCloseRegisterOpen,setIsCloseRegisterOpen]= useState(false);
+  const [isMobileCartOpen,   setIsMobileCartOpen]   = useState(false);
   const [isMovementOpen,     setIsMovementOpen]     = useState(false);
   const [isLoading,          setIsLoading]          = useState(true);
   const [isOfflineCatalog,   setIsOfflineCatalog]   = useState(false);
@@ -56,10 +57,7 @@ function PosPageContent() {
   useEffect(() => {
     if (!token) { navigate('/login'); return; }
 
-    if (window.innerWidth < 768) {
-      navigate('/dashboard');
-      return;
-    }
+
 
     setIsLoading(true);
 
@@ -178,33 +176,46 @@ function PosPageContent() {
   if (!token) return null;
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-white font-sans overflow-hidden">
+    <div className="flex flex-col md:flex-row h-[100dvh] bg-zinc-950 text-white font-sans overflow-hidden">
       {/* Esquerda */}
-      <div className="flex-1 flex flex-col p-6 pr-4">
+      <div className="flex-1 flex flex-col p-3 md:p-6 md:pr-4 pb-[80px] md:pb-6 relative h-full">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4 min-h-[64px]">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 md:mb-6 gap-3 shrink-0">
+          <div className="flex justify-between items-center w-full md:w-auto gap-4 min-h-[48px] md:min-h-[64px]">
             {tenantConfig === null ? (
-               <div className="h-12 w-32 bg-zinc-800/50 animate-pulse rounded-lg"></div>
+               <div className="h-10 md:h-12 w-24 md:w-32 bg-zinc-800/50 animate-pulse rounded-lg"></div>
             ) : tenantConfig?.logoUrl ? (
-              <img src={getFullUrl(tenantConfig.logoUrl)} alt="Logo" className="h-16 object-contain drop-shadow-md" />
+              <img src={getFullUrl(tenantConfig.logoUrl)} alt="Logo" className="h-10 md:h-16 object-contain drop-shadow-md" />
             ) : (
-              <h1 className="text-3xl font-black bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
+              <h1 className="text-2xl md:text-3xl font-black bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm truncate max-w-[150px] md:max-w-none">
                 {tenantConfig?.nomeFantasia || tenantConfig?.razaoSocial || 'PDV'}
               </h1>
             )}
-            <p className="text-emerald-400 font-medium text-sm flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Operador: {operator?.name || user?.name} <span className="text-zinc-500">({user?.tenant})</span>
-              {cashRegister?.id && (
-                <span className="ml-2 text-xs bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 text-emerald-400 uppercase tracking-widest hidden sm:inline-block">
-                  Caixa Aberto
-                </span>
-              )}
-            </p>
+            
+            <div className="flex items-center gap-1.5 md:hidden">
+                <ConnectionStatus syncState={syncState} />
+                <button onClick={() => setIsCloseRegisterOpen(true)} className="p-2 text-zinc-400 hover:text-amber-400 bg-zinc-900 rounded-xl transition">
+                  <FileText size={18} />
+                </button>
+                <button onClick={handleLogout} className="p-2 text-zinc-400 hover:text-red-400 bg-zinc-900 rounded-xl transition">
+                  <LogOut size={18} />
+                </button>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 justify-between md:justify-start">
+             <p className="text-emerald-400 font-medium text-xs md:text-sm flex items-center gap-2 truncate max-w-[200px] md:max-w-none">
+               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
+               <span className="truncate">Op: {operator?.name || user?.name}</span>
+             </p>
+             {cashRegister?.id && (
+               <span className="text-[10px] md:text-xs bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 text-emerald-400 uppercase tracking-widest">
+                 Caixa Aberto
+               </span>
+             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
             {/* Badge de conexão */}
             <ConnectionStatus syncState={syncState} />
 
@@ -236,20 +247,20 @@ function PosPageContent() {
         </div>
 
         {/* Busca */}
-        <div className="relative mb-6">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search size={22} className="text-blue-500" />
+        <div className="relative mb-3 md:mb-6 shrink-0">
+          <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+            <Search size={20} className="text-blue-500" />
           </div>
           <input
             type="text"
-            placeholder="[F2] Bipe ou Digite o Cód Curto e aperte Enter..."
-            className="w-full py-4 pl-12 pr-4 text-2xl font-bold bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-zinc-500 shadow-inner tracking-tight"
-            value={search} onChange={e => setSearch(e.target.value)} onKeyDown={handleSearchKeyPress} autoFocus
+            placeholder="Buscar por nome, código ou EAN..."
+            className="w-full py-3 md:py-4 pl-10 md:pl-12 pr-4 text-lg md:text-2xl font-bold bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-xl md:rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-zinc-500 shadow-inner tracking-tight"
+            value={search} onChange={e => setSearch(e.target.value)} onKeyDown={handleSearchKeyPress}
           />
         </div>
 
         {/* Grid de Produtos */}
-        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto pr-1 md:pr-2 custom-scrollbar">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-full text-zinc-500 space-y-4">
               <PackageOpen size={48} className="opacity-50 animate-pulse" />
@@ -263,7 +274,7 @@ function PosPageContent() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-12">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 pb-24 md:pb-12">
               {displayedProducts.map(product => (
                 <div key={product.id} className="group relative bg-zinc-900 border border-zinc-800 p-3 rounded-2xl hover:border-blue-500 transition-all flex flex-col items-center justify-between min-h-[160px] overflow-hidden shadow-sm hover:shadow-md">
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
@@ -310,12 +321,17 @@ function PosPageContent() {
       </div>
 
       {/* Carrinho (direita) */}
-      <div className="w-[420px] bg-zinc-900/90 backdrop-blur-2xl border-l border-zinc-800 flex flex-col shadow-2xl z-10 relative">
-        <div className="p-6 border-b border-zinc-800 flex items-center justify-between">
-          <h2 className="text-2xl font-bold flex items-center gap-3">
+      <div className={`fixed inset-0 z-50 flex flex-col bg-zinc-950 transition-transform duration-300 md:relative md:z-10 md:w-[420px] md:bg-zinc-900/90 md:backdrop-blur-2xl md:border-l md:border-zinc-800 md:shadow-2xl ${isMobileCartOpen ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}`}>
+        <div className="p-4 md:p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-950 md:bg-transparent">
+          <h2 className="text-xl md:text-2xl font-bold flex items-center gap-3">
             <ShoppingCart className="text-blue-500" /> Carrinho
           </h2>
-          <span className="bg-blue-600 text-xs px-3 py-1 rounded-full font-bold">{items.length} itens</span>
+          <div className="flex items-center gap-3">
+            <span className="bg-blue-600 text-xs px-3 py-1 rounded-full font-bold">{items.length} itens</span>
+            <button onClick={() => setIsMobileCartOpen(false)} className="md:hidden p-2 text-zinc-400 hover:text-white bg-zinc-900 rounded-lg">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
@@ -371,13 +387,27 @@ function PosPageContent() {
           <button
             disabled={items.length === 0}
             onClick={() => setIsPaymentOpen(true)}
-            className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-bold py-5 px-6 rounded-2xl text-xl transition-all shadow-lg active:scale-95 flex justify-between items-center group overflow-hidden relative"
+            className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-bold py-4 md:py-5 px-6 rounded-xl md:rounded-2xl text-xl transition-all shadow-lg active:scale-95 flex justify-between items-center group overflow-hidden relative"
           >
             <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-            <span className="z-10">[F4] Cobrar</span>
+            <span className="z-10"><span className="hidden md:inline">[F4]</span> Cobrar</span>
             <span className="z-10 bg-black/20 p-2 rounded-xl text-sm italic">Finalizar</span>
           </button>
         </div>
+      </div>
+
+      {/* Botão Flutuante (FAB) Mobile */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 p-3 bg-zinc-950/90 backdrop-blur-xl border-t border-zinc-800 z-40 pb-safe">
+        <button
+          onClick={() => setIsMobileCartOpen(true)}
+          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl flex justify-between items-center shadow-lg active:scale-95 transition-transform"
+        >
+          <div className="flex items-center gap-2">
+            <ShoppingCart size={20} />
+            <span className="bg-black/20 px-2 py-0.5 rounded-full text-xs font-bold">{items.length}</span>
+          </div>
+          <span className="text-lg tracking-tight">R$ {total.toFixed(2)}</span>
+        </button>
       </div>
 
       {/* Modais de Operador e Turno */}

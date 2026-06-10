@@ -602,8 +602,8 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex justify-between items-center p-6 border-b border-zinc-800 bg-zinc-900/50">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[95vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 md:p-6 border-b border-zinc-800 bg-zinc-900/50 shrink-0">
           <div>
             <h2 className="text-2xl font-bold text-white tracking-tight">Finalizar Pagamento</h2>
             {!isOnline && (
@@ -615,7 +615,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
           <button onClick={onClose} className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full transition text-zinc-400 hover:text-white"><X size={20} /></button>
         </div>
 
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 flex-1 overflow-y-auto custom-scrollbar">
           {/* Painel Esquerdo */}
           <div className="space-y-5">
             <div>
@@ -739,7 +739,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-zinc-800 bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-4 md:p-6 border-t border-zinc-800 bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
           <div className="flex-1 flex flex-col gap-2">
              {isNfceEnabled && (
                <label className={`flex items-center gap-2 font-medium transition ${isOnline ? 'cursor-pointer text-zinc-300 hover:text-white' : 'cursor-not-allowed text-zinc-600'}`}>

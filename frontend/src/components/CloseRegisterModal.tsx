@@ -94,7 +94,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
   const modalBody = (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 lg:p-8 transition-all">
       <div className="bg-zinc-950 border border-zinc-800 rounded-[2rem] w-full max-w-6xl shadow-[0_0_100px_rgba(239,68,68,0.1)] overflow-hidden animate-in fade-in zoom-in-95 duration-300 flex flex-col h-full max-h-[95vh] lg:max-h-[90vh]">
-        <div className="flex justify-between items-center p-6 border-b border-zinc-800 bg-zinc-900/50">
+        <div className="flex justify-between items-center p-4 md:p-6 border-b border-zinc-800 bg-zinc-900/50 shrink-0">
           <h2 className="text-2xl font-bold flex items-center gap-3"><FileText className="text-red-500" /> Auditoria de Fechamento</h2>
           <button onClick={() => onClose(false)} className="p-2 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors"><X size={24}/></button>
         </div>
@@ -106,7 +106,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
             
             {/* Lado Esquerdo: Resumo Financeiro e Declaração */}
             <div className="w-full lg:w-[45%] h-auto lg:h-full flex flex-col border-b lg:border-b-0 lg:border-r border-zinc-800 bg-zinc-900/20 lg:overflow-y-auto custom-scrollbar shrink-0">
-              <div className="p-6 space-y-6">
+              <div className="p-4 md:p-6 space-y-4 md:space-y-6 flex-1 overflow-y-auto custom-scrollbar">
                 <div className="flex justify-between items-center text-xs text-zinc-400 pb-2 border-b border-zinc-800">
                   <span>Abertura: <strong className="text-zinc-300 text-sm ml-1">{new Date(data.register.openingTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</strong></span>
                   <span>Vendas do Turno: <strong className="text-zinc-300 text-sm ml-1">{data.report.countSales}</strong></span>
