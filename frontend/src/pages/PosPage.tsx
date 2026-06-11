@@ -413,7 +413,7 @@ function PosPageContent() {
             <ShoppingCart size={20} className="shrink-0" />
             {items.length > 0 ? (
               <span className="bg-black/20 px-2 py-0.5 rounded-full text-xs font-bold truncate block w-full">
-                {items.map(item => `${item.product.shortCode || item.product.name.split(' ')[0]}(${item.quantity})`).join(' ')}
+                {items.map(item => `${item.product?.shortCode || (item.product?.name || 'Item').split(' ')[0]}(${item.quantity})`).join(' ')}
               </span>
             ) : (
               <span className="bg-black/20 px-2 py-0.5 rounded-full text-xs font-bold">0</span>
