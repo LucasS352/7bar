@@ -173,6 +173,8 @@ function PosPageContent() {
     }
   };
 
+  const totalItemsCount = items.reduce((acc, item) => acc + item.quantity, 0);
+
   if (!token) return null;
 
   return (
@@ -332,7 +334,7 @@ function PosPageContent() {
             <ShoppingCart className="text-blue-500" /> Carrinho
           </h2>
           <div className="flex items-center gap-3">
-            <span className="bg-blue-600 text-xs px-3 py-1 rounded-full font-bold">{items.length} itens</span>
+            <span className="bg-blue-600 text-xs px-3 py-1 rounded-full font-bold">{totalItemsCount} itens</span>
             <button onClick={() => setIsMobileCartOpen(false)} className="md:hidden p-2 text-zinc-400 hover:text-white bg-zinc-900 rounded-lg">
               <X size={20} />
             </button>
@@ -340,7 +342,7 @@ function PosPageContent() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-          {items.length === 0 ? (
+          {totalItemsCount === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-zinc-600">
               <ShoppingCart size={40} className="mb-4 opacity-20" />
               <p>Adicione produtos para vender.</p>
@@ -390,7 +392,7 @@ function PosPageContent() {
             <span className="text-4xl font-black text-white">R$ {total.toFixed(2)}</span>
           </div>
           <button
-            disabled={items.length === 0}
+            disabled={totalItemsCount === 0}
             onClick={() => setIsPaymentOpen(true)}
             className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-bold py-4 md:py-5 px-6 rounded-xl md:rounded-2xl text-xl transition-all shadow-lg active:scale-95 flex justify-between items-center group overflow-hidden relative"
           >
@@ -407,11 +409,17 @@ function PosPageContent() {
           onClick={() => setIsMobileCartOpen(true)}
           className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl flex justify-between items-center shadow-lg active:scale-95 transition-transform"
         >
-          <div className="flex items-center gap-2">
-            <ShoppingCart size={20} />
-            <span className="bg-black/20 px-2 py-0.5 rounded-full text-xs font-bold">{items.length}</span>
+          <div className="flex items-center gap-2 flex-1 min-w-0 mr-3 text-left">
+            <ShoppingCart size={20} className="shrink-0" />
+            {items.length > 0 ? (
+              <span className="bg-black/20 px-2 py-0.5 rounded-full text-xs font-bold truncate block w-full">
+                {items.map(item => `${item.product.shortCode || item.product.name.split(' ')[0]}(${item.quantity})`).join(' ')}
+              </span>
+            ) : (
+              <span className="bg-black/20 px-2 py-0.5 rounded-full text-xs font-bold">0</span>
+            )}
           </div>
-          <span className="text-lg tracking-tight">R$ {total.toFixed(2)}</span>
+          <span className="text-lg tracking-tight shrink-0">R$ {total.toFixed(2)}</span>
         </button>
       </div>
 

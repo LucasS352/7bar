@@ -21,4 +21,13 @@ export class AuthController {
   async operatorLogin(@CurrentUser() user: any, @Body() body: { operatorId: string, pin: string }) {
     return this.authService.validateOperatorPin(user.tenantId, body.operatorId, body.pin);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('accept-terms')
+  async acceptTerms(@CurrentUser() user: any) {
+    if (user.role !== 'admin' && user.role !== 'superadmin') {
+      throw new UnauthorizedException('Apenas administradores podem aceitar os termos.');
+    }
+    return this.authService.acceptTerms(user.tenantId);
+  }
 }

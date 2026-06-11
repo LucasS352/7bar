@@ -62,8 +62,13 @@ model Tenant {
   // Integração Cosmos (Bluesoft) — lookup de EAN brasileiro
   cosmosApiKey String? // Token da API Cosmos do cliente para lookup de EAN
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Mensalidades
+  mensalidadeValor      Decimal?  @default(0.00) @map("mensalidade_valor") @db.Decimal(10, 2)
+  mensalidadeVencimento DateTime? @map("mensalidade_vencimento")
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  termsAcceptedAt DateTime? @map("terms_accepted_at")
 
   users User[]
 
@@ -112,4 +117,16 @@ model MasterProduct {
 
   @@index([ean])
   @@map("master_products")
+}
+
+// ------------------------------------------------------------
+//  Image — armazenamento global de fotos no banco heart
+// ------------------------------------------------------------
+model Image {
+  id        String   @id @default(uuid())
+  data      Bytes    @db.LongBlob
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  @@map("images")
 }

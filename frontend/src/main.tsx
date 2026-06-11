@@ -31,6 +31,7 @@ import { useAuthStore } from './store/auth';
 
 // Estilos globais
 import './app/globals.css';
+import { TermsAcceptanceModal } from './components/TermsAcceptanceModal';
 
 // ── PWA Service Worker ──────────────────────────────────────────────────────
 // O vite-plugin-pwa injeta automaticamente o registro do SW.
@@ -112,6 +113,7 @@ function App() {
 
       {/* Toast global */}
       <Toaster theme="dark" position="top-center" richColors />
+      <TermsAcceptanceModal />
     </BrowserRouter>
   );
 }

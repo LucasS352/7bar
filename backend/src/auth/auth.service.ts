@@ -60,8 +60,17 @@ export class AuthService {
         id: user.id,
         name: user.name,
         role: user.role,
-        tenant: user.tenant.name
+        tenant: user.tenant.name,
+        termsAccepted: !!user.tenant.termsAcceptedAt
       }
     };
+  }
+
+  async acceptTerms(tenantId: string) {
+    await this.heartPrisma.tenant.update({
+      where: { id: tenantId },
+      data: { termsAcceptedAt: new Date() }
+    });
+    return { success: true };
   }
 }

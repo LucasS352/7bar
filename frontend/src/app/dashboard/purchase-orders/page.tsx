@@ -707,6 +707,13 @@ export default function PurchaseOrdersPage() {
                     <div className="space-y-3">
                       {orderItems.map((item, index) => (
                         <div key={item.productId} className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 p-3 rounded-xl">
+                          {item.product.imageUrl ? (
+                            <img src={item.product.imageUrl} alt={item.product.name} className="w-12 h-12 object-cover rounded-lg border border-zinc-800" />
+                          ) : (
+                            <div className="w-12 h-12 bg-zinc-900 rounded-lg flex items-center justify-center border border-zinc-800">
+                              <Package size={20} className="text-zinc-600" />
+                            </div>
+                          )}
                           <div className="flex-1 space-y-1">
                             <strong className="block text-sm text-zinc-200">{item.product.name}</strong>
                             <div className="flex items-center gap-2">
@@ -797,6 +804,13 @@ export default function PurchaseOrdersPage() {
               <div className="space-y-3">
                 {receivingOrder.items.map((item: any, index: number) => (
                   <div key={item.id} className="flex items-center gap-4 bg-zinc-950 border border-zinc-800 p-3 rounded-xl">
+                    {item.product?.imageUrl ? (
+                      <img src={item.product.imageUrl} alt={item.product?.name || 'Produto'} className="w-12 h-12 object-cover rounded-lg border border-zinc-800" />
+                    ) : (
+                      <div className="w-12 h-12 bg-zinc-900 rounded-lg flex items-center justify-center border border-zinc-800">
+                        <Package size={20} className="text-zinc-600" />
+                      </div>
+                    )}
                     <div className="flex-1">
                       <strong className="block text-sm text-zinc-200">{item.product.name}</strong>
                       <span className="text-xs text-zinc-500">Qtd: {Number(item.quantity)} {item.unitName || item.product.unit} | Est. Unit: R$ {Number(item.expectedCost).toFixed(2)}</span>

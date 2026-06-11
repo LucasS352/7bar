@@ -155,8 +155,11 @@ exports.Prisma.TenantScalarFieldEnum = {
   certSenha: 'certSenha',
   certValidade: 'certValidade',
   cosmosApiKey: 'cosmosApiKey',
+  mensalidadeValor: 'mensalidadeValor',
+  mensalidadeVencimento: 'mensalidadeVencimento',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  termsAcceptedAt: 'termsAcceptedAt'
 };
 
 exports.Prisma.UserScalarFieldEnum = {
@@ -183,6 +186,13 @@ exports.Prisma.MasterProductScalarFieldEnum = {
   imageUrl: 'imageUrl',
   category: 'category',
   source: 'source',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ImageScalarFieldEnum = {
+  id: 'id',
+  data: 'data',
+  mimeType: 'mimeType',
   createdAt: 'createdAt'
 };
 
@@ -263,11 +273,17 @@ exports.Prisma.MasterProductOrderByRelevanceFieldEnum = {
   source: 'source'
 };
 
+exports.Prisma.ImageOrderByRelevanceFieldEnum = {
+  id: 'id',
+  mimeType: 'mimeType'
+};
+
 
 exports.Prisma.ModelName = {
   Tenant: 'Tenant',
   User: 'User',
-  MasterProduct: 'MasterProduct'
+  MasterProduct: 'MasterProduct',
+  Image: 'Image'
 };
 
 /**

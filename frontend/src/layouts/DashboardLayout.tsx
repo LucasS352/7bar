@@ -43,7 +43,6 @@ export function DashboardLayout() {
 
   const navItems = [
     { name: 'Analytics',          to: '/dashboard',                       icon: LayoutDashboard },
-    { name: 'Contas a Pagar',     to: '/dashboard/finance/payables',      icon: Banknote },
     ...(modules.estoque !== false ? [
       { name: 'Catálogo e Estoque', to: '/dashboard/inventory',             icon: Package },
       { name: 'Fornecedores',       to: '/dashboard/suppliers',             icon: Truck },
@@ -51,6 +50,7 @@ export function DashboardLayout() {
     ] : []),
     { name: 'Histórico de Caixas',to: '/dashboard/registers',             icon: History },
     { name: 'Comandas / Consumo', to: '/dashboard/comandas',              icon: Users },
+    { name: 'Contas a Pagar',     to: '/dashboard/finance/payables',      icon: Banknote },
   ];
   const configItems = [
     { name: 'Empresa',            to: '/dashboard/configuracoes/empresa',    icon: Building2 },

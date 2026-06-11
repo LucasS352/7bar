@@ -68,6 +68,7 @@ model Tenant {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  termsAcceptedAt DateTime? @map("terms_accepted_at")
 
   users     User[]
 
