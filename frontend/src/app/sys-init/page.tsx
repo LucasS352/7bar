@@ -65,10 +65,47 @@ export default function SysInitPage() {
 
   // ── Edit Form step ────────────────────────────────────────────────────
   const [editingTenant, setEditingTenant] = useState<any>(null);
-  const [editTab, setEditTab] = useState<"identidade" | "modulos" | "fiscal">("identidade");
+  const [editTab, setEditTab] = useState<"identidade" | "modulos" | "fiscal" | "mensalidade" | "integracoes">("identidade");
+  const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
+  
+  // Integração States
+  const [integrationCreds, setIntegrationCreds] = useState<{clientId: string, clientSecret: string, merchantId: string, allowedCategories?: string[], priceMarkup?: number, syncStock?: boolean}>({ clientId: '', clientSecret: '', merchantId: '', allowedCategories: [], priceMarkup: 0, syncStock: false });
+  const [tenantCategories, setTenantCategories] = useState<any[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [modulos, setModulos] = useState<any>({});
   const [editLoading, setEditLoading] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncResult, setSyncResult] = useState<{message: string; synced: number; errors: number} | null>(null);
+
+  const handleSyncCatalog = async () => {
+    if (!editingTenant?.id) return;
+    setSyncLoading(true);
+    setSyncResult(null);
+    try {
+      const pin = pinDigits.join('');
+      
+      // Auto-salva as credenciais antes de sincronizar
+      await api.post(`/integrations/setup/${editingTenant.id}`, {
+        provider: selectedIntegration,
+        credentials: integrationCreds,
+        settings: { active: true }
+      }, {
+        headers: { 'x-setup-pin': pin },
+      });
+
+      const res = await api.post(`/integrations/ifood/sync-catalog/${editingTenant.id}`, {}, {
+        headers: { 'x-setup-pin': pin },
+      });
+      const data = res.data;
+      setSyncResult(data);
+      toast.success(`${data.synced} produto(s) sincronizados com o iFood!`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || err.message || 'Erro ao sincronizar catálogo');
+    } finally {
+      setSyncLoading(false);
+    }
+  };
 
   const loadTenants = async () => {
     setLoadingTenants(true);
@@ -240,6 +277,30 @@ export default function SysInitPage() {
     } catch (err: any) {
       console.error(err.response?.data || err);
       toast.error(err.response?.data?.message || "Erro ao salvar alterações.");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleSaveIntegration = async () => {
+    setEditLoading(true);
+    try {
+      const pin = pinDigits.join('');
+      await api.post(`/integrations/setup/${editingTenant.id}`, {
+        provider: selectedIntegration,
+        credentials: integrationCreds,
+        settings: { active: true }
+      }, {
+        headers: { 'x-setup-pin': pin },
+      });
+      toast.success("Integração salva com sucesso!");
+      setSelectedIntegration(null);
+      loadTenants(); // Recarrega para obter as integrações recém-salvas
+      setEditingTenant(null); // Fecha o modal
+      setStep("list");
+    } catch (err: any) {
+      console.error(err.response?.data || err);
+      toast.error(err.response?.data?.message || "Erro ao salvar integração.");
     } finally {
       setEditLoading(false);
     }
@@ -668,7 +729,8 @@ export default function SysInitPage() {
                  <button onClick={() => setEditTab("identidade")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'identidade' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Identidade</button>
                  <button onClick={() => setEditTab("modulos")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'modulos' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Módulos</button>
                  <button onClick={() => setEditTab("fiscal")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'fiscal' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Fiscal</button>
-                 <button onClick={() => setEditTab("mensalidade")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'mensalidade' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Mensalidade</button>
+                 <button onClick={() => { setEditTab("mensalidade"); setSelectedIntegration(null); }} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'mensalidade' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Mensalidade</button>
+                 <button onClick={() => { setEditTab("integracoes"); setSelectedIntegration(null); }} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'integracoes' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Integrações</button>
                </div>
 
                <div className="p-6 flex-1">
@@ -738,18 +800,197 @@ export default function SysInitPage() {
                  )}
 
                  {editTab === 'mensalidade' && (
-                   <div className="space-y-5">
-                     <p className="text-sm text-zinc-400 border-b border-zinc-800 pb-3">Configure as regras comerciais e datas de pagamento deste cliente.</p>
+                   <div className="space-y-4">
+                     <p className="text-sm text-zinc-400 mb-2">Configure o valor e a data do próximo vencimento da mensalidade deste cliente.</p>
                      <div className="grid grid-cols-2 gap-4">
                        <div>
-                         <label className="text-xs text-zinc-400 uppercase">Valor da Mensalidade (R$)</label>
-                         <input type="number" step="0.01" value={editingTenant.mensalidadeValor || 0} onChange={e => setEditingTenant({...editingTenant, mensalidadeValor: e.target.value})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm" />
+                                  <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block">Valor (R$)</label>
+                         <input type="number" step="0.01" value={editingTenant.mensalidadeValor || ''} onChange={e => setEditingTenant({...editingTenant, mensalidadeValor: e.target.value})} className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:border-violet-500 outline-none" />
                        </div>
                        <div>
-                         <label className="text-xs text-zinc-400 uppercase">Próximo Vencimento</label>
-                         <input type="date" value={editingTenant.mensalidadeVencimento ? new Date(editingTenant.mensalidadeVencimento).toISOString().split('T')[0] : ''} onChange={e => setEditingTenant({...editingTenant, mensalidadeVencimento: e.target.value})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm" />
+                         <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block">Próximo Vencimento</label>
+                         <input type="date" value={editingTenant.mensalidadeVencimento ? new Date(editingTenant.mensalidadeVencimento).toISOString().split('T')[0] : ''} onChange={e => setEditingTenant({...editingTenant, mensalidadeVencimento: e.target.value ? new Date(e.target.value).toISOString() : null})} className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:border-violet-500 outline-none" />
                        </div>
                      </div>
+                   </div>
+                 )}
+
+                 {editTab === 'integracoes' && (
+                   <div className="space-y-4">
+                     {!selectedIntegration ? (
+                       <>
+                         <p className="text-sm text-zinc-400 mb-2">Selecione o provedor para configurar a integração deste cliente.</p>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           {/* iFood Card */}
+                           <button onClick={async () => {
+                             const existing = editingTenant?.tenantIntegrations?.find((i: any) => i.provider === 'ifood');
+                             if (existing && existing.credentials) {
+                               setIntegrationCreds({ 
+                                 ...existing.credentials, 
+                                 allowedCategories: existing.credentials.allowedCategories || [],
+                                 priceMarkup: existing.credentials.priceMarkup || 0,
+                                 syncStock: existing.credentials.syncStock || false
+                               });
+                             } else {
+                               setIntegrationCreds({ clientId: '', clientSecret: '', merchantId: '', allowedCategories: [], priceMarkup: 0, syncStock: false });
+                             }
+                             
+                             try {
+                               const pin = pinDigits.join('');
+                               const res = await api.get(`/tenants/setup/${editingTenant.id}/categories`, {
+                                 headers: { 'x-setup-pin': pin }
+                               });
+                               setTenantCategories(res.data);
+                             } catch (e) {
+                               console.error("Erro ao buscar categorias do tenant:", e);
+                             }
+
+                             setSelectedIntegration('ifood');
+                           }} className="bg-zinc-950 border border-zinc-800 hover:border-red-500/50 rounded-2xl p-5 flex items-center gap-4 transition-colors group text-left">
+                             <div className="w-14 h-14 bg-red-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg group-hover:scale-105 transition-transform">iFood</div>
+                             <div>
+                               <h3 className="font-bold text-white">Integração iFood</h3>
+                               <p className="text-xs text-zinc-400 mt-1">Conectar ao portal do parceiro</p>
+                             </div>
+                           </button>
+
+                           {/* Outros Cards (Em breve) */}
+                           <div className="bg-zinc-950/50 border border-zinc-800/50 rounded-2xl p-5 flex items-center gap-4 opacity-50 cursor-not-allowed">
+                             <div className="w-14 h-14 bg-orange-500 rounded-xl flex items-center justify-center font-bold text-white shadow-lg">Rappi</div>
+                             <div>
+                               <h3 className="font-bold text-white">Integração Rappi</h3>
+                               <p className="text-xs text-zinc-400 mt-1">Em breve</p>
+                             </div>
+                           </div>
+
+                           <div className="bg-zinc-950/50 border border-zinc-800/50 rounded-2xl p-5 flex items-center gap-4 opacity-50 cursor-not-allowed">
+                             <div className="w-14 h-14 bg-emerald-500 rounded-xl flex items-center justify-center font-bold text-white shadow-lg">Wpp</div>
+                             <div>
+                               <h3 className="font-bold text-white">WhatsApp Bot</h3>
+                               <p className="text-xs text-zinc-400 mt-1">Em breve</p>
+                             </div>
+                           </div>
+                         </div>
+                       </>
+                     ) : selectedIntegration === 'ifood' ? (
+                       <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5">
+                         <div className="flex items-center gap-4 mb-4">
+                           <button onClick={() => setSelectedIntegration(null)} className="p-2 bg-zinc-900 hover:bg-zinc-800 rounded-lg text-zinc-400 transition-colors">
+                             <ArrowRight className="rotate-180" size={20} />
+                           </button>
+                           <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg">iFood</div>
+                           <div>
+                             <h3 className="font-bold text-white text-lg">Integração iFood</h3>
+                             <p className="text-xs text-zinc-400">Insira as chaves de API do cliente</p>
+                           </div>
+                         </div>
+                         <div className="space-y-3">
+                           <div>
+                             <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1 block">Client ID</label>
+                             <input type="text" value={integrationCreds.clientId} onChange={e => setIntegrationCreds({...integrationCreds, clientId: e.target.value})} placeholder="Cole o Client ID" className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white focus:border-red-500 outline-none text-sm" />
+                           </div>
+                           <div>
+                             <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1 block">Client Secret</label>
+                             <input type="password" value={integrationCreds.clientSecret} onChange={e => setIntegrationCreds({...integrationCreds, clientSecret: e.target.value})} placeholder="Cole o Client Secret" className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white focus:border-red-500 outline-none text-sm" />
+                           </div>
+                           <div>
+                             <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1 block">Merchant ID</label>
+                             <input type="text" value={integrationCreds.merchantId} onChange={e => setIntegrationCreds({...integrationCreds, merchantId: e.target.value})} placeholder="Cole o ID da Loja (Merchant)" className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white focus:border-red-500 outline-none text-sm" />
+                           </div>
+                           <button disabled={editLoading} onClick={handleSaveIntegration} className="w-full mt-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors">
+                             {editLoading ? 'Salvando...' : 'Conectar ao iFood'}
+                           </button>
+
+                           {/* Separator */}
+                           <div className="border-t border-zinc-800 my-4" />
+                           
+                           {/* Markup and Stock Sync Settings */}
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                             <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
+                               <label className="text-sm font-bold text-white block mb-1">Acréscimo de Preço (%)</label>
+                               <p className="text-xs text-zinc-400 mb-3">Compensa taxas adicionando uma margem ao preço do PDV.</p>
+                               <div className="relative">
+                                 <input 
+                                   type="number" 
+                                   value={integrationCreds.priceMarkup || 0} 
+                                   onChange={e => setIntegrationCreds({...integrationCreds, priceMarkup: Number(e.target.value)})} 
+                                   className="w-full p-2.5 pl-4 pr-8 bg-zinc-950 border border-zinc-700 rounded-lg text-white text-sm focus:border-red-500 outline-none"
+                                 />
+                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">%</span>
+                               </div>
+                             </div>
+                             
+                             <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
+                               <div className="flex items-start justify-between">
+                                 <div>
+                                   <p className="text-sm font-bold text-white">Sincronizar Estoque</p>
+                                   <p className="text-xs text-zinc-400 mt-1">Atualizar estoque do iFood automaticamente com as vendas do PDV.</p>
+                                 </div>
+                                 <button onClick={() => setIntegrationCreds({...integrationCreds, syncStock: !integrationCreds.syncStock})} className={`transition-colors mt-1 ${integrationCreds.syncStock ? 'text-red-500' : 'text-zinc-600'}`}>
+                                   {integrationCreds.syncStock ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
+                                 </button>
+                               </div>
+                             </div>
+                           </div>
+
+                           {/* Category Filter */}
+                           <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 mb-3">
+                             <div className="mb-3">
+                               <p className="text-sm font-bold text-white">Filtro de Categorias</p>
+                               <p className="text-xs text-zinc-400">Selecione as categorias que deseja enviar para o iFood. Se nenhuma for selecionada, nenhum produto será sincronizado.</p>
+                             </div>
+                             <div className="max-h-48 overflow-y-auto space-y-1 pr-2">
+                               {tenantCategories.map(cat => {
+                                 const isChecked = integrationCreds.allowedCategories?.includes(cat.id) ?? false;
+                                 return (
+                                   <label key={cat.id} className="flex items-center gap-3 text-sm text-zinc-300 cursor-pointer hover:bg-zinc-800/80 p-2 rounded-lg transition-colors">
+                                     <input 
+                                       type="checkbox" 
+                                       checked={isChecked}
+                                       onChange={(e) => {
+                                         const current = integrationCreds.allowedCategories || [];
+                                         const next = e.target.checked 
+                                           ? [...current, cat.id] 
+                                           : current.filter(id => id !== cat.id);
+                                         setIntegrationCreds({ ...integrationCreds, allowedCategories: next });
+                                       }}
+                                       className="rounded border-zinc-700 text-red-600 focus:ring-red-600 bg-zinc-950 w-4 h-4 cursor-pointer"
+                                     />
+                                     {cat.name}
+                                   </label>
+                                 );
+                               })}
+                               {tenantCategories.length === 0 && (
+                                 <p className="text-xs text-zinc-500 italic p-2">Nenhuma categoria encontrada.</p>
+                               )}
+                             </div>
+                           </div>
+
+                           {/* Catalog Sync */}
+                           <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
+                             <div className="flex items-center justify-between mb-2">
+                               <div>
+                                 <p className="text-sm font-bold text-white">Sincronizar Catálogo</p>
+                                 <p className="text-xs text-zinc-400">Envia todos os produtos ativos para o iFood com externalCode vinculado</p>
+                               </div>
+                             </div>
+                             <button
+                               disabled={syncLoading}
+                               onClick={handleSyncCatalog}
+                               className="w-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
+                             >
+                               {syncLoading ? <><Loader2 className="animate-spin" size={16} /> Sincronizando...</> : '🔄 Sincronizar Produtos → iFood'}
+                             </button>
+                             {syncResult && (
+                               <div className={`mt-3 p-3 rounded-lg text-xs ${syncResult.errors > 0 ? 'bg-yellow-900/30 border border-yellow-700 text-yellow-300' : 'bg-green-900/30 border border-green-700 text-green-300'}`}>
+                                 <p className="font-bold mb-1">{syncResult.errors > 0 ? '⚠️ Concluído com erros' : '✅ Sincronização concluída'}</p>
+                                 <p>{syncResult.message}</p>
+                               </div>
+                             )}
+                           </div>
+                         </div>
+                       </div>
+                     ) : null}
                    </div>
                  )}
                </div>

@@ -88,6 +88,22 @@ services:
       timeout: 10s
       retries: 3
 
+  # ─── Integrações (Microserviço Separado) ───────────────────────────────────
+  integrations-hub:
+    build:
+      context: ./integrations-hub
+      dockerfile: Dockerfile
+    container_name: 7bar_integrations
+    restart: unless-stopped
+    environment:
+      DATABASE_URL_HEART: mysql://root:7bar%402025@mysql:3306/heart
+      DATABASE_URL_TENANT: mysql://root:7bar%402025@mysql:3306/7bar
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - 7bar_network
+
 volumes:
   mysql_data:
     name: 7bar_mysql_data

@@ -723,10 +723,16 @@ export default function PurchaseOrdersPage() {
                                 step="0.01" 
                                 min="0"
                                 className="bg-zinc-900 border border-zinc-700 rounded text-xs px-2 py-1 text-white w-20 outline-none focus:border-emerald-500"
-                                value={item.expectedCost === 0 ? '' : Number(item.expectedCost).toFixed(2)}
+                                value={(item as any)._rawExpectedCost ?? (item.expectedCost === 0 ? '' : Number(item.expectedCost).toFixed(2))}
                                 onChange={(e) => {
                                   const newItems = [...orderItems];
+                                  (newItems[index] as any)._rawExpectedCost = e.target.value;
                                   newItems[index].expectedCost = Number(e.target.value);
+                                  setOrderItems(newItems);
+                                }}
+                                onBlur={() => {
+                                  const newItems = [...orderItems];
+                                  (newItems[index] as any)._rawExpectedCost = undefined;
                                   setOrderItems(newItems);
                                 }}
                               />
@@ -748,12 +754,19 @@ export default function PurchaseOrdersPage() {
                             </select>
                             <input 
                               type="number" 
+                              step="0.01"
                               min="0"
                               placeholder="Qtd"
-                              value={item.quantity === 0 ? '' : item.quantity}
+                              value={(item as any)._rawQuantity ?? (item.quantity === 0 ? '' : item.quantity)}
                               onChange={e => {
                                 const newItems = [...orderItems];
+                                (newItems[index] as any)._rawQuantity = e.target.value;
                                 newItems[index].quantity = Number(e.target.value);
+                                setOrderItems(newItems);
+                              }}
+                              onBlur={() => {
+                                const newItems = [...orderItems];
+                                (newItems[index] as any)._rawQuantity = undefined;
                                 setOrderItems(newItems);
                               }}
                               className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white text-center"

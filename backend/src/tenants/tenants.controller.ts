@@ -228,4 +228,11 @@ export class TenantsController {
     if (!valid) throw new UnauthorizedException('PIN inválido.');
     return this.tenantsService.registrarPagamento(id);
   }
+  @Get('setup/:id/categories')
+  async getTenantCategories(@Request() req: any, @Param('id') id: string) {
+    const pin = req.headers['x-setup-pin'] as string;
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN inválido.');
+    return this.tenantsService.getTenantCategories(id);
+  }
 }

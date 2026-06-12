@@ -3,13 +3,15 @@ import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { Prisma } from '@prisma/client';
 import { ProductsService } from '../products/products.service';
+import { IntegrationsService } from '../integrations/integrations.service';
 
 @Injectable()
 export class PurchaseOrdersService {
   constructor(
     private readonly tenantManager: TenantConnectionManager,
     private readonly tenantContext: TenantContextService,
-    private readonly productsService: ProductsService
+    private readonly productsService: ProductsService,
+    private readonly integrationsService: IntegrationsService
   ) {}
 
   private async getPrisma() {
@@ -95,12 +97,15 @@ export class PurchaseOrdersService {
     if (!order) throw new NotFoundException('Pedido de compra não encontrado.');
     if (order.status === 'COMPLETED') throw new BadRequestException('Este pedido já foi recebido.');
 
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       let totalReal = new Prisma.Decimal(0);
+      const updatedProductIds: string[] = [];
 
       for (const reqItem of receivedItems) {
         const orderItem = order.items.find((i) => i.id === reqItem.id);
         if (!orderItem) continue;
+        
+        updatedProductIds.push(orderItem.productId);
 
         const quantity = new Prisma.Decimal(orderItem.quantity);
         const realCost = new Prisma.Decimal(reqItem.realCost); // UNIT COST
@@ -160,7 +165,7 @@ export class PurchaseOrdersService {
       this.productsService.invalidateCache(this.tenantContext.get().tenantId);
 
       // Atualizar o pedido para COMPLETED e setar o total real
-      return tx.purchaseOrder.update({
+      const updatedOrder = await tx.purchaseOrder.update({
         where: { id: order.id },
         data: {
           status: 'COMPLETED',
@@ -168,7 +173,15 @@ export class PurchaseOrdersService {
           totalReal,
         },
       });
+
+      return { updatedOrder, updatedProductIds };
     });
+
+    if (result.updatedProductIds.length > 0) {
+      this.integrationsService.syncProductStock(this.tenantContext.get().tenantId, [...new Set(result.updatedProductIds)]).catch(e => console.error(e));
+    }
+
+    return result.updatedOrder;
   }
 
   async deletePurchaseOrder(id: string) {

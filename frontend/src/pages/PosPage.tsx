@@ -184,42 +184,62 @@ function PosPageContent() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 md:mb-6 gap-3 shrink-0">
           <div className="flex justify-between items-center w-full md:w-auto gap-4 min-h-[48px] md:min-h-[64px]">
-            {tenantConfig === null ? (
-               <div className="h-10 md:h-12 w-24 md:w-32 bg-zinc-800/50 animate-pulse rounded-lg"></div>
-            ) : tenantConfig?.logoUrl ? (
-              <img src={getFullUrl(tenantConfig.logoUrl)} alt="Logo" className="h-10 md:h-16 object-contain drop-shadow-md" />
-            ) : (
-              <h1 className="text-2xl md:text-3xl font-black bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm truncate max-w-[150px] md:max-w-none">
-                {tenantConfig?.nomeFantasia || tenantConfig?.razaoSocial || 'PDV'}
-              </h1>
-            )}
-            
-            <div className="flex items-center gap-1.5 md:hidden">
-                <ConnectionStatus syncState={syncState} />
-                {cashRegister?.id && (
-                  <button onClick={() => setIsMovementOpen(true)} className="p-2 text-zinc-400 hover:text-emerald-400 bg-zinc-900 rounded-xl transition">
-                    <ArrowDownUp size={18} />
-                  </button>
-                )}
-                <button onClick={() => setIsCloseRegisterOpen(true)} className="p-2 text-zinc-400 hover:text-amber-400 bg-zinc-900 rounded-xl transition">
-                  <FileText size={18} />
-                </button>
-                <button onClick={handleLogout} className="p-2 text-zinc-400 hover:text-red-400 bg-zinc-900 rounded-xl transition">
-                  <LogOut size={18} />
-                </button>
+            <div className="flex items-center gap-4">
+              {tenantConfig === null ? (
+                 <div className="h-10 md:h-12 w-10 md:w-12 bg-zinc-800/50 animate-pulse rounded-xl shrink-0"></div>
+              ) : tenantConfig?.logoUrl ? (
+                <div className="bg-white p-1.5 md:p-2 rounded-xl flex items-center justify-center shrink-0">
+                  <img src={getFullUrl(tenantConfig.logoUrl)} alt="Logo" className="h-8 w-8 md:h-10 md:w-10 object-contain drop-shadow-md" />
+                </div>
+              ) : (
+                <div className="bg-white p-1.5 md:p-2 rounded-xl flex items-center justify-center shrink-0">
+                  <h1 className="text-xl md:text-2xl font-black text-zinc-900 truncate max-w-[100px]">
+                    {tenantConfig?.nomeFantasia?.substring(0, 2) || tenantConfig?.razaoSocial?.substring(0, 2) || '7B'}
+                  </h1>
+                </div>
+              )}
+              
+              <div className="hidden md:flex items-center gap-3">
+                 <p className="text-emerald-400 font-medium text-xs md:text-sm flex items-center gap-2 truncate max-w-[200px] md:max-w-none">
+                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
+                   <span className="truncate">Operador: {operator?.name || user?.name} {user?.tenant ? `(${user.tenant})` : ''}</span>
+                 </p>
+                 {cashRegister?.id && (
+                   <span className="text-[10px] md:text-xs bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 text-emerald-400 uppercase tracking-widest font-bold">
+                     CAIXA ABERTO
+                   </span>
+                 )}
+              </div>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-2 justify-between md:justify-start">
-             <p className="text-emerald-400 font-medium text-xs md:text-sm flex items-center gap-2 truncate max-w-[200px] md:max-w-none">
-               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
-               <span className="truncate">Op: {operator?.name || user?.name}</span>
-             </p>
-             {cashRegister?.id && (
-               <span className="text-[10px] md:text-xs bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 text-emerald-400 uppercase tracking-widest">
-                 Caixa Aberto
-               </span>
-             )}
+            
+            {/* Mobile Actions and Mobile Operator Info */}
+            <div className="flex flex-col items-end gap-2 md:hidden">
+              <div className="flex items-center gap-1.5">
+                  <ConnectionStatus syncState={syncState} />
+                  {cashRegister?.id && (
+                    <button onClick={() => setIsMovementOpen(true)} className="p-2 text-zinc-400 hover:text-emerald-400 bg-zinc-900 rounded-xl transition">
+                      <ArrowDownUp size={18} />
+                    </button>
+                  )}
+                  <button onClick={() => setIsCloseRegisterOpen(true)} className="p-2 text-zinc-400 hover:text-amber-400 bg-zinc-900 rounded-xl transition">
+                    <FileText size={18} />
+                  </button>
+                  <button onClick={handleLogout} className="p-2 text-zinc-400 hover:text-red-400 bg-zinc-900 rounded-xl transition">
+                    <LogOut size={18} />
+                  </button>
+              </div>
+              <div className="flex items-center gap-2">
+                 <p className="text-emerald-400 font-medium text-xs flex items-center gap-1.5 truncate max-w-[150px]">
+                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
+                   <span className="truncate">Op: {operator?.name || user?.name}</span>
+                 </p>
+                 {cashRegister?.id && (
+                   <span className="text-[9px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 text-emerald-400 uppercase tracking-widest font-bold">
+                     ABERTO
+                   </span>
+                 )}
+              </div>
+            </div>
           </div>
 
           <div className="hidden md:flex items-center gap-2">

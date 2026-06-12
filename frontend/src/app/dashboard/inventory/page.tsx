@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useDeferredValue, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
 import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert, X, Truck, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
@@ -38,6 +39,7 @@ interface Supplier {
 function SupplierSelector({ product, suppliers, onToggle }: { product: Product, suppliers: Supplier[], onToggle: (supplierId: string, isLinked: boolean) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [openUpwards, setOpenUpwards] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const linkedCount = product.supplierProducts?.length || 0;
@@ -51,17 +53,28 @@ function SupplierSelector({ product, suppliers, onToggle }: { product: Product, 
         setIsOpen(false);
       }
     };
+    const handleScroll = () => { if (isOpen) setIsOpen(false); };
+    
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('scroll', handleScroll, true);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
   }, [isOpen]);
 
   const handleToggle = () => {
     if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      setOpenUpwards(spaceBelow < 300);
+      const willOpenUpwards = spaceBelow < 300;
+      setOpenUpwards(willOpenUpwards);
+      setDropdownPos({
+        top: willOpenUpwards ? rect.top - 8 : rect.bottom + 8,
+        left: rect.left + rect.width / 2
+      });
     }
     setIsOpen(!isOpen);
   };
@@ -98,14 +111,14 @@ function SupplierSelector({ product, suppliers, onToggle }: { product: Product, 
           {linkedCount > 0 ? <Edit3 size={14} /> : <Plus size={14} />}
         </button>
 
-      {isOpen && (
+      {isOpen && typeof document !== 'undefined' && createPortal(
         <div 
           ref={dropdownRef}
-          className="absolute z-50 w-56 rounded-xl bg-zinc-800 border border-zinc-700 shadow-xl text-left"
+          className="fixed z-[9999] w-56 rounded-xl bg-zinc-800 border border-zinc-700 shadow-xl text-left"
           style={{ 
-            left: '50%', 
-            transform: 'translateX(-50%)',
-            ...(openUpwards ? { bottom: '100%', marginBottom: '8px' } : { top: '100%', marginTop: '8px' })
+            left: dropdownPos.left, 
+            top: dropdownPos.top,
+            transform: `translate(-50%, ${openUpwards ? '-100%' : '0'})`
           }}
         >
           <div className="p-2 max-h-60 overflow-y-auto custom-scrollbar">
@@ -132,7 +145,8 @@ function SupplierSelector({ product, suppliers, onToggle }: { product: Product, 
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       </div>
     </div>

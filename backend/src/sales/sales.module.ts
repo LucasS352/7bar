@@ -7,9 +7,10 @@ import { ProductsModule } from '../products/products.module';
 
 import { SalesCronService } from './sales-cron.service';
 import { MailModule } from '../mail/mail.module';
+import { IntegrationsModule } from '../integrations/integrations.module';
 
 @Module({
-  imports: [NfceModule, PrismaModule, ProductsModule, MailModule],
+  imports: [NfceModule, PrismaModule, ProductsModule, MailModule, IntegrationsModule],
   providers: [SalesService, SalesCronService],
   controllers: [SalesController],
 })

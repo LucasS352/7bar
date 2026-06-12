@@ -7,6 +7,7 @@ import { ProductsService } from '../products/products.service';
 import { Prisma } from '@prisma/client';
 import archiver = require('archiver');
 import { MailService } from '../mail/mail.service';
+import { IntegrationsService } from '../integrations/integrations.service';
 
 /** Mapa de método de pagamento → tPag SEFAZ (Tabela 5.4) */
 const TPAG_MAP: Record<string, string> = {
@@ -27,7 +28,8 @@ export class SalesService {
     private nfceService: NfceService,
     private tenantContext: TenantContextService,
     private productsService: ProductsService,
-    private mailService: MailService
+    private mailService: MailService,
+    private integrationsService: IntegrationsService
   ) {}
 
   private async getPrisma() {
@@ -427,6 +429,12 @@ export class SalesService {
       if (emitirNfce) {
         const { tenantId, databaseUrl } = this.tenantContext.get();
         setImmediate(() => this.dispararNfce(tenantId, databaseUrl, fullSale));
+      }
+
+      // ─── Disparar sincronização de estoque no iFood (se ativada) ───────────
+      if (allProductIds.length > 0) {
+        const { tenantId } = this.tenantContext.get();
+        setImmediate(() => this.integrationsService.syncProductStock(tenantId, allProductIds));
       }
 
       return fullSale;

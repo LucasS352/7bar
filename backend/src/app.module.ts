@@ -21,6 +21,7 @@ import { PayablesModule } from './payables/payables.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TenantInterceptor } from './prisma/tenant-context.service';
 import { ScheduleModule } from '@nestjs/schedule';
+import { IntegrationsModule } from './integrations/integrations.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     SuppliersModule,
     PurchaseOrdersModule,
     PayablesModule,
+    IntegrationsModule,
   ],
   controllers: [AppController],
   providers: [

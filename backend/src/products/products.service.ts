@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, ConflictException, NotFoundException }
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { PrismaClient, Prisma } from '@prisma/client';
+import { IntegrationsService } from '../integrations/integrations.service';
 
 // ── DTOs internos (evitar `any`) ─────────────────────────────────────────────
 
@@ -103,7 +104,8 @@ export class ProductsService {
   constructor(
     private tenantManager: TenantConnectionManager,
     private tenantContext: TenantContextService,
-    private heartPrisma: HeartPrismaService
+    private heartPrisma: HeartPrismaService,
+    private integrationsService: IntegrationsService
   ) {}
 
   /** Atalho para pegar o cliente prisma do contexto atual */
@@ -442,6 +444,11 @@ export class ProductsService {
     });
 
     this.invalidateCache(this.tenantContext.get().tenantId);
+
+    if (sanitized.stock !== undefined && Number(sanitized.stock) !== Number(oldProduct.stock)) {
+      this.integrationsService.syncProductStock(this.tenantContext.get().tenantId, [id]).catch(e => console.error(e));
+    }
+
     return updatedProduct;
   }
 
@@ -523,6 +530,9 @@ export class ProductsService {
     });
 
     this.invalidateCache(this.tenantContext.get().tenantId);
+    
+    this.integrationsService.syncProductStock(this.tenantContext.get().tenantId, [productId]).catch(e => console.error(e));
+
     return result;
   }
 

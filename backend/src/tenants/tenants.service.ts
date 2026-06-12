@@ -23,7 +23,7 @@ export class TenantsService {
   ) {}
 
   findAll() {
-    return this.heartPrisma.tenant.findMany({ include: { users: true } });
+    return this.heartPrisma.tenant.findMany({ include: { users: true, tenantIntegrations: true } });
   }
 
   create(data: any) {
@@ -228,6 +228,19 @@ export class TenantsService {
     }
 
     return results;
+  }
+
+  async getTenantCategories(tenantId: string) {
+    const tenant = await this.heartPrisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant || !tenant.databaseUrl) return [];
+    
+    try {
+      const tenantPrisma = await this.tenantManager.getTenantClient(tenantId, tenant.databaseUrl);
+      return await tenantPrisma.category.findMany({ orderBy: { name: 'asc' } });
+    } catch (e: any) {
+      this.logger.error(`Erro ao buscar categorias do tenant ${tenantId}: ${e.message}`);
+      return [];
+    }
   }
 
   async provisionTenant(dto: ProvisionTenantDto) {
