@@ -7,10 +7,12 @@ import { ShoppingCart, Lock, Mail, Loader2, Trophy } from 'lucide-react';
 
 const COPA_IMAGES = [
   '/copa/162679014360f6d9000011c_1626790143_3x2_md.jpg',
-  '/copa/Brasil-cai-no-grupo-da-sorte-e-tera-vantagem-na-Copa-do-Mundo-2026.png',
+  '/copa/GettyImages-1446999450.jpg',
   '/copa/brasil_servia_richarlison_2_gol_2.jpg.jpg',
-  '/copa/d3a95420-59ad-11f1-b129-29bd05ec26aa.jpg',
-  '/copa/jpg.jpg'
+  '/copa/brazil-national-football-team-hall-of-fame-players-t0xddwnsw6y45tyi.jpg',
+  '/copa/brazil-national-football-team-neymar-richarlison-silva-noae0e4xn0xferzq.jpg',
+  '/copa/jpg.jpg',
+  '/copa/neymar.jpg'
 ];
 
 export function LoginPage() {
@@ -24,7 +26,7 @@ export function LoginPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % COPA_IMAGES.length);
-    }, 5000);
+    }, 3500);
     return () => clearInterval(interval);
   }, []);
 
@@ -53,8 +55,8 @@ export function LoginPage() {
       {COPA_IMAGES.map((src, index) => (
         <div
           key={src}
-          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out z-0 ${
-            index === currentImageIndex ? 'opacity-50' : 'opacity-0'
+          className={`absolute inset-0 bg-cover bg-center transition-all duration-[2000ms] ease-in-out z-0 ${
+            index === currentImageIndex ? 'opacity-50 scale-105' : 'opacity-0 scale-100'
           }`}
           style={{ backgroundImage: `url('${src}')` }}
         />
