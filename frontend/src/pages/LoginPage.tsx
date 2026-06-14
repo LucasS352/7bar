@@ -78,7 +78,7 @@ export function LoginPage() {
           <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-green-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-green-500/30 border border-yellow-400/30">
             <ShoppingCart size={32} className="text-white" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">7bar PDV</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Adega PDV</h1>
           <p className="text-zinc-300 mt-2 text-sm">Sistema de Ponto de Venda</p>
         </div>
 
