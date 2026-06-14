@@ -59,8 +59,8 @@ export default function SuppliersPage() {
       toast.success('Fornecedor excluído.');
       fetchSuppliers();
       if (activeSupplier?.id === id) setActiveSupplier(null);
-    } catch (error) {
-      toast.error('Erro ao excluir fornecedor.');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erro ao excluir fornecedor.');
     }
   };
 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { ProductsService } from '../products/products.service';
@@ -66,9 +66,16 @@ export class SuppliersService {
 
   async deleteSupplier(supplierId: string) {
     const prisma = await this.getPrisma();
-    return prisma.supplier.delete({
-      where: { id: supplierId },
-    });
+    try {
+      return await prisma.supplier.delete({
+        where: { id: supplierId },
+      });
+    } catch (error: any) {
+      if (error.code === 'P2003') {
+        throw new BadRequestException('Não é possível excluir o fornecedor pois ele possui histórico de produtos ou pedidos vinculados.');
+      }
+      throw error;
+    }
   }
 
   // --- Supplier Products ---
