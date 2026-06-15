@@ -37,6 +37,9 @@ function PosPageContent() {
   const [tenantConfig,       setTenantConfig]       = useState<any>(null);
   const [compositeProduct,   setCompositeProduct]   = useState<Product | null>(null);
   const [focusedProductIdx,  setFocusedProductIdx]  = useState<number>(-1);
+  const [promptQuantity,      setPromptQuantity]      = useState(false);
+  const [productToSetQuantity,setProductToSetQuantity]= useState<Product | null>(null);
+  const [tempQuantity,        setTempQuantity]        = useState<number>(1);
   const productRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const { operator, cashRegister, isLoading: isShiftLoading, logoutOperator, refreshShift } = useShift();
 
@@ -45,8 +48,11 @@ function PosPageContent() {
     const fullProduct = products.find(p => p.id === product.id) || product;
     if (fullProduct.isComposite && fullProduct.modifierGroups && fullProduct.modifierGroups.length > 0) {
       setCompositeProduct(fullProduct);
+    } else if (promptQuantity) {
+      setProductToSetQuantity(fullProduct);
+      setTempQuantity(1);
     } else {
-      addItem(product);
+      addItem(fullProduct);
     }
   };
 
@@ -270,6 +276,10 @@ function PosPageContent() {
                   </button>
               </div>
               <div className="flex items-center gap-2">
+                 <label className="flex items-center gap-1.5 text-[10px] text-zinc-400 bg-zinc-900 px-2 py-1 rounded-lg">
+                   <input type="checkbox" checked={promptQuantity} onChange={e => setPromptQuantity(e.target.checked)} className="w-3 h-3 rounded border-zinc-700 bg-zinc-800 text-blue-500" />
+                   Unidade
+                 </label>
                  <p className="text-emerald-400 font-medium text-xs flex items-center gap-1.5 truncate max-w-[150px]">
                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
                    <span className="truncate">Op: {operator?.name || user?.name}</span>
@@ -286,6 +296,12 @@ function PosPageContent() {
           <div className="hidden md:flex items-center gap-2">
             {/* Badge de conexão */}
             <ConnectionStatus syncState={syncState} />
+
+            {/* Checkbox para selecionar quantidade */}
+            <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-zinc-800/50 text-zinc-400 hover:text-white cursor-pointer transition select-none text-sm font-semibold">
+              <input type="checkbox" checked={promptQuantity} onChange={e => setPromptQuantity(e.target.checked)} className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-950" />
+              Selecionar Unidade
+            </label>
 
             {/* Badge de catálogo offline */}
             {isOfflineCatalog && (
@@ -546,6 +562,45 @@ function PosPageContent() {
           setCompositeProduct(null);
         }}
       />
+
+      {/* Modal de Quantidade */}
+      {productToSetQuantity && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl flex flex-col">
+            <h3 className="text-xl font-bold text-white mb-2 text-center line-clamp-2">{productToSetQuantity.name}</h3>
+            <p className="text-zinc-400 mb-6 text-sm text-center">Informe a quantidade desejada:</p>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (tempQuantity > 0) {
+                addItem(productToSetQuantity, tempQuantity);
+                setProductToSetQuantity(null);
+                setTempQuantity(1);
+                setTimeout(() => (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus(), 10);
+              }
+            }}>
+              <input
+                type="number"
+                min="0.001"
+                step="any"
+                autoFocus
+                value={tempQuantity === 0 ? '' : tempQuantity}
+                onChange={(e) => setTempQuantity(Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
+                className="w-full text-center text-4xl font-black bg-zinc-950 border border-zinc-800 rounded-2xl py-6 text-blue-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 mb-6 shadow-inner"
+              />
+              <div className="flex gap-3">
+                <button type="button" onClick={() => { setProductToSetQuantity(null); setTimeout(() => (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus(), 10); }} className="flex-1 py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition text-lg active:scale-95">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={tempQuantity <= 0} className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 disabled:text-white/50 text-white font-bold rounded-xl transition text-lg active:scale-95 shadow-lg shadow-blue-500/20">
+                  Adicionar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
