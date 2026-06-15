@@ -17,6 +17,7 @@ import { MasterProductsModule } from './master-products/master-products.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { PayablesModule } from './payables/payables.module';
+import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TenantInterceptor } from './prisma/tenant-context.service';
@@ -43,6 +44,7 @@ import { IntegrationsModule } from './integrations/integrations.module';
     SuppliersModule,
     PurchaseOrdersModule,
     PayablesModule,
+    PaymentMethodsModule,
     IntegrationsModule,
   ],
   controllers: [AppController],

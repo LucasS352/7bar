@@ -56,6 +56,7 @@ type SaleItem = {
 
 type Payment = {
   method: string;
+  label?: string;
   value: number;
 };
 
@@ -835,7 +836,7 @@ export default function SalesDashboard() {
                         ) : (
                           sale.payments.map((p, idx) => (
                             <span key={idx} className="inline-block text-[10px] uppercase font-bold text-zinc-400 bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded mr-1">
-                              {p.method}
+                              {p.label || getMethodName(p.method)}
                             </span>
                           ))
                         )}

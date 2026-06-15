@@ -28,6 +28,16 @@ export type User = $Result.DefaultSelection<Prisma.$UserPayload>
  * 
  */
 export type MasterProduct = $Result.DefaultSelection<Prisma.$MasterProductPayload>
+/**
+ * Model Image
+ * 
+ */
+export type Image = $Result.DefaultSelection<Prisma.$ImagePayload>
+/**
+ * Model TenantIntegration
+ * 
+ */
+export type TenantIntegration = $Result.DefaultSelection<Prisma.$TenantIntegrationPayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -176,6 +186,26 @@ export class PrismaClient<
     * ```
     */
   get masterProduct(): Prisma.MasterProductDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.image`: Exposes CRUD operations for the **Image** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Images
+    * const images = await prisma.image.findMany()
+    * ```
+    */
+  get image(): Prisma.ImageDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.tenantIntegration`: Exposes CRUD operations for the **TenantIntegration** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more TenantIntegrations
+    * const tenantIntegrations = await prisma.tenantIntegration.findMany()
+    * ```
+    */
+  get tenantIntegration(): Prisma.TenantIntegrationDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -619,7 +649,9 @@ export namespace Prisma {
   export const ModelName: {
     Tenant: 'Tenant',
     User: 'User',
-    MasterProduct: 'MasterProduct'
+    MasterProduct: 'MasterProduct',
+    Image: 'Image',
+    TenantIntegration: 'TenantIntegration'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -638,7 +670,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "tenant" | "user" | "masterProduct"
+      modelProps: "tenant" | "user" | "masterProduct" | "image" | "tenantIntegration"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -840,6 +872,138 @@ export namespace Prisma {
           }
         }
       }
+      Image: {
+        payload: Prisma.$ImagePayload<ExtArgs>
+        fields: Prisma.ImageFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ImageFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ImagePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ImageFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ImagePayload>
+          }
+          findFirst: {
+            args: Prisma.ImageFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ImagePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ImageFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ImagePayload>
+          }
+          findMany: {
+            args: Prisma.ImageFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ImagePayload>[]
+          }
+          create: {
+            args: Prisma.ImageCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ImagePayload>
+          }
+          createMany: {
+            args: Prisma.ImageCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.ImageDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ImagePayload>
+          }
+          update: {
+            args: Prisma.ImageUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ImagePayload>
+          }
+          deleteMany: {
+            args: Prisma.ImageDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ImageUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.ImageUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ImagePayload>
+          }
+          aggregate: {
+            args: Prisma.ImageAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateImage>
+          }
+          groupBy: {
+            args: Prisma.ImageGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ImageGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ImageCountArgs<ExtArgs>
+            result: $Utils.Optional<ImageCountAggregateOutputType> | number
+          }
+        }
+      }
+      TenantIntegration: {
+        payload: Prisma.$TenantIntegrationPayload<ExtArgs>
+        fields: Prisma.TenantIntegrationFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.TenantIntegrationFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantIntegrationPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.TenantIntegrationFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantIntegrationPayload>
+          }
+          findFirst: {
+            args: Prisma.TenantIntegrationFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantIntegrationPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.TenantIntegrationFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantIntegrationPayload>
+          }
+          findMany: {
+            args: Prisma.TenantIntegrationFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantIntegrationPayload>[]
+          }
+          create: {
+            args: Prisma.TenantIntegrationCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantIntegrationPayload>
+          }
+          createMany: {
+            args: Prisma.TenantIntegrationCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.TenantIntegrationDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantIntegrationPayload>
+          }
+          update: {
+            args: Prisma.TenantIntegrationUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantIntegrationPayload>
+          }
+          deleteMany: {
+            args: Prisma.TenantIntegrationDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.TenantIntegrationUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.TenantIntegrationUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantIntegrationPayload>
+          }
+          aggregate: {
+            args: Prisma.TenantIntegrationAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateTenantIntegration>
+          }
+          groupBy: {
+            args: Prisma.TenantIntegrationGroupByArgs<ExtArgs>
+            result: $Utils.Optional<TenantIntegrationGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.TenantIntegrationCountArgs<ExtArgs>
+            result: $Utils.Optional<TenantIntegrationCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -939,6 +1103,8 @@ export namespace Prisma {
     tenant?: TenantOmit
     user?: UserOmit
     masterProduct?: MasterProductOmit
+    image?: ImageOmit
+    tenantIntegration?: TenantIntegrationOmit
   }
 
   /* Types for Logging */
@@ -1020,10 +1186,12 @@ export namespace Prisma {
 
   export type TenantCountOutputType = {
     users: number
+    tenantIntegrations: number
   }
 
   export type TenantCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     users?: boolean | TenantCountOutputTypeCountUsersArgs
+    tenantIntegrations?: boolean | TenantCountOutputTypeCountTenantIntegrationsArgs
   }
 
   // Custom InputTypes
@@ -1042,6 +1210,13 @@ export namespace Prisma {
    */
   export type TenantCountOutputTypeCountUsersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: UserWhereInput
+  }
+
+  /**
+   * TenantCountOutputType without action
+   */
+  export type TenantCountOutputTypeCountTenantIntegrationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TenantIntegrationWhereInput
   }
 
 
@@ -1065,12 +1240,14 @@ export namespace Prisma {
     crt: number | null
     nfceSerie: number | null
     nfceAmbiente: number | null
+    mensalidadeValor: Decimal | null
   }
 
   export type TenantSumAggregateOutputType = {
     crt: number | null
     nfceSerie: number | null
     nfceAmbiente: number | null
+    mensalidadeValor: Decimal | null
   }
 
   export type TenantMinAggregateOutputType = {
@@ -1106,8 +1283,11 @@ export namespace Prisma {
     certSenha: string | null
     certValidade: Date | null
     cosmosApiKey: string | null
+    mensalidadeValor: Decimal | null
+    mensalidadeVencimento: Date | null
     createdAt: Date | null
     updatedAt: Date | null
+    termsAcceptedAt: Date | null
   }
 
   export type TenantMaxAggregateOutputType = {
@@ -1143,8 +1323,11 @@ export namespace Prisma {
     certSenha: string | null
     certValidade: Date | null
     cosmosApiKey: string | null
+    mensalidadeValor: Decimal | null
+    mensalidadeVencimento: Date | null
     createdAt: Date | null
     updatedAt: Date | null
+    termsAcceptedAt: Date | null
   }
 
   export type TenantCountAggregateOutputType = {
@@ -1181,8 +1364,11 @@ export namespace Prisma {
     certSenha: number
     certValidade: number
     cosmosApiKey: number
+    mensalidadeValor: number
+    mensalidadeVencimento: number
     createdAt: number
     updatedAt: number
+    termsAcceptedAt: number
     _all: number
   }
 
@@ -1191,12 +1377,14 @@ export namespace Prisma {
     crt?: true
     nfceSerie?: true
     nfceAmbiente?: true
+    mensalidadeValor?: true
   }
 
   export type TenantSumAggregateInputType = {
     crt?: true
     nfceSerie?: true
     nfceAmbiente?: true
+    mensalidadeValor?: true
   }
 
   export type TenantMinAggregateInputType = {
@@ -1232,8 +1420,11 @@ export namespace Prisma {
     certSenha?: true
     certValidade?: true
     cosmosApiKey?: true
+    mensalidadeValor?: true
+    mensalidadeVencimento?: true
     createdAt?: true
     updatedAt?: true
+    termsAcceptedAt?: true
   }
 
   export type TenantMaxAggregateInputType = {
@@ -1269,8 +1460,11 @@ export namespace Prisma {
     certSenha?: true
     certValidade?: true
     cosmosApiKey?: true
+    mensalidadeValor?: true
+    mensalidadeVencimento?: true
     createdAt?: true
     updatedAt?: true
+    termsAcceptedAt?: true
   }
 
   export type TenantCountAggregateInputType = {
@@ -1307,8 +1501,11 @@ export namespace Prisma {
     certSenha?: true
     certValidade?: true
     cosmosApiKey?: true
+    mensalidadeValor?: true
+    mensalidadeVencimento?: true
     createdAt?: true
     updatedAt?: true
+    termsAcceptedAt?: true
     _all?: true
   }
 
@@ -1432,8 +1629,11 @@ export namespace Prisma {
     certSenha: string | null
     certValidade: Date | null
     cosmosApiKey: string | null
+    mensalidadeValor: Decimal | null
+    mensalidadeVencimento: Date | null
     createdAt: Date
     updatedAt: Date
+    termsAcceptedAt: Date | null
     _count: TenantCountAggregateOutputType | null
     _avg: TenantAvgAggregateOutputType | null
     _sum: TenantSumAggregateOutputType | null
@@ -1489,9 +1689,13 @@ export namespace Prisma {
     certSenha?: boolean
     certValidade?: boolean
     cosmosApiKey?: boolean
+    mensalidadeValor?: boolean
+    mensalidadeVencimento?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    termsAcceptedAt?: boolean
     users?: boolean | Tenant$usersArgs<ExtArgs>
+    tenantIntegrations?: boolean | Tenant$tenantIntegrationsArgs<ExtArgs>
     _count?: boolean | TenantCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["tenant"]>
 
@@ -1531,13 +1735,17 @@ export namespace Prisma {
     certSenha?: boolean
     certValidade?: boolean
     cosmosApiKey?: boolean
+    mensalidadeValor?: boolean
+    mensalidadeVencimento?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    termsAcceptedAt?: boolean
   }
 
-  export type TenantOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "databaseName" | "databaseUrl" | "name" | "status" | "logoUrl" | "modulos" | "razaoSocial" | "nomeFantasia" | "cnpj" | "ie" | "im" | "crt" | "logradouro" | "numero" | "complemento" | "bairro" | "municipio" | "codMunicipio" | "uf" | "cep" | "telefone" | "emailContador" | "nfceAtivo" | "nfceAutoSync" | "nfceSerie" | "nfceAmbiente" | "nfceCsc" | "nfceIdCsc" | "certPfx" | "certSenha" | "certValidade" | "cosmosApiKey" | "createdAt" | "updatedAt", ExtArgs["result"]["tenant"]>
+  export type TenantOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "databaseName" | "databaseUrl" | "name" | "status" | "logoUrl" | "modulos" | "razaoSocial" | "nomeFantasia" | "cnpj" | "ie" | "im" | "crt" | "logradouro" | "numero" | "complemento" | "bairro" | "municipio" | "codMunicipio" | "uf" | "cep" | "telefone" | "emailContador" | "nfceAtivo" | "nfceAutoSync" | "nfceSerie" | "nfceAmbiente" | "nfceCsc" | "nfceIdCsc" | "certPfx" | "certSenha" | "certValidade" | "cosmosApiKey" | "mensalidadeValor" | "mensalidadeVencimento" | "createdAt" | "updatedAt" | "termsAcceptedAt", ExtArgs["result"]["tenant"]>
   export type TenantInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     users?: boolean | Tenant$usersArgs<ExtArgs>
+    tenantIntegrations?: boolean | Tenant$tenantIntegrationsArgs<ExtArgs>
     _count?: boolean | TenantCountOutputTypeDefaultArgs<ExtArgs>
   }
 
@@ -1545,6 +1753,7 @@ export namespace Prisma {
     name: "Tenant"
     objects: {
       users: Prisma.$UserPayload<ExtArgs>[]
+      tenantIntegrations: Prisma.$TenantIntegrationPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -1580,8 +1789,11 @@ export namespace Prisma {
       certSenha: string | null
       certValidade: Date | null
       cosmosApiKey: string | null
+      mensalidadeValor: Prisma.Decimal | null
+      mensalidadeVencimento: Date | null
       createdAt: Date
       updatedAt: Date
+      termsAcceptedAt: Date | null
     }, ExtArgs["result"]["tenant"]>
     composites: {}
   }
@@ -1923,6 +2135,7 @@ export namespace Prisma {
   export interface Prisma__TenantClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     users<T extends Tenant$usersArgs<ExtArgs> = {}>(args?: Subset<T, Tenant$usersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    tenantIntegrations<T extends Tenant$tenantIntegrationsArgs<ExtArgs> = {}>(args?: Subset<T, Tenant$tenantIntegrationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TenantIntegrationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1985,8 +2198,11 @@ export namespace Prisma {
     readonly certSenha: FieldRef<"Tenant", 'String'>
     readonly certValidade: FieldRef<"Tenant", 'DateTime'>
     readonly cosmosApiKey: FieldRef<"Tenant", 'String'>
+    readonly mensalidadeValor: FieldRef<"Tenant", 'Decimal'>
+    readonly mensalidadeVencimento: FieldRef<"Tenant", 'DateTime'>
     readonly createdAt: FieldRef<"Tenant", 'DateTime'>
     readonly updatedAt: FieldRef<"Tenant", 'DateTime'>
+    readonly termsAcceptedAt: FieldRef<"Tenant", 'DateTime'>
   }
     
 
@@ -2351,6 +2567,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: UserScalarFieldEnum | UserScalarFieldEnum[]
+  }
+
+  /**
+   * Tenant.tenantIntegrations
+   */
+  export type Tenant$tenantIntegrationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantIntegration
+     */
+    select?: TenantIntegrationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantIntegration
+     */
+    omit?: TenantIntegrationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantIntegrationInclude<ExtArgs> | null
+    where?: TenantIntegrationWhereInput
+    orderBy?: TenantIntegrationOrderByWithRelationInput | TenantIntegrationOrderByWithRelationInput[]
+    cursor?: TenantIntegrationWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: TenantIntegrationScalarFieldEnum | TenantIntegrationScalarFieldEnum[]
   }
 
   /**
@@ -4305,6 +4545,1831 @@ export namespace Prisma {
 
 
   /**
+   * Model Image
+   */
+
+  export type AggregateImage = {
+    _count: ImageCountAggregateOutputType | null
+    _min: ImageMinAggregateOutputType | null
+    _max: ImageMaxAggregateOutputType | null
+  }
+
+  export type ImageMinAggregateOutputType = {
+    id: string | null
+    data: Bytes | null
+    mimeType: string | null
+    createdAt: Date | null
+  }
+
+  export type ImageMaxAggregateOutputType = {
+    id: string | null
+    data: Bytes | null
+    mimeType: string | null
+    createdAt: Date | null
+  }
+
+  export type ImageCountAggregateOutputType = {
+    id: number
+    data: number
+    mimeType: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type ImageMinAggregateInputType = {
+    id?: true
+    data?: true
+    mimeType?: true
+    createdAt?: true
+  }
+
+  export type ImageMaxAggregateInputType = {
+    id?: true
+    data?: true
+    mimeType?: true
+    createdAt?: true
+  }
+
+  export type ImageCountAggregateInputType = {
+    id?: true
+    data?: true
+    mimeType?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type ImageAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Image to aggregate.
+     */
+    where?: ImageWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Images to fetch.
+     */
+    orderBy?: ImageOrderByWithRelationInput | ImageOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ImageWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Images from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Images.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned Images
+    **/
+    _count?: true | ImageCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ImageMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ImageMaxAggregateInputType
+  }
+
+  export type GetImageAggregateType<T extends ImageAggregateArgs> = {
+        [P in keyof T & keyof AggregateImage]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateImage[P]>
+      : GetScalarType<T[P], AggregateImage[P]>
+  }
+
+
+
+
+  export type ImageGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ImageWhereInput
+    orderBy?: ImageOrderByWithAggregationInput | ImageOrderByWithAggregationInput[]
+    by: ImageScalarFieldEnum[] | ImageScalarFieldEnum
+    having?: ImageScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ImageCountAggregateInputType | true
+    _min?: ImageMinAggregateInputType
+    _max?: ImageMaxAggregateInputType
+  }
+
+  export type ImageGroupByOutputType = {
+    id: string
+    data: Bytes
+    mimeType: string
+    createdAt: Date
+    _count: ImageCountAggregateOutputType | null
+    _min: ImageMinAggregateOutputType | null
+    _max: ImageMaxAggregateOutputType | null
+  }
+
+  type GetImageGroupByPayload<T extends ImageGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ImageGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ImageGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ImageGroupByOutputType[P]>
+            : GetScalarType<T[P], ImageGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ImageSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    data?: boolean
+    mimeType?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["image"]>
+
+
+
+  export type ImageSelectScalar = {
+    id?: boolean
+    data?: boolean
+    mimeType?: boolean
+    createdAt?: boolean
+  }
+
+  export type ImageOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "data" | "mimeType" | "createdAt", ExtArgs["result"]["image"]>
+
+  export type $ImagePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "Image"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      data: Prisma.Bytes
+      mimeType: string
+      createdAt: Date
+    }, ExtArgs["result"]["image"]>
+    composites: {}
+  }
+
+  type ImageGetPayload<S extends boolean | null | undefined | ImageDefaultArgs> = $Result.GetResult<Prisma.$ImagePayload, S>
+
+  type ImageCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<ImageFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: ImageCountAggregateInputType | true
+    }
+
+  export interface ImageDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Image'], meta: { name: 'Image' } }
+    /**
+     * Find zero or one Image that matches the filter.
+     * @param {ImageFindUniqueArgs} args - Arguments to find a Image
+     * @example
+     * // Get one Image
+     * const image = await prisma.image.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ImageFindUniqueArgs>(args: SelectSubset<T, ImageFindUniqueArgs<ExtArgs>>): Prisma__ImageClient<$Result.GetResult<Prisma.$ImagePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one Image that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {ImageFindUniqueOrThrowArgs} args - Arguments to find a Image
+     * @example
+     * // Get one Image
+     * const image = await prisma.image.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ImageFindUniqueOrThrowArgs>(args: SelectSubset<T, ImageFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ImageClient<$Result.GetResult<Prisma.$ImagePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Image that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ImageFindFirstArgs} args - Arguments to find a Image
+     * @example
+     * // Get one Image
+     * const image = await prisma.image.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ImageFindFirstArgs>(args?: SelectSubset<T, ImageFindFirstArgs<ExtArgs>>): Prisma__ImageClient<$Result.GetResult<Prisma.$ImagePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Image that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ImageFindFirstOrThrowArgs} args - Arguments to find a Image
+     * @example
+     * // Get one Image
+     * const image = await prisma.image.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ImageFindFirstOrThrowArgs>(args?: SelectSubset<T, ImageFindFirstOrThrowArgs<ExtArgs>>): Prisma__ImageClient<$Result.GetResult<Prisma.$ImagePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more Images that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ImageFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Images
+     * const images = await prisma.image.findMany()
+     * 
+     * // Get first 10 Images
+     * const images = await prisma.image.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const imageWithIdOnly = await prisma.image.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ImageFindManyArgs>(args?: SelectSubset<T, ImageFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ImagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a Image.
+     * @param {ImageCreateArgs} args - Arguments to create a Image.
+     * @example
+     * // Create one Image
+     * const Image = await prisma.image.create({
+     *   data: {
+     *     // ... data to create a Image
+     *   }
+     * })
+     * 
+     */
+    create<T extends ImageCreateArgs>(args: SelectSubset<T, ImageCreateArgs<ExtArgs>>): Prisma__ImageClient<$Result.GetResult<Prisma.$ImagePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many Images.
+     * @param {ImageCreateManyArgs} args - Arguments to create many Images.
+     * @example
+     * // Create many Images
+     * const image = await prisma.image.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ImageCreateManyArgs>(args?: SelectSubset<T, ImageCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a Image.
+     * @param {ImageDeleteArgs} args - Arguments to delete one Image.
+     * @example
+     * // Delete one Image
+     * const Image = await prisma.image.delete({
+     *   where: {
+     *     // ... filter to delete one Image
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ImageDeleteArgs>(args: SelectSubset<T, ImageDeleteArgs<ExtArgs>>): Prisma__ImageClient<$Result.GetResult<Prisma.$ImagePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one Image.
+     * @param {ImageUpdateArgs} args - Arguments to update one Image.
+     * @example
+     * // Update one Image
+     * const image = await prisma.image.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ImageUpdateArgs>(args: SelectSubset<T, ImageUpdateArgs<ExtArgs>>): Prisma__ImageClient<$Result.GetResult<Prisma.$ImagePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more Images.
+     * @param {ImageDeleteManyArgs} args - Arguments to filter Images to delete.
+     * @example
+     * // Delete a few Images
+     * const { count } = await prisma.image.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ImageDeleteManyArgs>(args?: SelectSubset<T, ImageDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Images.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ImageUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Images
+     * const image = await prisma.image.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ImageUpdateManyArgs>(args: SelectSubset<T, ImageUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one Image.
+     * @param {ImageUpsertArgs} args - Arguments to update or create a Image.
+     * @example
+     * // Update or create a Image
+     * const image = await prisma.image.upsert({
+     *   create: {
+     *     // ... data to create a Image
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Image we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ImageUpsertArgs>(args: SelectSubset<T, ImageUpsertArgs<ExtArgs>>): Prisma__ImageClient<$Result.GetResult<Prisma.$ImagePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of Images.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ImageCountArgs} args - Arguments to filter Images to count.
+     * @example
+     * // Count the number of Images
+     * const count = await prisma.image.count({
+     *   where: {
+     *     // ... the filter for the Images we want to count
+     *   }
+     * })
+    **/
+    count<T extends ImageCountArgs>(
+      args?: Subset<T, ImageCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ImageCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Image.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ImageAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ImageAggregateArgs>(args: Subset<T, ImageAggregateArgs>): Prisma.PrismaPromise<GetImageAggregateType<T>>
+
+    /**
+     * Group by Image.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ImageGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ImageGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ImageGroupByArgs['orderBy'] }
+        : { orderBy?: ImageGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ImageGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetImageGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the Image model
+   */
+  readonly fields: ImageFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for Image.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ImageClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the Image model
+   */
+  interface ImageFieldRefs {
+    readonly id: FieldRef<"Image", 'String'>
+    readonly data: FieldRef<"Image", 'Bytes'>
+    readonly mimeType: FieldRef<"Image", 'String'>
+    readonly createdAt: FieldRef<"Image", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * Image findUnique
+   */
+  export type ImageFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Image
+     */
+    select?: ImageSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Image
+     */
+    omit?: ImageOmit<ExtArgs> | null
+    /**
+     * Filter, which Image to fetch.
+     */
+    where: ImageWhereUniqueInput
+  }
+
+  /**
+   * Image findUniqueOrThrow
+   */
+  export type ImageFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Image
+     */
+    select?: ImageSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Image
+     */
+    omit?: ImageOmit<ExtArgs> | null
+    /**
+     * Filter, which Image to fetch.
+     */
+    where: ImageWhereUniqueInput
+  }
+
+  /**
+   * Image findFirst
+   */
+  export type ImageFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Image
+     */
+    select?: ImageSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Image
+     */
+    omit?: ImageOmit<ExtArgs> | null
+    /**
+     * Filter, which Image to fetch.
+     */
+    where?: ImageWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Images to fetch.
+     */
+    orderBy?: ImageOrderByWithRelationInput | ImageOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Images.
+     */
+    cursor?: ImageWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Images from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Images.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Images.
+     */
+    distinct?: ImageScalarFieldEnum | ImageScalarFieldEnum[]
+  }
+
+  /**
+   * Image findFirstOrThrow
+   */
+  export type ImageFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Image
+     */
+    select?: ImageSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Image
+     */
+    omit?: ImageOmit<ExtArgs> | null
+    /**
+     * Filter, which Image to fetch.
+     */
+    where?: ImageWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Images to fetch.
+     */
+    orderBy?: ImageOrderByWithRelationInput | ImageOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Images.
+     */
+    cursor?: ImageWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Images from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Images.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Images.
+     */
+    distinct?: ImageScalarFieldEnum | ImageScalarFieldEnum[]
+  }
+
+  /**
+   * Image findMany
+   */
+  export type ImageFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Image
+     */
+    select?: ImageSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Image
+     */
+    omit?: ImageOmit<ExtArgs> | null
+    /**
+     * Filter, which Images to fetch.
+     */
+    where?: ImageWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Images to fetch.
+     */
+    orderBy?: ImageOrderByWithRelationInput | ImageOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing Images.
+     */
+    cursor?: ImageWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Images from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Images.
+     */
+    skip?: number
+    distinct?: ImageScalarFieldEnum | ImageScalarFieldEnum[]
+  }
+
+  /**
+   * Image create
+   */
+  export type ImageCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Image
+     */
+    select?: ImageSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Image
+     */
+    omit?: ImageOmit<ExtArgs> | null
+    /**
+     * The data needed to create a Image.
+     */
+    data: XOR<ImageCreateInput, ImageUncheckedCreateInput>
+  }
+
+  /**
+   * Image createMany
+   */
+  export type ImageCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many Images.
+     */
+    data: ImageCreateManyInput | ImageCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * Image update
+   */
+  export type ImageUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Image
+     */
+    select?: ImageSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Image
+     */
+    omit?: ImageOmit<ExtArgs> | null
+    /**
+     * The data needed to update a Image.
+     */
+    data: XOR<ImageUpdateInput, ImageUncheckedUpdateInput>
+    /**
+     * Choose, which Image to update.
+     */
+    where: ImageWhereUniqueInput
+  }
+
+  /**
+   * Image updateMany
+   */
+  export type ImageUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update Images.
+     */
+    data: XOR<ImageUpdateManyMutationInput, ImageUncheckedUpdateManyInput>
+    /**
+     * Filter which Images to update
+     */
+    where?: ImageWhereInput
+    /**
+     * Limit how many Images to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * Image upsert
+   */
+  export type ImageUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Image
+     */
+    select?: ImageSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Image
+     */
+    omit?: ImageOmit<ExtArgs> | null
+    /**
+     * The filter to search for the Image to update in case it exists.
+     */
+    where: ImageWhereUniqueInput
+    /**
+     * In case the Image found by the `where` argument doesn't exist, create a new Image with this data.
+     */
+    create: XOR<ImageCreateInput, ImageUncheckedCreateInput>
+    /**
+     * In case the Image was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ImageUpdateInput, ImageUncheckedUpdateInput>
+  }
+
+  /**
+   * Image delete
+   */
+  export type ImageDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Image
+     */
+    select?: ImageSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Image
+     */
+    omit?: ImageOmit<ExtArgs> | null
+    /**
+     * Filter which Image to delete.
+     */
+    where: ImageWhereUniqueInput
+  }
+
+  /**
+   * Image deleteMany
+   */
+  export type ImageDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Images to delete
+     */
+    where?: ImageWhereInput
+    /**
+     * Limit how many Images to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * Image without action
+   */
+  export type ImageDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Image
+     */
+    select?: ImageSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Image
+     */
+    omit?: ImageOmit<ExtArgs> | null
+  }
+
+
+  /**
+   * Model TenantIntegration
+   */
+
+  export type AggregateTenantIntegration = {
+    _count: TenantIntegrationCountAggregateOutputType | null
+    _min: TenantIntegrationMinAggregateOutputType | null
+    _max: TenantIntegrationMaxAggregateOutputType | null
+  }
+
+  export type TenantIntegrationMinAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    provider: string | null
+    status: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type TenantIntegrationMaxAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    provider: string | null
+    status: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type TenantIntegrationCountAggregateOutputType = {
+    id: number
+    tenantId: number
+    provider: number
+    status: number
+    credentials: number
+    settings: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type TenantIntegrationMinAggregateInputType = {
+    id?: true
+    tenantId?: true
+    provider?: true
+    status?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type TenantIntegrationMaxAggregateInputType = {
+    id?: true
+    tenantId?: true
+    provider?: true
+    status?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type TenantIntegrationCountAggregateInputType = {
+    id?: true
+    tenantId?: true
+    provider?: true
+    status?: true
+    credentials?: true
+    settings?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type TenantIntegrationAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which TenantIntegration to aggregate.
+     */
+    where?: TenantIntegrationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TenantIntegrations to fetch.
+     */
+    orderBy?: TenantIntegrationOrderByWithRelationInput | TenantIntegrationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: TenantIntegrationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TenantIntegrations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TenantIntegrations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned TenantIntegrations
+    **/
+    _count?: true | TenantIntegrationCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: TenantIntegrationMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: TenantIntegrationMaxAggregateInputType
+  }
+
+  export type GetTenantIntegrationAggregateType<T extends TenantIntegrationAggregateArgs> = {
+        [P in keyof T & keyof AggregateTenantIntegration]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateTenantIntegration[P]>
+      : GetScalarType<T[P], AggregateTenantIntegration[P]>
+  }
+
+
+
+
+  export type TenantIntegrationGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TenantIntegrationWhereInput
+    orderBy?: TenantIntegrationOrderByWithAggregationInput | TenantIntegrationOrderByWithAggregationInput[]
+    by: TenantIntegrationScalarFieldEnum[] | TenantIntegrationScalarFieldEnum
+    having?: TenantIntegrationScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: TenantIntegrationCountAggregateInputType | true
+    _min?: TenantIntegrationMinAggregateInputType
+    _max?: TenantIntegrationMaxAggregateInputType
+  }
+
+  export type TenantIntegrationGroupByOutputType = {
+    id: string
+    tenantId: string
+    provider: string
+    status: string
+    credentials: JsonValue
+    settings: JsonValue
+    createdAt: Date
+    updatedAt: Date
+    _count: TenantIntegrationCountAggregateOutputType | null
+    _min: TenantIntegrationMinAggregateOutputType | null
+    _max: TenantIntegrationMaxAggregateOutputType | null
+  }
+
+  type GetTenantIntegrationGroupByPayload<T extends TenantIntegrationGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<TenantIntegrationGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof TenantIntegrationGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], TenantIntegrationGroupByOutputType[P]>
+            : GetScalarType<T[P], TenantIntegrationGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type TenantIntegrationSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    provider?: boolean
+    status?: boolean
+    credentials?: boolean
+    settings?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    tenant?: boolean | TenantDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["tenantIntegration"]>
+
+
+
+  export type TenantIntegrationSelectScalar = {
+    id?: boolean
+    tenantId?: boolean
+    provider?: boolean
+    status?: boolean
+    credentials?: boolean
+    settings?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type TenantIntegrationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "tenantId" | "provider" | "status" | "credentials" | "settings" | "createdAt" | "updatedAt", ExtArgs["result"]["tenantIntegration"]>
+  export type TenantIntegrationInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    tenant?: boolean | TenantDefaultArgs<ExtArgs>
+  }
+
+  export type $TenantIntegrationPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "TenantIntegration"
+    objects: {
+      tenant: Prisma.$TenantPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      tenantId: string
+      provider: string
+      status: string
+      credentials: Prisma.JsonValue
+      settings: Prisma.JsonValue
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["tenantIntegration"]>
+    composites: {}
+  }
+
+  type TenantIntegrationGetPayload<S extends boolean | null | undefined | TenantIntegrationDefaultArgs> = $Result.GetResult<Prisma.$TenantIntegrationPayload, S>
+
+  type TenantIntegrationCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<TenantIntegrationFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: TenantIntegrationCountAggregateInputType | true
+    }
+
+  export interface TenantIntegrationDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['TenantIntegration'], meta: { name: 'TenantIntegration' } }
+    /**
+     * Find zero or one TenantIntegration that matches the filter.
+     * @param {TenantIntegrationFindUniqueArgs} args - Arguments to find a TenantIntegration
+     * @example
+     * // Get one TenantIntegration
+     * const tenantIntegration = await prisma.tenantIntegration.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends TenantIntegrationFindUniqueArgs>(args: SelectSubset<T, TenantIntegrationFindUniqueArgs<ExtArgs>>): Prisma__TenantIntegrationClient<$Result.GetResult<Prisma.$TenantIntegrationPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one TenantIntegration that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {TenantIntegrationFindUniqueOrThrowArgs} args - Arguments to find a TenantIntegration
+     * @example
+     * // Get one TenantIntegration
+     * const tenantIntegration = await prisma.tenantIntegration.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends TenantIntegrationFindUniqueOrThrowArgs>(args: SelectSubset<T, TenantIntegrationFindUniqueOrThrowArgs<ExtArgs>>): Prisma__TenantIntegrationClient<$Result.GetResult<Prisma.$TenantIntegrationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first TenantIntegration that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantIntegrationFindFirstArgs} args - Arguments to find a TenantIntegration
+     * @example
+     * // Get one TenantIntegration
+     * const tenantIntegration = await prisma.tenantIntegration.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends TenantIntegrationFindFirstArgs>(args?: SelectSubset<T, TenantIntegrationFindFirstArgs<ExtArgs>>): Prisma__TenantIntegrationClient<$Result.GetResult<Prisma.$TenantIntegrationPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first TenantIntegration that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantIntegrationFindFirstOrThrowArgs} args - Arguments to find a TenantIntegration
+     * @example
+     * // Get one TenantIntegration
+     * const tenantIntegration = await prisma.tenantIntegration.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends TenantIntegrationFindFirstOrThrowArgs>(args?: SelectSubset<T, TenantIntegrationFindFirstOrThrowArgs<ExtArgs>>): Prisma__TenantIntegrationClient<$Result.GetResult<Prisma.$TenantIntegrationPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more TenantIntegrations that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantIntegrationFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all TenantIntegrations
+     * const tenantIntegrations = await prisma.tenantIntegration.findMany()
+     * 
+     * // Get first 10 TenantIntegrations
+     * const tenantIntegrations = await prisma.tenantIntegration.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const tenantIntegrationWithIdOnly = await prisma.tenantIntegration.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends TenantIntegrationFindManyArgs>(args?: SelectSubset<T, TenantIntegrationFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TenantIntegrationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a TenantIntegration.
+     * @param {TenantIntegrationCreateArgs} args - Arguments to create a TenantIntegration.
+     * @example
+     * // Create one TenantIntegration
+     * const TenantIntegration = await prisma.tenantIntegration.create({
+     *   data: {
+     *     // ... data to create a TenantIntegration
+     *   }
+     * })
+     * 
+     */
+    create<T extends TenantIntegrationCreateArgs>(args: SelectSubset<T, TenantIntegrationCreateArgs<ExtArgs>>): Prisma__TenantIntegrationClient<$Result.GetResult<Prisma.$TenantIntegrationPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many TenantIntegrations.
+     * @param {TenantIntegrationCreateManyArgs} args - Arguments to create many TenantIntegrations.
+     * @example
+     * // Create many TenantIntegrations
+     * const tenantIntegration = await prisma.tenantIntegration.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends TenantIntegrationCreateManyArgs>(args?: SelectSubset<T, TenantIntegrationCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a TenantIntegration.
+     * @param {TenantIntegrationDeleteArgs} args - Arguments to delete one TenantIntegration.
+     * @example
+     * // Delete one TenantIntegration
+     * const TenantIntegration = await prisma.tenantIntegration.delete({
+     *   where: {
+     *     // ... filter to delete one TenantIntegration
+     *   }
+     * })
+     * 
+     */
+    delete<T extends TenantIntegrationDeleteArgs>(args: SelectSubset<T, TenantIntegrationDeleteArgs<ExtArgs>>): Prisma__TenantIntegrationClient<$Result.GetResult<Prisma.$TenantIntegrationPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one TenantIntegration.
+     * @param {TenantIntegrationUpdateArgs} args - Arguments to update one TenantIntegration.
+     * @example
+     * // Update one TenantIntegration
+     * const tenantIntegration = await prisma.tenantIntegration.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends TenantIntegrationUpdateArgs>(args: SelectSubset<T, TenantIntegrationUpdateArgs<ExtArgs>>): Prisma__TenantIntegrationClient<$Result.GetResult<Prisma.$TenantIntegrationPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more TenantIntegrations.
+     * @param {TenantIntegrationDeleteManyArgs} args - Arguments to filter TenantIntegrations to delete.
+     * @example
+     * // Delete a few TenantIntegrations
+     * const { count } = await prisma.tenantIntegration.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends TenantIntegrationDeleteManyArgs>(args?: SelectSubset<T, TenantIntegrationDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more TenantIntegrations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantIntegrationUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many TenantIntegrations
+     * const tenantIntegration = await prisma.tenantIntegration.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends TenantIntegrationUpdateManyArgs>(args: SelectSubset<T, TenantIntegrationUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one TenantIntegration.
+     * @param {TenantIntegrationUpsertArgs} args - Arguments to update or create a TenantIntegration.
+     * @example
+     * // Update or create a TenantIntegration
+     * const tenantIntegration = await prisma.tenantIntegration.upsert({
+     *   create: {
+     *     // ... data to create a TenantIntegration
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the TenantIntegration we want to update
+     *   }
+     * })
+     */
+    upsert<T extends TenantIntegrationUpsertArgs>(args: SelectSubset<T, TenantIntegrationUpsertArgs<ExtArgs>>): Prisma__TenantIntegrationClient<$Result.GetResult<Prisma.$TenantIntegrationPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of TenantIntegrations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantIntegrationCountArgs} args - Arguments to filter TenantIntegrations to count.
+     * @example
+     * // Count the number of TenantIntegrations
+     * const count = await prisma.tenantIntegration.count({
+     *   where: {
+     *     // ... the filter for the TenantIntegrations we want to count
+     *   }
+     * })
+    **/
+    count<T extends TenantIntegrationCountArgs>(
+      args?: Subset<T, TenantIntegrationCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], TenantIntegrationCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a TenantIntegration.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantIntegrationAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends TenantIntegrationAggregateArgs>(args: Subset<T, TenantIntegrationAggregateArgs>): Prisma.PrismaPromise<GetTenantIntegrationAggregateType<T>>
+
+    /**
+     * Group by TenantIntegration.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantIntegrationGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends TenantIntegrationGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: TenantIntegrationGroupByArgs['orderBy'] }
+        : { orderBy?: TenantIntegrationGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, TenantIntegrationGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetTenantIntegrationGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the TenantIntegration model
+   */
+  readonly fields: TenantIntegrationFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for TenantIntegration.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__TenantIntegrationClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    tenant<T extends TenantDefaultArgs<ExtArgs> = {}>(args?: Subset<T, TenantDefaultArgs<ExtArgs>>): Prisma__TenantClient<$Result.GetResult<Prisma.$TenantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the TenantIntegration model
+   */
+  interface TenantIntegrationFieldRefs {
+    readonly id: FieldRef<"TenantIntegration", 'String'>
+    readonly tenantId: FieldRef<"TenantIntegration", 'String'>
+    readonly provider: FieldRef<"TenantIntegration", 'String'>
+    readonly status: FieldRef<"TenantIntegration", 'String'>
+    readonly credentials: FieldRef<"TenantIntegration", 'Json'>
+    readonly settings: FieldRef<"TenantIntegration", 'Json'>
+    readonly createdAt: FieldRef<"TenantIntegration", 'DateTime'>
+    readonly updatedAt: FieldRef<"TenantIntegration", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * TenantIntegration findUnique
+   */
+  export type TenantIntegrationFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantIntegration
+     */
+    select?: TenantIntegrationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantIntegration
+     */
+    omit?: TenantIntegrationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantIntegrationInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantIntegration to fetch.
+     */
+    where: TenantIntegrationWhereUniqueInput
+  }
+
+  /**
+   * TenantIntegration findUniqueOrThrow
+   */
+  export type TenantIntegrationFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantIntegration
+     */
+    select?: TenantIntegrationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantIntegration
+     */
+    omit?: TenantIntegrationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantIntegrationInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantIntegration to fetch.
+     */
+    where: TenantIntegrationWhereUniqueInput
+  }
+
+  /**
+   * TenantIntegration findFirst
+   */
+  export type TenantIntegrationFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantIntegration
+     */
+    select?: TenantIntegrationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantIntegration
+     */
+    omit?: TenantIntegrationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantIntegrationInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantIntegration to fetch.
+     */
+    where?: TenantIntegrationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TenantIntegrations to fetch.
+     */
+    orderBy?: TenantIntegrationOrderByWithRelationInput | TenantIntegrationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for TenantIntegrations.
+     */
+    cursor?: TenantIntegrationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TenantIntegrations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TenantIntegrations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of TenantIntegrations.
+     */
+    distinct?: TenantIntegrationScalarFieldEnum | TenantIntegrationScalarFieldEnum[]
+  }
+
+  /**
+   * TenantIntegration findFirstOrThrow
+   */
+  export type TenantIntegrationFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantIntegration
+     */
+    select?: TenantIntegrationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantIntegration
+     */
+    omit?: TenantIntegrationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantIntegrationInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantIntegration to fetch.
+     */
+    where?: TenantIntegrationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TenantIntegrations to fetch.
+     */
+    orderBy?: TenantIntegrationOrderByWithRelationInput | TenantIntegrationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for TenantIntegrations.
+     */
+    cursor?: TenantIntegrationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TenantIntegrations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TenantIntegrations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of TenantIntegrations.
+     */
+    distinct?: TenantIntegrationScalarFieldEnum | TenantIntegrationScalarFieldEnum[]
+  }
+
+  /**
+   * TenantIntegration findMany
+   */
+  export type TenantIntegrationFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantIntegration
+     */
+    select?: TenantIntegrationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantIntegration
+     */
+    omit?: TenantIntegrationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantIntegrationInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantIntegrations to fetch.
+     */
+    where?: TenantIntegrationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TenantIntegrations to fetch.
+     */
+    orderBy?: TenantIntegrationOrderByWithRelationInput | TenantIntegrationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing TenantIntegrations.
+     */
+    cursor?: TenantIntegrationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TenantIntegrations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TenantIntegrations.
+     */
+    skip?: number
+    distinct?: TenantIntegrationScalarFieldEnum | TenantIntegrationScalarFieldEnum[]
+  }
+
+  /**
+   * TenantIntegration create
+   */
+  export type TenantIntegrationCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantIntegration
+     */
+    select?: TenantIntegrationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantIntegration
+     */
+    omit?: TenantIntegrationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantIntegrationInclude<ExtArgs> | null
+    /**
+     * The data needed to create a TenantIntegration.
+     */
+    data: XOR<TenantIntegrationCreateInput, TenantIntegrationUncheckedCreateInput>
+  }
+
+  /**
+   * TenantIntegration createMany
+   */
+  export type TenantIntegrationCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many TenantIntegrations.
+     */
+    data: TenantIntegrationCreateManyInput | TenantIntegrationCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * TenantIntegration update
+   */
+  export type TenantIntegrationUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantIntegration
+     */
+    select?: TenantIntegrationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantIntegration
+     */
+    omit?: TenantIntegrationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantIntegrationInclude<ExtArgs> | null
+    /**
+     * The data needed to update a TenantIntegration.
+     */
+    data: XOR<TenantIntegrationUpdateInput, TenantIntegrationUncheckedUpdateInput>
+    /**
+     * Choose, which TenantIntegration to update.
+     */
+    where: TenantIntegrationWhereUniqueInput
+  }
+
+  /**
+   * TenantIntegration updateMany
+   */
+  export type TenantIntegrationUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update TenantIntegrations.
+     */
+    data: XOR<TenantIntegrationUpdateManyMutationInput, TenantIntegrationUncheckedUpdateManyInput>
+    /**
+     * Filter which TenantIntegrations to update
+     */
+    where?: TenantIntegrationWhereInput
+    /**
+     * Limit how many TenantIntegrations to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * TenantIntegration upsert
+   */
+  export type TenantIntegrationUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantIntegration
+     */
+    select?: TenantIntegrationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantIntegration
+     */
+    omit?: TenantIntegrationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantIntegrationInclude<ExtArgs> | null
+    /**
+     * The filter to search for the TenantIntegration to update in case it exists.
+     */
+    where: TenantIntegrationWhereUniqueInput
+    /**
+     * In case the TenantIntegration found by the `where` argument doesn't exist, create a new TenantIntegration with this data.
+     */
+    create: XOR<TenantIntegrationCreateInput, TenantIntegrationUncheckedCreateInput>
+    /**
+     * In case the TenantIntegration was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<TenantIntegrationUpdateInput, TenantIntegrationUncheckedUpdateInput>
+  }
+
+  /**
+   * TenantIntegration delete
+   */
+  export type TenantIntegrationDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantIntegration
+     */
+    select?: TenantIntegrationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantIntegration
+     */
+    omit?: TenantIntegrationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantIntegrationInclude<ExtArgs> | null
+    /**
+     * Filter which TenantIntegration to delete.
+     */
+    where: TenantIntegrationWhereUniqueInput
+  }
+
+  /**
+   * TenantIntegration deleteMany
+   */
+  export type TenantIntegrationDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which TenantIntegrations to delete
+     */
+    where?: TenantIntegrationWhereInput
+    /**
+     * Limit how many TenantIntegrations to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * TenantIntegration without action
+   */
+  export type TenantIntegrationDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantIntegration
+     */
+    select?: TenantIntegrationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantIntegration
+     */
+    omit?: TenantIntegrationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantIntegrationInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -4352,8 +6417,11 @@ export namespace Prisma {
     certSenha: 'certSenha',
     certValidade: 'certValidade',
     cosmosApiKey: 'cosmosApiKey',
+    mensalidadeValor: 'mensalidadeValor',
+    mensalidadeVencimento: 'mensalidadeVencimento',
     createdAt: 'createdAt',
-    updatedAt: 'updatedAt'
+    updatedAt: 'updatedAt',
+    termsAcceptedAt: 'termsAcceptedAt'
   };
 
   export type TenantScalarFieldEnum = (typeof TenantScalarFieldEnum)[keyof typeof TenantScalarFieldEnum]
@@ -4392,6 +6460,30 @@ export namespace Prisma {
   export type MasterProductScalarFieldEnum = (typeof MasterProductScalarFieldEnum)[keyof typeof MasterProductScalarFieldEnum]
 
 
+  export const ImageScalarFieldEnum: {
+    id: 'id',
+    data: 'data',
+    mimeType: 'mimeType',
+    createdAt: 'createdAt'
+  };
+
+  export type ImageScalarFieldEnum = (typeof ImageScalarFieldEnum)[keyof typeof ImageScalarFieldEnum]
+
+
+  export const TenantIntegrationScalarFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    provider: 'provider',
+    status: 'status',
+    credentials: 'credentials',
+    settings: 'settings',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type TenantIntegrationScalarFieldEnum = (typeof TenantIntegrationScalarFieldEnum)[keyof typeof TenantIntegrationScalarFieldEnum]
+
+
   export const SortOrder: {
     asc: 'asc',
     desc: 'desc'
@@ -4406,6 +6498,13 @@ export namespace Prisma {
   };
 
   export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+  export const JsonNullValueInput: {
+    JsonNull: typeof JsonNull
+  };
+
+  export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
   export const JsonNullValueFilter: {
@@ -4493,6 +6592,24 @@ export namespace Prisma {
   export type MasterProductOrderByRelevanceFieldEnum = (typeof MasterProductOrderByRelevanceFieldEnum)[keyof typeof MasterProductOrderByRelevanceFieldEnum]
 
 
+  export const ImageOrderByRelevanceFieldEnum: {
+    id: 'id',
+    mimeType: 'mimeType'
+  };
+
+  export type ImageOrderByRelevanceFieldEnum = (typeof ImageOrderByRelevanceFieldEnum)[keyof typeof ImageOrderByRelevanceFieldEnum]
+
+
+  export const TenantIntegrationOrderByRelevanceFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    provider: 'provider',
+    status: 'status'
+  };
+
+  export type TenantIntegrationOrderByRelevanceFieldEnum = (typeof TenantIntegrationOrderByRelevanceFieldEnum)[keyof typeof TenantIntegrationOrderByRelevanceFieldEnum]
+
+
   /**
    * Field references
    */
@@ -4548,6 +6665,13 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'Decimal'
+   */
+  export type DecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal'>
+    
+
+
+  /**
    * Reference to a field of type 'Float'
    */
   export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -4594,9 +6718,13 @@ export namespace Prisma {
     certSenha?: StringNullableFilter<"Tenant"> | string | null
     certValidade?: DateTimeNullableFilter<"Tenant"> | Date | string | null
     cosmosApiKey?: StringNullableFilter<"Tenant"> | string | null
+    mensalidadeValor?: DecimalNullableFilter<"Tenant"> | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: DateTimeNullableFilter<"Tenant"> | Date | string | null
     createdAt?: DateTimeFilter<"Tenant"> | Date | string
     updatedAt?: DateTimeFilter<"Tenant"> | Date | string
+    termsAcceptedAt?: DateTimeNullableFilter<"Tenant"> | Date | string | null
     users?: UserListRelationFilter
+    tenantIntegrations?: TenantIntegrationListRelationFilter
   }
 
   export type TenantOrderByWithRelationInput = {
@@ -4633,9 +6761,13 @@ export namespace Prisma {
     certSenha?: SortOrderInput | SortOrder
     certValidade?: SortOrderInput | SortOrder
     cosmosApiKey?: SortOrderInput | SortOrder
+    mensalidadeValor?: SortOrderInput | SortOrder
+    mensalidadeVencimento?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    termsAcceptedAt?: SortOrderInput | SortOrder
     users?: UserOrderByRelationAggregateInput
+    tenantIntegrations?: TenantIntegrationOrderByRelationAggregateInput
     _relevance?: TenantOrderByRelevanceInput
   }
 
@@ -4676,9 +6808,13 @@ export namespace Prisma {
     certSenha?: StringNullableFilter<"Tenant"> | string | null
     certValidade?: DateTimeNullableFilter<"Tenant"> | Date | string | null
     cosmosApiKey?: StringNullableFilter<"Tenant"> | string | null
+    mensalidadeValor?: DecimalNullableFilter<"Tenant"> | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: DateTimeNullableFilter<"Tenant"> | Date | string | null
     createdAt?: DateTimeFilter<"Tenant"> | Date | string
     updatedAt?: DateTimeFilter<"Tenant"> | Date | string
+    termsAcceptedAt?: DateTimeNullableFilter<"Tenant"> | Date | string | null
     users?: UserListRelationFilter
+    tenantIntegrations?: TenantIntegrationListRelationFilter
   }, "id" | "databaseName" | "cnpj">
 
   export type TenantOrderByWithAggregationInput = {
@@ -4715,8 +6851,11 @@ export namespace Prisma {
     certSenha?: SortOrderInput | SortOrder
     certValidade?: SortOrderInput | SortOrder
     cosmosApiKey?: SortOrderInput | SortOrder
+    mensalidadeValor?: SortOrderInput | SortOrder
+    mensalidadeVencimento?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    termsAcceptedAt?: SortOrderInput | SortOrder
     _count?: TenantCountOrderByAggregateInput
     _avg?: TenantAvgOrderByAggregateInput
     _max?: TenantMaxOrderByAggregateInput
@@ -4761,8 +6900,11 @@ export namespace Prisma {
     certSenha?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     certValidade?: DateTimeNullableWithAggregatesFilter<"Tenant"> | Date | string | null
     cosmosApiKey?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
+    mensalidadeValor?: DecimalNullableWithAggregatesFilter<"Tenant"> | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: DateTimeNullableWithAggregatesFilter<"Tenant"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Tenant"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Tenant"> | Date | string
+    termsAcceptedAt?: DateTimeNullableWithAggregatesFilter<"Tenant"> | Date | string | null
   }
 
   export type UserWhereInput = {
@@ -4929,6 +7071,126 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"MasterProduct"> | Date | string
   }
 
+  export type ImageWhereInput = {
+    AND?: ImageWhereInput | ImageWhereInput[]
+    OR?: ImageWhereInput[]
+    NOT?: ImageWhereInput | ImageWhereInput[]
+    id?: StringFilter<"Image"> | string
+    data?: BytesFilter<"Image"> | Bytes
+    mimeType?: StringFilter<"Image"> | string
+    createdAt?: DateTimeFilter<"Image"> | Date | string
+  }
+
+  export type ImageOrderByWithRelationInput = {
+    id?: SortOrder
+    data?: SortOrder
+    mimeType?: SortOrder
+    createdAt?: SortOrder
+    _relevance?: ImageOrderByRelevanceInput
+  }
+
+  export type ImageWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: ImageWhereInput | ImageWhereInput[]
+    OR?: ImageWhereInput[]
+    NOT?: ImageWhereInput | ImageWhereInput[]
+    data?: BytesFilter<"Image"> | Bytes
+    mimeType?: StringFilter<"Image"> | string
+    createdAt?: DateTimeFilter<"Image"> | Date | string
+  }, "id">
+
+  export type ImageOrderByWithAggregationInput = {
+    id?: SortOrder
+    data?: SortOrder
+    mimeType?: SortOrder
+    createdAt?: SortOrder
+    _count?: ImageCountOrderByAggregateInput
+    _max?: ImageMaxOrderByAggregateInput
+    _min?: ImageMinOrderByAggregateInput
+  }
+
+  export type ImageScalarWhereWithAggregatesInput = {
+    AND?: ImageScalarWhereWithAggregatesInput | ImageScalarWhereWithAggregatesInput[]
+    OR?: ImageScalarWhereWithAggregatesInput[]
+    NOT?: ImageScalarWhereWithAggregatesInput | ImageScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"Image"> | string
+    data?: BytesWithAggregatesFilter<"Image"> | Bytes
+    mimeType?: StringWithAggregatesFilter<"Image"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"Image"> | Date | string
+  }
+
+  export type TenantIntegrationWhereInput = {
+    AND?: TenantIntegrationWhereInput | TenantIntegrationWhereInput[]
+    OR?: TenantIntegrationWhereInput[]
+    NOT?: TenantIntegrationWhereInput | TenantIntegrationWhereInput[]
+    id?: StringFilter<"TenantIntegration"> | string
+    tenantId?: StringFilter<"TenantIntegration"> | string
+    provider?: StringFilter<"TenantIntegration"> | string
+    status?: StringFilter<"TenantIntegration"> | string
+    credentials?: JsonFilter<"TenantIntegration">
+    settings?: JsonFilter<"TenantIntegration">
+    createdAt?: DateTimeFilter<"TenantIntegration"> | Date | string
+    updatedAt?: DateTimeFilter<"TenantIntegration"> | Date | string
+    tenant?: XOR<TenantScalarRelationFilter, TenantWhereInput>
+  }
+
+  export type TenantIntegrationOrderByWithRelationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    provider?: SortOrder
+    status?: SortOrder
+    credentials?: SortOrder
+    settings?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    tenant?: TenantOrderByWithRelationInput
+    _relevance?: TenantIntegrationOrderByRelevanceInput
+  }
+
+  export type TenantIntegrationWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    tenantId_provider?: TenantIntegrationTenantIdProviderCompoundUniqueInput
+    AND?: TenantIntegrationWhereInput | TenantIntegrationWhereInput[]
+    OR?: TenantIntegrationWhereInput[]
+    NOT?: TenantIntegrationWhereInput | TenantIntegrationWhereInput[]
+    tenantId?: StringFilter<"TenantIntegration"> | string
+    provider?: StringFilter<"TenantIntegration"> | string
+    status?: StringFilter<"TenantIntegration"> | string
+    credentials?: JsonFilter<"TenantIntegration">
+    settings?: JsonFilter<"TenantIntegration">
+    createdAt?: DateTimeFilter<"TenantIntegration"> | Date | string
+    updatedAt?: DateTimeFilter<"TenantIntegration"> | Date | string
+    tenant?: XOR<TenantScalarRelationFilter, TenantWhereInput>
+  }, "id" | "tenantId_provider">
+
+  export type TenantIntegrationOrderByWithAggregationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    provider?: SortOrder
+    status?: SortOrder
+    credentials?: SortOrder
+    settings?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: TenantIntegrationCountOrderByAggregateInput
+    _max?: TenantIntegrationMaxOrderByAggregateInput
+    _min?: TenantIntegrationMinOrderByAggregateInput
+  }
+
+  export type TenantIntegrationScalarWhereWithAggregatesInput = {
+    AND?: TenantIntegrationScalarWhereWithAggregatesInput | TenantIntegrationScalarWhereWithAggregatesInput[]
+    OR?: TenantIntegrationScalarWhereWithAggregatesInput[]
+    NOT?: TenantIntegrationScalarWhereWithAggregatesInput | TenantIntegrationScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"TenantIntegration"> | string
+    tenantId?: StringWithAggregatesFilter<"TenantIntegration"> | string
+    provider?: StringWithAggregatesFilter<"TenantIntegration"> | string
+    status?: StringWithAggregatesFilter<"TenantIntegration"> | string
+    credentials?: JsonWithAggregatesFilter<"TenantIntegration">
+    settings?: JsonWithAggregatesFilter<"TenantIntegration">
+    createdAt?: DateTimeWithAggregatesFilter<"TenantIntegration"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"TenantIntegration"> | Date | string
+  }
+
   export type TenantCreateInput = {
     id?: string
     databaseName: string
@@ -4963,9 +7225,13 @@ export namespace Prisma {
     certSenha?: string | null
     certValidade?: Date | string | null
     cosmosApiKey?: string | null
+    mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    termsAcceptedAt?: Date | string | null
     users?: UserCreateNestedManyWithoutTenantInput
+    tenantIntegrations?: TenantIntegrationCreateNestedManyWithoutTenantInput
   }
 
   export type TenantUncheckedCreateInput = {
@@ -5002,9 +7268,13 @@ export namespace Prisma {
     certSenha?: string | null
     certValidade?: Date | string | null
     cosmosApiKey?: string | null
+    mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    termsAcceptedAt?: Date | string | null
     users?: UserUncheckedCreateNestedManyWithoutTenantInput
+    tenantIntegrations?: TenantIntegrationUncheckedCreateNestedManyWithoutTenantInput
   }
 
   export type TenantUpdateInput = {
@@ -5041,9 +7311,13 @@ export namespace Prisma {
     certSenha?: NullableStringFieldUpdateOperationsInput | string | null
     certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
+    mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     users?: UserUpdateManyWithoutTenantNestedInput
+    tenantIntegrations?: TenantIntegrationUpdateManyWithoutTenantNestedInput
   }
 
   export type TenantUncheckedUpdateInput = {
@@ -5080,9 +7354,13 @@ export namespace Prisma {
     certSenha?: NullableStringFieldUpdateOperationsInput | string | null
     certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
+    mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     users?: UserUncheckedUpdateManyWithoutTenantNestedInput
+    tenantIntegrations?: TenantIntegrationUncheckedUpdateManyWithoutTenantNestedInput
   }
 
   export type TenantCreateManyInput = {
@@ -5119,8 +7397,11 @@ export namespace Prisma {
     certSenha?: string | null
     certValidade?: Date | string | null
     cosmosApiKey?: string | null
+    mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    termsAcceptedAt?: Date | string | null
   }
 
   export type TenantUpdateManyMutationInput = {
@@ -5157,8 +7438,11 @@ export namespace Prisma {
     certSenha?: NullableStringFieldUpdateOperationsInput | string | null
     certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
+    mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type TenantUncheckedUpdateManyInput = {
@@ -5195,8 +7479,11 @@ export namespace Prisma {
     certSenha?: NullableStringFieldUpdateOperationsInput | string | null
     certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
+    mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type UserCreateInput = {
@@ -5387,6 +7674,131 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type ImageCreateInput = {
+    id?: string
+    data: Bytes
+    mimeType: string
+    createdAt?: Date | string
+  }
+
+  export type ImageUncheckedCreateInput = {
+    id?: string
+    data: Bytes
+    mimeType: string
+    createdAt?: Date | string
+  }
+
+  export type ImageUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    data?: BytesFieldUpdateOperationsInput | Bytes
+    mimeType?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ImageUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    data?: BytesFieldUpdateOperationsInput | Bytes
+    mimeType?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ImageCreateManyInput = {
+    id?: string
+    data: Bytes
+    mimeType: string
+    createdAt?: Date | string
+  }
+
+  export type ImageUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    data?: BytesFieldUpdateOperationsInput | Bytes
+    mimeType?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ImageUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    data?: BytesFieldUpdateOperationsInput | Bytes
+    mimeType?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TenantIntegrationCreateInput = {
+    id?: string
+    provider: string
+    status?: string
+    credentials: JsonNullValueInput | InputJsonValue
+    settings: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    tenant: TenantCreateNestedOneWithoutTenantIntegrationsInput
+  }
+
+  export type TenantIntegrationUncheckedCreateInput = {
+    id?: string
+    tenantId: string
+    provider: string
+    status?: string
+    credentials: JsonNullValueInput | InputJsonValue
+    settings: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TenantIntegrationUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    credentials?: JsonNullValueInput | InputJsonValue
+    settings?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    tenant?: TenantUpdateOneRequiredWithoutTenantIntegrationsNestedInput
+  }
+
+  export type TenantIntegrationUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    credentials?: JsonNullValueInput | InputJsonValue
+    settings?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TenantIntegrationCreateManyInput = {
+    id?: string
+    tenantId: string
+    provider: string
+    status?: string
+    credentials: JsonNullValueInput | InputJsonValue
+    settings: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TenantIntegrationUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    credentials?: JsonNullValueInput | InputJsonValue
+    settings?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TenantIntegrationUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    credentials?: JsonNullValueInput | InputJsonValue
+    settings?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[]
@@ -5474,6 +7886,17 @@ export namespace Prisma {
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
   }
 
+  export type DecimalNullableFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | null
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | null
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalNullableFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+  }
+
   export type DateTimeFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[]
@@ -5491,12 +7914,22 @@ export namespace Prisma {
     none?: UserWhereInput
   }
 
+  export type TenantIntegrationListRelationFilter = {
+    every?: TenantIntegrationWhereInput
+    some?: TenantIntegrationWhereInput
+    none?: TenantIntegrationWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
   }
 
   export type UserOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type TenantIntegrationOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -5540,14 +7973,18 @@ export namespace Prisma {
     certSenha?: SortOrder
     certValidade?: SortOrder
     cosmosApiKey?: SortOrder
+    mensalidadeValor?: SortOrder
+    mensalidadeVencimento?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    termsAcceptedAt?: SortOrder
   }
 
   export type TenantAvgOrderByAggregateInput = {
     crt?: SortOrder
     nfceSerie?: SortOrder
     nfceAmbiente?: SortOrder
+    mensalidadeValor?: SortOrder
   }
 
   export type TenantMaxOrderByAggregateInput = {
@@ -5583,8 +8020,11 @@ export namespace Prisma {
     certSenha?: SortOrder
     certValidade?: SortOrder
     cosmosApiKey?: SortOrder
+    mensalidadeValor?: SortOrder
+    mensalidadeVencimento?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    termsAcceptedAt?: SortOrder
   }
 
   export type TenantMinOrderByAggregateInput = {
@@ -5620,14 +8060,18 @@ export namespace Prisma {
     certSenha?: SortOrder
     certValidade?: SortOrder
     cosmosApiKey?: SortOrder
+    mensalidadeValor?: SortOrder
+    mensalidadeVencimento?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    termsAcceptedAt?: SortOrder
   }
 
   export type TenantSumOrderByAggregateInput = {
     crt?: SortOrder
     nfceSerie?: SortOrder
     nfceAmbiente?: SortOrder
+    mensalidadeValor?: SortOrder
   }
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
@@ -5738,6 +8182,22 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type DecimalNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | null
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | null
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalNullableWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedDecimalNullableFilter<$PrismaModel>
+    _sum?: NestedDecimalNullableFilter<$PrismaModel>
+    _min?: NestedDecimalNullableFilter<$PrismaModel>
+    _max?: NestedDecimalNullableFilter<$PrismaModel>
   }
 
   export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
@@ -5852,6 +8312,139 @@ export namespace Prisma {
     createdAt?: SortOrder
   }
 
+  export type BytesFilter<$PrismaModel = never> = {
+    equals?: Bytes | BytesFieldRefInput<$PrismaModel>
+    in?: Bytes[]
+    notIn?: Bytes[]
+    not?: NestedBytesFilter<$PrismaModel> | Bytes
+  }
+
+  export type ImageOrderByRelevanceInput = {
+    fields: ImageOrderByRelevanceFieldEnum | ImageOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type ImageCountOrderByAggregateInput = {
+    id?: SortOrder
+    data?: SortOrder
+    mimeType?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ImageMaxOrderByAggregateInput = {
+    id?: SortOrder
+    data?: SortOrder
+    mimeType?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ImageMinOrderByAggregateInput = {
+    id?: SortOrder
+    data?: SortOrder
+    mimeType?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type BytesWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Bytes | BytesFieldRefInput<$PrismaModel>
+    in?: Bytes[]
+    notIn?: Bytes[]
+    not?: NestedBytesWithAggregatesFilter<$PrismaModel> | Bytes
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBytesFilter<$PrismaModel>
+    _max?: NestedBytesFilter<$PrismaModel>
+  }
+  export type JsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue
+    lte?: InputJsonValue
+    gt?: InputJsonValue
+    gte?: InputJsonValue
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type TenantIntegrationOrderByRelevanceInput = {
+    fields: TenantIntegrationOrderByRelevanceFieldEnum | TenantIntegrationOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type TenantIntegrationTenantIdProviderCompoundUniqueInput = {
+    tenantId: string
+    provider: string
+  }
+
+  export type TenantIntegrationCountOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    provider?: SortOrder
+    status?: SortOrder
+    credentials?: SortOrder
+    settings?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type TenantIntegrationMaxOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    provider?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type TenantIntegrationMinOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    provider?: SortOrder
+    status?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+  export type JsonWithAggregatesFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue
+    lte?: InputJsonValue
+    gt?: InputJsonValue
+    gte?: InputJsonValue
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedJsonFilter<$PrismaModel>
+    _max?: NestedJsonFilter<$PrismaModel>
+  }
+
   export type UserCreateNestedManyWithoutTenantInput = {
     create?: XOR<UserCreateWithoutTenantInput, UserUncheckedCreateWithoutTenantInput> | UserCreateWithoutTenantInput[] | UserUncheckedCreateWithoutTenantInput[]
     connectOrCreate?: UserCreateOrConnectWithoutTenantInput | UserCreateOrConnectWithoutTenantInput[]
@@ -5859,11 +8452,25 @@ export namespace Prisma {
     connect?: UserWhereUniqueInput | UserWhereUniqueInput[]
   }
 
+  export type TenantIntegrationCreateNestedManyWithoutTenantInput = {
+    create?: XOR<TenantIntegrationCreateWithoutTenantInput, TenantIntegrationUncheckedCreateWithoutTenantInput> | TenantIntegrationCreateWithoutTenantInput[] | TenantIntegrationUncheckedCreateWithoutTenantInput[]
+    connectOrCreate?: TenantIntegrationCreateOrConnectWithoutTenantInput | TenantIntegrationCreateOrConnectWithoutTenantInput[]
+    createMany?: TenantIntegrationCreateManyTenantInputEnvelope
+    connect?: TenantIntegrationWhereUniqueInput | TenantIntegrationWhereUniqueInput[]
+  }
+
   export type UserUncheckedCreateNestedManyWithoutTenantInput = {
     create?: XOR<UserCreateWithoutTenantInput, UserUncheckedCreateWithoutTenantInput> | UserCreateWithoutTenantInput[] | UserUncheckedCreateWithoutTenantInput[]
     connectOrCreate?: UserCreateOrConnectWithoutTenantInput | UserCreateOrConnectWithoutTenantInput[]
     createMany?: UserCreateManyTenantInputEnvelope
     connect?: UserWhereUniqueInput | UserWhereUniqueInput[]
+  }
+
+  export type TenantIntegrationUncheckedCreateNestedManyWithoutTenantInput = {
+    create?: XOR<TenantIntegrationCreateWithoutTenantInput, TenantIntegrationUncheckedCreateWithoutTenantInput> | TenantIntegrationCreateWithoutTenantInput[] | TenantIntegrationUncheckedCreateWithoutTenantInput[]
+    connectOrCreate?: TenantIntegrationCreateOrConnectWithoutTenantInput | TenantIntegrationCreateOrConnectWithoutTenantInput[]
+    createMany?: TenantIntegrationCreateManyTenantInputEnvelope
+    connect?: TenantIntegrationWhereUniqueInput | TenantIntegrationWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -5894,6 +8501,14 @@ export namespace Prisma {
     set?: Date | string | null
   }
 
+  export type NullableDecimalFieldUpdateOperationsInput = {
+    set?: Decimal | DecimalJsLike | number | string | null
+    increment?: Decimal | DecimalJsLike | number | string
+    decrement?: Decimal | DecimalJsLike | number | string
+    multiply?: Decimal | DecimalJsLike | number | string
+    divide?: Decimal | DecimalJsLike | number | string
+  }
+
   export type DateTimeFieldUpdateOperationsInput = {
     set?: Date | string
   }
@@ -5912,6 +8527,20 @@ export namespace Prisma {
     deleteMany?: UserScalarWhereInput | UserScalarWhereInput[]
   }
 
+  export type TenantIntegrationUpdateManyWithoutTenantNestedInput = {
+    create?: XOR<TenantIntegrationCreateWithoutTenantInput, TenantIntegrationUncheckedCreateWithoutTenantInput> | TenantIntegrationCreateWithoutTenantInput[] | TenantIntegrationUncheckedCreateWithoutTenantInput[]
+    connectOrCreate?: TenantIntegrationCreateOrConnectWithoutTenantInput | TenantIntegrationCreateOrConnectWithoutTenantInput[]
+    upsert?: TenantIntegrationUpsertWithWhereUniqueWithoutTenantInput | TenantIntegrationUpsertWithWhereUniqueWithoutTenantInput[]
+    createMany?: TenantIntegrationCreateManyTenantInputEnvelope
+    set?: TenantIntegrationWhereUniqueInput | TenantIntegrationWhereUniqueInput[]
+    disconnect?: TenantIntegrationWhereUniqueInput | TenantIntegrationWhereUniqueInput[]
+    delete?: TenantIntegrationWhereUniqueInput | TenantIntegrationWhereUniqueInput[]
+    connect?: TenantIntegrationWhereUniqueInput | TenantIntegrationWhereUniqueInput[]
+    update?: TenantIntegrationUpdateWithWhereUniqueWithoutTenantInput | TenantIntegrationUpdateWithWhereUniqueWithoutTenantInput[]
+    updateMany?: TenantIntegrationUpdateManyWithWhereWithoutTenantInput | TenantIntegrationUpdateManyWithWhereWithoutTenantInput[]
+    deleteMany?: TenantIntegrationScalarWhereInput | TenantIntegrationScalarWhereInput[]
+  }
+
   export type UserUncheckedUpdateManyWithoutTenantNestedInput = {
     create?: XOR<UserCreateWithoutTenantInput, UserUncheckedCreateWithoutTenantInput> | UserCreateWithoutTenantInput[] | UserUncheckedCreateWithoutTenantInput[]
     connectOrCreate?: UserCreateOrConnectWithoutTenantInput | UserCreateOrConnectWithoutTenantInput[]
@@ -5926,6 +8555,20 @@ export namespace Prisma {
     deleteMany?: UserScalarWhereInput | UserScalarWhereInput[]
   }
 
+  export type TenantIntegrationUncheckedUpdateManyWithoutTenantNestedInput = {
+    create?: XOR<TenantIntegrationCreateWithoutTenantInput, TenantIntegrationUncheckedCreateWithoutTenantInput> | TenantIntegrationCreateWithoutTenantInput[] | TenantIntegrationUncheckedCreateWithoutTenantInput[]
+    connectOrCreate?: TenantIntegrationCreateOrConnectWithoutTenantInput | TenantIntegrationCreateOrConnectWithoutTenantInput[]
+    upsert?: TenantIntegrationUpsertWithWhereUniqueWithoutTenantInput | TenantIntegrationUpsertWithWhereUniqueWithoutTenantInput[]
+    createMany?: TenantIntegrationCreateManyTenantInputEnvelope
+    set?: TenantIntegrationWhereUniqueInput | TenantIntegrationWhereUniqueInput[]
+    disconnect?: TenantIntegrationWhereUniqueInput | TenantIntegrationWhereUniqueInput[]
+    delete?: TenantIntegrationWhereUniqueInput | TenantIntegrationWhereUniqueInput[]
+    connect?: TenantIntegrationWhereUniqueInput | TenantIntegrationWhereUniqueInput[]
+    update?: TenantIntegrationUpdateWithWhereUniqueWithoutTenantInput | TenantIntegrationUpdateWithWhereUniqueWithoutTenantInput[]
+    updateMany?: TenantIntegrationUpdateManyWithWhereWithoutTenantInput | TenantIntegrationUpdateManyWithWhereWithoutTenantInput[]
+    deleteMany?: TenantIntegrationScalarWhereInput | TenantIntegrationScalarWhereInput[]
+  }
+
   export type TenantCreateNestedOneWithoutUsersInput = {
     create?: XOR<TenantCreateWithoutUsersInput, TenantUncheckedCreateWithoutUsersInput>
     connectOrCreate?: TenantCreateOrConnectWithoutUsersInput
@@ -5938,6 +8581,24 @@ export namespace Prisma {
     upsert?: TenantUpsertWithoutUsersInput
     connect?: TenantWhereUniqueInput
     update?: XOR<XOR<TenantUpdateToOneWithWhereWithoutUsersInput, TenantUpdateWithoutUsersInput>, TenantUncheckedUpdateWithoutUsersInput>
+  }
+
+  export type BytesFieldUpdateOperationsInput = {
+    set?: Bytes
+  }
+
+  export type TenantCreateNestedOneWithoutTenantIntegrationsInput = {
+    create?: XOR<TenantCreateWithoutTenantIntegrationsInput, TenantUncheckedCreateWithoutTenantIntegrationsInput>
+    connectOrCreate?: TenantCreateOrConnectWithoutTenantIntegrationsInput
+    connect?: TenantWhereUniqueInput
+  }
+
+  export type TenantUpdateOneRequiredWithoutTenantIntegrationsNestedInput = {
+    create?: XOR<TenantCreateWithoutTenantIntegrationsInput, TenantUncheckedCreateWithoutTenantIntegrationsInput>
+    connectOrCreate?: TenantCreateOrConnectWithoutTenantIntegrationsInput
+    upsert?: TenantUpsertWithoutTenantIntegrationsInput
+    connect?: TenantWhereUniqueInput
+    update?: XOR<XOR<TenantUpdateToOneWithWhereWithoutTenantIntegrationsInput, TenantUpdateWithoutTenantIntegrationsInput>, TenantUncheckedUpdateWithoutTenantIntegrationsInput>
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -6002,6 +8663,17 @@ export namespace Prisma {
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+  }
+
+  export type NestedDecimalNullableFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | null
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | null
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalNullableFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
   }
 
   export type NestedDateTimeFilter<$PrismaModel = never> = {
@@ -6144,6 +8816,22 @@ export namespace Prisma {
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
 
+  export type NestedDecimalNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel> | null
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | null
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | null
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalNullableWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedDecimalNullableFilter<$PrismaModel>
+    _sum?: NestedDecimalNullableFilter<$PrismaModel>
+    _min?: NestedDecimalNullableFilter<$PrismaModel>
+    _max?: NestedDecimalNullableFilter<$PrismaModel>
+  }
+
   export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[]
@@ -6156,6 +8844,46 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedDateTimeFilter<$PrismaModel>
     _max?: NestedDateTimeFilter<$PrismaModel>
+  }
+
+  export type NestedBytesFilter<$PrismaModel = never> = {
+    equals?: Bytes | BytesFieldRefInput<$PrismaModel>
+    in?: Bytes[]
+    notIn?: Bytes[]
+    not?: NestedBytesFilter<$PrismaModel> | Bytes
+  }
+
+  export type NestedBytesWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Bytes | BytesFieldRefInput<$PrismaModel>
+    in?: Bytes[]
+    notIn?: Bytes[]
+    not?: NestedBytesWithAggregatesFilter<$PrismaModel> | Bytes
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBytesFilter<$PrismaModel>
+    _max?: NestedBytesFilter<$PrismaModel>
+  }
+  export type NestedJsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue
+    lte?: InputJsonValue
+    gt?: InputJsonValue
+    gte?: InputJsonValue
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
   export type UserCreateWithoutTenantInput = {
@@ -6192,6 +8920,36 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type TenantIntegrationCreateWithoutTenantInput = {
+    id?: string
+    provider: string
+    status?: string
+    credentials: JsonNullValueInput | InputJsonValue
+    settings: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TenantIntegrationUncheckedCreateWithoutTenantInput = {
+    id?: string
+    provider: string
+    status?: string
+    credentials: JsonNullValueInput | InputJsonValue
+    settings: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TenantIntegrationCreateOrConnectWithoutTenantInput = {
+    where: TenantIntegrationWhereUniqueInput
+    create: XOR<TenantIntegrationCreateWithoutTenantInput, TenantIntegrationUncheckedCreateWithoutTenantInput>
+  }
+
+  export type TenantIntegrationCreateManyTenantInputEnvelope = {
+    data: TenantIntegrationCreateManyTenantInput | TenantIntegrationCreateManyTenantInput[]
+    skipDuplicates?: boolean
+  }
+
   export type UserUpsertWithWhereUniqueWithoutTenantInput = {
     where: UserWhereUniqueInput
     update: XOR<UserUpdateWithoutTenantInput, UserUncheckedUpdateWithoutTenantInput>
@@ -6222,6 +8980,36 @@ export namespace Prisma {
     active?: BoolFilter<"User"> | boolean
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
+  }
+
+  export type TenantIntegrationUpsertWithWhereUniqueWithoutTenantInput = {
+    where: TenantIntegrationWhereUniqueInput
+    update: XOR<TenantIntegrationUpdateWithoutTenantInput, TenantIntegrationUncheckedUpdateWithoutTenantInput>
+    create: XOR<TenantIntegrationCreateWithoutTenantInput, TenantIntegrationUncheckedCreateWithoutTenantInput>
+  }
+
+  export type TenantIntegrationUpdateWithWhereUniqueWithoutTenantInput = {
+    where: TenantIntegrationWhereUniqueInput
+    data: XOR<TenantIntegrationUpdateWithoutTenantInput, TenantIntegrationUncheckedUpdateWithoutTenantInput>
+  }
+
+  export type TenantIntegrationUpdateManyWithWhereWithoutTenantInput = {
+    where: TenantIntegrationScalarWhereInput
+    data: XOR<TenantIntegrationUpdateManyMutationInput, TenantIntegrationUncheckedUpdateManyWithoutTenantInput>
+  }
+
+  export type TenantIntegrationScalarWhereInput = {
+    AND?: TenantIntegrationScalarWhereInput | TenantIntegrationScalarWhereInput[]
+    OR?: TenantIntegrationScalarWhereInput[]
+    NOT?: TenantIntegrationScalarWhereInput | TenantIntegrationScalarWhereInput[]
+    id?: StringFilter<"TenantIntegration"> | string
+    tenantId?: StringFilter<"TenantIntegration"> | string
+    provider?: StringFilter<"TenantIntegration"> | string
+    status?: StringFilter<"TenantIntegration"> | string
+    credentials?: JsonFilter<"TenantIntegration">
+    settings?: JsonFilter<"TenantIntegration">
+    createdAt?: DateTimeFilter<"TenantIntegration"> | Date | string
+    updatedAt?: DateTimeFilter<"TenantIntegration"> | Date | string
   }
 
   export type TenantCreateWithoutUsersInput = {
@@ -6258,8 +9046,12 @@ export namespace Prisma {
     certSenha?: string | null
     certValidade?: Date | string | null
     cosmosApiKey?: string | null
+    mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    termsAcceptedAt?: Date | string | null
+    tenantIntegrations?: TenantIntegrationCreateNestedManyWithoutTenantInput
   }
 
   export type TenantUncheckedCreateWithoutUsersInput = {
@@ -6296,8 +9088,12 @@ export namespace Prisma {
     certSenha?: string | null
     certValidade?: Date | string | null
     cosmosApiKey?: string | null
+    mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    termsAcceptedAt?: Date | string | null
+    tenantIntegrations?: TenantIntegrationUncheckedCreateNestedManyWithoutTenantInput
   }
 
   export type TenantCreateOrConnectWithoutUsersInput = {
@@ -6350,8 +9146,12 @@ export namespace Prisma {
     certSenha?: NullableStringFieldUpdateOperationsInput | string | null
     certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
+    mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tenantIntegrations?: TenantIntegrationUpdateManyWithoutTenantNestedInput
   }
 
   export type TenantUncheckedUpdateWithoutUsersInput = {
@@ -6388,8 +9188,196 @@ export namespace Prisma {
     certSenha?: NullableStringFieldUpdateOperationsInput | string | null
     certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
+    mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tenantIntegrations?: TenantIntegrationUncheckedUpdateManyWithoutTenantNestedInput
+  }
+
+  export type TenantCreateWithoutTenantIntegrationsInput = {
+    id?: string
+    databaseName: string
+    databaseUrl: string
+    name?: string
+    status?: string
+    logoUrl?: string | null
+    modulos?: NullableJsonNullValueInput | InputJsonValue
+    razaoSocial?: string | null
+    nomeFantasia?: string | null
+    cnpj?: string | null
+    ie?: string | null
+    im?: string | null
+    crt?: number
+    logradouro?: string | null
+    numero?: string | null
+    complemento?: string | null
+    bairro?: string | null
+    municipio?: string | null
+    codMunicipio?: string | null
+    uf?: string | null
+    cep?: string | null
+    telefone?: string | null
+    emailContador?: string | null
+    nfceAtivo?: boolean
+    nfceAutoSync?: boolean
+    nfceSerie?: number
+    nfceAmbiente?: number
+    nfceCsc?: string | null
+    nfceIdCsc?: string | null
+    certPfx?: Bytes | null
+    certSenha?: string | null
+    certValidade?: Date | string | null
+    cosmosApiKey?: string | null
+    mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    termsAcceptedAt?: Date | string | null
+    users?: UserCreateNestedManyWithoutTenantInput
+  }
+
+  export type TenantUncheckedCreateWithoutTenantIntegrationsInput = {
+    id?: string
+    databaseName: string
+    databaseUrl: string
+    name?: string
+    status?: string
+    logoUrl?: string | null
+    modulos?: NullableJsonNullValueInput | InputJsonValue
+    razaoSocial?: string | null
+    nomeFantasia?: string | null
+    cnpj?: string | null
+    ie?: string | null
+    im?: string | null
+    crt?: number
+    logradouro?: string | null
+    numero?: string | null
+    complemento?: string | null
+    bairro?: string | null
+    municipio?: string | null
+    codMunicipio?: string | null
+    uf?: string | null
+    cep?: string | null
+    telefone?: string | null
+    emailContador?: string | null
+    nfceAtivo?: boolean
+    nfceAutoSync?: boolean
+    nfceSerie?: number
+    nfceAmbiente?: number
+    nfceCsc?: string | null
+    nfceIdCsc?: string | null
+    certPfx?: Bytes | null
+    certSenha?: string | null
+    certValidade?: Date | string | null
+    cosmosApiKey?: string | null
+    mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    termsAcceptedAt?: Date | string | null
+    users?: UserUncheckedCreateNestedManyWithoutTenantInput
+  }
+
+  export type TenantCreateOrConnectWithoutTenantIntegrationsInput = {
+    where: TenantWhereUniqueInput
+    create: XOR<TenantCreateWithoutTenantIntegrationsInput, TenantUncheckedCreateWithoutTenantIntegrationsInput>
+  }
+
+  export type TenantUpsertWithoutTenantIntegrationsInput = {
+    update: XOR<TenantUpdateWithoutTenantIntegrationsInput, TenantUncheckedUpdateWithoutTenantIntegrationsInput>
+    create: XOR<TenantCreateWithoutTenantIntegrationsInput, TenantUncheckedCreateWithoutTenantIntegrationsInput>
+    where?: TenantWhereInput
+  }
+
+  export type TenantUpdateToOneWithWhereWithoutTenantIntegrationsInput = {
+    where?: TenantWhereInput
+    data: XOR<TenantUpdateWithoutTenantIntegrationsInput, TenantUncheckedUpdateWithoutTenantIntegrationsInput>
+  }
+
+  export type TenantUpdateWithoutTenantIntegrationsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    databaseName?: StringFieldUpdateOperationsInput | string
+    databaseUrl?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    modulos?: NullableJsonNullValueInput | InputJsonValue
+    razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
+    cnpj?: NullableStringFieldUpdateOperationsInput | string | null
+    ie?: NullableStringFieldUpdateOperationsInput | string | null
+    im?: NullableStringFieldUpdateOperationsInput | string | null
+    crt?: IntFieldUpdateOperationsInput | number
+    logradouro?: NullableStringFieldUpdateOperationsInput | string | null
+    numero?: NullableStringFieldUpdateOperationsInput | string | null
+    complemento?: NullableStringFieldUpdateOperationsInput | string | null
+    bairro?: NullableStringFieldUpdateOperationsInput | string | null
+    municipio?: NullableStringFieldUpdateOperationsInput | string | null
+    codMunicipio?: NullableStringFieldUpdateOperationsInput | string | null
+    uf?: NullableStringFieldUpdateOperationsInput | string | null
+    cep?: NullableStringFieldUpdateOperationsInput | string | null
+    telefone?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContador?: NullableStringFieldUpdateOperationsInput | string | null
+    nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
+    nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
+    nfceSerie?: IntFieldUpdateOperationsInput | number
+    nfceAmbiente?: IntFieldUpdateOperationsInput | number
+    nfceCsc?: NullableStringFieldUpdateOperationsInput | string | null
+    nfceIdCsc?: NullableStringFieldUpdateOperationsInput | string | null
+    certPfx?: NullableBytesFieldUpdateOperationsInput | Bytes | null
+    certSenha?: NullableStringFieldUpdateOperationsInput | string | null
+    certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
+    mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    users?: UserUpdateManyWithoutTenantNestedInput
+  }
+
+  export type TenantUncheckedUpdateWithoutTenantIntegrationsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    databaseName?: StringFieldUpdateOperationsInput | string
+    databaseUrl?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    modulos?: NullableJsonNullValueInput | InputJsonValue
+    razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
+    cnpj?: NullableStringFieldUpdateOperationsInput | string | null
+    ie?: NullableStringFieldUpdateOperationsInput | string | null
+    im?: NullableStringFieldUpdateOperationsInput | string | null
+    crt?: IntFieldUpdateOperationsInput | number
+    logradouro?: NullableStringFieldUpdateOperationsInput | string | null
+    numero?: NullableStringFieldUpdateOperationsInput | string | null
+    complemento?: NullableStringFieldUpdateOperationsInput | string | null
+    bairro?: NullableStringFieldUpdateOperationsInput | string | null
+    municipio?: NullableStringFieldUpdateOperationsInput | string | null
+    codMunicipio?: NullableStringFieldUpdateOperationsInput | string | null
+    uf?: NullableStringFieldUpdateOperationsInput | string | null
+    cep?: NullableStringFieldUpdateOperationsInput | string | null
+    telefone?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContador?: NullableStringFieldUpdateOperationsInput | string | null
+    nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
+    nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
+    nfceSerie?: IntFieldUpdateOperationsInput | number
+    nfceAmbiente?: IntFieldUpdateOperationsInput | number
+    nfceCsc?: NullableStringFieldUpdateOperationsInput | string | null
+    nfceIdCsc?: NullableStringFieldUpdateOperationsInput | string | null
+    certPfx?: NullableBytesFieldUpdateOperationsInput | Bytes | null
+    certSenha?: NullableStringFieldUpdateOperationsInput | string | null
+    certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
+    mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    users?: UserUncheckedUpdateManyWithoutTenantNestedInput
   }
 
   export type UserCreateManyTenantInput = {
@@ -6400,6 +9388,16 @@ export namespace Prisma {
     role?: string
     pin?: string | null
     active?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TenantIntegrationCreateManyTenantInput = {
+    id?: string
+    provider: string
+    status?: string
+    credentials: JsonNullValueInput | InputJsonValue
+    settings: JsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -6436,6 +9434,36 @@ export namespace Prisma {
     role?: StringFieldUpdateOperationsInput | string
     pin?: NullableStringFieldUpdateOperationsInput | string | null
     active?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TenantIntegrationUpdateWithoutTenantInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    credentials?: JsonNullValueInput | InputJsonValue
+    settings?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TenantIntegrationUncheckedUpdateWithoutTenantInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    credentials?: JsonNullValueInput | InputJsonValue
+    settings?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TenantIntegrationUncheckedUpdateManyWithoutTenantInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    credentials?: JsonNullValueInput | InputJsonValue
+    settings?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

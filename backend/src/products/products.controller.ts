@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, Patch, Query, UseInterceptors, UploadedFile, Request, BadRequestException } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards, Patch, Query, UseInterceptors, UploadedFile, UploadedFiles, Request, BadRequestException } from '@nestjs/common';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ProductsService, TenantSettingsDto } from './products.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -45,6 +45,16 @@ export class ProductsController {
   ) {
     if (!file) throw new BadRequestException('Arquivo não enviado.');
     return this.productsService.uploadPhoto(req.user.tenantId, file);
+  }
+
+  @Post('bulk-images')
+  @UseInterceptors(FilesInterceptor('files', 300))
+  async bulkImageUpload(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Request() req: any,
+  ) {
+    if (!files || files.length === 0) throw new BadRequestException('Nenhum arquivo enviado.');
+    return this.productsService.bulkImageUpload(req.user.tenantId, files);
   }
 
   @Post('bulk')
@@ -93,5 +103,29 @@ export class ProductsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.productsService.remove(id);
+  }
+
+  /** Exporta lista de produtos para contagem de inventário */
+  @Get('inventory/export')
+  inventoryExport(
+    @Query('categoryIds') categoryIds?: string,
+    @Query('productIds') productIds?: string,
+  ) {
+    return this.productsService.inventoryExport({
+      categoryIds: categoryIds ? categoryIds.split(',').filter(Boolean) : undefined,
+      productIds: productIds ? productIds.split(',').filter(Boolean) : undefined,
+    });
+  }
+
+  /** Importa resultado da contagem física e atualiza o estoque */
+  @Post('inventory/import')
+  inventoryImport(@Body('items') items: { productId: string; newStock: number }[]) {
+    return this.productsService.inventoryImport(items);
+  }
+
+  /** Retorna histórico de contagens físicas agrupado por sessão */
+  @Get('inventory/history')
+  inventoryHistory() {
+    return this.productsService.inventoryHistory();
   }
 }

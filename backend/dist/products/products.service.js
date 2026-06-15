@@ -14,6 +14,7 @@ const common_1 = require("@nestjs/common");
 const tenant_prisma_service_1 = require("../prisma/tenant-prisma.service");
 const tenant_context_service_1 = require("../prisma/tenant-context.service");
 const client_1 = require("@prisma/client");
+const integrations_service_1 = require("../integrations/integrations.service");
 const heart_prisma_service_1 = require("../prisma/heart-prisma.service");
 let ProductsService = class ProductsService {
     invalidateCache(tenantId) {
@@ -23,10 +24,11 @@ let ProductsService = class ProductsService {
             }
         }
     }
-    constructor(tenantManager, tenantContext, heartPrisma) {
+    constructor(tenantManager, tenantContext, heartPrisma, integrationsService) {
         this.tenantManager = tenantManager;
         this.tenantContext = tenantContext;
         this.heartPrisma = heartPrisma;
+        this.integrationsService = integrationsService;
         this.catalogCache = new Map();
         this.CACHE_TTL = 10 * 60 * 1000;
     }
@@ -102,6 +104,9 @@ let ProductsService = class ProductsService {
         }
         throw new common_1.NotFoundException('Produto não encontrado em nenhum catálogo.');
     }
+    clearCache() {
+        this.catalogCache.clear();
+    }
     async findAll(page = 1, limit = 50) {
         const { tenantId } = this.tenantContext.get();
         const cacheKey = `${tenantId}_p_${page}_l_${limit}`;
@@ -118,6 +123,9 @@ let ProductsService = class ProductsService {
                 include: {
                     category: true,
                     grupoTributacao: true,
+                    supplierProducts: {
+                        select: { supplierId: true }
+                    },
                     modifierGroups: {
                         include: {
                             options: {
@@ -331,6 +339,9 @@ let ProductsService = class ProductsService {
             return product;
         });
         this.invalidateCache(this.tenantContext.get().tenantId);
+        if (sanitized.stock !== undefined && Number(sanitized.stock) !== Number(oldProduct.stock)) {
+            this.integrationsService.syncProductStock(this.tenantContext.get().tenantId, [id]).catch(e => console.error(e));
+        }
         return updatedProduct;
     }
     async remove(id) {
@@ -353,12 +364,119 @@ let ProductsService = class ProductsService {
         this.invalidateCache(this.tenantContext.get().tenantId);
         return result;
     }
+    async inventoryHistory() {
+        const prisma = await this.getPrisma();
+        const logs = await prisma.inventoryLog.findMany({
+            where: { reason: { contains: 'Contagem Física' } },
+            include: { product: { select: { name: true } } },
+            orderBy: { createdAt: 'desc' },
+            take: 2000,
+        });
+        const sessions = {};
+        for (const log of logs) {
+            const d = new Date(log.createdAt);
+            const windowMinutes = Math.floor(d.getMinutes() / 30) * 30;
+            const sessionKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}-${windowMinutes}`;
+            if (!sessions[sessionKey]) {
+                sessions[sessionKey] = {
+                    sessionId: sessionKey,
+                    date: log.createdAt,
+                    totalProducts: 0,
+                    increases: 0,
+                    decreases: 0,
+                    unchanged: 0,
+                    items: [],
+                };
+            }
+            const beforeMatch = log.reason?.match(/Antes:\s*([\d.]+)/);
+            const afterMatch = log.reason?.match(/Depois:\s*([\d.]+)/);
+            const before = beforeMatch ? parseFloat(beforeMatch[1]) : 0;
+            const after = afterMatch ? parseFloat(afterMatch[1]) : 0;
+            const diff = after - before;
+            sessions[sessionKey].totalProducts++;
+            if (diff > 0)
+                sessions[sessionKey].increases++;
+            else if (diff < 0)
+                sessions[sessionKey].decreases++;
+            else
+                sessions[sessionKey].unchanged++;
+            sessions[sessionKey].items.push({
+                name: log.product?.name || 'Desconhecido',
+                before,
+                after,
+                diff,
+            });
+        }
+        return Object.values(sessions).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+    async inventoryExport(filters) {
+        const prisma = await this.getPrisma();
+        const where = { active: true };
+        if (filters.productIds && filters.productIds.length > 0) {
+            where.id = { in: filters.productIds };
+        }
+        else if (filters.categoryIds && filters.categoryIds.length > 0) {
+            where.categoryId = { in: filters.categoryIds };
+        }
+        const products = await prisma.product.findMany({
+            where,
+            include: { category: true },
+            orderBy: [{ category: { name: 'asc' } }, { name: 'asc' }],
+        });
+        return products.map((p) => ({
+            id: p.id,
+            shortCode: p.shortCode || '',
+            name: p.name,
+            category: p.category?.name || '',
+            unit: p.unit || 'UN',
+            stock: Number(p.stock),
+        }));
+    }
+    async inventoryImport(items) {
+        const prisma = await this.getPrisma();
+        const results = [];
+        const errors = [];
+        for (const item of items) {
+            if (item.newStock === null || item.newStock === undefined || isNaN(item.newStock)) {
+                continue;
+            }
+            try {
+                await prisma.$transaction(async (tx) => {
+                    const product = await tx.product.findUnique({ where: { id: item.productId } });
+                    if (!product)
+                        throw new Error('Produto não encontrado');
+                    const before = Number(product.stock);
+                    const after = Number(item.newStock);
+                    const diff = after - before;
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: { stock: new client_1.Prisma.Decimal(after) },
+                    });
+                    await tx.inventoryLog.create({
+                        data: {
+                            productId: item.productId,
+                            type: diff >= 0 ? 'IN' : 'OUT',
+                            quantity: Math.abs(diff),
+                            costPrice: Number(product.priceCost),
+                            reason: `Ajuste de Inventário (Contagem Física) — Antes: ${before}, Depois: ${after}`,
+                        },
+                    });
+                    results.push({ productId: item.productId, name: product.name, before, after });
+                });
+            }
+            catch (err) {
+                errors.push({ productId: item.productId, error: err.message });
+            }
+        }
+        this.invalidateCache(this.tenantContext.get().tenantId);
+        return { updated: results.length, errors, results };
+    }
     async addStock(productId, quantity, costPrice, reason) {
         if (quantity <= 0) {
             throw new common_1.BadRequestException('A quantidade de entrada deve ser maior que zero.');
         }
         const prisma = await this.getPrisma();
-        return prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx) => {
             const product = await tx.product.findUnique({ where: { id: productId } });
             if (!product)
                 throw new common_1.NotFoundException('Produto não encontrado.');
@@ -389,6 +507,9 @@ let ProductsService = class ProductsService {
             });
             return { product: updated, quantityAdded: quantity };
         });
+        this.invalidateCache(this.tenantContext.get().tenantId);
+        this.integrationsService.syncProductStock(this.tenantContext.get().tenantId, [productId]).catch(e => console.error(e));
+        return result;
     }
     async bulkEntry(items) {
         const prisma = await this.getPrisma();
@@ -533,18 +654,14 @@ let ProductsService = class ProductsService {
         return { allowNegativeStock: settings.allowNegativeStock };
     }
     async uploadPhoto(tenantId, file) {
-        const fs = require('fs');
-        const crypto = require('crypto');
-        const path = require('path');
-        const dir = path.join(process.cwd(), 'uploads', 'products');
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
-        }
-        const ext = path.extname(file.originalname);
-        const filename = `${tenantId}_${crypto.randomBytes(8).toString('hex')}${ext}`;
-        const filePath = path.join(dir, filename);
-        fs.writeFileSync(filePath, file.buffer);
-        const imageUrl = `/api/products/uploads/images/${filename}`;
+        const prisma = await this.getPrisma();
+        const image = await this.heartPrisma.image.create({
+            data: {
+                data: Buffer.from(file.buffer),
+                mimeType: file.mimetype,
+            }
+        });
+        const imageUrl = `/api/products/uploads/images/${image.id}`;
         return { imageUrl };
     }
     async getProductLots(productId) {
@@ -567,6 +684,7 @@ exports.ProductsService = ProductsService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [tenant_prisma_service_1.TenantConnectionManager,
         tenant_context_service_1.TenantContextService,
-        heart_prisma_service_1.HeartPrismaService])
+        heart_prisma_service_1.HeartPrismaService,
+        integrations_service_1.IntegrationsService])
 ], ProductsService);
 //# sourceMappingURL=products.service.js.map

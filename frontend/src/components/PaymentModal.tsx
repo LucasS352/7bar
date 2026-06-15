@@ -15,13 +15,15 @@ import {
 type PayMode = 'simple' | 'nfce';
 type NfceStatus = 'pendente' | 'autorizada' | 'rejeitada' | 'nao_emitida' | null;
 
-const METHOD_CONFIG = [
+const BASE_METHOD_CONFIG = [
   { id: 'dinheiro', icon: Banknote,   label: 'Dinheiro', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 ring-emerald-500 hover:border-emerald-500' },
   { id: 'pix',     icon: QrCode,     label: 'Pix',      color: 'bg-teal-500/10 text-teal-400 border-teal-500/20 ring-teal-500 hover:border-teal-500' },
   { id: 'credito', icon: CreditCard, label: 'Crédito',  color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20 ring-indigo-500 hover:border-indigo-500' },
   { id: 'debito',  icon: CreditCard, label: 'Débito',   color: 'bg-sky-500/10 text-sky-400 border-sky-500/20 ring-sky-500 hover:border-sky-500' },
   { id: 'consumo_funcionario', icon: User, label: 'Consumo Colaborador', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20 ring-amber-500 hover:border-amber-500' }
 ];
+
+const CUSTOM_COLOR = 'bg-purple-500/10 text-purple-400 border-purple-500/20 ring-purple-500 hover:border-purple-500';
 
 const METHOD_NAMES: Record<string, string> = { dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito', consumo_funcionario: 'Consumo Colaborador' };
 
@@ -53,11 +55,13 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
   const isNfceEnabled = modules.nfce !== false;
 
-  const [payments, setPayments] = useState<{ id: string; method: string; value: number; given: number }[]>([]);
-  const [method, setMethod] = useState<'dinheiro' | 'pix' | 'credito' | 'debito' | 'consumo_funcionario'>('dinheiro');
+  const [payments, setPayments] = useState<{ id: string; method: string; label?: string; value: number; given: number }[]>([]);
+  const [method, setMethod] = useState<string>('dinheiro');
+  const [customMethods, setCustomMethods] = useState<{ id: string; name: string; hasVariablePricing?: boolean }[]>([]);
   const [operatorsList, setOperatorsList] = useState<{ id: string; name: string }[]>([]);
   const [selectedOperatorId, setSelectedOperatorId] = useState('');
   const [inputValue, setInputValue] = useState('');
+  const [variablePrices, setVariablePrices] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [payMode, setPayMode] = useState<PayMode>('simple');
   const [showConsumerForm, setShowConsumerForm] = useState(false);
@@ -221,6 +225,10 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         .then(res => setOperatorsList(res.data || []))
         .catch(console.error);
 
+      api.get('/payment-methods')
+        .then(res => setCustomMethods((res.data || []).filter((m: any) => m.active)))
+        .catch(console.error);
+
       // Remove focus from the background search bar to prevent accidental typing
       setTimeout(() => {
         if (document.activeElement instanceof HTMLElement) {
@@ -231,6 +239,23 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
   useEffect(() => { setInputValue(remaining > 0 ? remaining.toFixed(2) : ''); }, [remaining]);
+
+  useEffect(() => {
+    const selectedCustom = customMethods.find(cm => cm.id === method);
+    if (selectedCustom?.hasVariablePricing) {
+      api.get(`/payment-methods/${method}/prices`).then(res => {
+        const priceMap: Record<string, number> = {};
+        // Use standard cart price as fallback, override with saved prices if any
+        items.forEach(item => { priceMap[item.id] = Number(item.priceSell); });
+        res.data.forEach((p: any) => {
+          if (priceMap[p.productId] !== undefined) priceMap[p.productId] = Number(p.price);
+        });
+        setVariablePrices(priceMap);
+      }).catch(console.error);
+    } else {
+      setVariablePrices({});
+    }
+  }, [method, customMethods, items]);
 
   useEffect(() => {
     if (isOpen && (saleResult || savedOffline) && !nfcePolling) {
@@ -249,12 +274,53 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     if (!isOpen || saleResult || savedOffline) return;
     const handler = (e: KeyboardEvent) => {
       const activeIsInput = document.activeElement?.tagName.toLowerCase() === 'input';
-      
-      if (!activeIsInput) {
+      const activeIsSelect = document.activeElement?.tagName.toLowerCase() === 'select';
+
+      if (!activeIsInput && !activeIsSelect) {
+        // Atalhos numéricos para métodos padrão
         if (e.key === '1') { e.preventDefault(); setMethod('dinheiro'); document.getElementById('value-input')?.focus(); }
-        if (e.key === '2') { e.preventDefault(); setMethod('pix'); document.getElementById('value-input')?.focus(); }
-        if (e.key === '3') { e.preventDefault(); setMethod('credito'); document.getElementById('value-input')?.focus(); }
-        if (e.key === '4') { e.preventDefault(); setMethod('debito'); document.getElementById('value-input')?.focus(); }
+        if (e.key === '2') { e.preventDefault(); setMethod('pix');      document.getElementById('value-input')?.focus(); }
+        if (e.key === '3') { e.preventDefault(); setMethod('credito');  document.getElementById('value-input')?.focus(); }
+        if (e.key === '4') { e.preventDefault(); setMethod('debito');   document.getElementById('value-input')?.focus(); }
+
+        // Navegação por setas entre métodos de pagamento
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          const allMethods = [
+            ...BASE_METHOD_CONFIG.map(m => m.id),
+            ...customMethods.map(m => m.id)
+          ];
+          const currentIdx = allMethods.indexOf(method);
+          if (currentIdx === -1) return;
+          const cols = 2; // grid tem 2 colunas
+          let next = currentIdx;
+          if (e.key === 'ArrowRight') next = Math.min(currentIdx + 1, allMethods.length - 1);
+          else if (e.key === 'ArrowLeft') next = Math.max(currentIdx - 1, 0);
+          else if (e.key === 'ArrowDown') {
+            // Se estiver na última linha vai direto para o input de valor
+            const nextIdx = currentIdx + cols;
+            if (nextIdx >= allMethods.length) {
+              document.getElementById('value-input')?.focus();
+              return;
+            }
+            next = nextIdx;
+          }
+          else if (e.key === 'ArrowUp') next = Math.max(currentIdx - cols, 0);
+          if (next !== currentIdx) setMethod(allMethods[next]);
+        }
+
+        // Tab move foco para o campo de valor
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          document.getElementById('value-input')?.focus();
+        }
+        // Enter: se ainda tem valor a pagar, vai para o campo de valor
+        // Se já está pago (remaining=0), deixa cair no handler de finalizar abaixo
+        if (e.key === 'Enter' && remaining > 0) {
+          e.preventDefault();
+          document.getElementById('value-input')?.focus();
+          return;
+        }
       }
 
       if (e.key === 'Enter' && remaining <= 0) {
@@ -266,7 +332,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, remaining, saleResult, savedOffline, isOnline, autoNfce, isNfceEnabled]);
+  }, [isOpen, remaining, saleResult, savedOffline, isOnline, autoNfce, isNfceEnabled, method, customMethods]);
 
   useEffect(() => {
     if (!nfcePolling || !saleResult?.id) return;
@@ -289,14 +355,22 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     const val = parseFloat(inputValue);
     if (isNaN(val) || val <= 0) { toast.error('Digite um valor válido.'); return; }
     if (remaining <= 0) { toast.error('Total já atingido.'); return; }
-    if (method !== 'dinheiro' && val > remaining) { toast.error('Cartão/Pix: valor não pode exceder o saldo devedor.'); return; }
-    const actualValue = method === 'dinheiro' && val > remaining ? remaining : val;
+    // Métodos custom: permitem valor livre (ex: iFood com 12% a mais)
+    const isCustomMethod = customMethods.some(cm => cm.id === method);
+    if (!isCustomMethod && method !== 'dinheiro' && val > remaining) { toast.error('Cartão/Pix: valor não pode exceder o saldo devedor.'); return; }
+    const actualValue = (!isCustomMethod && method === 'dinheiro' && val > remaining) ? remaining : val;
     const id = Math.random().toString(36).substring(2) + Date.now().toString(36);
-    setPayments([...payments, { id, method, value: actualValue, given: val }]);
+    const customLabel = customMethods.find(cm => cm.id === method)?.name;
+    setPayments([...payments, { id, method, label: customLabel, value: actualValue, given: val }]);
   };
 
   // ── Salva venda offline no IndexedDB (OFFLINE_CONTINGENCY) ──────────────
   const handleSaveOffline = async () => {
+    const selectedCustom = customMethods.find(cm => cm.id === method);
+    if (selectedCustom?.hasVariablePricing) {
+      toast.error('Preços Variáveis não são suportados no modo Offline.');
+      return;
+    }
     if (remaining > 0) { toast.error(`Falta R$ ${remaining.toFixed(2)} para finalizar.`); return; }
     setLoading(true);
     try {
@@ -386,9 +460,31 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   };
 
   const handleConfirm = async (mode: PayMode) => {
-    if (remaining > 0) { toast.error(`Falta R$ ${remaining.toFixed(2)} para finalizar.`); return; }
+    const selectedCustom = customMethods.find(cm => cm.id === method);
+    const isVariablePricingActive = selectedCustom?.hasVariablePricing;
+
+    if (!isVariablePricingActive && remaining > 0) { 
+      toast.error(`Falta R$ ${remaining.toFixed(2)} para finalizar.`); 
+      return; 
+    }
+    if (isVariablePricingActive && payments.length > 0) {
+      toast.error('Pagamentos parciais não são permitidos usando Preços na Plataforma. Limpe os pagamentos e tente novamente.');
+      return;
+    }
     
-    const isConsumo = payments.some(p => p.method === 'consumo_funcionario');
+    let finalPayments = [...payments];
+    if (isVariablePricingActive) {
+      const val = items.reduce((acc, item) => acc + (variablePrices[item.id] || Number(item.priceSell)) * item.quantity, 0);
+      finalPayments = [{
+        id: 'var_price_payment',
+        method: method,
+        label: selectedCustom.name,
+        value: val,
+        given: val
+      }];
+    }
+
+    const isConsumo = finalPayments.some(p => p.method === 'consumo_funcionario');
     if (isConsumo && !selectedOperatorId) {
       toast.error('Por favor, selecione o funcionário que está consumindo.');
       return;
@@ -398,6 +494,12 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     const actualMode = isConsumo ? 'simple' : (isNfceEnabled ? mode : 'simple');
     setPayMode(actualMode);
     try {
+      if (isVariablePricingActive) {
+        api.put(`/payment-methods/${method}/prices`, {
+          prices: Object.entries(variablePrices).map(([productId, price]) => ({ productId, price }))
+        }).catch(console.error); // Executa em background
+      }
+
       const body = {
         items: items.map(i => ({ 
           productId: i.id, 
@@ -408,7 +510,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
             componentProductId: m.componentProductId,
           })) : undefined
         })),
-        payments: payments.map(p => ({ method: p.method, value: p.value, troco: Math.max(0, p.given - p.value) })),
+        payments: finalPayments.map(p => ({ method: p.method, label: p.label, value: p.value, troco: Math.max(0, p.given - p.value) })),
         discount: discountValue,
         cashRegisterId: cashRegister?.id,
         operatorId: operator?.id ?? user?.id,
@@ -621,11 +723,17 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
             <div>
               <span className="text-zinc-400 font-medium block mb-3 text-sm">Selecione o Método</span>
               <div className="grid grid-cols-2 gap-2">
-                {METHOD_CONFIG.map((m, index) => (
-                  <button key={m.id} onClick={() => { setMethod(m.id as typeof method); document.getElementById('value-input')?.focus(); }}
+                {BASE_METHOD_CONFIG.map((m, index) => (
+                  <button key={m.id} onClick={() => { setMethod(m.id); document.getElementById('value-input')?.focus(); }}
                     className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-sm relative overflow-hidden ${method === m.id ? `${m.color} ring-2 ring-offset-2 ring-offset-zinc-900` : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}`}>
                     <div className="absolute top-0 right-0 bg-zinc-800/50 px-1.5 py-0.5 rounded-bl-lg text-[10px] font-bold text-zinc-500">{index + 1}</div>
                     <m.icon size={18} /><span className="font-semibold">{m.label}</span>
+                  </button>
+                ))}
+                {customMethods.map((cm) => (
+                  <button key={cm.id} onClick={() => { setMethod(cm.id); document.getElementById('value-input')?.focus(); }}
+                    className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-sm relative overflow-hidden ${method === cm.id ? `${CUSTOM_COLOR} ring-2 ring-offset-2 ring-offset-zinc-900` : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}`}>
+                    <CreditCard size={18} /><span className="font-semibold truncate">{cm.name}</span>
                   </button>
                 ))}
               </div>
@@ -647,30 +755,32 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
               )}
             </div>
 
-            <div>
-              <label className="text-zinc-400 text-sm font-medium mb-2 block">Deseja passar qual valor?</label>
-              <div className="flex items-center gap-3">
-                <div className="relative flex-1">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">R$</span>
-                  <input type="number" id="value-input"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-xl font-bold text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    placeholder="0.00" value={inputValue} onChange={e => setInputValue(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleAddPayment()} disabled={remaining <= 0}
-                  />
+            {customMethods.find(cm => cm.id === method)?.hasVariablePricing ? null : (
+              <div>
+                <label className="text-zinc-400 text-sm font-medium mb-2 block">Deseja passar qual valor?</label>
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">R$</span>
+                    <input type="number" id="value-input"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-xl font-bold text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      placeholder="0.00" value={inputValue} onChange={e => setInputValue(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleAddPayment()} disabled={remaining <= 0}
+                    />
+                  </div>
+                  <button onClick={handleAddPayment} disabled={remaining <= 0} className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white p-3.5 rounded-xl transition flex-shrink-0"><Plus size={22} /></button>
+                  <button
+                    onClick={() => { setDiscountModalOpen(true); setPinVerified(false); setDiscountPinInput(''); }}
+                    className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-500/40 text-amber-400 p-3.5 rounded-xl transition flex-shrink-0"
+                    title="Aplicar desconto (requer PIN)"
+                  >
+                    <Tag size={20} />
+                  </button>
                 </div>
-                <button onClick={handleAddPayment} disabled={remaining <= 0} className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white p-3.5 rounded-xl transition flex-shrink-0"><Plus size={22} /></button>
-                <button
-                  onClick={() => { setDiscountModalOpen(true); setPinVerified(false); setDiscountPinInput(''); }}
-                  className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-500/40 text-amber-400 p-3.5 rounded-xl transition flex-shrink-0"
-                  title="Aplicar desconto (requer PIN)"
-                >
-                  <Tag size={20} />
-                </button>
+                {method === 'dinheiro' && parseFloat(inputValue) > remaining && remaining > 0 && (
+                  <p className="text-emerald-400/80 text-xs mt-2 italic">Troco a devolver: R$ {(parseFloat(inputValue) - remaining).toFixed(2)}</p>
+                )}
               </div>
-              {method === 'dinheiro' && parseFloat(inputValue) > remaining && remaining > 0 && (
-                <p className="text-emerald-400/80 text-xs mt-2 italic">Troco a devolver: R$ {(parseFloat(inputValue) - remaining).toFixed(2)}</p>
-              )}
-            </div>
+            )}
 
             <div className="border-t border-zinc-800 pt-4">
               <button onClick={() => setShowConsumerForm(!showConsumerForm)}
@@ -690,51 +800,84 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
           {/* Painel Direito: Resumo */}
           <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <span className="text-zinc-400 font-medium">Total da Venda</span>
-                  {discountValue > 0 && (
-                    <p className="text-xs text-zinc-500 line-through">R$ {total.toFixed(2)}</p>
-                  )}
+            
+            {customMethods.find(cm => cm.id === method)?.hasVariablePricing ? (
+              <div className="flex flex-col h-full">
+                <label className="text-amber-400 text-sm font-bold flex items-center gap-2 mb-3"><Tag size={16}/> Preços na Plataforma</label>
+                <div className="space-y-2 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-4">
+                  {items.map(item => (
+                    <div key={item.id} className="flex flex-col gap-2 bg-zinc-900 p-3 rounded-xl border border-zinc-800">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-zinc-300 font-medium truncate">{item.name}</p>
+                        <p className="text-xs text-zinc-500">{item.quantity} UN <span className="mx-1">•</span> Padrão: R$ {Number(item.priceSell).toFixed(2)}</p>
+                      </div>
+                      <div className="relative w-full shrink-0">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">R$</span>
+                        <input type="number"
+                          className="w-full bg-zinc-950 border border-zinc-700 rounded-lg py-2 pl-9 pr-3 text-sm font-bold text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                          value={variablePrices[item.id] ?? ''}
+                          onChange={e => setVariablePrices({...variablePrices, [item.id]: parseFloat(e.target.value) || 0})}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="text-right">
-                  {discountValue > 0 && (
-                    <span className="text-xs text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded mr-2">-R$ {discountValue.toFixed(2)}</span>
-                  )}
-                  <span className="text-2xl font-black text-white">R$ {effectiveTotal.toFixed(2)}</span>
+                <div className="flex justify-between items-center bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 mt-auto">
+                  <span className="text-amber-400 font-bold text-sm">Novo Total:</span>
+                  <span className="text-2xl font-black text-amber-400">
+                    R$ {items.reduce((acc, item) => acc + (variablePrices[item.id] || Number(item.priceSell)) * item.quantity, 0).toFixed(2)}
+                  </span>
                 </div>
               </div>
-              <div className="space-y-2 mb-4 max-h-40 overflow-y-auto custom-scrollbar">
-                {payments.length === 0 && <p className="text-zinc-600 text-sm text-center py-4 border border-dashed border-zinc-800 rounded-lg">Nenhum pagamento lançado</p>}
-                {payments.map(p => (
-                  <div key={p.id} className="flex justify-between items-center p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm group">
-                    <span className="font-semibold text-zinc-300 flex items-center gap-2">
-                      {p.method === 'dinheiro' ? <Banknote size={14} className="text-emerald-500" /> :
-                       p.method === 'consumo_funcionario' ? <User size={14} className="text-amber-400" /> :
-                       <CreditCard size={14} className="text-blue-500" />}
-                      {METHOD_NAMES[p.method]}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold">R$ {p.value.toFixed(2)}</span>
-                      <button onClick={() => setPayments(payments.filter(x => x.id !== p.id))} className="text-zinc-500 hover:text-red-400 transition opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
+            ) : (
+              <>
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <span className="text-zinc-400 font-medium">Total da Venda</span>
+                      {discountValue > 0 && (
+                        <p className="text-xs text-zinc-500 line-through">R$ {total.toFixed(2)}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      {discountValue > 0 && (
+                        <span className="text-xs text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded mr-2">-R$ {discountValue.toFixed(2)}</span>
+                      )}
+                      <span className="text-2xl font-black text-white">R$ {effectiveTotal.toFixed(2)}</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-3 pt-4 border-t border-zinc-800">
-              {change > 0 && (
-                <div className="flex justify-between items-center bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20">
-                  <span className="text-emerald-400 font-medium text-sm">Troco</span>
-                  <span className="text-xl font-black text-emerald-400">R$ {change.toFixed(2)}</span>
+                  <div className="space-y-2 mb-4 max-h-40 overflow-y-auto custom-scrollbar">
+                    {payments.length === 0 && <p className="text-zinc-600 text-sm text-center py-4 border border-dashed border-zinc-800 rounded-lg">Nenhum pagamento lançado</p>}
+                    {payments.map(p => (
+                      <div key={p.id} className="flex justify-between items-center p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-sm group">
+                        <span className="font-semibold text-zinc-300 flex items-center gap-2">
+                          {p.method === 'dinheiro' ? <Banknote size={14} className="text-emerald-500" /> :
+                           p.method === 'consumo_funcionario' ? <User size={14} className="text-amber-400" /> :
+                           <CreditCard size={14} className="text-blue-500" />}
+                          {p.label || METHOD_NAMES[p.method] || p.method}
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold">R$ {p.value.toFixed(2)}</span>
+                          <button onClick={() => setPayments(payments.filter(x => x.id !== p.id))} className="text-zinc-500 hover:text-red-400 transition opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              )}
-              <div className="flex justify-between items-end">
-                <span className="text-zinc-400 text-sm font-bold uppercase tracking-wider">Falta Pagar</span>
-                <span className={`text-4xl font-black ${remaining > 0 ? 'text-amber-400' : 'text-zinc-600'}`}>R$ {remaining.toFixed(2)}</span>
-              </div>
-            </div>
+                <div className="space-y-3 pt-4 border-t border-zinc-800">
+                  {change > 0 && (
+                    <div className="flex justify-between items-center bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20">
+                      <span className="text-emerald-400 font-medium text-sm">Troco</span>
+                      <span className="text-xl font-black text-emerald-400">R$ {change.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-end">
+                    <span className="text-zinc-400 text-sm font-bold uppercase tracking-wider">Falta Pagar</span>
+                    <span className={`text-4xl font-black ${remaining > 0 ? 'text-amber-400' : 'text-zinc-600'}`}>R$ {remaining.toFixed(2)}</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -774,14 +917,14 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
           
           <div className="w-full sm:w-auto">
             {isOnline ? (
-              <button onClick={() => handleConfirm(isNfceEnabled && autoNfce ? 'nfce' : 'simple')} disabled={loading || remaining > 0}
+              <button onClick={() => handleConfirm(isNfceEnabled && autoNfce ? 'nfce' : 'simple')} disabled={loading || !(customMethods.find(cm => cm.id === method)?.hasVariablePricing ? payments.length === 0 : remaining <= 0)}
                 className="w-full sm:w-64 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(37,99,235,0.2)] disabled:shadow-none relative">
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <ShoppingBag size={20} />}
                 Finalizar Venda
                 <span className="absolute top-1.5 right-2 text-[10px] font-mono bg-black/20 text-blue-200 px-1.5 py-0.5 rounded">Enter</span>
               </button>
             ) : (
-              <button onClick={handleSaveOffline} disabled={loading || remaining > 0}
+              <button onClick={handleSaveOffline} disabled={loading || !(customMethods.find(cm => cm.id === method)?.hasVariablePricing ? payments.length === 0 : remaining <= 0)}
                 className="w-full sm:w-64 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(234,88,12,0.2)] disabled:shadow-none relative">
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <ShoppingBag size={20} />}
                 Salvar Offline

@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Users, ChevronLeft, ChevronRight, AlertTriangle, Truck, ShoppingCart, Banknote } from 'lucide-react';
+import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Users, ChevronLeft, ChevronRight, AlertTriangle, Truck, ShoppingCart, Banknote, CreditCard, FileSpreadsheet, Images } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { api } from '@/lib/api';
 import { getFullUrl } from '@/lib/getFullUrl';
@@ -52,12 +52,17 @@ export function DashboardLayout() {
     { name: 'Comandas / Consumo', to: '/dashboard/comandas',              icon: Users },
     { name: 'Contas a Pagar',     to: '/dashboard/finance/payables',      icon: Banknote },
   ];
+  const inventoryToolItems = [
+    { name: 'Contagem de Estoque', to: '/dashboard/inventory/stock-count', icon: FileSpreadsheet },
+    { name: 'Imagens em Massa',   to: '/dashboard/bulk-images',            icon: Images },
+  ];
   const configItems = [
-    { name: 'Empresa',            to: '/dashboard/configuracoes/empresa',    icon: Building2 },
+    { name: 'Empresa',            to: '/dashboard/configuracoes/empresa',           icon: Building2 },
     ...(modules.nfce !== false ? [
-      { name: 'Grupos Tributários', to: '/dashboard/configuracoes/tributacao', icon: FileText }
+      { name: 'Grupos Tributários', to: '/dashboard/configuracoes/tributacao',        icon: FileText }
     ] : []),
-    { name: 'Gestão de Equipe',   to: '/dashboard/equipe',                   icon: Users },
+    { name: 'Formas de Pagamento', to: '/dashboard/configuracoes/payment-methods',   icon: CreditCard },
+    { name: 'Gestão de Equipe',   to: '/dashboard/equipe',                           icon: Users },
   ];
 
   const pathname = window.location.pathname;
@@ -97,6 +102,19 @@ export function DashboardLayout() {
               {!isCollapsed && <span className="font-semibold whitespace-nowrap">{item.name}</span>}
             </NavLink>
           ))}
+          <div className="pt-4 pb-1 hidden md:block">
+            <p className={`text-xs font-bold text-zinc-600 uppercase tracking-widest mb-2 flex items-center gap-2 ${isCollapsed ? 'justify-center' : 'px-4'}`}>
+              <FileSpreadsheet size={12} />{!isCollapsed && <span>Inventário</span>}
+            </p>
+            {inventoryToolItems.map(item => (
+              <NavLink key={item.to} to={item.to} title={isCollapsed ? item.name : ''}
+                className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm ${isCollapsed ? 'justify-center' : ''} ${isActive ? 'bg-purple-600/10 text-purple-400 border border-purple-500/20' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
+              >
+                <item.icon size={17} className="shrink-0" />
+                {!isCollapsed && <span className="font-semibold whitespace-nowrap">{item.name}</span>}
+              </NavLink>
+            ))}
+          </div>
           <div className="pt-4 pb-1">
             <p className={`text-xs font-bold text-zinc-600 uppercase tracking-widest mb-2 flex items-center gap-2 ${isCollapsed ? 'justify-center' : 'px-4'}`}>
               <Settings size={12} />{!isCollapsed && <span>Configurações</span>}

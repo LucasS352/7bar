@@ -66,6 +66,12 @@ export declare class CashRegistersService {
             totalCredito: number;
             totalDebito: number;
             totalCartao: number;
+            totalCustom: number;
+            customMethods: {
+                method: string;
+                label: string;
+                total: number;
+            }[];
             totalVendas: number;
             totalSuprimentos: number;
             totalSangrias: number;
@@ -74,9 +80,9 @@ export declare class CashRegistersService {
             salesDetails: ({
                 items: ({
                     product: {
-                        name: string;
                         id: string;
                         createdAt: Date;
+                        name: string;
                         updatedAt: Date;
                         categoryId: string;
                         grupoTributacaoId: string | null;
@@ -121,12 +127,15 @@ export declare class CashRegistersService {
                     valorIcms: Prisma.Decimal;
                     valorPis: Prisma.Decimal;
                     valorCofins: Prisma.Decimal;
+                    settled: boolean;
+                    settledAt: Date | null;
                 })[];
                 payments: {
                     id: string;
                     saleId: string;
                     tPag: string;
                     method: string;
+                    label: string | null;
                     value: Prisma.Decimal;
                     troco: Prisma.Decimal;
                 }[];
@@ -139,8 +148,10 @@ export declare class CashRegistersService {
                 customerId: string | null;
                 operatorId: string | null;
                 cashRegisterId: string | null;
+                addition: Prisma.Decimal;
                 total: Prisma.Decimal;
                 status: string;
+                source: string;
                 emitirNfce: boolean;
                 nfceStatus: string | null;
                 nfceNumero: number | null;

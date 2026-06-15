@@ -1,4 +1,4 @@
-import { useState, useEffect, useDeferredValue, useMemo } from 'react';
+import { useState, useEffect, useDeferredValue, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { useCartStore, type Product, type CartItemModifier } from '@/store/cart';
@@ -36,6 +36,8 @@ function PosPageContent() {
   const [isOfflineCatalog,   setIsOfflineCatalog]   = useState(false);
   const [tenantConfig,       setTenantConfig]       = useState<any>(null);
   const [compositeProduct,   setCompositeProduct]   = useState<Product | null>(null);
+  const [focusedProductIdx,  setFocusedProductIdx]  = useState<number>(-1);
+  const productRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const { operator, cashRegister, isLoading: isShiftLoading, logoutOperator, refreshShift } = useShift();
 
   const handleClickProduct = (product: Product) => {
@@ -171,7 +173,46 @@ function PosPageContent() {
       if (match) { handleClickProduct(match); setSearch(''); }
       else if (displayedProducts.length === 1) { handleClickProduct(displayedProducts[0]); setSearch(''); }
     }
+    // Tab ou ArrowDown move o foco para o primeiro card de produto
+    if ((e.key === 'Tab' || e.key === 'ArrowDown') && displayedProducts.length > 0) {
+      e.preventDefault();
+      setFocusedProductIdx(0);
+      setTimeout(() => productRefs.current[0]?.focus(), 0);
+    }
   };
+
+  const handleProductGridKeyDown = useCallback((e: React.KeyboardEvent, index: number) => {
+    const cols = window.innerWidth >= 1024 ? 4 : window.innerWidth >= 768 ? 3 : 2;
+    let next = index;
+    if (e.key === 'ArrowRight') { e.preventDefault(); next = Math.min(index + 1, displayedProducts.length - 1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); next = Math.max(index - 1, 0); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); next = Math.min(index + cols, displayedProducts.length - 1); }
+    else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (index < cols) {
+        // Volta para a barra de busca
+        setFocusedProductIdx(-1);
+        (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus();
+        return;
+      }
+      next = Math.max(index - cols, 0);
+    }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      handleClickProduct(displayedProducts[index]);
+      return;
+    }
+    else if (e.key === 'Escape') {
+      setFocusedProductIdx(-1);
+      (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus();
+      return;
+    }
+    if (next !== index) {
+      setFocusedProductIdx(next);
+      setTimeout(() => productRefs.current[next]?.focus(), 0);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayedProducts]);
 
   const totalItemsCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -302,10 +343,16 @@ function PosPageContent() {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 pb-24 md:pb-12">
-              {displayedProducts.map(product => (
-                <div key={product.id} className="group relative bg-zinc-900 border border-zinc-800 p-3 rounded-2xl hover:border-blue-500 transition-all flex flex-col items-center justify-between min-h-[160px] overflow-hidden shadow-sm hover:shadow-md">
+              {displayedProducts.map((product, idx) => (
+                <div key={product.id} className={`group relative bg-zinc-900 border-2 p-3 rounded-2xl hover:border-blue-500 transition-all flex flex-col items-center justify-between min-h-[160px] overflow-hidden shadow-sm hover:shadow-md ${focusedProductIdx === idx ? 'border-blue-400 ring-2 ring-blue-400/30' : 'border-zinc-800'}`}>
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-                  <button onClick={() => handleClickProduct(product)} className="w-full flex-1 flex flex-col items-center justify-start z-10 active:scale-95 transition-transform">
+                  <button
+                    ref={el => { productRefs.current[idx] = el; }}
+                    onClick={() => handleClickProduct(product)}
+                    onKeyDown={e => handleProductGridKeyDown(e, idx)}
+                    onFocus={() => setFocusedProductIdx(idx)}
+                    tabIndex={focusedProductIdx === idx || (focusedProductIdx === -1 && idx === 0) ? 0 : -1}
+                    className="w-full flex-1 flex flex-col items-center justify-start z-10 active:scale-95 transition-transform focus:outline-none">
                     {product.isComposite && (
                       <span className="absolute top-3 left-3 bg-indigo-600 border border-indigo-500 text-white font-extrabold text-[10px] px-2 py-0.5 rounded shadow-sm z-20 flex items-center gap-1">
                         <Layers size={10} /> Combo

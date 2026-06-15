@@ -7,9 +7,9 @@ export declare class SalesController {
     findAll(page?: number, limit?: number): Promise<{
         data: ({
             customer: {
-                name: string;
                 id: string;
                 createdAt: Date;
+                name: string;
                 updatedAt: Date;
                 phone: string;
                 cpfCnpj: string | null;
@@ -17,18 +17,18 @@ export declare class SalesController {
                 reference: string | null;
             } | null;
             operator: {
-                name: string;
                 id: string;
                 createdAt: Date;
+                name: string;
                 updatedAt: Date;
                 active: boolean;
                 pin: string;
             } | null;
             items: ({
                 product: {
-                    name: string;
                     id: string;
                     createdAt: Date;
+                    name: string;
                     updatedAt: Date;
                     categoryId: string;
                     grupoTributacaoId: string | null;
@@ -73,12 +73,15 @@ export declare class SalesController {
                 valorIcms: import("@prisma/client/runtime/library").Decimal;
                 valorPis: import("@prisma/client/runtime/library").Decimal;
                 valorCofins: import("@prisma/client/runtime/library").Decimal;
+                settled: boolean;
+                settledAt: Date | null;
             })[];
             payments: {
                 id: string;
                 saleId: string;
                 tPag: string;
                 method: string;
+                label: string | null;
                 value: import("@prisma/client/runtime/library").Decimal;
                 troco: import("@prisma/client/runtime/library").Decimal;
             }[];
@@ -91,8 +94,10 @@ export declare class SalesController {
             customerId: string | null;
             operatorId: string | null;
             cashRegisterId: string | null;
+            addition: import("@prisma/client/runtime/library").Decimal;
             total: import("@prisma/client/runtime/library").Decimal;
             status: string;
+            source: string;
             emitirNfce: boolean;
             nfceStatus: string | null;
             nfceNumero: number | null;
@@ -118,9 +123,9 @@ export declare class SalesController {
     getTodaySales(page?: number, limit?: number): Promise<{
         data: ({
             customer: {
-                name: string;
                 id: string;
                 createdAt: Date;
+                name: string;
                 updatedAt: Date;
                 phone: string;
                 cpfCnpj: string | null;
@@ -129,9 +134,9 @@ export declare class SalesController {
             } | null;
             items: ({
                 product: {
-                    name: string;
                     id: string;
                     createdAt: Date;
+                    name: string;
                     updatedAt: Date;
                     categoryId: string;
                     grupoTributacaoId: string | null;
@@ -176,12 +181,15 @@ export declare class SalesController {
                 valorIcms: import("@prisma/client/runtime/library").Decimal;
                 valorPis: import("@prisma/client/runtime/library").Decimal;
                 valorCofins: import("@prisma/client/runtime/library").Decimal;
+                settled: boolean;
+                settledAt: Date | null;
             })[];
             payments: {
                 id: string;
                 saleId: string;
                 tPag: string;
                 method: string;
+                label: string | null;
                 value: import("@prisma/client/runtime/library").Decimal;
                 troco: import("@prisma/client/runtime/library").Decimal;
             }[];
@@ -194,8 +202,10 @@ export declare class SalesController {
             customerId: string | null;
             operatorId: string | null;
             cashRegisterId: string | null;
+            addition: import("@prisma/client/runtime/library").Decimal;
             total: import("@prisma/client/runtime/library").Decimal;
             status: string;
+            source: string;
             emitirNfce: boolean;
             nfceStatus: string | null;
             nfceNumero: number | null;

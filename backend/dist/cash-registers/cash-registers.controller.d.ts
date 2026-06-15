@@ -60,6 +60,12 @@ export declare class CashRegistersController {
             totalCredito: number;
             totalDebito: number;
             totalCartao: number;
+            totalCustom: number;
+            customMethods: {
+                method: string;
+                label: string;
+                total: number;
+            }[];
             totalVendas: number;
             totalSuprimentos: number;
             totalSangrias: number;
@@ -68,9 +74,9 @@ export declare class CashRegistersController {
             salesDetails: ({
                 items: ({
                     product: {
-                        name: string;
                         id: string;
                         createdAt: Date;
+                        name: string;
                         updatedAt: Date;
                         categoryId: string;
                         grupoTributacaoId: string | null;
@@ -115,12 +121,15 @@ export declare class CashRegistersController {
                     valorIcms: import("@prisma/client/runtime/library").Decimal;
                     valorPis: import("@prisma/client/runtime/library").Decimal;
                     valorCofins: import("@prisma/client/runtime/library").Decimal;
+                    settled: boolean;
+                    settledAt: Date | null;
                 })[];
                 payments: {
                     id: string;
                     saleId: string;
                     tPag: string;
                     method: string;
+                    label: string | null;
                     value: import("@prisma/client/runtime/library").Decimal;
                     troco: import("@prisma/client/runtime/library").Decimal;
                 }[];
@@ -133,8 +142,10 @@ export declare class CashRegistersController {
                 customerId: string | null;
                 operatorId: string | null;
                 cashRegisterId: string | null;
+                addition: import("@prisma/client/runtime/library").Decimal;
                 total: import("@prisma/client/runtime/library").Decimal;
                 status: string;
+                source: string;
                 emitirNfce: boolean;
                 nfceStatus: string | null;
                 nfceNumero: number | null;

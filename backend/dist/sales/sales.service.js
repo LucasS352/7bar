@@ -20,6 +20,7 @@ const products_service_1 = require("../products/products.service");
 const client_1 = require("@prisma/client");
 const archiver = require("archiver");
 const mail_service_1 = require("../mail/mail.service");
+const integrations_service_1 = require("../integrations/integrations.service");
 const TPAG_MAP = {
     dinheiro: '01',
     credito: '03',
@@ -28,13 +29,14 @@ const TPAG_MAP = {
     outros: '99',
 };
 let SalesService = SalesService_1 = class SalesService {
-    constructor(tenantManager, heartPrisma, nfceService, tenantContext, productsService, mailService) {
+    constructor(tenantManager, heartPrisma, nfceService, tenantContext, productsService, mailService, integrationsService) {
         this.tenantManager = tenantManager;
         this.heartPrisma = heartPrisma;
         this.nfceService = nfceService;
         this.tenantContext = tenantContext;
         this.productsService = productsService;
         this.mailService = mailService;
+        this.integrationsService = integrationsService;
         this.logger = new common_1.Logger(SalesService_1.name);
     }
     async getPrisma() {
@@ -128,6 +130,11 @@ let SalesService = SalesService_1 = class SalesService {
                 where: { id: { in: allProductIds } },
                 include: {
                     grupoTributacao: true,
+                    category: {
+                        include: {
+                            grupoTributacao: true
+                        }
+                    },
                     modifierGroups: {
                         include: {
                             options: true
@@ -144,13 +151,24 @@ let SalesService = SalesService_1 = class SalesService {
                 subtotal = subtotal.add(itemSubtotal);
             }
             const discount = new client_1.Prisma.Decimal(data.discount || 0);
-            const total = subtotal.sub(discount).toDecimalPlaces(2);
-            const paymentsData = data.payments.map((pay) => ({
-                tPag: TPAG_MAP[pay.method] ?? '99',
-                method: pay.method,
-                value: Number(pay.value),
-                troco: Number(pay.troco || 0),
-            }));
+            let total = subtotal.sub(discount);
+            let paymentsTotal = new client_1.Prisma.Decimal(0);
+            const paymentsData = data.payments.map((pay) => {
+                paymentsTotal = paymentsTotal.add(new client_1.Prisma.Decimal(pay.value));
+                return {
+                    tPag: TPAG_MAP[pay.method] ?? '99',
+                    method: pay.method,
+                    label: pay.label ?? null,
+                    value: Number(pay.value),
+                    troco: Number(pay.troco || 0),
+                };
+            });
+            let addition = new client_1.Prisma.Decimal(0);
+            if (paymentsTotal.gt(total)) {
+                addition = paymentsTotal.sub(total);
+                total = paymentsTotal;
+            }
+            const finalTotalStr = total.toDecimalPlaces(2);
             let nfceNumero = null;
             const emitirNfce = Boolean(data.emitirNfce);
             if (emitirNfce) {
@@ -176,7 +194,8 @@ let SalesService = SalesService_1 = class SalesService {
                     cashRegisterId: data.cashRegisterId || null,
                     subtotal,
                     discount,
-                    total,
+                    addition,
+                    total: finalTotalStr,
                     status: 'completed',
                     emitirNfce,
                     nfceStatus: emitirNfce ? 'pendente' : null,
@@ -308,7 +327,7 @@ let SalesService = SalesService_1 = class SalesService {
                 }
                 const priceUnit = new client_1.Prisma.Decimal(item.priceUnit);
                 const itemSubtotal = priceUnit.mul(new client_1.Prisma.Decimal(qty)).toDecimalPlaces(2);
-                const gt = product.grupoTributacao;
+                const gt = product.grupoTributacao || product.category?.grupoTributacao;
                 const priceCost = qty > 0 ? totalCostOfLots.div(new client_1.Prisma.Decimal(qty)) : new client_1.Prisma.Decimal(0);
                 await tx.saleItem.create({
                     data: {
@@ -375,6 +394,10 @@ let SalesService = SalesService_1 = class SalesService {
             if (emitirNfce) {
                 const { tenantId, databaseUrl } = this.tenantContext.get();
                 setImmediate(() => this.dispararNfce(tenantId, databaseUrl, fullSale));
+            }
+            if (allProductIds.length > 0) {
+                const { tenantId } = this.tenantContext.get();
+                setImmediate(() => this.integrationsService.syncProductStock(tenantId, allProductIds));
             }
             return fullSale;
         });
@@ -589,10 +612,17 @@ let SalesService = SalesService_1 = class SalesService {
             if (item.productId) {
                 const currentProduct = await prisma.product.findUnique({
                     where: { id: item.productId },
-                    include: { grupoTributacao: true }
+                    include: {
+                        grupoTributacao: true,
+                        category: {
+                            include: {
+                                grupoTributacao: true
+                            }
+                        }
+                    }
                 });
                 if (currentProduct) {
-                    const gt = currentProduct.grupoTributacao;
+                    const gt = currentProduct.grupoTributacao || currentProduct.category?.grupoTributacao;
                     const updatedFields = {
                         productName: currentProduct.name,
                         unit: currentProduct.unit || 'UN',
@@ -831,6 +861,7 @@ exports.SalesService = SalesService = SalesService_1 = __decorate([
         nfce_service_1.NfceService,
         tenant_context_service_1.TenantContextService,
         products_service_1.ProductsService,
-        mail_service_1.MailService])
+        mail_service_1.MailService,
+        integrations_service_1.IntegrationsService])
 ], SalesService);
 //# sourceMappingURL=sales.service.js.map

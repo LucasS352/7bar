@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useDeferredValue, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
-import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert, X, Truck, ShoppingCart } from 'lucide-react';
+import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert, X, Truck, ShoppingCart, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { AddProductModal } from '@/components/AddProductModal';
@@ -335,6 +335,7 @@ export default function InventoryDashboard() {
           <Package className="text-blue-500" size={32} /> Controle de Estoque
         </h1>
         <div className="flex overflow-x-auto w-full md:w-auto gap-2 pb-2 md:pb-0 custom-scrollbar snap-x">
+
           <Link
             to="/dashboard/inventory/categories"
             className="snap-start shrink-0 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm md:text-base"

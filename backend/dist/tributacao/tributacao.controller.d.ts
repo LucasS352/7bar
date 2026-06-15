@@ -4,6 +4,7 @@ export declare class TributacaoController {
     constructor(service: TributacaoService);
     findAll(req: any): Promise<{
         id: string;
+        createdAt: Date;
         nome: string;
         ativo: boolean;
         csosn: string | null;
@@ -17,11 +18,11 @@ export declare class TributacaoController {
         aliqCofins: import("@prisma/client/runtime/library").Decimal;
         cstIpi: string | null;
         aliqIpi: import("@prisma/client/runtime/library").Decimal;
-        createdAt: Date;
         updatedAt: Date;
     }[]>;
     findOne(id: string, req: any): Promise<{
         id: string;
+        createdAt: Date;
         nome: string;
         ativo: boolean;
         csosn: string | null;
@@ -35,11 +36,11 @@ export declare class TributacaoController {
         aliqCofins: import("@prisma/client/runtime/library").Decimal;
         cstIpi: string | null;
         aliqIpi: import("@prisma/client/runtime/library").Decimal;
-        createdAt: Date;
         updatedAt: Date;
     }>;
     create(body: any, req: any): Promise<{
         id: string;
+        createdAt: Date;
         nome: string;
         ativo: boolean;
         csosn: string | null;
@@ -53,11 +54,11 @@ export declare class TributacaoController {
         aliqCofins: import("@prisma/client/runtime/library").Decimal;
         cstIpi: string | null;
         aliqIpi: import("@prisma/client/runtime/library").Decimal;
-        createdAt: Date;
         updatedAt: Date;
     }>;
     update(id: string, body: any, req: any): Promise<{
         id: string;
+        createdAt: Date;
         nome: string;
         ativo: boolean;
         csosn: string | null;
@@ -71,11 +72,11 @@ export declare class TributacaoController {
         aliqCofins: import("@prisma/client/runtime/library").Decimal;
         cstIpi: string | null;
         aliqIpi: import("@prisma/client/runtime/library").Decimal;
-        createdAt: Date;
         updatedAt: Date;
     }>;
     remove(id: string, req: any): Promise<{
         id: string;
+        createdAt: Date;
         nome: string;
         ativo: boolean;
         csosn: string | null;
@@ -89,7 +90,6 @@ export declare class TributacaoController {
         aliqCofins: import("@prisma/client/runtime/library").Decimal;
         cstIpi: string | null;
         aliqIpi: import("@prisma/client/runtime/library").Decimal;
-        createdAt: Date;
         updatedAt: Date;
     }>;
 }

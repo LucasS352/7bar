@@ -6,9 +6,9 @@ export declare class CustomersService {
     constructor(tenantManager: TenantConnectionManager, tenantContext: TenantContextService);
     private getPrisma;
     findAll(): Promise<{
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         phone: string;
         cpfCnpj: string | null;
@@ -16,9 +16,9 @@ export declare class CustomersService {
         reference: string | null;
     }[]>;
     findByPhone(phone: string): Promise<{
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         phone: string;
         cpfCnpj: string | null;
@@ -26,9 +26,9 @@ export declare class CustomersService {
         reference: string | null;
     } | null>;
     create(data: any): Promise<{
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         phone: string;
         cpfCnpj: string | null;

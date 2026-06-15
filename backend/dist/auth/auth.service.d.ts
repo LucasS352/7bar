@@ -17,6 +17,10 @@ export declare class AuthService {
             name: any;
             role: any;
             tenant: any;
+            termsAccepted: boolean;
         };
+    }>;
+    acceptTerms(tenantId: string): Promise<{
+        success: boolean;
     }>;
 }

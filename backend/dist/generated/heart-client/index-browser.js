@@ -155,8 +155,11 @@ exports.Prisma.TenantScalarFieldEnum = {
   certSenha: 'certSenha',
   certValidade: 'certValidade',
   cosmosApiKey: 'cosmosApiKey',
+  mensalidadeValor: 'mensalidadeValor',
+  mensalidadeVencimento: 'mensalidadeVencimento',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  termsAcceptedAt: 'termsAcceptedAt'
 };
 
 exports.Prisma.UserScalarFieldEnum = {
@@ -186,6 +189,24 @@ exports.Prisma.MasterProductScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.ImageScalarFieldEnum = {
+  id: 'id',
+  data: 'data',
+  mimeType: 'mimeType',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.TenantIntegrationScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  provider: 'provider',
+  status: 'status',
+  credentials: 'credentials',
+  settings: 'settings',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -193,6 +214,10 @@ exports.Prisma.SortOrder = {
 
 exports.Prisma.NullableJsonNullValueInput = {
   DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull
+};
+
+exports.Prisma.JsonNullValueInput = {
   JsonNull: Prisma.JsonNull
 };
 
@@ -263,11 +288,25 @@ exports.Prisma.MasterProductOrderByRelevanceFieldEnum = {
   source: 'source'
 };
 
+exports.Prisma.ImageOrderByRelevanceFieldEnum = {
+  id: 'id',
+  mimeType: 'mimeType'
+};
+
+exports.Prisma.TenantIntegrationOrderByRelevanceFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  provider: 'provider',
+  status: 'status'
+};
+
 
 exports.Prisma.ModelName = {
   Tenant: 'Tenant',
   User: 'User',
-  MasterProduct: 'MasterProduct'
+  MasterProduct: 'MasterProduct',
+  Image: 'Image',
+  TenantIntegration: 'TenantIntegration'
 };
 
 /**

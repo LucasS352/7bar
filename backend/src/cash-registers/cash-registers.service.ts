@@ -99,15 +99,26 @@ export class CashRegistersService {
     let totalPix = new Prisma.Decimal(0);
     let totalCredito = new Prisma.Decimal(0);
     let totalDebito = new Prisma.Decimal(0);
+    // Mapa para métodos customizados: { methodKey -> { label, total } }
+    const customMethodTotals: Record<string, { label: string; total: Prisma.Decimal }> = {};
 
     sales.forEach(sale => {
       if (sale.status === 'cancelled') return;
-      sale.payments.forEach(p => {
+      sale.payments.forEach((p: any) => {
         const v = new Prisma.Decimal(p.value as any);
         if (p.method === 'dinheiro')      totalDinheiro = totalDinheiro.add(v);
         else if (p.method === 'pix')      totalPix      = totalPix.add(v);
         else if (p.method === 'credito')  totalCredito  = totalCredito.add(v);
         else if (p.method === 'debito')   totalDebito   = totalDebito.add(v);
+        else if (p.method !== 'consumo_funcionario') {
+          // Método customizado: usa label salvo ou o próprio method como fallback
+          const key = p.method;
+          const labelName = p.label || p.method;
+          if (!customMethodTotals[key]) {
+            customMethodTotals[key] = { label: labelName, total: new Prisma.Decimal(0) };
+          }
+          customMethodTotals[key].total = customMethodTotals[key].total.add(v);
+        }
       });
     });
 
@@ -129,10 +140,20 @@ export class CashRegistersService {
     
     // Total Cartão = Crédito + Débito
     const totalCartao = totalCredito.add(totalDebito);
-    // Total Vendas = Dinheiro + Pix + Cartão
-    const totalVendas = totalDinheiro.add(totalPix).add(totalCartao);
+    // Total Customizado (iFood, Ticket, etc.)
+    let totalCustom = new Prisma.Decimal(0);
+    Object.values(customMethodTotals).forEach(m => { totalCustom = totalCustom.add(m.total); });
+    // Total Vendas = Dinheiro + Pix + Cartão + Custom
+    const totalVendas = totalDinheiro.add(totalPix).add(totalCartao).add(totalCustom);
     // Dinheiro Esperado na Gaveta = Abertura + Vendas(Dinheiro) + Suprimentos - Sangrias
     const expectedDinheiro = openingValue.add(totalDinheiro).add(totalSuprimentos).sub(totalSangrias);
+
+    // Serializa métodos customizados para JSON
+    const customMethodsSummary = Object.entries(customMethodTotals).map(([key, val]) => ({
+      method: key,
+      label: val.label,
+      total: val.total.toNumber(),
+    }));
 
     return {
       register,
@@ -142,6 +163,8 @@ export class CashRegistersService {
         totalCredito: totalCredito.toNumber(),
         totalDebito: totalDebito.toNumber(),
         totalCartao: totalCartao.toNumber(),
+        totalCustom: totalCustom.toNumber(),
+        customMethods: customMethodsSummary,
         totalVendas: totalVendas.toNumber(),
         totalSuprimentos: totalSuprimentos.toNumber(),
         totalSangrias: totalSangrias.toNumber(),

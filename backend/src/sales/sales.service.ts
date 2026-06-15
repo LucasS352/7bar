@@ -173,15 +173,29 @@ export class SalesService {
       }
 
       const discount = new Prisma.Decimal(data.discount || 0);
-      const total = subtotal.sub(discount).toDecimalPlaces(2);
+      let total = subtotal.sub(discount);
 
-      // ─── 2. Montar pagamentos com tPag SEFAZ ────────────────────────────────
-      const paymentsData = data.payments.map((pay: any) => ({
-        tPag:   TPAG_MAP[pay.method] ?? '99',
-        method: pay.method,
-        value:  Number(pay.value),
-        troco:  Number(pay.troco || 0),
-      }));
+      // Calcular total pago para detectar acréscimo (ex: iFood com valor maior que o carrinho)
+      let paymentsTotal = new Prisma.Decimal(0);
+      const paymentsData = data.payments.map((pay: any) => {
+        paymentsTotal = paymentsTotal.add(new Prisma.Decimal(pay.value));
+        return {
+          tPag:   TPAG_MAP[pay.method] ?? '99',
+          method: pay.method,
+          label:  pay.label ?? null, // label customizado (ex: "iFood")
+          value:  Number(pay.value),
+          troco:  Number(pay.troco || 0),
+        };
+      });
+
+      let addition = new Prisma.Decimal(0);
+      if (paymentsTotal.gt(total)) {
+        addition = paymentsTotal.sub(total);
+        total = paymentsTotal;
+      }
+      
+      const finalTotalStr = total.toDecimalPlaces(2);
+
 
       // ─── 3. Numeração NFC-e (se solicitada) ─────────────────────────────────
       let nfceNumero: number | null = null;
@@ -213,7 +227,8 @@ export class SalesService {
           cashRegisterId: data.cashRegisterId || null,
           subtotal,
           discount,
-          total,
+          addition, // <-- Salvando o acréscimo
+          total: finalTotalStr,
           status:         'completed',
           emitirNfce,
           nfceStatus:     emitirNfce ? 'pendente' : null,

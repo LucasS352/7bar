@@ -62,7 +62,7 @@ let TenantsService = TenantsService_1 = class TenantsService {
         this.logger = new common_1.Logger(TenantsService_1.name);
     }
     findAll() {
-        return this.heartPrisma.tenant.findMany({ include: { users: true } });
+        return this.heartPrisma.tenant.findMany({ include: { users: true, tenantIntegrations: true } });
     }
     create(data) {
         return this.heartPrisma.tenant.create({ data });
@@ -93,7 +93,7 @@ let TenantsService = TenantsService_1 = class TenantsService {
             'logradouro', 'numero', 'complemento', 'bairro',
             'municipio', 'codMunicipio', 'uf', 'cep', 'telefone',
             'nfceAtivo', 'nfceSerie', 'nfceAmbiente', 'nfceCsc', 'nfceIdCsc',
-            'modulos', 'status', 'emailContador'
+            'modulos', 'status', 'emailContador', 'mensalidadeValor', 'mensalidadeVencimento'
         ];
         const safeData = Object.fromEntries(Object.entries(data).filter(([k]) => allowed.includes(k)));
         if (safeData.crt != null)
@@ -102,6 +102,12 @@ let TenantsService = TenantsService_1 = class TenantsService {
             safeData.nfceSerie = Number(safeData.nfceSerie);
         if (safeData.nfceAmbiente != null)
             safeData.nfceAmbiente = Number(safeData.nfceAmbiente);
+        if (safeData.mensalidadeValor != null) {
+            safeData.mensalidadeValor = Number(safeData.mensalidadeValor);
+        }
+        if (safeData.mensalidadeVencimento !== undefined) {
+            safeData.mensalidadeVencimento = safeData.mensalidadeVencimento ? new Date(safeData.mensalidadeVencimento) : null;
+        }
         if (safeData.cnpj) {
             const cleanCnpj = String(safeData.cnpj).replace(/\D/g, '');
             const duplicate = await this.heartPrisma.tenant.findFirst({
@@ -233,8 +239,21 @@ let TenantsService = TenantsService_1 = class TenantsService {
         }
         return results;
     }
+    async getTenantCategories(tenantId) {
+        const tenant = await this.heartPrisma.tenant.findUnique({ where: { id: tenantId } });
+        if (!tenant || !tenant.databaseUrl)
+            return [];
+        try {
+            const tenantPrisma = await this.tenantManager.getTenantClient(tenantId, tenant.databaseUrl);
+            return await tenantPrisma.category.findMany({ orderBy: { name: 'asc' } });
+        }
+        catch (e) {
+            this.logger.error(`Erro ao buscar categorias do tenant ${tenantId}: ${e.message}`);
+            return [];
+        }
+    }
     async provisionTenant(dto) {
-        const { pin, tenantName, dbName, adminName, adminEmail, adminPassword, seedProducts } = dto;
+        const { pin, tenantName, dbName, adminName, adminEmail, adminPassword, seedProducts, mensalidadeValor, mensalidadeVencimento } = dto;
         const pinValid = await this.validatePin(pin);
         if (!pinValid) {
             throw new common_1.UnauthorizedException('PIN inválido. Acesso negado.');
@@ -286,6 +305,8 @@ let TenantsService = TenantsService_1 = class TenantsService {
                 databaseName: sanitizedDbName,
                 databaseUrl: tenantDbUrl,
                 status: 'active',
+                mensalidadeValor: mensalidadeValor != null ? Number(mensalidadeValor) : 0,
+                mensalidadeVencimento: mensalidadeVencimento ? new Date(mensalidadeVencimento) : null,
                 users: {
                     create: {
                         name: adminName,
@@ -414,6 +435,41 @@ let TenantsService = TenantsService_1 = class TenantsService {
         if (!settings?.discountPin)
             return false;
         return bcrypt.compare(pin, settings.discountPin);
+    }
+    async deleteTenant(tenantId) {
+        const tenant = await this.heartPrisma.tenant.findUnique({
+            where: { id: tenantId }
+        });
+        if (!tenant)
+            throw new common_1.NotFoundException('Empresa não encontrada');
+        try {
+            this.logger.log(`⚠️ Excluindo banco de dados: ${tenant.databaseName}`);
+            await this.heartPrisma.$executeRawUnsafe(`DROP DATABASE \`${tenant.databaseName}\``);
+            this.logger.log(`✅ Banco de dados ${tenant.databaseName} excluído com sucesso.`);
+        }
+        catch (e) {
+            this.logger.error(`Falha ao excluir o banco de dados ${tenant.databaseName}: ${e.message}`);
+        }
+        await this.heartPrisma.tenant.delete({
+            where: { id: tenantId }
+        });
+        return { success: true };
+    }
+    async registrarPagamento(tenantId) {
+        const tenant = await this.heartPrisma.tenant.findUnique({
+            where: { id: tenantId }
+        });
+        if (!tenant)
+            throw new common_1.NotFoundException('Empresa não encontrada');
+        let currentDueDate = tenant.mensalidadeVencimento ? new Date(tenant.mensalidadeVencimento) : new Date();
+        const nextDueDate = new Date(currentDueDate);
+        nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+        return this.heartPrisma.tenant.update({
+            where: { id: tenantId },
+            data: {
+                mensalidadeVencimento: nextDueDate
+            }
+        });
     }
 };
 exports.TenantsService = TenantsService;

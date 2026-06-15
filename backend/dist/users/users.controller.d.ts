@@ -3,23 +3,23 @@ export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
     findAll(user: any): Promise<{
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         active: boolean;
         email: string;
         role: string;
     }[]>;
     create(user: any, body: any): Promise<{
-        name: string;
         id: string;
+        name: string;
         active: boolean;
         email: string;
         role: string;
     }>;
     update(user: any, id: string, body: any): Promise<{
-        name: string;
         id: string;
+        name: string;
         active: boolean;
         email: string;
         role: string;

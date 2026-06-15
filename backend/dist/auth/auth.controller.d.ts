@@ -9,10 +9,14 @@ export declare class AuthController {
             name: any;
             role: any;
             tenant: any;
+            termsAccepted: boolean;
         };
     }>;
     operatorLogin(user: any, body: {
         operatorId: string;
         pin: string;
     }): Promise<any>;
+    acceptTerms(user: any): Promise<{
+        success: boolean;
+    }>;
 }

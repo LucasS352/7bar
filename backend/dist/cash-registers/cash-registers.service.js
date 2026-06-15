@@ -96,10 +96,11 @@ let CashRegistersService = class CashRegistersService {
         let totalPix = new client_1.Prisma.Decimal(0);
         let totalCredito = new client_1.Prisma.Decimal(0);
         let totalDebito = new client_1.Prisma.Decimal(0);
+        const customMethodTotals = {};
         sales.forEach(sale => {
             if (sale.status === 'cancelled')
                 return;
-            sale.payments.forEach(p => {
+            sale.payments.forEach((p) => {
                 const v = new client_1.Prisma.Decimal(p.value);
                 if (p.method === 'dinheiro')
                     totalDinheiro = totalDinheiro.add(v);
@@ -109,6 +110,14 @@ let CashRegistersService = class CashRegistersService {
                     totalCredito = totalCredito.add(v);
                 else if (p.method === 'debito')
                     totalDebito = totalDebito.add(v);
+                else if (p.method !== 'consumo_funcionario') {
+                    const key = p.method;
+                    const labelName = p.label || p.method;
+                    if (!customMethodTotals[key]) {
+                        customMethodTotals[key] = { label: labelName, total: new client_1.Prisma.Decimal(0) };
+                    }
+                    customMethodTotals[key].total = customMethodTotals[key].total.add(v);
+                }
             });
         });
         const movements = await prisma.cashMovement.findMany({
@@ -126,8 +135,15 @@ let CashRegistersService = class CashRegistersService {
         });
         const openingValue = new client_1.Prisma.Decimal(register.openingValue);
         const totalCartao = totalCredito.add(totalDebito);
-        const totalVendas = totalDinheiro.add(totalPix).add(totalCartao);
+        let totalCustom = new client_1.Prisma.Decimal(0);
+        Object.values(customMethodTotals).forEach(m => { totalCustom = totalCustom.add(m.total); });
+        const totalVendas = totalDinheiro.add(totalPix).add(totalCartao).add(totalCustom);
         const expectedDinheiro = openingValue.add(totalDinheiro).add(totalSuprimentos).sub(totalSangrias);
+        const customMethodsSummary = Object.entries(customMethodTotals).map(([key, val]) => ({
+            method: key,
+            label: val.label,
+            total: val.total.toNumber(),
+        }));
         return {
             register,
             report: {
@@ -136,10 +152,12 @@ let CashRegistersService = class CashRegistersService {
                 totalCredito: totalCredito.toNumber(),
                 totalDebito: totalDebito.toNumber(),
                 totalCartao: totalCartao.toNumber(),
+                totalCustom: totalCustom.toNumber(),
+                customMethods: customMethodsSummary,
                 totalVendas: totalVendas.toNumber(),
                 totalSuprimentos: totalSuprimentos.toNumber(),
                 totalSangrias: totalSangrias.toNumber(),
-                countSales: sales.length,
+                countSales: sales.filter(s => s.status !== 'cancelled').length,
                 expectedDinheiro: expectedDinheiro.toNumber(),
                 salesDetails: sales,
                 movements

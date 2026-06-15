@@ -23,9 +23,14 @@ const nfce_module_1 = require("./nfce/nfce.module");
 const operators_module_1 = require("./operators/operators.module");
 const dashboard_module_1 = require("./dashboard/dashboard.module");
 const master_products_module_1 = require("./master-products/master-products.module");
+const suppliers_module_1 = require("./suppliers/suppliers.module");
+const purchase_orders_module_1 = require("./purchase-orders/purchase-orders.module");
+const payables_module_1 = require("./payables/payables.module");
+const payment_methods_module_1 = require("./payment-methods/payment-methods.module");
 const core_1 = require("@nestjs/core");
 const tenant_context_service_1 = require("./prisma/tenant-context.service");
 const schedule_1 = require("@nestjs/schedule");
+const integrations_module_1 = require("./integrations/integrations.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -47,6 +52,11 @@ exports.AppModule = AppModule = __decorate([
             operators_module_1.OperatorsModule,
             dashboard_module_1.DashboardModule,
             master_products_module_1.MasterProductsModule,
+            suppliers_module_1.SuppliersModule,
+            purchase_orders_module_1.PurchaseOrdersModule,
+            payables_module_1.PayablesModule,
+            payment_methods_module_1.PaymentMethodsModule,
+            integrations_module_1.IntegrationsModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [

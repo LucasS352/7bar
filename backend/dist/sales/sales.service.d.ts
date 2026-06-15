@@ -6,6 +6,7 @@ import { NfceService } from '../nfce/nfce.service';
 import { ProductsService } from '../products/products.service';
 import { Prisma } from '@prisma/client';
 import { MailService } from '../mail/mail.service';
+import { IntegrationsService } from '../integrations/integrations.service';
 export declare class SalesService {
     private tenantManager;
     private heartPrisma;
@@ -13,8 +14,9 @@ export declare class SalesService {
     private tenantContext;
     private productsService;
     private mailService;
+    private integrationsService;
     private readonly logger;
-    constructor(tenantManager: TenantConnectionManager, heartPrisma: HeartPrismaService, nfceService: NfceService, tenantContext: TenantContextService, productsService: ProductsService, mailService: MailService);
+    constructor(tenantManager: TenantConnectionManager, heartPrisma: HeartPrismaService, nfceService: NfceService, tenantContext: TenantContextService, productsService: ProductsService, mailService: MailService, integrationsService: IntegrationsService);
     private getPrisma;
     private consumeLotsFIFO;
     checkout(data: any): Promise<any>;
@@ -23,9 +25,9 @@ export declare class SalesService {
     findAll(page?: number, limit?: number): Promise<{
         data: ({
             customer: {
-                name: string;
                 id: string;
                 createdAt: Date;
+                name: string;
                 updatedAt: Date;
                 phone: string;
                 cpfCnpj: string | null;
@@ -33,18 +35,18 @@ export declare class SalesService {
                 reference: string | null;
             } | null;
             operator: {
-                name: string;
                 id: string;
                 createdAt: Date;
+                name: string;
                 updatedAt: Date;
                 active: boolean;
                 pin: string;
             } | null;
             items: ({
                 product: {
-                    name: string;
                     id: string;
                     createdAt: Date;
+                    name: string;
                     updatedAt: Date;
                     categoryId: string;
                     grupoTributacaoId: string | null;
@@ -89,12 +91,15 @@ export declare class SalesService {
                 valorIcms: Prisma.Decimal;
                 valorPis: Prisma.Decimal;
                 valorCofins: Prisma.Decimal;
+                settled: boolean;
+                settledAt: Date | null;
             })[];
             payments: {
                 id: string;
                 saleId: string;
                 tPag: string;
                 method: string;
+                label: string | null;
                 value: Prisma.Decimal;
                 troco: Prisma.Decimal;
             }[];
@@ -107,8 +112,10 @@ export declare class SalesService {
             customerId: string | null;
             operatorId: string | null;
             cashRegisterId: string | null;
+            addition: Prisma.Decimal;
             total: Prisma.Decimal;
             status: string;
+            source: string;
             emitirNfce: boolean;
             nfceStatus: string | null;
             nfceNumero: number | null;
@@ -134,9 +141,9 @@ export declare class SalesService {
     getTodaySales(page?: number, limit?: number): Promise<{
         data: ({
             customer: {
-                name: string;
                 id: string;
                 createdAt: Date;
+                name: string;
                 updatedAt: Date;
                 phone: string;
                 cpfCnpj: string | null;
@@ -145,9 +152,9 @@ export declare class SalesService {
             } | null;
             items: ({
                 product: {
-                    name: string;
                     id: string;
                     createdAt: Date;
+                    name: string;
                     updatedAt: Date;
                     categoryId: string;
                     grupoTributacaoId: string | null;
@@ -192,12 +199,15 @@ export declare class SalesService {
                 valorIcms: Prisma.Decimal;
                 valorPis: Prisma.Decimal;
                 valorCofins: Prisma.Decimal;
+                settled: boolean;
+                settledAt: Date | null;
             })[];
             payments: {
                 id: string;
                 saleId: string;
                 tPag: string;
                 method: string;
+                label: string | null;
                 value: Prisma.Decimal;
                 troco: Prisma.Decimal;
             }[];
@@ -210,8 +220,10 @@ export declare class SalesService {
             customerId: string | null;
             operatorId: string | null;
             cashRegisterId: string | null;
+            addition: Prisma.Decimal;
             total: Prisma.Decimal;
             status: string;
+            source: string;
             emitirNfce: boolean;
             nfceStatus: string | null;
             nfceNumero: number | null;

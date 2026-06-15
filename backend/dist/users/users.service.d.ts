@@ -3,16 +3,16 @@ export declare class UsersService {
     private heartPrisma;
     constructor(heartPrisma: HeartPrismaService);
     findAll(tenantId: string): Promise<{
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         active: boolean;
         email: string;
         role: string;
     }[]>;
     create(tenantId: string, data: any): Promise<{
-        name: string;
         id: string;
+        name: string;
         active: boolean;
         email: string;
         role: string;
@@ -22,8 +22,8 @@ export declare class UsersService {
         active: boolean;
     }>;
     update(tenantId: string, id: string, data: any): Promise<{
-        name: string;
         id: string;
+        name: string;
         active: boolean;
         email: string;
         role: string;

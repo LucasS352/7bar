@@ -19,6 +19,7 @@ exports.TenantsModule = TenantsModule = __decorate([
         imports: [prisma_module_1.PrismaModule],
         providers: [tenants_service_1.TenantsService],
         controllers: [tenants_controller_1.TenantsController],
+        exports: [tenants_service_1.TenantsService],
     })
 ], TenantsModule);
 //# sourceMappingURL=tenants.module.js.map

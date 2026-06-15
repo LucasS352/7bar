@@ -135,6 +135,33 @@ let TenantsController = class TenantsController {
             throw new common_1.UnauthorizedException('PIN de desconto inválido.');
         return { valid: true };
     }
+    async deleteTenant(req, id) {
+        if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+            throw new common_1.UnauthorizedException('Permissão negada.');
+        }
+        return this.tenantsService.deleteTenant(id);
+    }
+    async deleteTenantSetup(req, id) {
+        const pin = req.headers['x-setup-pin'];
+        const valid = await this.tenantsService.validatePin(pin);
+        if (!valid)
+            throw new common_1.UnauthorizedException('PIN inválido.');
+        return this.tenantsService.deleteTenant(id);
+    }
+    async registrarPagamentoSetup(req, id) {
+        const pin = req.headers['x-setup-pin'];
+        const valid = await this.tenantsService.validatePin(pin);
+        if (!valid)
+            throw new common_1.UnauthorizedException('PIN inválido.');
+        return this.tenantsService.registrarPagamento(id);
+    }
+    async getTenantCategories(req, id) {
+        const pin = req.headers['x-setup-pin'];
+        const valid = await this.tenantsService.validatePin(pin);
+        if (!valid)
+            throw new common_1.UnauthorizedException('PIN inválido.');
+        return this.tenantsService.getTenantCategories(id);
+    }
 };
 exports.TenantsController = TenantsController;
 __decorate([
@@ -277,6 +304,39 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], TenantsController.prototype, "verifyDiscountPin", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], TenantsController.prototype, "deleteTenant", null);
+__decorate([
+    (0, common_1.Delete)('setup/:id'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], TenantsController.prototype, "deleteTenantSetup", null);
+__decorate([
+    (0, common_1.Post)('setup/:id/registrar-pagamento'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], TenantsController.prototype, "registrarPagamentoSetup", null);
+__decorate([
+    (0, common_1.Get)('setup/:id/categories'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], TenantsController.prototype, "getTenantCategories", null);
 exports.TenantsController = TenantsController = __decorate([
     (0, common_1.Controller)('tenants'),
     __metadata("design:paramtypes", [tenants_service_1.TenantsService])

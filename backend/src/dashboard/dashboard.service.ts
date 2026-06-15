@@ -93,7 +93,7 @@ export class DashboardService {
     const periodSales = await prisma.sale.findMany({
       where: { createdAt: { gte: periodStart, lte: periodEnd }, NOT: { status: 'cancelled' } },
       include: {
-        payments: { select: { method: true, value: true } },
+        payments: { select: { method: true, value: true, label: true } },
         items: {
           select: {
             quantity: true,
@@ -112,7 +112,7 @@ export class DashboardService {
     };
     periodSales.forEach(sale => {
       sale.payments.forEach(p => {
-        const method = p.method as string;
+        const method = (p.label || p.method) as string;
         byPaymentMethod[method] = (byPaymentMethod[method] ?? 0) + Number(p.value);
       });
     });

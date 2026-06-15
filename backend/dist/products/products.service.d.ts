@@ -1,6 +1,7 @@
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { Prisma } from '@prisma/client';
+import { IntegrationsService } from '../integrations/integrations.service';
 interface ModifierOptionInputDto {
     name: string;
     componentProductId: string;
@@ -77,19 +78,20 @@ export declare class ProductsService {
     private tenantManager;
     private tenantContext;
     private heartPrisma;
+    private integrationsService;
     private catalogCache;
     private readonly CACHE_TTL;
     invalidateCache(tenantId: string): void;
-    constructor(tenantManager: TenantConnectionManager, tenantContext: TenantContextService, heartPrisma: HeartPrismaService);
+    constructor(tenantManager: TenantConnectionManager, tenantContext: TenantContextService, heartPrisma: HeartPrismaService, integrationsService: IntegrationsService);
     private getPrisma;
     private nextShortCode;
     private sanitize;
     lookupBarcode(barcode: string): Promise<{
         source: string;
         data: {
-            name: string;
             id: string;
             createdAt: Date;
+            name: string;
             updatedAt: Date;
             categoryId: string;
             grupoTributacaoId: string | null;
@@ -122,13 +124,14 @@ export declare class ProductsService {
             masterCategory: string | null;
         };
     }>;
+    clearCache(): void;
     findAll(page?: number, limit?: number): Promise<any>;
     getComposition(id: string): Promise<({
         options: ({
             componentProduct: {
-                name: string;
                 id: string;
                 createdAt: Date;
+                name: string;
                 updatedAt: Date;
                 categoryId: string;
                 grupoTributacaoId: string | null;
@@ -149,24 +152,24 @@ export declare class ProductsService {
                 volumeCapacity: Prisma.Decimal | null;
             };
         } & {
-            name: string;
             id: string;
+            name: string;
             quantity: Prisma.Decimal;
             groupId: string;
             componentProductId: string;
             priceAdjustment: Prisma.Decimal;
         })[];
     } & {
-        name: string;
         id: string;
+        name: string;
         productId: string;
         minSelected: number;
         maxSelected: number;
     })[]>;
     create(data: ProductCreateDto): Promise<{
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         categoryId: string;
         grupoTributacaoId: string | null;
@@ -187,9 +190,9 @@ export declare class ProductsService {
         volumeCapacity: Prisma.Decimal | null;
     }>;
     update(id: string, data: ProductUpdateDto): Promise<{
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         categoryId: string;
         grupoTributacaoId: string | null;
@@ -210,11 +213,52 @@ export declare class ProductsService {
         volumeCapacity: Prisma.Decimal | null;
     }>;
     remove(id: string): Promise<any>;
+    inventoryHistory(): Promise<{
+        sessionId: string;
+        date: string;
+        totalProducts: number;
+        increases: number;
+        decreases: number;
+        unchanged: number;
+        items: {
+            name: string;
+            before: number;
+            after: number;
+            diff: number;
+        }[];
+    }[]>;
+    inventoryExport(filters: {
+        categoryIds?: string[];
+        productIds?: string[];
+    }): Promise<{
+        id: any;
+        shortCode: any;
+        name: any;
+        category: any;
+        unit: any;
+        stock: number;
+    }[]>;
+    inventoryImport(items: {
+        productId: string;
+        newStock: number;
+    }[]): Promise<{
+        updated: number;
+        errors: {
+            productId: string;
+            error: string;
+        }[];
+        results: {
+            productId: string;
+            name: string;
+            before: number;
+            after: number;
+        }[];
+    }>;
     addStock(productId: string, quantity: number, costPrice?: number, reason?: string): Promise<{
         product: {
-            name: string;
             id: string;
             createdAt: Date;
+            name: string;
             updatedAt: Date;
             categoryId: string;
             grupoTributacaoId: string | null;

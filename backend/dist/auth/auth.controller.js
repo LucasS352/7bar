@@ -31,6 +31,12 @@ let AuthController = class AuthController {
     async operatorLogin(user, body) {
         return this.authService.validateOperatorPin(user.tenantId, body.operatorId, body.pin);
     }
+    async acceptTerms(user) {
+        if (user.role !== 'admin' && user.role !== 'superadmin') {
+            throw new common_1.UnauthorizedException('Apenas administradores podem aceitar os termos.');
+        }
+        return this.authService.acceptTerms(user.tenantId);
+    }
 };
 exports.AuthController = AuthController;
 __decorate([
@@ -49,6 +55,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "operatorLogin", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('accept-terms'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "acceptTerms", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

@@ -24,15 +24,28 @@ let CategoriesService = class CategoriesService {
     }
     async findAll() {
         const prisma = await this.getPrisma();
-        return prisma.category.findMany();
+        return prisma.category.findMany({
+            include: { grupoTributacao: true }
+        });
     }
     async create(data) {
         const prisma = await this.getPrisma();
-        return prisma.category.create({ data });
+        return prisma.category.create({
+            data: {
+                name: data.name,
+                grupoTributacaoId: data.grupoTributacaoId || null
+            }
+        });
     }
     async update(id, data) {
         const prisma = await this.getPrisma();
-        return prisma.category.update({ where: { id }, data });
+        return prisma.category.update({
+            where: { id },
+            data: {
+                name: data.name,
+                grupoTributacaoId: data.grupoTributacaoId !== undefined ? (data.grupoTributacaoId || null) : undefined
+            }
+        });
     }
     async remove(id) {
         const prisma = await this.getPrisma();

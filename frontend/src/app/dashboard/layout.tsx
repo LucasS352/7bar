@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Banknote, Store } from 'lucide-react';
+import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Banknote, Store, CreditCard } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -25,6 +25,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const configItems = [
     { name: 'Empresa', href: '/dashboard/configuracoes/empresa', icon: Building2 },
     { name: 'Grupos Tributários', href: '/dashboard/configuracoes/tributacao', icon: FileText },
+    { name: 'Formas de Pagamento', href: '/dashboard/configuracoes/payment-methods', icon: CreditCard },
   ];
 
   return (

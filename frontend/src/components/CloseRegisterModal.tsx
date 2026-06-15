@@ -177,6 +177,12 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                       <span>Transferências (Pix)</span>
                       <span className="font-bold">R$ {Number(data.report.totalPix || 0).toFixed(2)}</span>
                     </div>
+                    {(data.report.customMethods || []).map((cm: any) => (
+                      <div key={cm.method} className="flex justify-between text-purple-400">
+                        <span>{cm.label}</span>
+                        <span className="font-bold">R$ {Number(cm.total || 0).toFixed(2)}</span>
+                      </div>
+                    ))}
                   </div>
 
                   <div className="flex justify-between p-4 bg-zinc-800/20 text-white rounded-2xl border border-zinc-700/50 mt-4">

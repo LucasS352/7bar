@@ -15,12 +15,13 @@ const prisma_module_1 = require("../prisma/prisma.module");
 const products_module_1 = require("../products/products.module");
 const sales_cron_service_1 = require("./sales-cron.service");
 const mail_module_1 = require("../mail/mail.module");
+const integrations_module_1 = require("../integrations/integrations.module");
 let SalesModule = class SalesModule {
 };
 exports.SalesModule = SalesModule;
 exports.SalesModule = SalesModule = __decorate([
     (0, common_1.Module)({
-        imports: [nfce_module_1.NfceModule, prisma_module_1.PrismaModule, products_module_1.ProductsModule, mail_module_1.MailModule],
+        imports: [nfce_module_1.NfceModule, prisma_module_1.PrismaModule, products_module_1.ProductsModule, mail_module_1.MailModule, integrations_module_1.IntegrationsModule],
         providers: [sales_service_1.SalesService, sales_cron_service_1.SalesCronService],
         controllers: [sales_controller_1.SalesController],
     })

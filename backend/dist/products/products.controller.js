@@ -59,6 +59,18 @@ let ProductsController = class ProductsController {
     remove(id) {
         return this.productsService.remove(id);
     }
+    inventoryExport(categoryIds, productIds) {
+        return this.productsService.inventoryExport({
+            categoryIds: categoryIds ? categoryIds.split(',').filter(Boolean) : undefined,
+            productIds: productIds ? productIds.split(',').filter(Boolean) : undefined,
+        });
+    }
+    inventoryImport(items) {
+        return this.productsService.inventoryImport(items);
+    }
+    inventoryHistory() {
+        return this.productsService.inventoryHistory();
+    }
 };
 exports.ProductsController = ProductsController;
 __decorate([
@@ -151,6 +163,27 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Get)('inventory/export'),
+    __param(0, (0, common_1.Query)('categoryIds')),
+    __param(1, (0, common_1.Query)('productIds')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "inventoryExport", null);
+__decorate([
+    (0, common_1.Post)('inventory/import'),
+    __param(0, (0, common_1.Body)('items')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "inventoryImport", null);
+__decorate([
+    (0, common_1.Get)('inventory/history'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "inventoryHistory", null);
 exports.ProductsController = ProductsController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('products'),

@@ -6,9 +6,9 @@ export declare class ProductsController {
     lookupBarcode(barcode: string): Promise<{
         source: string;
         data: {
-            name: string;
             id: string;
             createdAt: Date;
+            name: string;
             updatedAt: Date;
             categoryId: string;
             grupoTributacaoId: string | null;
@@ -42,9 +42,9 @@ export declare class ProductsController {
         };
     }>;
     create(body: any): Promise<{
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         categoryId: string;
         grupoTributacaoId: string | null;
@@ -75,9 +75,9 @@ export declare class ProductsController {
     }>;
     addStock(id: string, quantity: number, costPrice?: number, reason?: string): Promise<{
         product: {
-            name: string;
             id: string;
             createdAt: Date;
+            name: string;
             updatedAt: Date;
             categoryId: string;
             grupoTributacaoId: string | null;
@@ -106,9 +106,9 @@ export declare class ProductsController {
     getComposition(id: string): Promise<({
         options: ({
             componentProduct: {
-                name: string;
                 id: string;
                 createdAt: Date;
+                name: string;
                 updatedAt: Date;
                 categoryId: string;
                 grupoTributacaoId: string | null;
@@ -129,24 +129,24 @@ export declare class ProductsController {
                 volumeCapacity: import("@prisma/client/runtime/library").Decimal | null;
             };
         } & {
-            name: string;
             id: string;
+            name: string;
             quantity: import("@prisma/client/runtime/library").Decimal;
             groupId: string;
             componentProductId: string;
             priceAdjustment: import("@prisma/client/runtime/library").Decimal;
         })[];
     } & {
-        name: string;
         id: string;
+        name: string;
         productId: string;
         minSelected: number;
         maxSelected: number;
     })[]>;
     update(id: string, body: any): Promise<{
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         categoryId: string;
         grupoTributacaoId: string | null;
@@ -174,4 +174,42 @@ export declare class ProductsController {
         createdAt: Date;
     }[]>;
     remove(id: string): Promise<any>;
+    inventoryExport(categoryIds?: string, productIds?: string): Promise<{
+        id: any;
+        shortCode: any;
+        name: any;
+        category: any;
+        unit: any;
+        stock: number;
+    }[]>;
+    inventoryImport(items: {
+        productId: string;
+        newStock: number;
+    }[]): Promise<{
+        updated: number;
+        errors: {
+            productId: string;
+            error: string;
+        }[];
+        results: {
+            productId: string;
+            name: string;
+            before: number;
+            after: number;
+        }[];
+    }>;
+    inventoryHistory(): Promise<{
+        sessionId: string;
+        date: string;
+        totalProducts: number;
+        increases: number;
+        decreases: number;
+        unchanged: number;
+        items: {
+            name: string;
+            before: number;
+            after: number;
+            diff: number;
+        }[];
+    }[]>;
 }

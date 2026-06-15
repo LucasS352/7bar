@@ -62,10 +62,16 @@ model Tenant {
   // Integração Cosmos (Bluesoft) — lookup de EAN brasileiro
   cosmosApiKey String? // Token da API Cosmos do cliente para lookup de EAN
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Mensalidades
+  mensalidadeValor      Decimal?  @default(0.00) @map("mensalidade_valor") @db.Decimal(10, 2)
+  mensalidadeVencimento DateTime? @map("mensalidade_vencimento")
 
-  users User[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  termsAcceptedAt DateTime? @map("terms_accepted_at")
+
+  users              User[]
+  tenantIntegrations TenantIntegration[]
 
   @@map("tenants")
 }
@@ -112,4 +118,36 @@ model MasterProduct {
 
   @@index([ean])
   @@map("master_products")
+}
+
+// ------------------------------------------------------------
+//  Image — armazenamento global de fotos no banco heart
+// ------------------------------------------------------------
+model Image {
+  id        String   @id @default(uuid())
+  data      Bytes    @db.LongBlob
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  @@map("images")
+}
+
+// ------------------------------------------------------------
+//  TenantIntegration — central de integrações (App Store)
+// ------------------------------------------------------------
+model TenantIntegration {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  provider    String // ex: "ifood", "goomer", "whatsapp"
+  status      String @default("active") // active, paused, disconnected
+  credentials Json // Tokens OAuth (accessToken, refreshToken, merchantId)
+  settings    Json // Configurações (autoAceitarPedido, imprimirAutomatico)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, provider])
+  @@map("tenant_integrations")
 }

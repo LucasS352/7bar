@@ -6,9 +6,9 @@ export declare class TenantsController {
     constructor(tenantsService: TenantsService);
     findAll(req: any): import("src/generated/heart-client").Prisma.PrismaPromise<({
         users: {
-            name: string;
             id: string;
             createdAt: Date;
+            name: string;
             updatedAt: Date;
             active: boolean;
             pin: string | null;
@@ -17,10 +17,20 @@ export declare class TenantsController {
             password: string;
             role: string;
         }[];
+        tenantIntegrations: {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: string;
+            tenantId: string;
+            provider: string;
+            credentials: import("src/generated/heart-client/runtime/library").JsonValue;
+            settings: import("src/generated/heart-client/runtime/library").JsonValue;
+        }[];
     } & {
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         status: string;
         nfceSerie: number;
@@ -53,12 +63,15 @@ export declare class TenantsController {
         certSenha: string | null;
         certValidade: Date | null;
         cosmosApiKey: string | null;
+        mensalidadeValor: import("src/generated/heart-client/runtime/library").Decimal | null;
+        mensalidadeVencimento: Date | null;
+        termsAcceptedAt: Date | null;
     })[]>;
     listByPin(req: any): Promise<({
         users: {
-            name: string;
             id: string;
             createdAt: Date;
+            name: string;
             updatedAt: Date;
             active: boolean;
             pin: string | null;
@@ -67,10 +80,20 @@ export declare class TenantsController {
             password: string;
             role: string;
         }[];
+        tenantIntegrations: {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: string;
+            tenantId: string;
+            provider: string;
+            credentials: import("src/generated/heart-client/runtime/library").JsonValue;
+            settings: import("src/generated/heart-client/runtime/library").JsonValue;
+        }[];
     } & {
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         status: string;
         nfceSerie: number;
@@ -103,15 +126,18 @@ export declare class TenantsController {
         certSenha: string | null;
         certValidade: Date | null;
         cosmosApiKey: string | null;
+        mensalidadeValor: import("src/generated/heart-client/runtime/library").Decimal | null;
+        mensalidadeVencimento: Date | null;
+        termsAcceptedAt: Date | null;
     })[]>;
     migrateTenants(req: any, body: {
         tenantIds: string[];
     }): Promise<any[]>;
     getMe(req: any): Promise<any>;
     updateMe(req: any, body: any): Promise<{
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         status: string;
         nfceSerie: number;
@@ -144,11 +170,14 @@ export declare class TenantsController {
         certSenha: string | null;
         certValidade: Date | null;
         cosmosApiKey: string | null;
+        mensalidadeValor: import("src/generated/heart-client/runtime/library").Decimal | null;
+        mensalidadeVencimento: Date | null;
+        termsAcceptedAt: Date | null;
     }>;
     updateTenantSetup(req: any, id: string, body: any): Promise<{
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         status: string;
         nfceSerie: number;
@@ -181,11 +210,14 @@ export declare class TenantsController {
         certSenha: string | null;
         certValidade: Date | null;
         cosmosApiKey: string | null;
+        mensalidadeValor: import("src/generated/heart-client/runtime/library").Decimal | null;
+        mensalidadeVencimento: Date | null;
+        termsAcceptedAt: Date | null;
     }>;
     updateTenant(req: any, id: string, body: any): Promise<{
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         status: string;
         nfceSerie: number;
@@ -218,6 +250,9 @@ export declare class TenantsController {
         certSenha: string | null;
         certValidade: Date | null;
         cosmosApiKey: string | null;
+        mensalidadeValor: import("src/generated/heart-client/runtime/library").Decimal | null;
+        mensalidadeVencimento: Date | null;
+        termsAcceptedAt: Date | null;
     }>;
     uploadCertificado(req: any, file: Express.Multer.File, body: any): Promise<{
         message: string;
@@ -232,9 +267,9 @@ export declare class TenantsController {
     }>;
     serveLogo(filename: string, res: Response): void;
     create(req: any, body: any): import("src/generated/heart-client").Prisma.Prisma__TenantClient<{
-        name: string;
         id: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         status: string;
         nfceSerie: number;
@@ -267,6 +302,9 @@ export declare class TenantsController {
         certSenha: string | null;
         certValidade: Date | null;
         cosmosApiKey: string | null;
+        mensalidadeValor: import("src/generated/heart-client/runtime/library").Decimal | null;
+        mensalidadeVencimento: Date | null;
+        termsAcceptedAt: Date | null;
     }, never, import("src/generated/heart-client/runtime/library").DefaultArgs, import("src/generated/heart-client").Prisma.PrismaClientOptions>;
     setup(body: ProvisionTenantDto): Promise<{
         message: string;
@@ -296,4 +334,57 @@ export declare class TenantsController {
     }): Promise<{
         valid: boolean;
     }>;
+    deleteTenant(req: any, id: string): Promise<{
+        success: boolean;
+    }>;
+    deleteTenantSetup(req: any, id: string): Promise<{
+        success: boolean;
+    }>;
+    registrarPagamentoSetup(req: any, id: string): Promise<{
+        id: string;
+        createdAt: Date;
+        name: string;
+        updatedAt: Date;
+        status: string;
+        nfceSerie: number;
+        databaseName: string;
+        cnpj: string | null;
+        databaseUrl: string;
+        logoUrl: string | null;
+        modulos: import("src/generated/heart-client/runtime/library").JsonValue | null;
+        razaoSocial: string | null;
+        nomeFantasia: string | null;
+        ie: string | null;
+        im: string | null;
+        crt: number;
+        logradouro: string | null;
+        numero: string | null;
+        complemento: string | null;
+        bairro: string | null;
+        municipio: string | null;
+        codMunicipio: string | null;
+        uf: string | null;
+        cep: string | null;
+        telefone: string | null;
+        emailContador: string | null;
+        nfceAtivo: boolean;
+        nfceAutoSync: boolean;
+        nfceAmbiente: number;
+        nfceCsc: string | null;
+        nfceIdCsc: string | null;
+        certPfx: import("src/generated/heart-client/runtime/library").Bytes | null;
+        certSenha: string | null;
+        certValidade: Date | null;
+        cosmosApiKey: string | null;
+        mensalidadeValor: import("src/generated/heart-client/runtime/library").Decimal | null;
+        mensalidadeVencimento: Date | null;
+        termsAcceptedAt: Date | null;
+    }>;
+    getTenantCategories(req: any, id: string): Promise<{
+        id: string;
+        createdAt: Date;
+        name: string;
+        updatedAt: Date;
+        grupoTributacaoId: string | null;
+    }[]>;
 }

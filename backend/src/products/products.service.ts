@@ -480,6 +480,156 @@ export class ProductsService {
     return result;
   }
 
+  // ── Inventário / Contagem de Estoque ─────────────────────────────────────
+
+  /**
+   * Retorna o histórico de contagens físicas agrupado por sessão (janela de 30 min).
+   */
+  async inventoryHistory() {
+    const prisma = await this.getPrisma();
+
+    const logs = await prisma.inventoryLog.findMany({
+      where: { reason: { contains: 'Contagem Física' } },
+      include: { product: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 2000,
+    });
+
+    // Agrupa por janela de 30 minutos
+    const sessions: Record<string, {
+      sessionId: string;
+      date: string;
+      totalProducts: number;
+      increases: number;
+      decreases: number;
+      unchanged: number;
+      items: { name: string; before: number; after: number; diff: number }[];
+    }> = {};
+
+    for (const log of logs as any[]) {
+      const d = new Date(log.createdAt);
+      const windowMinutes = Math.floor(d.getMinutes() / 30) * 30;
+      const sessionKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}-${windowMinutes}`;
+
+      if (!sessions[sessionKey]) {
+        sessions[sessionKey] = {
+          sessionId: sessionKey,
+          date: log.createdAt,
+          totalProducts: 0,
+          increases: 0,
+          decreases: 0,
+          unchanged: 0,
+          items: [],
+        };
+      }
+
+      // Extrai before/after do reason: "Antes: X, Depois: Y"
+      const beforeMatch = log.reason?.match(/Antes:\s*([\d.]+)/);
+      const afterMatch  = log.reason?.match(/Depois:\s*([\d.]+)/);
+      const before = beforeMatch ? parseFloat(beforeMatch[1]) : 0;
+      const after  = afterMatch  ? parseFloat(afterMatch[1])  : 0;
+      const diff   = after - before;
+
+      sessions[sessionKey].totalProducts++;
+      if (diff > 0) sessions[sessionKey].increases++;
+      else if (diff < 0) sessions[sessionKey].decreases++;
+      else sessions[sessionKey].unchanged++;
+
+      sessions[sessionKey].items.push({
+        name: log.product?.name || 'Desconhecido',
+        before,
+        after,
+        diff,
+      });
+    }
+
+    return Object.values(sessions).sort((a, b) =>
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }
+
+  /**
+   * Retorna produtos para exportação do inventário.
+   * Filtros opcionais: categoryIds[] e productIds[]
+   */
+  async inventoryExport(filters: { categoryIds?: string[]; productIds?: string[] }) {
+    const prisma = await this.getPrisma();
+
+    const where: any = { active: true };
+
+    if (filters.productIds && filters.productIds.length > 0) {
+      where.id = { in: filters.productIds };
+    } else if (filters.categoryIds && filters.categoryIds.length > 0) {
+      where.categoryId = { in: filters.categoryIds };
+    }
+
+    const products = await prisma.product.findMany({
+      where,
+      include: { category: true },
+      orderBy: [{ category: { name: 'asc' } }, { name: 'asc' }],
+    });
+
+    return products.map((p: any) => ({
+      id: p.id,
+      shortCode: p.shortCode || '',
+      name: p.name,
+      category: p.category?.name || '',
+      unit: p.unit || 'UN',
+      stock: Number(p.stock),
+    }));
+  }
+
+  /**
+   * Recebe array de { productId, newStock } e substitui o estoque de cada produto.
+   * Produtos com newStock === null/undefined são ignorados.
+   * Registra cada ajuste no InventoryLog.
+   */
+  async inventoryImport(items: { productId: string; newStock: number }[]) {
+    const prisma = await this.getPrisma();
+
+    const results: { productId: string; name: string; before: number; after: number }[] = [];
+    const errors: { productId: string; error: string }[] = [];
+
+    for (const item of items) {
+      if (item.newStock === null || item.newStock === undefined || isNaN(item.newStock)) {
+        continue; // Ignora linhas sem valor preenchido
+      }
+
+      try {
+        await prisma.$transaction(async (tx: any) => {
+          const product = await tx.product.findUnique({ where: { id: item.productId } });
+          if (!product) throw new Error('Produto não encontrado');
+
+          const before = Number(product.stock);
+          const after = Number(item.newStock);
+          const diff = after - before;
+
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: new Prisma.Decimal(after) },
+          });
+
+          await tx.inventoryLog.create({
+            data: {
+              productId: item.productId,
+              type: diff >= 0 ? 'IN' : 'OUT',
+              quantity: Math.abs(diff),
+              costPrice: Number(product.priceCost),
+              reason: `Ajuste de Inventário (Contagem Física) — Antes: ${before}, Depois: ${after}`,
+            },
+          });
+
+          results.push({ productId: item.productId, name: product.name, before, after });
+        });
+      } catch (err: any) {
+        errors.push({ productId: item.productId, error: err.message });
+      }
+    }
+
+    this.invalidateCache(this.tenantContext.get().tenantId);
+    return { updated: results.length, errors, results };
+  }
+
   // ── Entrada de Estoque Incremental ────────────────────────────────────────
 
   /**
@@ -707,6 +857,99 @@ export class ProductsService {
       create: { id: 'singleton', allowNegativeStock: data.allowNegativeStock },
     });
     return { allowNegativeStock: settings.allowNegativeStock };
+  }
+
+  /** Normaliza string para comparação: remove acentos, lowercase, trim, espaços duplos */
+  private normalizeForMatch(str: string): string {
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  async bulkImageUpload(tenantId: string, files: Express.Multer.File[]) {
+    const prisma = await this.getPrisma();
+
+    // Buscar todos os produtos ativos do tenant
+    const allProducts = await prisma.product.findMany({
+      where: { active: true },
+      select: { id: true, name: true, imageUrl: true },
+    });
+
+    // Criar mapa: nome normalizado → produto
+    const productMap = new Map<string, { id: string; name: string; imageUrl: string | null }>();
+    for (const p of allProducts) {
+      productMap.set(this.normalizeForMatch(p.name), p);
+    }
+
+    const matched: { fileName: string; productId: string; productName: string; imageUrl: string }[] = [];
+    const notFound: { fileName: string }[] = [];
+    const errors: { fileName: string; error: string }[] = [];
+
+    for (const file of files) {
+      // Extrai nome do arquivo sem extensão
+      const fileNameWithoutExt = file.originalname.replace(/\.[^/.]+$/, '');
+      const normalizedFileName = this.normalizeForMatch(fileNameWithoutExt);
+
+      // Tenta match exato primeiro
+      let product = productMap.get(normalizedFileName);
+
+      // Se não encontrou exato, tenta match parcial (contém)
+      if (!product) {
+        for (const [key, val] of productMap.entries()) {
+          if (key.includes(normalizedFileName) || normalizedFileName.includes(key)) {
+            product = val;
+            break;
+          }
+        }
+      }
+
+      if (!product) {
+        notFound.push({ fileName: file.originalname });
+        continue;
+      }
+
+      try {
+        // Salvar imagem no banco heart (global)
+        const image = await this.heartPrisma.image.create({
+          data: {
+            data: Buffer.from(file.buffer),
+            mimeType: file.mimetype,
+          },
+        });
+
+        const imageUrl = `/api/products/uploads/images/${image.id}`;
+
+        // Atualizar o produto com a nova imageUrl
+        await prisma.product.update({
+          where: { id: product.id },
+          data: { imageUrl },
+        });
+
+        matched.push({
+          fileName: file.originalname,
+          productId: product.id,
+          productName: product.name,
+          imageUrl,
+        });
+      } catch (err: any) {
+        errors.push({ fileName: file.originalname, error: err?.message || 'Erro desconhecido' });
+      }
+    }
+
+    // Invalidar cache
+    this.invalidateCache(tenantId);
+
+    return {
+      total: files.length,
+      matched: matched.length,
+      notFound: notFound.length,
+      errors: errors.length,
+      details: { matched, notFound, errors },
+    };
   }
 
   async uploadPhoto(tenantId: string, file: Express.Multer.File) {

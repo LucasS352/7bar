@@ -21,10 +21,13 @@ import UsersPage from './app/dashboard/users/page';
 import CategoriesPage from './app/dashboard/inventory/categories/page';
 import MassEntryPage from './app/dashboard/inventory/purchases/page';
 import StockEntryPage from './app/dashboard/inventory/stock-entry/page';
+import StockCountPage from './app/dashboard/inventory/stock-count/page';
 import SysInitPage from './app/sys-init/page';
 import SuppliersPage from './app/dashboard/suppliers/page';
 import PurchaseOrdersPage from './app/dashboard/purchase-orders/page';
 import PayablesPage from './app/dashboard/finance/payables/page';
+import PaymentMethodsPage from './app/dashboard/configuracoes/payment-methods/page';
+import BulkImagesPage from './pages/dashboard/BulkImagesPage';
 
 // Stores
 import { useAuthStore } from './store/auth';
@@ -97,6 +100,7 @@ function App() {
           <Route path="inventory/categories" element={<CategoriesPage />} />
           <Route path="inventory/purchases" element={<MassEntryPage />} />
           <Route path="inventory/stock-entry" element={<StockEntryPage />} />
+          <Route path="inventory/stock-count" element={<StockCountPage />} />
           <Route path="registers" element={<RegistersPage />} />
           <Route path="configuracoes/empresa" element={<EmpresaPage />} />
           <Route path="configuracoes/tributacao" element={<TributacaoPage />} />
@@ -105,6 +109,8 @@ function App() {
           <Route path="suppliers" element={<SuppliersPage />} />
           <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
           <Route path="finance/payables" element={<PayablesPage />} />
+          <Route path="configuracoes/payment-methods" element={<PaymentMethodsPage />} />
+          <Route path="bulk-images" element={<BulkImagesPage />} />
         </Route>
 
         {/* Fallback */}

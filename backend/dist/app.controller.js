@@ -14,9 +14,11 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppController = void 0;
 const common_1 = require("@nestjs/common");
-const fs_1 = require("fs");
-const path_1 = require("path");
+const heart_prisma_service_1 = require("./prisma/heart-prisma.service");
 let AppController = class AppController {
+    constructor(heartPrisma) {
+        this.heartPrisma = heartPrisma;
+    }
     healthCheck() {
         return {
             status: 'ok',
@@ -25,14 +27,20 @@ let AppController = class AppController {
             timestamp: new Date().toISOString(),
         };
     }
-    serveProductImage(filename, res) {
-        const filePath = (0, path_1.join)(process.cwd(), 'uploads/products', filename);
-        if (!(0, fs_1.existsSync)(filePath)) {
-            res.status(404).send('Product image not found');
-            return;
+    async serveProductImage(id, res) {
+        try {
+            const image = await this.heartPrisma.image.findUnique({
+                where: { id }
+            });
+            if (!image) {
+                throw new common_1.NotFoundException('Image not found');
+            }
+            res.setHeader('Content-Type', image.mimeType);
+            res.send(image.data);
         }
-        const file = (0, fs_1.createReadStream)(filePath);
-        file.pipe(res);
+        catch (err) {
+            res.status(404).send('Product image not found');
+        }
     }
 };
 exports.AppController = AppController;
@@ -43,14 +51,15 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AppController.prototype, "healthCheck", null);
 __decorate([
-    (0, common_1.Get)('products/uploads/images/:filename'),
-    __param(0, (0, common_1.Param)('filename')),
+    (0, common_1.Get)('products/uploads/images/:id'),
+    __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], AppController.prototype, "serveProductImage", null);
 exports.AppController = AppController = __decorate([
-    (0, common_1.Controller)()
+    (0, common_1.Controller)(),
+    __metadata("design:paramtypes", [heart_prisma_service_1.HeartPrismaService])
 ], AppController);
 //# sourceMappingURL=app.controller.js.map
