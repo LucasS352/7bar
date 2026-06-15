@@ -37,11 +37,15 @@ function PosPageContent() {
   const [tenantConfig,       setTenantConfig]       = useState<any>(null);
   const [compositeProduct,   setCompositeProduct]   = useState<Product | null>(null);
   const [focusedProductIdx,  setFocusedProductIdx]  = useState<number>(-1);
-  const [promptQuantity,      setPromptQuantity]      = useState(false);
+  const [promptQuantity,      setPromptQuantity]      = useState(() => localStorage.getItem('7bar_promptQuantity') === 'true');
   const [productToSetQuantity,setProductToSetQuantity]= useState<Product | null>(null);
   const [tempQuantity,        setTempQuantity]        = useState<number>(1);
   const productRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const { operator, cashRegister, isLoading: isShiftLoading, logoutOperator, refreshShift } = useShift();
+
+  useEffect(() => {
+    localStorage.setItem('7bar_promptQuantity', String(promptQuantity));
+  }, [promptQuantity]);
 
   const handleClickProduct = (product: Product) => {
     // Busca o produto com os modifierGroups completos do array de products em memória
