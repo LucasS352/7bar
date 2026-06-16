@@ -777,7 +777,10 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                   </button>
                 </div>
                 {method === 'dinheiro' && parseFloat(inputValue) > remaining && remaining > 0 && (
-                  <p className="text-emerald-400/80 text-xs mt-2 italic">Troco a devolver: R$ {(parseFloat(inputValue) - remaining).toFixed(2)}</p>
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 mt-4 animate-in zoom-in-95 duration-200 shadow-inner">
+                    <p className="text-emerald-400 text-sm font-bold mb-1 uppercase tracking-wider">Troco a devolver</p>
+                    <p className="text-emerald-400 font-black text-3xl">R$ {(parseFloat(inputValue) - remaining).toFixed(2)}</p>
+                  </div>
                 )}
               </div>
             )}

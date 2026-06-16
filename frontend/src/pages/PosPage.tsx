@@ -50,6 +50,7 @@ function PosPageContent() {
   const handleClickProduct = (product: Product) => {
     // Busca o produto com os modifierGroups completos do array de products em memória
     const fullProduct = products.find(p => p.id === product.id) || product;
+    setSearch('');
     if (fullProduct.isComposite && fullProduct.modifierGroups && fullProduct.modifierGroups.length > 0) {
       setCompositeProduct(fullProduct);
     } else if (promptQuantity) {
@@ -143,7 +144,7 @@ function PosPageContent() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F4' && items.length > 0) { e.preventDefault(); setIsPaymentOpen(true); }
+      if (e.key === 'F12' && items.length > 0) { e.preventDefault(); setIsPaymentOpen(true); }
       if (e.key === 'Escape') setIsPaymentOpen(false);
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -484,7 +485,7 @@ function PosPageContent() {
             className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-bold py-4 md:py-5 px-6 rounded-xl md:rounded-2xl text-xl transition-all shadow-lg active:scale-95 flex justify-between items-center group overflow-hidden relative"
           >
             <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-            <span className="z-10"><span className="hidden md:inline">[F4]</span> Cobrar</span>
+            <span className="z-10"><span className="hidden md:inline">[F12]</span> Cobrar</span>
             <span className="z-10 bg-black/20 p-2 rounded-xl text-sm italic">Finalizar</span>
           </button>
         </div>
