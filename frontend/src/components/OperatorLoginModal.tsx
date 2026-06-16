@@ -13,6 +13,7 @@ interface OperatorLoginModalProps {
 interface OperatorData {
   id: string;
   name: string;
+  hasOpenRegister?: boolean;
 }
 
 export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
@@ -85,9 +86,16 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
                 <div className="w-12 h-12 bg-zinc-800 group-hover:bg-blue-500/20 rounded-full flex items-center justify-center shrink-0 transition-colors">
                   <User className="text-zinc-400 group-hover:text-blue-400 transition-colors" size={24} />
                 </div>
-                <div>
-                  <p className="text-white font-bold truncate">{op.name}</p>
-                  <p className="text-xs text-zinc-500 uppercase tracking-wider">Operador</p>
+                <div className="flex-1 flex justify-between items-center overflow-hidden">
+                  <div>
+                    <p className="text-white font-bold truncate">{op.name}</p>
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider">Operador</p>
+                  </div>
+                  {op.hasOpenRegister && (
+                    <span className="bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider whitespace-nowrap">
+                      Ativo
+                    </span>
+                  )}
                 </div>
               </button>
             ))}

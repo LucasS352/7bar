@@ -1,6 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { api } from '@/lib/api';
-import { toast } from 'sonner';
 
 interface Operator {
   id: string;
@@ -20,7 +19,8 @@ interface ShiftContextType {
   setCashRegister: (reg: CashRegister | null) => void;
   isLoading: boolean;
   logoutOperator: () => void;
-  refreshShift: () => Promise<void>;
+  // operatorId opcional: quando passado, usa esse valor diretamente (evita closure stale)
+  refreshShift: (operatorId?: string) => Promise<void>;
 }
 
 const ShiftContext = createContext<ShiftContextType | undefined>(undefined);
@@ -30,34 +30,54 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
   const [cashRegister, setCashRegister] = useState<CashRegister | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load operator from session storage and check for global open shifts
+  // ─── refreshShift: aceita operatorId EXPLÍCITO para evitar closure stale ───
+  // Sempre que possível, passe o operatorId diretamente em vez de depender
+  // do estado `operator`, pois o estado pode não ter sido atualizado ainda
+  // no momento em que a função é chamada (stale closure).
+  const refreshShift = useCallback(async (operatorId?: string) => {
+    // Resolve o ID: prioriza o parâmetro explícito, depois lê a sessão,
+    // por último tenta o estado atual (menos confiável em transitions).
+    const resolvedId = operatorId
+      ?? (() => {
+        try {
+          const saved = sessionStorage.getItem('currentOperator');
+          return saved ? JSON.parse(saved).id : null;
+        } catch { return null; }
+      })()
+      ?? operator?.id;
+
+    if (!resolvedId) return;
+
+    try {
+      const res = await api.get(`/cash-registers/current?operatorId=${resolvedId}`);
+      const register = res.data || null;
+      setCashRegister(register);
+
+      if (register) {
+        localStorage.setItem(`pdvpro_cached_register_${resolvedId}`, JSON.stringify(register));
+      } else {
+        localStorage.removeItem(`pdvpro_cached_register_${resolvedId}`);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar caixa atual:', err);
+    }
+  }, [operator?.id]);
+
+  // ─── Inicialização: carrega operador da sessão e busca o caixa dele ─────────
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
       try {
-        // 1. Tenta recuperar operador da sessão local
         const savedOp = sessionStorage.getItem('currentOperator');
-        let currentOp = savedOp ? JSON.parse(savedOp) : null;
+        const currentOp = savedOp ? JSON.parse(savedOp) : null;
 
-        // 2. SEMPRE verifica no servidor se há um caixa aberto (Verdade absoluta)
-        const res = await api.get('/cash-registers/current');
-        
-        if (res.data) {
-          // Se existe um caixa aberto, e não temos operador ou o operador é diferente, 
-          // nós assumimos o operador que abriu o caixa para manter a consistência.
-          setCashRegister(res.data);
-          
-          // Se não tivermos o operador no sessionStorage, buscamos os dados dele
-          if (!currentOp) {
-             const opRes = await api.get(`/operators/${res.data.operatorId}`);
-             currentOp = opRes.data;
-          }
+        if (currentOp) {
           setOperator(currentOp);
-          sessionStorage.setItem('currentOperator', JSON.stringify(currentOp));
-        } else if (currentOp) {
-          // Se não tem caixa aberto no banco mas tem operador salvo, mantemos o operador
-          // mas limpamos o caixa (caso ele tenha sido fechado em outra aba)
-          setOperator(currentOp);
+          // Passa o ID explicitamente para não depender do estado que acabou de ser setado
+          const res = await api.get(`/cash-registers/current?operatorId=${currentOp.id}`);
+          setCashRegister(res.data || null);
+        } else {
+          setOperator(null);
           setCashRegister(null);
         }
       } catch (err) {
@@ -68,40 +88,43 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     };
     init();
 
-    // Polling a cada 30s para detectar fechamentos feitos em outra aba/dispositivo
+    // Polling a cada 30s para detectar fechamentos feitos em outro dispositivo/aba
     const interval = setInterval(async () => {
       try {
-        const res = await api.get('/cash-registers/current');
-        setCashRegister(res.data || null);
+        const savedOp = sessionStorage.getItem('currentOperator');
+        const currentOp = savedOp ? JSON.parse(savedOp) : null;
+        if (currentOp) {
+          const res = await api.get(`/cash-registers/current?operatorId=${currentOp.id}`);
+          setCashRegister(res.data || null);
+        }
       } catch { /* silencia erros de rede no polling */ }
     }, 30_000);
 
     return () => clearInterval(interval);
   }, []);
 
+  // ─── Ao trocar de operador: limpa caixa IMEDIATAMENTE e busca o novo ────────
   useEffect(() => {
     if (operator) {
       sessionStorage.setItem('currentOperator', JSON.stringify(operator));
+      // 1. Limpa o caixa anterior de forma SÍNCRONA antes do fetch
+      setCashRegister(null);
+      // 2. Busca o caixa do novo operador passando o ID EXPLICITAMENTE
+      //    (não depende do closure de refreshShift)
+      const fetchRegister = async () => {
+        try {
+          const res = await api.get(`/cash-registers/current?operatorId=${operator.id}`);
+          setCashRegister(res.data || null);
+        } catch (err) {
+          console.error('Erro ao buscar caixa do operador:', err);
+        }
+      };
+      fetchRegister();
     } else {
       sessionStorage.removeItem('currentOperator');
+      setCashRegister(null);
     }
-  }, [operator]);
-
-  const refreshShift = async () => {
-    try {
-      const res = await api.get('/cash-registers/current');
-      const register = res.data || null;
-      setCashRegister(register);
-
-      if (register && operator) {
-        localStorage.setItem(`pdvpro_cached_register_${operator.id}`, JSON.stringify(register));
-      } else if (operator) {
-        localStorage.removeItem(`pdvpro_cached_register_${operator.id}`);
-      }
-    } catch (err) {
-      console.error('Erro ao buscar caixa atual:', err);
-    }
-  };
+  }, [operator?.id]);
 
   const logoutOperator = () => {
     setOperator(null);
@@ -117,7 +140,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
         setCashRegister,
         isLoading,
         logoutOperator,
-        refreshShift
+        refreshShift,
       }}
     >
       {children}

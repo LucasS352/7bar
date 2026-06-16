@@ -34,7 +34,7 @@ export class CashRegistersController {
   }
 
   @Get('current')
-  getCurrent() {
-    return this.cashRegistersService.getCurrentRegister();
+  getCurrent(@Query('operatorId') operatorId?: string) {
+    return this.cashRegistersService.getCurrentRegister(operatorId);
   }
 }

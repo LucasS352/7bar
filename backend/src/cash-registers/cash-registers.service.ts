@@ -25,11 +25,11 @@ export class CashRegistersService {
 
       return await prisma.$transaction(async (tx) => {
         const existing = await tx.cashRegister.findFirst({
-          where: { status: 'open' }
+          where: { status: 'open', operatorId: currentOpId }
         });
 
         if (existing) {
-          throw new BadRequestException(`Já existe um caixa aberto (${existing.operatorId === currentOpId ? 'por você' : 'por outro operador'}). Feche-o antes de abrir um novo.`);
+          throw new BadRequestException(`Você já possui um caixa aberto. Feche-o antes de abrir um novo.`);
         }
 
         return await tx.cashRegister.create({
@@ -56,10 +56,12 @@ export class CashRegistersService {
     });
   }
 
-  async getCurrentRegister() {
+  async getCurrentRegister(operatorId?: string) {
+    const { userId } = this.tenantContext.get();
+    const currentOpId = operatorId || userId;
     const prisma = await this.getPrisma();
     const current = await prisma.cashRegister.findFirst({
-      where: { status: 'open' }
+      where: { status: 'open', operatorId: currentOpId }
     });
 
     if (current) {

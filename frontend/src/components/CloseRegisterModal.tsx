@@ -11,6 +11,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
   const [closingValue, setClosingValue] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1); // 1 = auditoria, 2 = confirmação final
 
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
@@ -53,6 +54,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
     if (!isOpen || !registerId) return;
     setLoading(true);
     setData(null);
+    setStep(1);
     api.get(`/cash-registers/${registerId}/report`)
       .then(res => {
         setData(res.data);
@@ -78,11 +80,18 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
     return createPortal(fallbackContent, document.body);
   }
 
+  // Avança para a tela de confirmação (passo 2) — zera o campo para o operador preencher manualmente
+  const goToConfirmation = () => {
+    setClosingValue(0);
+    setStep(2);
+  };
+
+  // Fecha o caixa de verdade (chamado apenas no passo 2)
   const handleClose = async () => {
     setSubmitting(true);
     try {
       await api.post(`/cash-registers/${registerId}/close`, { closingValue });
-      toast.success('Auditoria validada. O Caixa foi encerrado formalmente.');
+      toast.success('Caixa encerrado formalmente. Bom descanso!');
       onClose(true);
     } catch (e: any) {
       toast.error('Erro ao fechar caixa');
@@ -209,23 +218,10 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                      )}
                   </div>
                 ) : (
-                  <div className="pt-4">
-                    <label className="text-sm font-semibold text-zinc-400 mb-3 block">Digite o dinheiro real conferido por você na gaveta:</label>
-                    <div className="relative">
-                      <span className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-2xl">R$</span>
-                      <input 
-                        type="number" 
-                        value={closingValue}
-                        onChange={e => setClosingValue(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-zinc-950 border-2 border-zinc-800 rounded-2xl py-5 pl-16 pr-5 text-3xl font-black text-white focus:outline-none focus:border-red-500 transition-colors shadow-inner"
-                      />
-                    </div>
-                    {closingValue !== Number(data.report.expectedDinheiro) && (
-                      <div className="mt-4 p-3 bg-red-500/10 rounded-xl border border-red-500/20 text-red-400 text-sm flex items-start gap-3">
-                        <AlertOctagon size={24} className="shrink-0 mt-0.5"/> 
-                        <p><strong>Atenção:</strong> O valor informado difere matematicamente do esperado pelo sistema. Uma quebra de <strong>R$ {(closingValue - Number(data.report.expectedDinheiro)).toFixed(2)}</strong> será registrada no histórico de auditoria.</p>
-                      </div>
-                    )}
+                  // Sem input aqui — o operador digita o valor somente na próxima tela
+                  <div className="pt-2 p-4 bg-zinc-900/40 rounded-2xl border border-zinc-800 text-center">
+                    <p className="text-zinc-500 text-xs uppercase tracking-wider">Próximo passo</p>
+                    <p className="text-zinc-300 text-sm mt-1">Você irá conferir e digitar o valor físico da gaveta na próxima tela.</p>
                   </div>
                 )}
                 
@@ -238,11 +234,10 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                   </button>
                 ) : (
                   <button 
-                    onClick={handleClose}
-                    disabled={submitting}
+                    onClick={goToConfirmation}
                     className="w-full py-5 rounded-2xl font-bold bg-red-600 hover:bg-red-500 text-white transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 mt-4 text-lg"
                   >
-                    {submitting ? <Loader2 className="animate-spin" /> : 'Confirmar Gaveta e Encerrar Caixa'}
+                    Confirmar Gaveta e Continuar →
                   </button>
                 )}
               </div>
@@ -339,40 +334,183 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
         )}
       </div>
 
-      {/* Modal de Justificativa de Cancelamento */}
-      {cancelSaleId && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 transition-all">
-          <div className="bg-zinc-950 border border-zinc-800 rounded-[2rem] w-full max-w-md p-6 text-center shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-bold text-red-400 mb-3">Justificar Cancelamento</h3>
-            <p className="text-zinc-400 text-sm mb-4">Insira o motivo pelo qual esta venda está sendo cancelada. Esta ação estornará os itens ao estoque.</p>
-            <textarea
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Ex: Lançamento incorreto, desistência..."
-              rows={3}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 transition-colors text-sm mb-4 resize-none"
-            />
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setCancelSaleId(null)}
-                disabled={cancelling}
-                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-xl text-sm transition-colors cursor-pointer"
-              >
-                Cancelar
+      {/* ═══ PASSO 2 — Confirmação Final de Fechamento ═══ */}
+      {step === 2 && data && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-zinc-800 bg-zinc-900/60">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center">
+                  <FileText className="text-red-400" size={20} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-white tracking-tight">Confirmação de Fechamento</h2>
+                  <p className="text-xs text-zinc-500 mt-0.5">Revise os valores antes de encerrar definitivamente</p>
+                </div>
+              </div>
+              <button onClick={() => setStep(1)} className="p-2 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors">
+                <X size={20} />
               </button>
-              <button
-                onClick={handleCancelSale}
-                disabled={cancelling || !cancelReason.trim()}
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-sm transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {cancelling ? <Loader2 size={16} className="animate-spin" /> : 'Confirmar Estorno'}
-              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh] custom-scrollbar">
+
+              {/* Campo principal — contar dinheiro na gaveta */}
+              <div className="bg-zinc-900 border-2 border-zinc-700 focus-within:border-red-500 rounded-2xl p-5 transition-colors">
+                <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">💵 Contagem Física da Gaveta</p>
+                <p className="text-zinc-400 text-sm mb-4">Conte o dinheiro físico que está na gaveta agora e informe o total abaixo:</p>
+                <div className="relative">
+                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 font-black text-2xl">R$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    autoFocus
+                    value={closingValue || ''}
+                    onChange={e => setClosingValue(parseFloat(e.target.value) || 0)}
+                    placeholder="0,00"
+                    className="w-full bg-zinc-950 border-2 border-zinc-800 rounded-2xl py-5 pl-16 pr-5 text-4xl font-black text-white focus:outline-none focus:border-red-500 transition-colors shadow-inner placeholder:text-zinc-700"
+                  />
+                </div>
+                <p className="text-zinc-600 text-xs mt-3 text-center">O sistema esperava <strong className="text-zinc-400">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</strong> na gaveta</p>
+              </div>
+
+              {/* Banner de Status — só exibe após o operador digitar um valor */}
+              {closingValue > 0 && (() => {
+                const diff = closingValue - Number(data.report.expectedDinheiro);
+                const bateu = Math.abs(diff) < 0.01;
+                const sobra = diff > 0.01;
+                return (
+                  <div className={`rounded-2xl p-5 border flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-200 ${bateu ? 'bg-emerald-500/10 border-emerald-500/30' : sobra ? 'bg-amber-500/10 border-amber-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0 ${bateu ? 'bg-emerald-500/20' : sobra ? 'bg-amber-500/20' : 'bg-red-500/20'}`}>
+                      {bateu ? '✅' : sobra ? '⚠️' : '🔴'}
+                    </div>
+                    <div>
+                      {bateu ? (
+                        <>
+                          <p className="text-emerald-400 font-black text-xl">Caixa Conferido!</p>
+                          <p className="text-emerald-400/70 text-sm mt-0.5">O valor declarado bate exatamente com o esperado pelo sistema.</p>
+                        </>
+                      ) : sobra ? (
+                        <>
+                          <p className="text-amber-400 font-black text-xl">Sobra de R$ {diff.toFixed(2)}</p>
+                          <p className="text-amber-400/70 text-sm mt-0.5">O valor declarado é maior que o esperado. Verifique se houve engano.</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-red-400 font-black text-xl">Quebra de R$ {Math.abs(diff).toFixed(2)}</p>
+                          <p className="text-red-400/70 text-sm mt-0.5">O valor declarado está abaixo do esperado. A diferença será registrada na auditoria.</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Grid: Dinheiro Físico + Digitais */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                {/* Dinheiro Físico */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-3">
+                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">💵 Dinheiro Físico (Gaveta)</p>
+
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-zinc-400">Fundo inicial</span>
+                    <span className="text-white font-bold">R$ {Number(data.register.openingValue).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-zinc-400">Vendas em dinheiro</span>
+                    <span className="text-emerald-400 font-bold">+ R$ {Number(data.report.totalDinheiro).toFixed(2)}</span>
+                  </div>
+                  {data.report.totalSuprimentos > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-zinc-400">Suprimentos (reforço)</span>
+                      <span className="text-blue-400 font-bold">+ R$ {Number(data.report.totalSuprimentos).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {data.report.totalSangrias > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-zinc-400">Sangrias</span>
+                      <span className="text-red-400 font-bold">- R$ {Number(data.report.totalSangrias).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="border-t border-zinc-700 pt-3 flex justify-between items-center">
+                    <span className="text-zinc-300 font-bold text-sm">Esperado na gaveta</span>
+                    <span className="text-white font-black text-xl">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-400 text-sm">Você declarou</span>
+                    <span className={`font-black text-xl ${Math.abs(closingValue - Number(data.report.expectedDinheiro)) < 0.01 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      R$ {Number(closingValue).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Recebimentos Digitais */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-3">
+                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">💳 Recebimentos Digitais</p>
+                  <p className="text-[11px] text-zinc-600">Estes valores estão em conta — não entram na gaveta</p>
+
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-indigo-400">Cartão de Crédito</span>
+                    <span className="text-indigo-300 font-bold">R$ {Number(data.report.totalCredito || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-sky-400">Cartão de Débito</span>
+                    <span className="text-sky-300 font-bold">R$ {Number(data.report.totalDebito || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-teal-400">Pix</span>
+                    <span className="text-teal-300 font-bold">R$ {Number(data.report.totalPix || 0).toFixed(2)}</span>
+                  </div>
+                  {(data.report.customMethods || []).map((cm: any) => (
+                    <div key={cm.method} className="flex justify-between items-center text-sm">
+                      <span className="text-purple-400">{cm.label}</span>
+                      <span className="text-purple-300 font-bold">R$ {Number(cm.total || 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="border-t border-zinc-700 pt-3 flex justify-between items-center">
+                    <span className="text-zinc-300 font-bold text-sm">Total Digital</span>
+                    <span className="text-white font-black text-xl">
+                      R$ {(Number(data.report.totalCredito || 0) + Number(data.report.totalDebito || 0) + Number(data.report.totalPix || 0) + (data.report.customMethods || []).reduce((a: number, m: any) => a + Number(m.total || 0), 0)).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Resumo total */}
+              <div className="flex justify-between items-center bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-4">
+                <span className="text-zinc-300 font-bold">Faturamento Total do Turno</span>
+                <span className="text-white font-black text-2xl">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
+              </div>
+
+              {/* Botões */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setStep(1)}
+                  className="flex-1 py-4 rounded-2xl font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-all text-sm"
+                >
+                  ← Voltar e Revisar
+                </button>
+                <button
+                  onClick={handleClose}
+                  disabled={submitting}
+                  className="flex-1 py-4 rounded-2xl font-black bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white transition-all shadow-lg shadow-red-900/30 active:scale-95 flex items-center justify-center gap-2 text-base"
+                >
+                  {submitting ? <Loader2 className="animate-spin" size={20} /> : '🔒 Encerrar Caixa Definitivamente'}
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 
   return createPortal(modalBody, document.body);
 }
+

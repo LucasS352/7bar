@@ -19,15 +19,28 @@ export class OperatorsService {
 
   async findAll(tenantId: string) {
     const prisma = await this.getPrisma(tenantId);
-    return prisma.operator.findMany({
+    const operators = await prisma.operator.findMany({
       select: {
         id: true,
         name: true,
         active: true,
         createdAt: true,
         updatedAt: true,
+        cashRegisters: {
+          where: { status: 'open' },
+          select: { id: true },
+          take: 1
+        }
       },
       orderBy: { name: 'asc' },
+    });
+
+    return operators.map(op => {
+      const { cashRegisters, ...rest } = op;
+      return {
+        ...rest,
+        hasOpenRegister: cashRegisters.length > 0
+      };
     });
   }
 

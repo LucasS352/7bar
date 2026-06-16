@@ -17,14 +17,19 @@ import {
 } from 'recharts';
 import { UserIcon } from 'lucide-react';
 
-// --- Types ---
+type RegisterSummary = {
+  cashRegisterId: string;
+  operatorName: string;
+  operatorId: string;
+  openedAt: string;
+  openingValue: number;
+  total: number;
+  salesCount: number;
+};
+
 type SummaryData = {
-  currentRegister: {
-    total: number;
-    operatorName: string;
-    openedAt: string;
-    cashRegisterId: string;
-  } | null;
+  openRegisters: RegisterSummary[];
+  currentRegister: RegisterSummary | null;
   today: { revenue: number; transactions: number };
   week: { revenue: number; vsLastWeek: number | null };
   month: { revenue: number };
@@ -552,28 +557,57 @@ export default function SalesDashboard() {
       {/* --- KPI CARDS --- */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         
-        {/* Card 1: Caixa Atual */}
-        <div className={`col-span-2 lg:col-span-1 relative overflow-hidden p-4 md:p-6 rounded-2xl border flex flex-col justify-between ${preset !== 'today' ? 'bg-zinc-900/50 border-zinc-800/50 opacity-60' : 'bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl'}`}>
-          {preset === 'today' && summary?.currentRegister && (
-            <div className="absolute top-0 right-0 p-4 flex items-center gap-2">
-               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-               <span className="text-xs font-bold text-emerald-500 tracking-wider">ABERTO</span>
+        {/* Cards de Caixas Abertos — dinâmico */}
+        {preset === 'today' && (summary?.openRegisters ?? []).length > 0 ? (
+          (summary!.openRegisters).map((reg, idx) => (
+            <div key={reg.cashRegisterId} className="col-span-2 lg:col-span-1 relative overflow-hidden p-4 md:p-6 rounded-2xl border bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl flex flex-col justify-between">
+              {/* Badge ABERTO */}
+              <div className="absolute top-0 right-0 p-4 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-xs font-bold text-emerald-500 tracking-wider">ABERTO</span>
+              </div>
+              <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
+                <DollarSign size={20} className="text-emerald-400" />
+                <span>Caixa {idx + 1}</span>
+              </div>
+              <div>
+                <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                  {formatCurrency(reg.total)}
+                </h3>
+                <p className="text-sm text-zinc-400 mt-2 flex items-center gap-1.5 font-semibold">
+                  <UserIcon size={14} className="text-blue-400" />
+                  {reg.operatorName}
+                </p>
+                <p className="text-xs text-zinc-600 mt-1 flex items-center gap-1.5">
+                  <Receipt size={12} />
+                  {reg.salesCount} venda{reg.salesCount !== 1 ? 's' : ''} · desde {new Date(reg.openedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
             </div>
-          )}
-          <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
-            <DollarSign size={20} className={preset === 'today' && summary?.currentRegister ? "text-emerald-400" : "text-zinc-500"} /> 
-            Caixa Atual
+          ))
+        ) : preset !== 'today' ? (
+          /* Fora do filtro "Hoje", mostra card genérico desativado */
+          <div className="col-span-2 lg:col-span-1 relative overflow-hidden p-4 md:p-6 rounded-2xl border bg-zinc-900/50 border-zinc-800/50 opacity-60 flex flex-col justify-between">
+            <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
+              <DollarSign size={20} className="text-zinc-500" /> Caixa Atual
+            </div>
+            <div>
+              <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">N/A</h3>
+              <p className="text-sm text-zinc-500 mt-2">Mude para &quot;Hoje&quot;</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-              {preset !== 'today' ? 'N/A' : (summary?.currentRegister ? formatCurrency(summary.currentRegister.total) : 'Fechado')}
-            </h3>
-            <p className="text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
-              <UserIcon size={14}/> 
-              {preset !== 'today' ? 'Mude para "Hoje"' : (summary?.currentRegister?.operatorName || 'Nenhum operador')}
-            </p>
+        ) : (
+          /* Hoje selecionado mas nenhum caixa aberto */
+          <div className="col-span-2 lg:col-span-1 relative overflow-hidden p-4 md:p-6 rounded-2xl border bg-zinc-900/50 border-zinc-800/50 flex flex-col justify-between">
+            <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
+              <DollarSign size={20} className="text-zinc-500" /> Caixa Atual
+            </div>
+            <div>
+              <h3 className="text-2xl md:text-3xl font-black text-zinc-600 tracking-tight">Fechado</h3>
+              <p className="text-sm text-zinc-600 mt-2">Nenhum caixa aberto</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Card 2: Hoje */}
         <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg">

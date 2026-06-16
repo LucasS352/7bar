@@ -17,7 +17,10 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       login: (token, user) => set({ token, user }),
-      logout: () => set({ token: null, user: null }),
+      logout: () => {
+        sessionStorage.removeItem('currentOperator');
+        set({ token: null, user: null });
+      },
       setTermsAccepted: () => set((state) => ({ user: state.user ? { ...state.user, termsAccepted: true } : null })),
     }),
     { name: '7bar-auth' }

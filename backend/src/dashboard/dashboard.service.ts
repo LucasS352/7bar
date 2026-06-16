@@ -43,21 +43,31 @@ export class DashboardService {
     const periodStart = new Date(`${startDate}T00:00:00-03:00`);
     const periodEnd   = new Date(`${endDate}T23:59:59-03:00`);
 
-    // ── 1. Caixa atual aberto ──────────────────────────────────────────────
-    const openRegister = await prisma.cashRegister.findFirst({
+    // ── 1. Todos os caixas abertos ──────────────────────────────────────────
+    const openRegisters = await prisma.cashRegister.findMany({
       where: { status: 'open' },
       include: { operator: { select: { name: true } } },
-      orderBy: { openingTime: 'desc' },
+      orderBy: { openingTime: 'asc' },
     });
 
-    let currentRegisterRevenue = 0;
-    if (openRegister) {
-      const regSales = await prisma.sale.aggregate({
-        where: { cashRegisterId: openRegister.id, NOT: { status: 'cancelled' } },
-        _sum: { total: true },
-      });
-      currentRegisterRevenue = Number(regSales._sum.total ?? 0);
-    }
+    const openRegistersWithRevenue = await Promise.all(
+      openRegisters.map(async (reg) => {
+        const regSales = await prisma.sale.aggregate({
+          where: { cashRegisterId: reg.id, NOT: { status: 'cancelled' } },
+          _sum: { total: true },
+          _count: { id: true },
+        });
+        return {
+          cashRegisterId: reg.id,
+          operatorName: (reg as any).operator?.name ?? 'Operador',
+          operatorId: reg.operatorId,
+          openedAt: (reg as any).openingTime,
+          openingValue: Number(reg.openingValue ?? 0),
+          total: Number(regSales._sum.total ?? 0),
+          salesCount: Number(regSales._count.id ?? 0),
+        };
+      })
+    );
 
     // ── 2. Faturamento de Hoje ─────────────────────────────────────────────
     const todayAgg = await prisma.sale.aggregate({
@@ -201,14 +211,9 @@ export class DashboardService {
     const upcomingPayables = payablesAlerts.filter(p => p.dueDate >= todayStart);
 
     return {
-      currentRegister: openRegister
-        ? {
-            total: currentRegisterRevenue,
-            operatorName: (openRegister as any).operator?.name ?? 'Operador',
-            cashRegisterId: openRegister.id,
-            openedAt: (openRegister as any).openingTime,
-          }
-        : null,
+      openRegisters: openRegistersWithRevenue,
+      // Compat: currentRegister aponta para o primeiro caixa aberto (se houver)
+      currentRegister: openRegistersWithRevenue.length > 0 ? openRegistersWithRevenue[0] : null,
       today: {
         revenue: Number(todayAgg._sum.total ?? 0),
         transactions: Number(todayAgg._count.id ?? 0),
