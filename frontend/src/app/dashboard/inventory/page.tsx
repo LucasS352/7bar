@@ -309,7 +309,7 @@ export default function InventoryDashboard() {
     const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
     
     return { displayedProducts: paginated, totalPages: totalPagesCount };
-  }, [products, debouncedSearch, currentPage]);
+  }, [products, debouncedSearch, currentPage, selectedCategory]);
 
   const { totalVarieties, totalItemsCount, totalGrossValue, totalCostValue, expectedProfit, lowStockProducts } = useMemo(() => {
     const totalVarieties  = products.length;
