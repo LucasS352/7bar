@@ -58,6 +58,10 @@ function PosPageContent() {
       setTempQuantity(1);
     } else {
       addItem(fullProduct);
+      setTimeout(() => {
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+        if (searchInput) searchInput.focus();
+      }, 10);
     }
   };
 
