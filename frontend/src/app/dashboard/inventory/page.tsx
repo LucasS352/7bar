@@ -27,6 +27,7 @@ interface Product {
   grupoTributacao?: GrupoTributacao | null;
   imageUrl?: string | null;
   supplierProducts?: { supplierId: string }[];
+  categoryId?: string | null;
 }
 
 interface Supplier {
@@ -166,6 +167,8 @@ export default function InventoryDashboard() {
   const [allowNegativeStock,  setAllowNegativeStock]  = useState(false);
   const [savingSettings,      setSavingSettings]      = useState(false);
   const [showLowStockAlert,   setShowLowStockAlert]   = useState(false);
+  const [categories,          setCategories]          = useState<any[]>([]);
+  const [selectedCategory,    setSelectedCategory]    = useState<string>('');
 
   const [lotModalProduct, setLotModalProduct] = useState<Product | null>(null);
   const [productLots, setProductLots] = useState<any[]>([]);
@@ -202,16 +205,23 @@ export default function InventoryDashboard() {
       .catch(console.error);
   }, []);
 
+  const fetchCategories = useCallback(() => {
+    api.get('/categories')
+      .then(res => setCategories(res.data || []))
+      .catch(console.error);
+  }, []);
+
   // Busca configurações do tenant ao montar
   useEffect(() => {
     fetchProducts();
     fetchSuppliers();
+    fetchCategories();
     if (isAdmin) {
       api.get<{ allowNegativeStock: boolean }>('/products/settings')
         .then(res => setAllowNegativeStock(res.data.allowNegativeStock))
         .catch(console.error);
     }
-  }, [fetchProducts, isAdmin]);
+  }, [fetchProducts, fetchSuppliers, fetchCategories, isAdmin]);
 
   const handleToggleNegativeStock = async (value: boolean) => {
     setSavingSettings(true);
@@ -288,6 +298,7 @@ export default function InventoryDashboard() {
     const searchTerms = normalizeStr(debouncedSearch).split(' ').filter(t => t.trim() !== '');
     
     const filtered = products.filter(p => {
+      if (selectedCategory && p.categoryId !== selectedCategory) return false;
       if (searchTerms.length === 0) return true;
       const searchString = normalizeStr(`${p.name} ${p.barcode || ''} ${p.shortCode || ''}`);
       return searchTerms.every(term => searchString.includes(term));
@@ -445,6 +456,19 @@ export default function InventoryDashboard() {
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
+          </div>
+
+          <div className="relative w-full md:w-auto min-w-[200px]">
+            <select
+              value={selectedCategory}
+              onChange={e => setSelectedCategory(e.target.value)}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 appearance-none"
+            >
+              <option value="">Todas as Categorias</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 md:ml-auto">
