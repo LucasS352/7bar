@@ -511,4 +511,44 @@ export class TenantsService {
       }
     });
   }
+
+  async getTenantUsers(tenantId: string) {
+    const users = await this.heartPrisma.user.findMany({
+      where: { tenantId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+        createdAt: true,
+      }
+    });
+    return users;
+  }
+
+  async resetUserPassword(tenantId: string, userId: string, newPasswordRaw: string) {
+    const user = await this.heartPrisma.user.findFirst({
+      where: { id: userId, tenantId }
+    });
+    if (!user) throw new NotFoundException('Usuário não encontrado.');
+
+    const hashedPassword = await bcrypt.hash(newPasswordRaw, 10);
+    return this.heartPrisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword }
+    });
+  }
+
+  async resetUserPin(tenantId: string, userId: string, newPin: string) {
+    const user = await this.heartPrisma.user.findFirst({
+      where: { id: userId, tenantId }
+    });
+    if (!user) throw new NotFoundException('Usuário não encontrado.');
+
+    return this.heartPrisma.user.update({
+      where: { id: userId },
+      data: { pin: newPin }
+    });
+  }
 }

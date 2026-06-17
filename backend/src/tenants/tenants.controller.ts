@@ -220,6 +220,36 @@ export class TenantsController {
     return this.tenantsService.deleteTenant(id);
   }
 
+  // --- CONTROLE DE USUÁRIOS (SYS-INIT) ---
+  @Get('setup/:id/users')
+  async getTenantUsers(@Request() req: any, @Param('id') id: string) {
+    const pin = req.headers['x-setup-pin'] as string;
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN inválido.');
+
+    return this.tenantsService.getTenantUsers(id);
+  }
+
+  @Patch('setup/:id/users/:userId/password')
+  async resetUserPassword(@Request() req: any, @Param('id') id: string, @Param('userId') userId: string, @Body() body: { password: string }) {
+    const pin = req.headers['x-setup-pin'] as string;
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN inválido.');
+    
+    if (!body.password) throw new BadRequestException('A nova senha é obrigatória.');
+    return this.tenantsService.resetUserPassword(id, userId, body.password);
+  }
+
+  @Patch('setup/:id/users/:userId/pin')
+  async resetUserPin(@Request() req: any, @Param('id') id: string, @Param('userId') userId: string, @Body() body: { pin: string }) {
+    const pin = req.headers['x-setup-pin'] as string;
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN inválido.');
+    
+    if (!body.pin) throw new BadRequestException('O novo PIN é obrigatório.');
+    return this.tenantsService.resetUserPin(id, userId, body.pin);
+  }
+
   /** Registra pagamento de mensalidade via sys-init (protegido por PIN) */
   @Post('setup/:id/registrar-pagamento')
   async registrarPagamentoSetup(@Request() req: any, @Param('id') id: string) {

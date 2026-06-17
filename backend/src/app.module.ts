@@ -23,6 +23,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TenantInterceptor } from './prisma/tenant-context.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { IntegrationsModule } from './integrations/integrations.module';
+import { BackupsModule } from './backups/backups.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { IntegrationsModule } from './integrations/integrations.module';
     PayablesModule,
     PaymentMethodsModule,
     IntegrationsModule,
+    BackupsModule,
   ],
   controllers: [AppController],
   providers: [

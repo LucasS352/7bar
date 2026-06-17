@@ -13,7 +13,7 @@ import {
 
 const PIN_LENGTH = 10;
 
-type Step = "pin" | "list" | "create" | "edit" | "success";
+type Step = "pin" | "list" | "create" | "edit" | "success" | "backups";
 
 function slugify(text: string) {
   return text
@@ -65,7 +65,7 @@ export default function SysInitPage() {
 
   // ── Edit Form step ────────────────────────────────────────────────────
   const [editingTenant, setEditingTenant] = useState<any>(null);
-  const [editTab, setEditTab] = useState<"identidade" | "modulos" | "fiscal" | "mensalidade" | "integracoes">("identidade");
+  const [editTab, setEditTab] = useState<"identidade" | "modulos" | "fiscal" | "mensalidade" | "integracoes" | "usuarios">("identidade");
   const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
   
   // Integração States
@@ -76,6 +76,34 @@ export default function SysInitPage() {
   const [editLoading, setEditLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncResult, setSyncResult] = useState<{message: string; synced: number; errors: number} | null>(null);
+
+  // Users State
+  const [tenantUsers, setTenantUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // Backups State
+  const [backupsList, setBackupsList] = useState<any[]>([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
+  const [creatingBackup, setCreatingBackup] = useState(false);
+  const [expandedFolder, setExpandedFolder] = useState<string | null>(null);
+  const [backupSchedule, setBackupSchedule] = useState({ enabled: false, time: '02:00' });
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [downloadingAll, setDownloadingAll] = useState(false);
+  
+  const loadBackups = async () => {
+    setLoadingBackups(true);
+    try {
+      const pin = pinDigits.join('');
+      const res = await api.get('/sys-init/backups', { headers: { 'x-setup-pin': pin } });
+      setBackupsList(res.data);
+      const scheduleRes = await api.get('/sys-init/backups/schedule', { headers: { 'x-setup-pin': pin } });
+      setBackupSchedule(scheduleRes.data);
+    } catch (e) {
+      toast.error('Erro ao carregar backups.');
+    } finally {
+      setLoadingBackups(false);
+    }
+  };
 
   const handleSyncCatalog = async () => {
     if (!editingTenant?.id) return;
@@ -136,6 +164,10 @@ export default function SysInitPage() {
   }, [tenantName, dbNameManual]);
 
   const handlePinKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleValidatePin();
+      return;
+    }
     if (e.key === "Backspace") {
       if (pinDigits[index]) {
         const next = [...pinDigits];
@@ -479,6 +511,9 @@ export default function SysInitPage() {
                     <Database size={18} /> Atualizar Bancos ({selectedTenantIds.length})
                   </button>
                 )}
+                <button onClick={() => { setStep("backups"); loadBackups(); }} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-blue-500/20">
+                  <Database size={18} /> Gerenciar Backups
+                </button>
                 <button onClick={() => setStep("create")} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
                   <Building2 size={18} /> Novo Tenant
                 </button>
@@ -673,6 +708,237 @@ export default function SysInitPage() {
           </div>
         )}
 
+        {step === "backups" && (
+           <div className="max-w-4xl mx-auto mt-10 animate-[fadeIn_0.3s_ease] w-full">
+             <button onClick={() => setStep("list")} className="mb-4 text-zinc-400 hover:text-white flex items-center gap-2 text-sm"><ArrowRight className="rotate-180" size={16} /> Voltar para lista</button>
+             <div className="bg-zinc-900/70 backdrop-blur-xl border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col p-6">
+               <div className="flex justify-between items-center mb-6">
+                 <div>
+                   <h2 className="text-2xl font-bold flex items-center gap-3">
+                     <Database className="text-blue-500" />
+                     Gestão de Backups
+                   </h2>
+                   <p className="text-xs text-zinc-400 mt-1">Gere e restaure cópias de segurança. Backups mais antigos que 7 dias são excluídos automaticamente.</p>
+                 </div>
+                 <div className="flex gap-2">
+                    <button 
+                      disabled={downloadingAll}
+                      onClick={async () => {
+                        setDownloadingAll(true);
+                        try {
+                          const pin = pinDigits.join('');
+                          const response = await api.get(`/sys-init/backups/download-all?pin=${pin}`, { responseType: 'blob' });
+                          const url = window.URL.createObjectURL(new Blob([response.data]));
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.setAttribute('download', `Backups_7bar_${new Date().getTime()}.zip`);
+                          document.body.appendChild(link);
+                          link.click();
+                          link.parentNode?.removeChild(link);
+                        } catch (e) {
+                          toast.error("Erro ao baixar ZIP");
+                        } finally {
+                          setDownloadingAll(false);
+                        }
+                      }}
+                      className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition border border-zinc-700"
+                    >
+                      {downloadingAll ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} className="rotate-180" />}
+                      Baixar Todos (.zip)
+                    </button>
+                   <button 
+                     disabled={creatingBackup}
+                     onClick={async () => {
+                       if (!window.confirm("Deseja criar um backup geral de todos os bancos de dados agora?")) return;
+                       setCreatingBackup(true);
+                       try {
+                         const pin = pinDigits.join('');
+                         await api.post('/sys-init/backups/create', { type: 'all' }, { headers: { 'x-setup-pin': pin } });
+                         toast.success("Backup geral criado com sucesso!");
+                         loadBackups();
+                       } catch (e: any) {
+                         toast.error(e.response?.data?.message || "Erro ao criar backup");
+                       } finally {
+                         setCreatingBackup(false);
+                       }
+                     }}
+                     className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition"
+                   >
+                     {creatingBackup ? <Loader2 className="animate-spin" size={18} /> : 'Gerar Backup Geral'}
+                   </button>
+                  </div>
+                </div>
+
+                <div className="bg-zinc-800/40 border border-zinc-700/50 rounded-2xl p-4 mb-6 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-white mb-1">Rotina Automática Diária</h3>
+                    <p className="text-xs text-zinc-400">Gere um backup geral automaticamente num horário fixo.</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {backupSchedule.enabled && (
+                      <input 
+                        type="time" 
+                        value={backupSchedule.time}
+                        onChange={(e) => setBackupSchedule({ ...backupSchedule, time: e.target.value })}
+                        className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                      />
+                    )}
+                    <button
+                      disabled={savingSchedule}
+                      onClick={async () => {
+                        setSavingSchedule(true);
+                        try {
+                          const pin = pinDigits.join('');
+                          const newEnabled = !backupSchedule.enabled;
+                          const payload = { ...backupSchedule, enabled: newEnabled };
+                          await api.post('/sys-init/backups/schedule', payload, { headers: { 'x-setup-pin': pin } });
+                          setBackupSchedule(payload);
+                          toast.success(`Rotina ${newEnabled ? 'ativada' : 'desativada'} com sucesso!`);
+                        } catch (e) {
+                          toast.error("Erro ao salvar rotina");
+                        } finally {
+                          setSavingSchedule(false);
+                        }
+                      }}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-sm transition ${backupSchedule.enabled ? 'bg-blue-600/20 text-blue-400' : 'bg-zinc-700/50 text-zinc-400'}`}
+                    >
+                      {savingSchedule ? <Loader2 className="animate-spin" size={16} /> : (backupSchedule.enabled ? <ToggleRight size={20} /> : <ToggleLeft size={20} />)}
+                      {backupSchedule.enabled ? 'Ativada' : 'Desativada'}
+                    </button>
+                    {backupSchedule.enabled && (
+                      <button 
+                        onClick={async () => {
+                          setSavingSchedule(true);
+                          try {
+                            const pin = pinDigits.join('');
+                            await api.post('/sys-init/backups/schedule', backupSchedule, { headers: { 'x-setup-pin': pin } });
+                            toast.success("Horário salvo com sucesso!");
+                          } catch (e) {
+                            toast.error("Erro ao salvar");
+                          } finally {
+                            setSavingSchedule(false);
+                          }
+                        }}
+                        className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition"
+                      >
+                        Salvar Hora
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+               {loadingBackups ? (
+                 <div className="py-12 text-center text-zinc-500">
+                   <Loader2 className="animate-spin inline-block mr-2" /> Carregando backups...
+                 </div>
+               ) : backupsList.length === 0 ? (
+                 <div className="py-12 text-center text-zinc-500 bg-zinc-950/50 rounded-xl border border-zinc-800/50">Nenhum backup encontrado.</div>
+               ) : (
+                 <div className="space-y-4">
+                   {backupsList.map((group, i) => (
+                     <div key={i} className="border border-zinc-800 rounded-xl overflow-hidden bg-zinc-950/50 transition">
+                       <button 
+                         onClick={() => setExpandedFolder(expandedFolder === group.folderName ? null : group.folderName)}
+                         className="w-full px-6 py-4 flex items-center justify-between hover:bg-zinc-800/30 transition text-left"
+                       >
+                         <div className="flex items-center gap-3">
+                           <Database size={20} className={group.isHeart ? 'text-rose-400' : 'text-blue-400'} />
+                           <div>
+                             <p className="font-bold text-zinc-200">{group.isHeart ? 'Sistema Central (Heart)' : `Tenant: ${group.tenantName}`}</p>
+                             <p className="text-xs text-zinc-500">{group.files.length} arquivo(s)</p>
+                           </div>
+                         </div>
+                         <ArrowRight size={18} className={`text-zinc-500 transition-transform ${expandedFolder === group.folderName ? '-rotate-90' : 'rotate-90'}`} />
+                       </button>
+                       
+                       {expandedFolder === group.folderName && (
+                         <div className="border-t border-zinc-800 bg-zinc-950/80">
+                           <table className="w-full text-left text-sm whitespace-nowrap">
+                             <thead className="bg-zinc-900/30 text-zinc-500">
+                               <tr>
+                                 <th className="px-6 py-3 font-medium">Arquivo</th>
+                                 <th className="px-6 py-3 font-medium">Tamanho</th>
+                                 <th className="px-6 py-3 font-medium">Data</th>
+                                 <th className="px-6 py-3 font-medium text-right">Ações</th>
+                               </tr>
+                             </thead>
+                             <tbody className="divide-y divide-zinc-800/50">
+                               {group.files.map((file: any, j: number) => (
+                                 <tr key={j} className="hover:bg-zinc-800/40 transition">
+                                   <td className="px-6 py-3 font-mono text-xs text-zinc-400">Backup_{group.isHeart ? 'Heart' : group.tenantName}.sql</td>
+                                   <td className="px-6 py-3 text-zinc-500">{(file.sizeBytes / 1024 / 1024).toFixed(2)} MB</td>
+                                   <td className="px-6 py-3 text-zinc-500">{new Date(file.createdAt).toLocaleString('pt-BR')}</td>
+                                   <td className="px-6 py-3 text-right">
+                                     <div className="flex justify-end gap-1">
+                                       <button 
+                                         onClick={async () => {
+                                           try {
+                                             const pin = pinDigits.join('');
+                                             const response = await api.get(`/sys-init/backups/download/${file.path}?pin=${pin}`, { responseType: 'blob' });
+                                             const url = window.URL.createObjectURL(new Blob([response.data]));
+                                             const link = document.createElement('a');
+                                             link.href = url;
+                                             link.setAttribute('download', file.filename);
+                                             document.body.appendChild(link);
+                                             link.click();
+                                             link.parentNode?.removeChild(link);
+                                           } catch (e) {
+                                             toast.error("Erro ao fazer download");
+                                           }
+                                         }}
+                                         className="p-1.5 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition" 
+                                         title="Download"
+                                       >
+                                         <Upload size={16} className="rotate-180" />
+                                       </button>
+                                       <button 
+                                         onClick={async () => {
+                                           if (!window.confirm(`⚠️ ATENÇÃO: Restaurar o backup ${file.filename}? Os dados atuais de ${group.folderName} serão substituídos irrevogavelmente.`)) return;
+                                           try {
+                                             const pin = pinDigits.join('');
+                                             await api.post(`/sys-init/backups/restore/${file.path}`, {}, { headers: { 'x-setup-pin': pin } });
+                                             toast.success("Backup restaurado com sucesso!");
+                                           } catch (e: any) {
+                                             toast.error(e.response?.data?.message || "Erro ao restaurar backup");
+                                           }
+                                         }}
+                                         className="p-1.5 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition" 
+                                         title="Restaurar"
+                                       >
+                                         <ArrowRight size={16} />
+                                       </button>
+                                       <button 
+                                         onClick={async () => {
+                                           if (!window.confirm("Deseja excluir este backup?")) return;
+                                           try {
+                                             const pin = pinDigits.join('');
+                                             await api.delete(`/sys-init/backups/${file.path}`, { headers: { 'x-setup-pin': pin } });
+                                             loadBackups();
+                                           } catch (e: any) {
+                                             toast.error("Erro ao excluir backup");
+                                           }
+                                         }}
+                                         className="p-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition" 
+                                         title="Excluir"
+                                       >
+                                         <Trash2 size={16} />
+                                       </button>
+                                     </div>
+                                   </td>
+                                 </tr>
+                               ))}
+                             </tbody>
+                           </table>
+                         </div>
+                       )}
+                     </div>
+                   ))}
+                 </div>
+               )}
+             </div>
+           </div>
+        )}
+
         {step === "create" && (
            <div className="max-w-md mx-auto mt-20 animate-[fadeIn_0.4s_ease]">
               <button onClick={() => setStep("list")} className="mb-4 text-zinc-400 hover:text-white flex items-center gap-2 text-sm"><ArrowRight className="rotate-180" size={16} /> Voltar para lista</button>
@@ -731,6 +997,20 @@ export default function SysInitPage() {
                  <button onClick={() => setEditTab("fiscal")} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'fiscal' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Fiscal</button>
                  <button onClick={() => { setEditTab("mensalidade"); setSelectedIntegration(null); }} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'mensalidade' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Mensalidade</button>
                  <button onClick={() => { setEditTab("integracoes"); setSelectedIntegration(null); }} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'integracoes' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Integrações</button>
+                 <button onClick={async () => { 
+                   setEditTab("usuarios"); 
+                   setSelectedIntegration(null);
+                   setLoadingUsers(true);
+                   try {
+                     const pin = pinDigits.join('');
+                     const res = await api.get(`/tenants/setup/${editingTenant.id}/users`, { headers: { 'x-setup-pin': pin } });
+                     setTenantUsers(res.data);
+                   } catch (e) {
+                     toast.error("Erro ao carregar usuários");
+                   } finally {
+                     setLoadingUsers(false);
+                   }
+                 }} className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${editTab === 'usuarios' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>Usuários</button>
                </div>
 
                <div className="p-6 flex-1">
@@ -993,6 +1273,75 @@ export default function SysInitPage() {
                      ) : null}
                    </div>
                  )}
+
+                 {editTab === 'usuarios' && (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <p className="text-sm text-zinc-400">Gerencie senhas e acessos da equipe do cliente.</p>
+                      </div>
+                      
+                      {loadingUsers ? (
+                        <div className="text-center py-10 text-zinc-500">
+                          <Loader2 className="animate-spin inline-block mx-auto" size={24} />
+                        </div>
+                      ) : tenantUsers.length === 0 ? (
+                        <div className="text-center py-10 text-zinc-500">Nenhum usuário encontrado.</div>
+                      ) : (
+                        <div className="space-y-3">
+                          {tenantUsers.map(user => (
+                            <div key={user.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 flex items-center justify-between">
+                              <div>
+                                <p className="font-bold text-zinc-200 flex items-center gap-2">
+                                  {user.name}
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-full border ${user.role === 'admin' ? 'bg-violet-900/30 text-violet-400 border-violet-800' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}>
+                                    {user.role}
+                                  </span>
+                                  {!user.active && <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-900/30 text-red-400 border border-red-800">Inativo</span>}
+                                </p>
+                                <p className="text-xs text-zinc-500">{user.email}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={async () => {
+                                    const pinSetup = pinDigits.join('');
+                                    const novaSenha = window.prompt(`Digite a nova SENHA DE LOGIN para ${user.name}:`);
+                                    if (novaSenha) {
+                                      try {
+                                        await api.patch(`/tenants/setup/${editingTenant.id}/users/${user.id}/password`, { password: novaSenha }, { headers: { 'x-setup-pin': pinSetup } });
+                                        toast.success("Senha alterada com sucesso!");
+                                      } catch (e: any) {
+                                        toast.error(e.response?.data?.message || "Erro ao alterar senha");
+                                      }
+                                    }
+                                  }}
+                                  className="px-3 py-1.5 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition"
+                                >
+                                  Senha Login
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    const pinSetup = pinDigits.join('');
+                                    const novoPin = window.prompt(`Digite o novo PIN DO CAIXA para ${user.name} (ex: 1234):`);
+                                    if (novoPin) {
+                                      try {
+                                        await api.patch(`/tenants/setup/${editingTenant.id}/users/${user.id}/pin`, { pin: novoPin }, { headers: { 'x-setup-pin': pinSetup } });
+                                        toast.success("PIN alterado com sucesso!");
+                                      } catch (e: any) {
+                                        toast.error(e.response?.data?.message || "Erro ao alterar PIN");
+                                      }
+                                    }
+                                  }}
+                                  className="px-3 py-1.5 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition"
+                                >
+                                  PIN Caixa
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                </div>
 
                <div className="p-6 border-t border-zinc-800 bg-zinc-900/50 flex justify-end gap-3">

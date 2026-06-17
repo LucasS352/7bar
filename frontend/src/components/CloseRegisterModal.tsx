@@ -194,10 +194,12 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                     ))}
                   </div>
 
-                  <div className="flex justify-between p-4 bg-zinc-800/20 text-white rounded-2xl border border-zinc-700/50 mt-4">
-                    <span className="text-zinc-300">Faturamento Bruto <span className="text-xs text-zinc-500 block">Todas transações da sessão</span></span>
-                    <span className="font-black text-xl self-center">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
-                  </div>
+                  {isAdmin && (
+                    <div className="flex justify-between p-4 bg-zinc-800/20 text-white rounded-2xl border border-zinc-700/50 mt-4">
+                      <span className="text-zinc-300">Faturamento Bruto <span className="text-xs text-zinc-500 block">Todas transações da sessão</span></span>
+                      <span className="font-black text-xl self-center">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-5 border-l-4 border-l-red-500 bg-red-500/10 rounded-r-2xl border border-red-500/20">
@@ -436,9 +438,9 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                       <span className="text-red-400 font-bold">- R$ {Number(data.report.totalSangrias).toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="border-t border-zinc-700 pt-3 flex justify-between items-center">
-                    <span className="text-zinc-300 font-bold text-sm">Esperado na gaveta</span>
-                    <span className="text-white font-black text-xl">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</span>
+                  <div className="border-t border-zinc-700 pt-3 flex justify-between items-center bg-red-500/10 -mx-5 px-5 pb-3">
+                    <span className="text-red-400 font-bold uppercase tracking-wider text-xs">Total Esperado na Gaveta</span>
+                    <span className="text-red-400 font-black text-3xl drop-shadow-sm">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-zinc-400 text-sm">Você declarou</span>
@@ -480,11 +482,13 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                 </div>
               </div>
 
-              {/* Resumo total */}
-              <div className="flex justify-between items-center bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-4">
-                <span className="text-zinc-300 font-bold">Faturamento Total do Turno</span>
-                <span className="text-white font-black text-2xl">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
-              </div>
+              {/* Resumo total - Apenas para Admins */}
+              {isAdmin && (
+                <div className="flex justify-between items-center bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-4">
+                  <span className="text-zinc-300 font-bold">Faturamento Total do Turno</span>
+                  <span className="text-white font-black text-2xl">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
+                </div>
+              )}
 
               {/* Botões */}
               <div className="flex gap-3 pt-2">

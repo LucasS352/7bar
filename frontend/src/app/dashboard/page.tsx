@@ -16,6 +16,7 @@ import {
   PieChart, Pie, Legend
 } from 'recharts';
 import { UserIcon } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 type RegisterSummary = {
   cashRegisterId: string;
@@ -174,6 +175,8 @@ export default function SalesDashboard() {
 
   // Paginação e busca na tabela
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterPayment, setFilterPayment] = useState<string>('todos');
+  const [sortBy, setSortBy] = useState<'recentes' | 'maior_valor'>('recentes');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
@@ -458,14 +461,59 @@ export default function SalesDashboard() {
 
   // Filtragem da tabela
   const filteredSales = useMemo(() => {
-    if (!searchTerm) return sales;
-    const lower = searchTerm.toLowerCase();
-    return sales.filter(s => 
-      s.total.toString().includes(lower) || 
-      s.items.some(i => i.product?.name.toLowerCase().includes(lower)) ||
-      s.payments.some(p => p.method.toLowerCase().includes(lower))
-    );
-  }, [sales, searchTerm]);
+    let result = sales;
+
+    // Filtro por método de pagamento
+    if (filterPayment !== 'todos') {
+      result = result.filter(s => s.payments.some(p => p.method.toLowerCase() === filterPayment.toLowerCase()));
+    }
+
+    // Busca geral (produto, valor, pagamento)
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      result = result.filter(s => 
+        s.total.toString().includes(lower) || 
+        s.items.some(i => i.product?.name.toLowerCase().includes(lower)) ||
+        s.payments.some(p => p.method.toLowerCase().includes(lower))
+      );
+    }
+
+    // Ordenação
+    if (sortBy === 'maior_valor') {
+      result = [...result].sort((a, b) => b.total - a.total);
+    } else {
+      result = [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    return result;
+  }, [sales, searchTerm, filterPayment, sortBy]);
+
+  const handleExportSales = () => {
+    if (filteredSales.length === 0) {
+      toast.error('Não há vendas para exportar com os filtros atuais.');
+      return;
+    }
+
+    const dataToExport = filteredSales.map(sale => {
+      return {
+        'Data/Hora': new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(sale.createdAt)),
+        'Itens': sale.items.map(i => `${i.quantity}x ${i.product?.name || 'Produto'}`).join(', '),
+        'Pagamento': sale.payments.map(p => `${p.method} (R$ ${p.value.toFixed(2)})`).join(', '),
+        'Total (R$)': sale.total.toFixed(2),
+        'Desconto (R$)': sale.discount ? sale.discount.toFixed(2) : '0.00',
+        'Status NFC-e': sale.nfceStatus || 'Não emitida',
+        'Status Venda': sale.status === 'cancelled' ? 'Cancelada' : 'Concluída'
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Histórico de Vendas');
+    
+    const fileName = `Vendas_Dashboard_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+    toast.success('Exportação concluída!');
+  };
 
   // Paginação
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
@@ -810,19 +858,52 @@ export default function SalesDashboard() {
 
         {/* Histórico de Transações */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl flex flex-col lg:col-span-2 overflow-hidden">
-          <div className="p-4 md:p-6 border-b border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <div className="p-4 md:p-6 border-b border-zinc-800 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2 whitespace-nowrap">
               <Receipt size={20} className="text-blue-400"/> Histórico de Vendas
             </h3>
-            <div className="relative w-full sm:w-64">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <input 
-                type="text" 
-                placeholder="Buscar valor, produto, pgto..."
-                value={searchTerm}
-                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none"
-              />
+            
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full xl:w-auto">
+              <div className="relative w-full sm:w-64">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <input 
+                  type="text" 
+                  placeholder="Buscar valor, produto, pgto..."
+                  value={searchTerm}
+                  onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              <select 
+                value={filterPayment}
+                onChange={e => { setFilterPayment(e.target.value); setCurrentPage(1); }}
+                className="bg-zinc-950 border border-zinc-800 text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none w-full sm:w-auto"
+              >
+                <option value="todos">Qualquer Pagamento</option>
+                <option value="dinheiro">Dinheiro</option>
+                <option value="credito">Crédito</option>
+                <option value="debito">Débito</option>
+                <option value="pix">PIX</option>
+                <option value="consumo_funcionario">Consumo Func.</option>
+              </select>
+
+              <select 
+                value={sortBy}
+                onChange={e => { setSortBy(e.target.value as any); setCurrentPage(1); }}
+                className="bg-zinc-950 border border-zinc-800 text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none w-full sm:w-auto"
+              >
+                <option value="recentes">Mais recentes</option>
+                <option value="maior_valor">Maior valor</option>
+              </select>
+
+              <button 
+                onClick={handleExportSales}
+                className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded-lg transition-colors border border-zinc-700 text-sm font-semibold w-full sm:w-auto"
+                title="Exportar listagem atual para Excel"
+              >
+                <Download size={16} /> <span className="hidden sm:inline">Exportar</span>
+              </button>
             </div>
           </div>
           

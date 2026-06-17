@@ -146,6 +146,7 @@ function PosPageContent() {
             <Search size={22} className="text-blue-500" />
           </div>
           <input 
+            id="product-search-input"
             type="text" 
             placeholder="[F2] Bipe ou Digite o Cód Curto e aperte Enter..." 
             className="w-full py-3 md:py-4 pl-12 pr-4 text-base md:text-2xl font-bold bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-xl md:rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-zinc-500 shadow-inner tracking-tight"
@@ -385,7 +386,17 @@ function PosPageContent() {
           }
         }} 
       />
-      <PaymentModal isOpen={isPaymentOpen} onClose={() => setIsPaymentOpen(false)} isOnline={true} />
+      <PaymentModal isOpen={isPaymentOpen} onClose={() => {
+        setIsPaymentOpen(false);
+        setTimeout(() => {
+          const input = document.getElementById('product-search-input');
+          if (input) {
+            input.focus();
+            // Fallback duplo caso a renderização seja lenta
+            setTimeout(() => input.focus(), 300);
+          }
+        }, 100);
+      }} isOnline={true} />
       {cashRegister && (
         <CashMovementModal 
           isOpen={isMovementOpen}

@@ -215,7 +215,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
   useEffect(() => {
     if (isOpen) {
-      setPayments([]); setMethod('dinheiro'); setInputValue(effectiveTotal.toFixed(2));
+      setPayments([]); setMethod('dinheiro'); setInputValue('');
       setPayMode('simple'); setShowConsumerForm(false); setCustomerCpf(''); setCustomerName('');
       setSaleResult(null); setNfcePolling(false); setSavedOffline(false);
       setDiscountValue(0); setDiscountPinInput(''); setPinVerified(false); setPendingDiscountStr('');
@@ -238,7 +238,13 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
-  useEffect(() => { setInputValue(remaining > 0 ? remaining.toFixed(2) : ''); }, [remaining]);
+  useEffect(() => { 
+    if (method === 'dinheiro') {
+      setInputValue('');
+    } else {
+      setInputValue(remaining > 0 ? remaining.toFixed(2) : '');
+    }
+  }, [remaining, method]);
 
   useEffect(() => {
     const selectedCustom = customMethods.find(cm => cm.id === method);
@@ -352,8 +358,9 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   }, [nfcePolling, saleResult?.id]);
 
   const handleAddPayment = () => {
-    const val = parseFloat(inputValue);
-    if (isNaN(val) || val <= 0) { toast.error('Digite um valor válido.'); return; }
+    let val = parseFloat(inputValue.toString().replace(',', '.'));
+    if (isNaN(val) || inputValue === '') val = remaining;
+    if (val <= 0) { toast.error('Digite um valor válido.'); return; }
     if (remaining <= 0) { toast.error('Total já atingido.'); return; }
     // Métodos custom: permitem valor livre (ex: iFood com 12% a mais)
     const isCustomMethod = customMethods.some(cm => cm.id === method);

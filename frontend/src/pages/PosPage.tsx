@@ -148,7 +148,7 @@ function PosPageContent() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F12' && items.length > 0) { e.preventDefault(); setIsPaymentOpen(true); }
+      if ((e.key === 'F12' || e.key === '*') && items.length > 0) { e.preventDefault(); setIsPaymentOpen(true); }
       if (e.key === 'Escape') setIsPaymentOpen(false);
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -345,6 +345,7 @@ function PosPageContent() {
             <Search size={20} className="text-blue-500" />
           </div>
           <input
+            id="product-search-input"
             type="text"
             placeholder="Buscar por nome, código ou EAN..."
             className="w-full py-3 md:py-4 pl-10 md:pl-12 pr-4 text-lg md:text-2xl font-bold bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-xl md:rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-zinc-500 shadow-inner tracking-tight"
@@ -489,7 +490,7 @@ function PosPageContent() {
             className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-bold py-4 md:py-5 px-6 rounded-xl md:rounded-2xl text-xl transition-all shadow-lg active:scale-95 flex justify-between items-center group overflow-hidden relative"
           >
             <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-            <span className="z-10"><span className="hidden md:inline">[F12]</span> Cobrar</span>
+            <span className="z-10"><span className="hidden md:inline">[F12 ou *]</span> Cobrar</span>
             <span className="z-10 bg-black/20 p-2 rounded-xl text-sm italic">Finalizar</span>
           </button>
         </div>
@@ -540,7 +541,16 @@ function PosPageContent() {
       )}
       <PaymentModal
         isOpen={isPaymentOpen}
-        onClose={() => setIsPaymentOpen(false)}
+        onClose={() => {
+          setIsPaymentOpen(false);
+          let checks = 0;
+          const interval = setInterval(() => {
+            const input = document.getElementById('product-search-input');
+            if (input) input.focus();
+            checks++;
+            if (checks > 10) clearInterval(interval);
+          }, 50);
+        }}
         isOnline={syncState.isOnline}
         onPendingCountChange={syncState.syncNow}
         tenantConfig={tenantConfig}
