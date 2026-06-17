@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { spawn } from 'child_process';
 import * as path from 'path';
@@ -75,7 +75,7 @@ export interface BackupGroup {
 }
 
 @Injectable()
-export class BackupsService {
+export class BackupsService implements OnModuleInit {
   private readonly logger = new Logger(BackupsService.name);
   private readonly backupDir = path.join(process.cwd(), 'backups');
   private readonly configPath = path.join(process.cwd(), 'backups', 'schedule.json');
@@ -84,6 +84,19 @@ export class BackupsService {
   constructor(private heartPrisma: HeartPrismaService) {
     if (!fs.existsSync(this.backupDir)) {
       fs.mkdirSync(this.backupDir, { recursive: true });
+    }
+  }
+
+  async onModuleInit() {
+    try {
+      this.logger.log('Ajustando autenticação do usuário root no MySQL para suportar mysqldump...');
+      const heartConfig = this.getDbConfig(process.env.DATABASE_URL_HEART!);
+      await this.heartPrisma.$executeRawUnsafe(`ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY '${heartConfig.password}';`);
+      await this.heartPrisma.$executeRawUnsafe(`ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${heartConfig.password}';`);
+      await this.heartPrisma.$executeRawUnsafe(`FLUSH PRIVILEGES;`);
+      this.logger.log('Autenticação do usuário root ajustada com sucesso.');
+    } catch (e: any) {
+      this.logger.error(`Não foi possível ajustar o usuário root no MySQL (pode já estar configurado): ${e.message}`);
     }
   }
 
