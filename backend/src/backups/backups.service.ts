@@ -1,13 +1,66 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import archiver = require('archiver');
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 
-const execAsync = promisify(exec);
+/**
+ * Executa mysqldump usando spawn (sem shell) e escreve o stdout direto em arquivo.
+ * Evita problemas de quoting/escaping com caracteres especiais (@, #, etc.) na senha.
+ */
+function runMysqldump(args: string[], filepath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('mysqldump', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const out = fs.createWriteStream(filepath);
+    child.stdout.pipe(out);
+
+    let stderrBuf = '';
+    child.stderr.on('data', (d) => { stderrBuf += d.toString(); });
+
+    child.on('close', (code) => {
+      out.close();
+      if (code === 0) {
+        resolve();
+      } else {
+        // Remove arquivo vazio em caso de falha
+        try { fs.unlinkSync(filepath); } catch {}
+        reject(new Error(stderrBuf.trim() || `mysqldump saiu com código ${code}`));
+      }
+    });
+
+    child.on('error', (err) => {
+      out.close();
+      try { fs.unlinkSync(filepath); } catch {}
+      reject(err);
+    });
+  });
+}
+
+/**
+ * Restaura um backup usando mysql sem shell — lê o arquivo e passa via stdin.
+ */
+function runMysqlRestore(args: string[], filepath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('mysql', args, { stdio: ['pipe', 'ignore', 'pipe'] });
+    const input = fs.createReadStream(filepath);
+    input.pipe(child.stdin);
+
+    let stderrBuf = '';
+    child.stderr.on('data', (d) => { stderrBuf += d.toString(); });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(stderrBuf.trim() || `mysql saiu com código ${code}`));
+      }
+    });
+
+    child.on('error', reject);
+  });
+}
 
 export interface BackupGroup {
   folderName: string;
@@ -132,14 +185,22 @@ export class BackupsService {
       
       const filename = `backup_heart_${timestamp}.sql`;
       const filepath = path.join(folderPath, filename);
-      const cmd = `mysqldump --skip-ssl-verify-server-cert -h ${heartConfig.host} -P ${heartConfig.port} -u ${heartConfig.user} -p"${heartConfig.password}" ${heartConfig.db} > "${filepath}"`;
-      
+      const args = [
+        '--skip-ssl-verify-server-cert',
+        '--default-auth=mysql_native_password',
+        `-h${heartConfig.host}`,
+        `-P${heartConfig.port}`,
+        `-u${heartConfig.user}`,
+        `-p${heartConfig.password}`,
+        heartConfig.db,
+      ];
+
       try {
-        await execAsync(cmd);
+        await runMysqldump(args, filepath);
         this.logger.log(`Backup do Heart criado em: heart/${filename}`);
       } catch (e: any) {
         this.logger.error(`Falha no backup do Heart: ${e.message}`);
-        throw new BadRequestException('Falha ao criar backup do Heart');
+        throw new BadRequestException('Falha ao criar backup do Heart: ' + e.message);
       }
     }
 
@@ -155,14 +216,22 @@ export class BackupsService {
 
       const filename = `backup_tenant_${slug}_${timestamp}.sql`;
       const filepath = path.join(folderPath, filename);
-      const cmd = `mysqldump --skip-ssl-verify-server-cert -h ${tConfig.host} -P ${tConfig.port} -u ${tConfig.user} -p"${tConfig.password}" ${tConfig.db} > "${filepath}"`;
-      
+      const args = [
+        '--skip-ssl-verify-server-cert',
+        '--default-auth=mysql_native_password',
+        `-h${tConfig.host}`,
+        `-P${tConfig.port}`,
+        `-u${tConfig.user}`,
+        `-p${tConfig.password}`,
+        tConfig.db,
+      ];
+
       try {
-        await execAsync(cmd);
+        await runMysqldump(args, filepath);
         this.logger.log(`Backup do Tenant ${tenant.name} criado em: ${folderName}/${filename}`);
       } catch (e: any) {
         this.logger.error(`Falha no backup do Tenant ${tenant.name}: ${e.message}`);
-        throw new BadRequestException('Falha ao criar backup do Tenant');
+        throw new BadRequestException('Falha ao criar backup do Tenant: ' + e.message);
       }
     }
 
@@ -177,10 +246,19 @@ export class BackupsService {
 
         const filename = `backup_tenant_${slug}_${timestamp}.sql`;
         const filepath = path.join(folderPath, filename);
-        const cmd = `mysqldump --skip-ssl-verify-server-cert -h ${tConfig.host} -P ${tConfig.port} -u ${tConfig.user} -p"${tConfig.password}" ${tConfig.db} > "${filepath}"`;
-        
+        const args = [
+          '--skip-ssl-verify-server-cert',
+          '--default-auth=mysql_native_password',
+          `-h${tConfig.host}`,
+          `-P${tConfig.port}`,
+          `-u${tConfig.user}`,
+          `-p${tConfig.password}`,
+          tConfig.db,
+        ];
+
         try {
-          await execAsync(cmd);
+          await runMysqldump(args, filepath);
+          this.logger.log(`Backup do Tenant ${tenant.name} criado em: ${folderName}/${filename}`);
         } catch (e: any) {
           this.logger.error(`Falha no backup do Tenant ${tenant.name}: ${e.message}`);
         }
@@ -219,9 +297,17 @@ export class BackupsService {
        throw new BadRequestException('Formato de arquivo não reconhecido.');
     }
 
-    const cmd = `mysql --skip-ssl-verify-server-cert -h ${dbConfig.host} -P ${dbConfig.port} -u ${dbConfig.user} -p"${dbConfig.password}" ${dbConfig.db} < "${filepath}"`;
+    const restoreArgs = [
+      '--skip-ssl-verify-server-cert',
+      '--default-auth=mysql_native_password',
+      `-h${dbConfig.host}`,
+      `-P${dbConfig.port}`,
+      `-u${dbConfig.user}`,
+      `-p${dbConfig.password}`,
+      dbConfig.db,
+    ];
     try {
-      await execAsync(cmd);
+      await runMysqlRestore(restoreArgs, filepath);
       this.logger.log(`Backup restaurado: ${folder}/${filename}`);
       return { success: true };
     } catch (e: any) {
