@@ -8,7 +8,8 @@ interface Operator {
   id: string;
   name: string;
   active: boolean;
-  createdAt: string;
+  isManager: boolean;
+  hasOpenRegister?: boolean;
 }
 
 interface OperatorsManagementModalProps {
@@ -24,6 +25,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
   const [editId, setEditId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
+  const [isManager, setIsManager] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -65,21 +67,27 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
 
     setSubmitting(true);
     try {
-      const payload: any = { name };
+      const payload: any = { name, isManager };
       if (pin) payload.pin = pin;
 
       if (editId) {
         await api.patch(`/operators/${editId}`, payload);
-        toast.success("Colaborador atualizado com sucesso!");
+        toast.success("Colaborador atualizado!");
       } else {
+        if (!pin) {
+          toast.error("Preencha o PIN!");
+          setSubmitting(false);
+          return;
+        }
         await api.post("/operators", payload);
-        toast.success("Colaborador criado com sucesso!");
+        toast.success("Colaborador criado!");
       }
       
       setShowForm(false);
       setEditId(null);
       setName("");
       setPin("");
+      setIsManager(false);
       fetchOperators();
     } catch (err: any) {
       toast.error(err.response?.data?.message || `Erro ao ${editId ? 'atualizar' : 'criar'} colaborador.`);
@@ -91,6 +99,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
   const handleEdit = (op: Operator) => {
     setEditId(op.id);
     setName(op.name);
+    setIsManager(op.isManager || false);
     setPin("");
     setShowForm(true);
   };
@@ -136,10 +145,24 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
               />
             </div>
 
+              <div className="flex items-center gap-3 pt-2">
+                <input
+                  type="checkbox"
+                  id="isManager"
+                  checked={isManager}
+                  onChange={(e) => setIsManager(e.target.checked)}
+                  className="w-5 h-5 rounded border-zinc-700 bg-zinc-950 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-900"
+                />
+                <label htmlFor="isManager" className="text-sm text-zinc-300">
+                  <strong className="block text-white">É Gerente de Caixa?</strong>
+                  <span className="text-xs text-zinc-500">Pode visualizar faturamentos totais e realizar a auditoria da gaveta.</span>
+                </label>
+              </div>
+
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => { setShowForm(false); setEditId(null); setName(""); setPin(""); }}
+                onClick={() => { setShowForm(false); setEditId(null); setName(""); setPin(""); setIsManager(false); }}
                 className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all"
               >
                 Cancelar
@@ -186,18 +209,25 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
                       className="flex-1 cursor-pointer"
                       onClick={() => handleEdit(op)}
                     >
-                      <p className="text-white font-semibold text-sm">{op.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {op.active ? (
-                          <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">
-                            <CheckCircle2 size={10} /> Ativo
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-[10px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded">
-                            <XCircle size={10} /> Inativo
-                          </span>
-                        )}
-                        <span className="text-zinc-600 text-xs">PIN configurado</span>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-white text-base flex items-center gap-2">
+                          {op.name}
+                          {op.isManager && (
+                            <span className="bg-blue-500/20 text-blue-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded border border-blue-500/30">Gerente</span>
+                          )}
+                        </span>
+                        <div className="flex items-center gap-3 mt-1 text-xs">
+                          {op.active ? (
+                            <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">
+                              <CheckCircle2 size={10} /> Ativo
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-[10px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded">
+                              <XCircle size={10} /> Inativo
+                            </span>
+                          )}
+                          <span className="text-zinc-600 text-xs">PIN configurado</span>
+                        </div>
                       </div>
                     </div>
                     <button

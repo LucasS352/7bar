@@ -24,6 +24,7 @@ export class OperatorsService {
         id: true,
         name: true,
         active: true,
+        isManager: true,
         createdAt: true,
         updatedAt: true,
         cashRegisters: {
@@ -53,7 +54,7 @@ export class OperatorsService {
     return operator;
   }
 
-  async create(tenantId: string, data: { name: string; pin: string }) {
+  async create(tenantId: string, data: { name: string; pin: string; isManager?: boolean }) {
     if (!data.pin || data.pin.length < 4 || data.pin.length > 6) {
       throw new BadRequestException('O PIN deve ter entre 4 e 6 dígitos.');
     }
@@ -65,6 +66,7 @@ export class OperatorsService {
         name: data.name,
         pin: hashedPin,
         active: true,
+        isManager: data.isManager || false,
       },
     });
     
@@ -73,12 +75,13 @@ export class OperatorsService {
     return result;
   }
 
-  async update(tenantId: string, id: string, data: { name?: string; pin?: string; active?: boolean }) {
+  async update(tenantId: string, id: string, data: { name?: string; pin?: string; active?: boolean; isManager?: boolean }) {
     const prisma = await this.getPrisma(tenantId);
     
     const updateData: any = {};
     if (data.name) updateData.name = data.name;
     if (data.active !== undefined) updateData.active = data.active;
+    if (data.isManager !== undefined) updateData.isManager = data.isManager;
     
     if (data.pin) {
       if (data.pin.length < 4 || data.pin.length > 6) {

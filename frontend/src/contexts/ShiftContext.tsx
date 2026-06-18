@@ -5,6 +5,7 @@ interface Operator {
   id: string;
   name: string;
   role: string;
+  isManager?: boolean;
 }
 
 interface CashRegister {
@@ -148,10 +149,20 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useShift() {
+export function useShift(): ShiftContextType {
   const context = useContext(ShiftContext);
+  // Retorna contexto vazio quando usado fora do ShiftProvider (ex: painel admin).
+  // Evita o crash "useShift must be used within a ShiftProvider".
   if (context === undefined) {
-    throw new Error('useShift must be used within a ShiftProvider');
+    return {
+      operator: null,
+      cashRegister: null,
+      setOperator: () => {},
+      setCashRegister: () => {},
+      isLoading: false,
+      logoutOperator: () => {},
+      refreshShift: async () => {},
+    };
   }
   return context;
 }

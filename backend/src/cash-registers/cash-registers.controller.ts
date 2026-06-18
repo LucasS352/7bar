@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Query } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, UseGuards, Query } from '@nestjs/common';
 import { CashRegistersService } from './cash-registers.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -19,8 +19,13 @@ export class CashRegistersController {
   }
 
   @Post(':id/close')
-  close(@Param('id') id: string, @Body('closingValue') closingValue: number) {
+  close(@Param('id') id: string, @Body('closingValue') closingValue: number | null) {
     return this.cashRegistersService.closeRegister(id, closingValue);
+  }
+
+  @Patch(':id/audit')
+  audit(@Param('id') id: string, @Body('closingValue') closingValue: number) {
+    return this.cashRegistersService.auditRegister(id, closingValue);
   }
 
   @Post(':id/movement')

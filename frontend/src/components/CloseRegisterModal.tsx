@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { FileText, Loader2, X, AlertOctagon, Receipt, Trash2 } from 'lucide-react';
+import { FileText, Loader2, X, AlertOctagon, Receipt, Trash2, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { useShift } from '@/contexts/ShiftContext';
 
 export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: boolean, onClose: (closed: boolean) => void, registerId: string | undefined }) {
   const [data, setData] = useState<any>(null);
@@ -14,7 +15,13 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
   const [step, setStep] = useState<1 | 2>(1); // 1 = auditoria, 2 = confirmação final
 
   const { user } = useAuthStore();
+  const { operator } = useShift();
+  // canSeeTotals é baseado no operador DONO DO CAIXA (não em quem está logado).
+  // Se o caixa pertence a um Gerente -> mostra totais. Se é de Colaborador -> auditoria cega.
+  // Depois que data carrega, usamos data.register.operator.isManager.
+  // Antes de carregar, fallback para isAdmin para não bloquear o painel admin.
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  const canSeeTotals = isAdmin || Boolean(data?.register?.operator?.isManager);
 
   const [cancelSaleId, setCancelSaleId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
@@ -90,11 +97,25 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
   const handleClose = async () => {
     setSubmitting(true);
     try {
-      await api.post(`/cash-registers/${registerId}/close`, { closingValue });
+      const payload = canSeeTotals ? { closingValue } : { closingValue: null };
+      await api.post(`/cash-registers/${registerId}/close`, payload);
       toast.success('Caixa encerrado formalmente. Bom descanso!');
       onClose(true);
     } catch (e: any) {
       toast.error('Erro ao fechar caixa');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleAudit = async () => {
+    setSubmitting(true);
+    try {
+      await api.patch(`/cash-registers/${registerId}/audit`, { closingValue });
+      toast.success('Auditoria salva com sucesso!');
+      onClose(true);
+    } catch (e: any) {
+      toast.error('Erro ao salvar auditoria');
     } finally {
       setSubmitting(false);
     }
@@ -194,7 +215,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                     ))}
                   </div>
 
-                  {isAdmin && (
+                  {canSeeTotals && (
                     <div className="flex justify-between p-4 bg-zinc-800/20 text-white rounded-2xl border border-zinc-700/50 mt-4">
                       <span className="text-zinc-300">Faturamento Bruto <span className="text-xs text-zinc-500 block">Todas transações da sessão</span></span>
                       <span className="font-black text-xl self-center">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
@@ -202,28 +223,65 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                   )}
                 </div>
 
-                <div className="p-5 border-l-4 border-l-red-500 bg-red-500/10 rounded-r-2xl border border-red-500/20">
-                  <p className="text-xs text-red-500 font-extrabold uppercase tracking-widest mb-2">Total Esperado na Gaveta</p>
-                  <p className="text-4xl font-black text-red-400 drop-shadow-sm">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</p>
-                </div>
+                {canSeeTotals ? (
+                  <div className="p-5 border-l-4 border-l-red-500 bg-red-500/10 rounded-r-2xl border border-red-500/20">
+                    <p className="text-xs text-red-500 font-extrabold uppercase tracking-widest mb-2">Total Esperado na Gaveta</p>
+                    <p className="text-4xl font-black text-red-400 drop-shadow-sm">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</p>
+                  </div>
+                ) : (
+                  <div className="p-5 border-l-4 border-l-blue-500 bg-blue-500/10 rounded-r-2xl border border-blue-500/20">
+                    <p className="text-xs text-blue-400 font-extrabold uppercase mb-2 flex items-center gap-2"><EyeOff size={14}/> Auditoria Cega</p>
+                    <p className="text-zinc-300 text-sm">Você não tem acesso ao valor esperado. O gerente fará a conferência da gaveta no fechamento.</p>
+                  </div>
+                )}
 
                 {data.register.status === 'closed' ? (
                   <div className="pt-4 text-center bg-zinc-950 rounded-[2rem] p-6 border border-zinc-800 shadow-inner">
-                     <p className="text-zinc-500 text-sm">Este caixa já foi auditado e encerrado formalmente.</p>
-                     <p className="text-emerald-400 font-black text-2xl mt-4 flex justify-center gap-2 items-center">
-                       Declarado: R$ {data.register.closingValue != null ? Number(data.register.closingValue).toFixed(2) : '--'}
-                     </p>
-                     {Number(data.register.closingValue) !== Number(data.report.expectedDinheiro) && (
-                        <p className="text-red-400 text-sm mt-4 border border-red-500/30 bg-red-500/10 inline-block px-4 py-2 rounded-full font-bold">
-                          <AlertOctagon size={16} className="inline mr-1 -mt-0.5"/> Diferença Constatada (Quebra): R$ {(Number(data.register.closingValue) - Number(data.report.expectedDinheiro)).toFixed(2)}
-                        </p>
+                     {data.register.closingValue == null ? (
+                       canSeeTotals ? (
+                         <div className="text-left">
+                           <p className="text-amber-500 font-bold mb-2 flex items-center gap-2"><AlertOctagon size={16}/> Pendente de Auditoria</p>
+                           <p className="text-zinc-400 text-sm mb-4">Este caixa foi fechado às cegas por um operador. Insira a contagem da gaveta para finalizar a auditoria.</p>
+                           <div className="flex gap-2">
+                             <input 
+                               type="number" 
+                               step="0.01"
+                               value={closingValue || ''}
+                               onChange={e => setClosingValue(parseFloat(e.target.value) || 0)}
+                               placeholder="R$ 0,00"
+                               className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white font-bold"
+                             />
+                             <button 
+                               onClick={handleAudit}
+                               disabled={submitting}
+                               className="bg-amber-500 hover:bg-amber-600 text-black font-bold px-6 rounded-xl flex items-center gap-2"
+                             >
+                               {submitting ? <Loader2 className="animate-spin" size={18}/> : 'Auditar'}
+                             </button>
+                           </div>
+                         </div>
+                       ) : (
+                         <p className="text-amber-500 font-bold flex justify-center gap-2 items-center"><AlertOctagon size={18}/> Fechamento Pendente de Auditoria</p>
+                       )
+                     ) : (
+                       <>
+                         <p className="text-zinc-500 text-sm">Este caixa já foi auditado e encerrado formalmente.</p>
+                         <p className="text-emerald-400 font-black text-2xl mt-4 flex justify-center gap-2 items-center">
+                           Declarado: R$ {Number(data.register.closingValue).toFixed(2)}
+                         </p>
+                         {Number(data.register.closingValue) !== Number(data.report.expectedDinheiro) && (
+                            <p className="text-red-400 text-sm mt-4 border border-red-500/30 bg-red-500/10 inline-block px-4 py-2 rounded-full font-bold">
+                              <AlertOctagon size={16} className="inline mr-1 -mt-0.5"/> Diferença Constatada (Quebra): R$ {(Number(data.register.closingValue) - Number(data.report.expectedDinheiro)).toFixed(2)}
+                            </p>
+                         )}
+                       </>
                      )}
                   </div>
                 ) : (
                   // Sem input aqui — o operador digita o valor somente na próxima tela
                   <div className="pt-2 p-4 bg-zinc-900/40 rounded-2xl border border-zinc-800 text-center">
                     <p className="text-zinc-500 text-xs uppercase tracking-wider">Próximo passo</p>
-                    <p className="text-zinc-300 text-sm mt-1">Você irá conferir e digitar o valor físico da gaveta na próxima tela.</p>
+                    <p className="text-zinc-300 text-sm mt-1">{canSeeTotals ? 'Você irá conferir e digitar o valor físico da gaveta na próxima tela.' : 'Você irá encerrar este turno definitivamente na próxima tela.'}</p>
                   </div>
                 )}
                 
@@ -359,25 +417,27 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
 
             <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh] custom-scrollbar">
 
-              {/* Campo principal — contar dinheiro na gaveta */}
-              <div className="bg-zinc-900 border-2 border-zinc-700 focus-within:border-red-500 rounded-2xl p-5 transition-colors">
-                <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">💵 Contagem Física da Gaveta</p>
-                <p className="text-zinc-400 text-sm mb-4">Conte o dinheiro físico que está na gaveta agora e informe o total abaixo:</p>
-                <div className="relative">
-                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 font-black text-2xl">R$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    autoFocus
-                    value={closingValue || ''}
-                    onChange={e => setClosingValue(parseFloat(e.target.value) || 0)}
-                    placeholder="0,00"
-                    className="w-full bg-zinc-950 border-2 border-zinc-800 rounded-2xl py-5 pl-16 pr-5 text-4xl font-black text-white focus:outline-none focus:border-red-500 transition-colors shadow-inner placeholder:text-zinc-700"
-                  />
+              {/* Campo principal — contar dinheiro na gaveta — só aparece para Gerentes */}
+              {canSeeTotals && (
+                <div className="bg-zinc-900 border-2 border-zinc-700 focus-within:border-red-500 rounded-2xl p-5 transition-colors">
+                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">💵 Contagem Física da Gaveta</p>
+                  <p className="text-zinc-400 text-sm mb-4">Conte o dinheiro físico que está na gaveta agora e informe o total abaixo:</p>
+                  <div className="relative">
+                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 font-black text-2xl">R$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      autoFocus
+                      value={closingValue || ''}
+                      onChange={e => setClosingValue(parseFloat(e.target.value) || 0)}
+                      placeholder="0,00"
+                      className="w-full bg-zinc-950 border-2 border-zinc-800 rounded-2xl py-5 pl-16 pr-5 text-4xl font-black text-white focus:outline-none focus:border-red-500 transition-colors shadow-inner placeholder:text-zinc-700"
+                    />
+                  </div>
+                  <p className="text-zinc-600 text-xs mt-3 text-center">O sistema esperava <strong className="text-zinc-400">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</strong> na gaveta</p>
                 </div>
-                <p className="text-zinc-600 text-xs mt-3 text-center">O sistema esperava <strong className="text-zinc-400">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</strong> na gaveta</p>
-              </div>
+              )}
 
               {/* Banner de Status — só exibe após o operador digitar um valor */}
               {closingValue > 0 && (() => {
@@ -438,16 +498,20 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                       <span className="text-red-400 font-bold">- R$ {Number(data.report.totalSangrias).toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="border-t border-zinc-700 pt-3 flex justify-between items-center bg-red-500/10 -mx-5 px-5 pb-3">
-                    <span className="text-red-400 font-bold uppercase tracking-wider text-xs">Total Esperado na Gaveta</span>
-                    <span className="text-red-400 font-black text-3xl drop-shadow-sm">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-400 text-sm">Você declarou</span>
-                    <span className={`font-black text-xl ${Math.abs(closingValue - Number(data.report.expectedDinheiro)) < 0.01 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      R$ {Number(closingValue).toFixed(2)}
-                    </span>
-                  </div>
+                  {canSeeTotals && (
+                    <>
+                      <div className="border-t border-zinc-700 pt-3 flex justify-between items-center bg-red-500/10 -mx-5 px-5 pb-3">
+                        <span className="text-red-400 font-bold uppercase tracking-wider text-xs">Total Esperado na Gaveta</span>
+                        <span className="text-red-400 font-black text-3xl drop-shadow-sm">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-400 text-sm">Você declarou</span>
+                        <span className={`font-black text-xl ${Math.abs(closingValue - Number(data.report.expectedDinheiro)) < 0.01 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          R$ {Number(closingValue).toFixed(2)}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Recebimentos Digitais */}

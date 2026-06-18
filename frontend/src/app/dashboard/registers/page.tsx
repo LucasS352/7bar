@@ -72,6 +72,8 @@ export default function CashRegistersHistoryPage() {
                   <td className="px-6 py-5 whitespace-nowrap">
                     {reg.status === 'open' ? (
                        <span className="flex items-center gap-2 text-emerald-400 font-bold text-[11px] bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 w-fit tracking-wider"><CheckCircle2 size={14}/> ABERTO</span>
+                    ) : reg.closingValue == null ? (
+                       <span className="flex items-center gap-2 text-amber-500 font-bold text-[11px] bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 w-fit tracking-wider">PENDENTE DE AUDITORIA</span>
                     ) : (
                        <span className="flex items-center gap-2 text-zinc-500 font-bold text-[11px] bg-zinc-800 px-2.5 py-1 rounded-full border border-zinc-700 w-fit tracking-wider"><XCircle size={14}/> FECHADO</span>
                     )}
@@ -86,7 +88,7 @@ export default function CashRegistersHistoryPage() {
                     R$ {Number(reg.openingValue || 0).toFixed(2)}
                   </td>
                   <td className="px-6 py-5 text-right font-bold text-zinc-400">
-                    {reg.closingValue !== undefined && reg.closingValue !== null ? `R$ ${Number(reg.closingValue).toFixed(2)}` : '--'}
+                    {reg.status === 'open' ? '--' : reg.closingValue != null ? `R$ ${Number(reg.closingValue).toFixed(2)}` : <span className="text-amber-500/80 text-xs uppercase">Pendente</span>}
                   </td>
                   <td className="px-6 py-5 text-center">
                     <button 
@@ -116,6 +118,8 @@ export default function CashRegistersHistoryPage() {
                 <span className="text-xs text-zinc-500 font-mono">ID: {reg.id.slice(0, 8)}</span>
                 {reg.status === 'open' ? (
                    <span className="flex items-center gap-1.5 text-emerald-400 font-bold text-[10px] bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 tracking-wider"><CheckCircle2 size={12}/> ABERTO</span>
+                ) : reg.closingValue == null ? (
+                   <span className="flex items-center gap-1.5 text-amber-500 font-bold text-[10px] bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20 tracking-wider">PENDENTE</span>
                 ) : (
                    <span className="flex items-center gap-1.5 text-zinc-500 font-bold text-[10px] bg-zinc-800 px-2.5 py-0.5 rounded-full border border-zinc-700 tracking-wider"><XCircle size={12}/> FECHADO</span>
                 )}
@@ -136,7 +140,7 @@ export default function CashRegistersHistoryPage() {
                 </div>
                 <div>
                   <span className="text-zinc-500 text-xs block">Terminou com</span>
-                  <span className="text-zinc-400 font-bold">{reg.closingValue !== undefined && reg.closingValue !== null ? `R$ ${Number(reg.closingValue).toFixed(2)}` : '--'}</span>
+                  <span className="text-zinc-400 font-bold">{reg.status === 'open' ? '--' : reg.closingValue != null ? `R$ ${Number(reg.closingValue).toFixed(2)}` : <span className="text-amber-500/80 uppercase text-[10px]">Pendente</span>}</span>
                 </div>
               </div>
 

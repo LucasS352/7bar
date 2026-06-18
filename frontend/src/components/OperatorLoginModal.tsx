@@ -89,7 +89,7 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
                 <div className="flex-1 flex justify-between items-center overflow-hidden">
                   <div>
                     <p className="text-white font-bold truncate">{op.name}</p>
-                    <p className="text-xs text-zinc-500 uppercase tracking-wider">Operador</p>
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider">{op.isManager ? 'Gerente' : 'Operador'}</p>
                   </div>
                   {op.hasOpenRegister && (
                     <span className="bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider whitespace-nowrap">
@@ -115,7 +115,7 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
                 <User className="text-blue-400" size={32} />
               </div>
               <h3 className="text-xl font-bold text-white">{selectedOp.name}</h3>
-              <p className="text-zinc-500 text-sm">Operador</p>
+              <p className="text-zinc-500 text-sm">{selectedOp.isManager ? 'Gerente de Caixa' : 'Operador'}</p>
             </div>
 
             <div>

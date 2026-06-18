@@ -48,11 +48,23 @@ export class CashRegistersService {
     }
   }
 
-  async closeRegister(id: string, closingValue: number) {
+  async closeRegister(id: string, closingValue: number | null) {
     const prisma = await this.getPrisma();
     return prisma.cashRegister.update({
       where: { id },
       data: { closingValue, closingTime: new Date(), status: 'closed' }
+    });
+  }
+
+  async auditRegister(id: string, closingValue: number) {
+    const prisma = await this.getPrisma();
+    const register = await prisma.cashRegister.findUnique({ where: { id } });
+    if (!register || register.status !== 'closed') {
+      throw new BadRequestException('Caixa não encontrado ou não está fechado');
+    }
+    return prisma.cashRegister.update({
+      where: { id },
+      data: { closingValue }
     });
   }
 
@@ -87,7 +99,10 @@ export class CashRegistersService {
 
   async getReport(id: string) {
     const prisma = await this.getPrisma();
-    const register = await prisma.cashRegister.findUnique({ where: { id } });
+    const register = await prisma.cashRegister.findUnique({
+      where: { id },
+      include: { operator: { select: { id: true, name: true, isManager: true } } }
+    });
     if (!register) throw new BadRequestException('Caixa não encontrado');
 
     const sales = await prisma.sale.findMany({

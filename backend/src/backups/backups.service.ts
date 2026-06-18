@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import archiver = require('archiver');
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
+import { google } from 'googleapis';
 
 /**
  * Executa mysqldump usando spawn (sem shell) e escreve o stdout direto em arquivo.
@@ -80,6 +81,7 @@ export class BackupsService implements OnModuleInit {
   private readonly backupDir = path.join(process.cwd(), 'backups');
   private readonly configPath = path.join(process.cwd(), 'backups', 'schedule.json');
   private lastScheduledBackupDate: string | null = null;
+  private driveFolderCache: { dateStr: string, folderId: string } | null = null;
 
   constructor(private heartPrisma: HeartPrismaService) {
     if (!fs.existsSync(this.backupDir)) {
@@ -97,6 +99,98 @@ export class BackupsService implements OnModuleInit {
       this.logger.log('Autenticação do usuário root ajustada com sucesso.');
     } catch (e: any) {
       this.logger.error(`Não foi possível ajustar o usuário root no MySQL (pode já estar configurado): ${e.message}`);
+    }
+  }
+
+  private async uploadToGoogleDrive(filepath: string, filename: string, driveFilename?: string) {
+    try {
+      const clientId = process.env.GOOGLE_DRIVE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
+      const refreshToken = process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
+
+      if (!clientId || !clientSecret || !refreshToken) {
+        throw new Error('As credenciais do Google Drive OAuth2 não estão configuradas nas variáveis de ambiente.');
+      }
+
+      const auth = new google.auth.OAuth2(clientId, clientSecret);
+      auth.setCredentials({ refresh_token: refreshToken });
+
+      const drive = google.drive({ version: 'v3', auth });
+      
+      // Procurar pasta "backups" (case-insensitive via JavaScript para evitar problemas)
+      const res = await drive.files.list({
+        q: "mimeType='application/vnd.google-apps.folder' and trashed=false",
+        fields: 'files(id, name)',
+        spaces: 'drive',
+      });
+
+      let parentFolderId = res.data.files?.find(f => f.name && f.name.toLowerCase().includes('backup'))?.id;
+
+      if (!parentFolderId) {
+         this.logger.warn('Pasta "backups" não encontrada no Google Drive da conta de serviço. O arquivo será salvo na raiz do Drive da conta de serviço.');
+      }
+
+      let targetFolderId = parentFolderId;
+
+      if (parentFolderId) {
+        // Obter data atual no formato DD-MM-YYYY
+        const dateStr = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }).replace(/\//g, '-');
+        
+        if (this.driveFolderCache && this.driveFolderCache.dateStr === dateStr) {
+           targetFolderId = this.driveFolderCache.folderId;
+        } else {
+          // Verificar se a pasta com a data já existe dentro do parentFolderId
+          const dateFolderRes = await drive.files.list({
+            q: `mimeType='application/vnd.google-apps.folder' and '${parentFolderId}' in parents and name='${dateStr}' and trashed=false`,
+            fields: 'files(id, name)',
+            spaces: 'drive',
+          });
+          
+          let dateFolderId = dateFolderRes.data.files?.[0]?.id;
+          
+          if (!dateFolderId) {
+            // Criar pasta da data
+            const folderMetadata = {
+              name: dateStr,
+              mimeType: 'application/vnd.google-apps.folder',
+              parents: [parentFolderId]
+            };
+            const folder = await drive.files.create({
+              requestBody: folderMetadata,
+              fields: 'id'
+            });
+            dateFolderId = folder.data.id;
+          }
+          
+          targetFolderId = dateFolderId;
+          this.driveFolderCache = { dateStr, folderId: targetFolderId as string };
+        }
+      }
+
+      const finalName = driveFilename || filename;
+
+      const fileMetadata: any = {
+        name: finalName,
+      };
+      if (targetFolderId) {
+        fileMetadata.parents = [targetFolderId];
+      }
+
+      const media = {
+        mimeType: finalName.endsWith('.zip') ? 'application/zip' : 'application/sql',
+        body: fs.createReadStream(filepath),
+      };
+
+      const file = await drive.files.create({
+        requestBody: fileMetadata,
+        media: media,
+        fields: 'id',
+      });
+
+      this.logger.log(`Backup enviado para o Google Drive com sucesso. File Id: ${file.data.id}`);
+
+    } catch (e: any) {
+      this.logger.error(`Falha ao enviar backup para o Google Drive: ${e.message}`);
     }
   }
 
@@ -211,6 +305,7 @@ export class BackupsService implements OnModuleInit {
       try {
         await runMysqldump(args, filepath);
         this.logger.log(`Backup do Heart criado em: heart/${filename}`);
+        await this.uploadToGoogleDrive(filepath, filename, 'heart.sql');
       } catch (e: any) {
         this.logger.error(`Falha no backup do Heart: ${e.message}`);
         throw new BadRequestException('Falha ao criar backup do Heart: ' + e.message);
@@ -242,6 +337,7 @@ export class BackupsService implements OnModuleInit {
       try {
         await runMysqldump(args, filepath);
         this.logger.log(`Backup do Tenant ${tenant.name} criado em: ${folderName}/${filename}`);
+        await this.uploadToGoogleDrive(filepath, filename, `tenant_${slug}.sql`);
       } catch (e: any) {
         this.logger.error(`Falha no backup do Tenant ${tenant.name}: ${e.message}`);
         throw new BadRequestException('Falha ao criar backup do Tenant: ' + e.message);
@@ -272,6 +368,7 @@ export class BackupsService implements OnModuleInit {
         try {
           await runMysqldump(args, filepath);
           this.logger.log(`Backup do Tenant ${tenant.name} criado em: ${folderName}/${filename}`);
+          await this.uploadToGoogleDrive(filepath, filename, `tenant_${slug}.sql`);
         } catch (e: any) {
           this.logger.error(`Falha no backup do Tenant ${tenant.name}: ${e.message}`);
         }
