@@ -415,15 +415,14 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
               </button>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh] custom-scrollbar">
+            <div className="p-5 space-y-4 overflow-y-auto max-h-[80vh] custom-scrollbar">
 
               {/* Campo principal — contar dinheiro na gaveta — só aparece para Gerentes */}
               {canSeeTotals && (
-                <div className="bg-zinc-900 border-2 border-zinc-700 focus-within:border-red-500 rounded-2xl p-5 transition-colors">
-                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">💵 Contagem Física da Gaveta</p>
-                  <p className="text-zinc-400 text-sm mb-4">Conte o dinheiro físico que está na gaveta agora e informe o total abaixo:</p>
+                <div className="bg-zinc-900 border border-zinc-800 focus-within:border-red-500 rounded-xl p-5 transition-colors">
+                  <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Valor Físico em Caixa</p>
                   <div className="relative">
-                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 font-black text-2xl">R$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-black text-xl">R$</span>
                     <input
                       type="number"
                       step="0.01"
@@ -432,38 +431,35 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                       value={closingValue || ''}
                       onChange={e => setClosingValue(parseFloat(e.target.value) || 0)}
                       placeholder="0,00"
-                      className="w-full bg-zinc-950 border-2 border-zinc-800 rounded-2xl py-5 pl-16 pr-5 text-4xl font-black text-white focus:outline-none focus:border-red-500 transition-colors shadow-inner placeholder:text-zinc-700"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-14 pr-4 text-2xl font-black text-white focus:outline-none focus:border-red-500 transition-colors shadow-inner placeholder:text-zinc-700 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none m-0"
+                      style={{ WebkitAppearance: 'none', margin: 0 }}
                     />
                   </div>
-                  <p className="text-zinc-600 text-xs mt-3 text-center">O sistema esperava <strong className="text-zinc-400">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</strong> na gaveta</p>
                 </div>
               )}
 
-              {/* Banner de Status — só exibe após o operador digitar um valor */}
+              {/* Banner de Status */}
               {closingValue > 0 && (() => {
                 const diff = closingValue - Number(data.report.expectedDinheiro);
                 const bateu = Math.abs(diff) < 0.01;
                 const sobra = diff > 0.01;
                 return (
-                  <div className={`rounded-2xl p-5 border flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-200 ${bateu ? 'bg-emerald-500/10 border-emerald-500/30' : sobra ? 'bg-amber-500/10 border-amber-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0 ${bateu ? 'bg-emerald-500/20' : sobra ? 'bg-amber-500/20' : 'bg-red-500/20'}`}>
-                      {bateu ? '✅' : sobra ? '⚠️' : '🔴'}
-                    </div>
+                  <div className={`rounded-xl p-4 border flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-200 ${bateu ? 'bg-emerald-500/10 border-emerald-500/30' : sobra ? 'bg-amber-500/10 border-amber-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
                     <div>
                       {bateu ? (
                         <>
-                          <p className="text-emerald-400 font-black text-xl">Caixa Conferido!</p>
-                          <p className="text-emerald-400/70 text-sm mt-0.5">O valor declarado bate exatamente com o esperado pelo sistema.</p>
+                          <p className="text-emerald-400 font-bold text-sm">Sem divergências</p>
+                          <p className="text-emerald-400/70 text-xs mt-0.5">O valor físico bate com o sistema.</p>
                         </>
                       ) : sobra ? (
                         <>
-                          <p className="text-amber-400 font-black text-xl">Sobra de R$ {diff.toFixed(2)}</p>
-                          <p className="text-amber-400/70 text-sm mt-0.5">O valor declarado é maior que o esperado. Verifique se houve engano.</p>
+                          <p className="text-amber-400 font-bold text-sm">Sobra de R$ {diff.toFixed(2)}</p>
+                          <p className="text-amber-400/70 text-xs mt-0.5">O valor físico excede o esperado.</p>
                         </>
                       ) : (
                         <>
-                          <p className="text-red-400 font-black text-xl">Quebra de R$ {Math.abs(diff).toFixed(2)}</p>
-                          <p className="text-red-400/70 text-sm mt-0.5">O valor declarado está abaixo do esperado. A diferença será registrada na auditoria.</p>
+                          <p className="text-red-400 font-bold text-sm">Quebra de R$ {Math.abs(diff).toFixed(2)}</p>
+                          <p className="text-red-400/70 text-xs mt-0.5">O valor físico está abaixo do esperado.</p>
                         </>
                       )}
                     </div>
@@ -472,74 +468,65 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
               })()}
 
               {/* Grid: Dinheiro Físico + Digitais */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                 {/* Dinheiro Físico */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-3">
-                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">💵 Dinheiro Físico (Gaveta)</p>
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-2.5">
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Dinheiro Físico</p>
 
-                  <div className="flex justify-between items-center text-sm">
+                  <div className="flex justify-between items-center text-xs">
                     <span className="text-zinc-400">Fundo inicial</span>
-                    <span className="text-white font-bold">R$ {Number(data.register.openingValue).toFixed(2)}</span>
+                    <span className="text-white font-medium">R$ {Number(data.register.openingValue).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-zinc-400">Vendas em dinheiro</span>
-                    <span className="text-emerald-400 font-bold">+ R$ {Number(data.report.totalDinheiro).toFixed(2)}</span>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-zinc-400">Vendas físicas</span>
+                    <span className="text-emerald-400 font-medium">+ R$ {Number(data.report.totalDinheiro).toFixed(2)}</span>
                   </div>
                   {data.report.totalSuprimentos > 0 && (
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-zinc-400">Suprimentos (reforço)</span>
-                      <span className="text-blue-400 font-bold">+ R$ {Number(data.report.totalSuprimentos).toFixed(2)}</span>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-zinc-400">Suprimentos</span>
+                      <span className="text-blue-400 font-medium">+ R$ {Number(data.report.totalSuprimentos).toFixed(2)}</span>
                     </div>
                   )}
                   {data.report.totalSangrias > 0 && (
-                    <div className="flex justify-between items-center text-sm">
+                    <div className="flex justify-between items-center text-xs">
                       <span className="text-zinc-400">Sangrias</span>
-                      <span className="text-red-400 font-bold">- R$ {Number(data.report.totalSangrias).toFixed(2)}</span>
+                      <span className="text-red-400 font-medium">- R$ {Number(data.report.totalSangrias).toFixed(2)}</span>
                     </div>
                   )}
                   {canSeeTotals && (
-                    <>
-                      <div className="border-t border-zinc-700 pt-3 flex justify-between items-center bg-red-500/10 -mx-5 px-5 pb-3">
-                        <span className="text-red-400 font-bold uppercase tracking-wider text-xs">Total Esperado na Gaveta</span>
-                        <span className="text-red-400 font-black text-3xl drop-shadow-sm">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-zinc-400 text-sm">Você declarou</span>
-                        <span className={`font-black text-xl ${Math.abs(closingValue - Number(data.report.expectedDinheiro)) < 0.01 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          R$ {Number(closingValue).toFixed(2)}
-                        </span>
-                      </div>
-                    </>
+                    <div className="border-t border-zinc-800 pt-2.5 mt-2.5 flex justify-between items-center">
+                      <span className="text-zinc-400 text-xs font-bold">Total Esperado</span>
+                      <span className="text-white font-bold text-sm">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</span>
+                    </div>
                   )}
                 </div>
 
                 {/* Recebimentos Digitais */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-3">
-                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">💳 Recebimentos Digitais</p>
-                  <p className="text-[11px] text-zinc-600">Estes valores estão em conta — não entram na gaveta</p>
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-2.5">
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Recebimentos Digitais</p>
 
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-indigo-400">Cartão de Crédito</span>
-                    <span className="text-indigo-300 font-bold">R$ {Number(data.report.totalCredito || 0).toFixed(2)}</span>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-zinc-400">Crédito</span>
+                    <span className="text-zinc-300 font-medium">R$ {Number(data.report.totalCredito || 0).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-sky-400">Cartão de Débito</span>
-                    <span className="text-sky-300 font-bold">R$ {Number(data.report.totalDebito || 0).toFixed(2)}</span>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-zinc-400">Débito</span>
+                    <span className="text-zinc-300 font-medium">R$ {Number(data.report.totalDebito || 0).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-teal-400">Pix</span>
-                    <span className="text-teal-300 font-bold">R$ {Number(data.report.totalPix || 0).toFixed(2)}</span>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-zinc-400">Pix</span>
+                    <span className="text-zinc-300 font-medium">R$ {Number(data.report.totalPix || 0).toFixed(2)}</span>
                   </div>
                   {(data.report.customMethods || []).map((cm: any) => (
-                    <div key={cm.method} className="flex justify-between items-center text-sm">
-                      <span className="text-purple-400">{cm.label}</span>
-                      <span className="text-purple-300 font-bold">R$ {Number(cm.total || 0).toFixed(2)}</span>
+                    <div key={cm.method} className="flex justify-between items-center text-xs">
+                      <span className="text-zinc-400">{cm.label}</span>
+                      <span className="text-zinc-300 font-medium">R$ {Number(cm.total || 0).toFixed(2)}</span>
                     </div>
                   ))}
-                  <div className="border-t border-zinc-700 pt-3 flex justify-between items-center">
-                    <span className="text-zinc-300 font-bold text-sm">Total Digital</span>
-                    <span className="text-white font-black text-xl">
+                  <div className="border-t border-zinc-800 pt-2.5 mt-2.5 flex justify-between items-center">
+                    <span className="text-zinc-400 text-xs font-bold">Total Digital</span>
+                    <span className="text-white font-bold text-sm">
                       R$ {(Number(data.report.totalCredito || 0) + Number(data.report.totalDebito || 0) + Number(data.report.totalPix || 0) + (data.report.customMethods || []).reduce((a: number, m: any) => a + Number(m.total || 0), 0)).toFixed(2)}
                     </span>
                   </div>
@@ -548,9 +535,9 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
 
               {/* Resumo total - Apenas para Admins */}
               {isAdmin && (
-                <div className="flex justify-between items-center bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-4">
-                  <span className="text-zinc-300 font-bold">Faturamento Total do Turno</span>
-                  <span className="text-white font-black text-2xl">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
+                <div className="flex justify-between items-center bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
+                  <span className="text-zinc-400 text-xs font-bold uppercase">Faturamento do Turno</span>
+                  <span className="text-white font-bold text-lg">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
                 </div>
               )}
 
@@ -558,16 +545,16 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => setStep(1)}
-                  className="flex-1 py-4 rounded-2xl font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-all text-sm"
+                  className="flex-1 py-3 rounded-xl font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-all text-sm"
                 >
-                  ← Voltar e Revisar
+                  Voltar
                 </button>
                 <button
                   onClick={handleClose}
                   disabled={submitting}
-                  className="flex-1 py-4 rounded-2xl font-black bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white transition-all shadow-lg shadow-red-900/30 active:scale-95 flex items-center justify-center gap-2 text-base"
+                  className="flex-[2] py-3 rounded-xl font-bold bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white transition-all active:scale-95 flex items-center justify-center gap-2 text-sm"
                 >
-                  {submitting ? <Loader2 className="animate-spin" size={20} /> : '🔒 Encerrar Caixa Definitivamente'}
+                  {submitting ? <Loader2 className="animate-spin" size={16} /> : 'Encerrar Caixa'}
                 </button>
               </div>
 

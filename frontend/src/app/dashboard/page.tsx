@@ -17,6 +17,9 @@ import {
 } from 'recharts';
 import { UserIcon } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { FileText, FileSpreadsheet } from 'lucide-react';
 
 type RegisterSummary = {
   cashRegisterId: string;
@@ -180,32 +183,32 @@ export default function SalesDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
+  const { computedStartDate, computedEndDate } = useMemo(() => {
+    let sDate = startDate;
+    let eDate = endDate;
+
+    if (preset === 'today') {
+      const localToday = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
+      sDate = localToday; eDate = localToday;
+    } else if (preset === 'week') {
+      const now = new Date();
+      const start = new Date(now);
+      start.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
+      sDate = start.toLocaleDateString('en-CA');
+      eDate = new Date().toLocaleDateString('en-CA');
+    } else if (preset === 'month') {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      sDate = start.toLocaleDateString('en-CA');
+      eDate = new Date().toLocaleDateString('en-CA');
+    }
+    return { computedStartDate: sDate, computedEndDate: eDate };
+  }, [preset, startDate, endDate]);
+
   const fetchDashboardData = async () => {
     try {
-      // Usar a mesma data se for preset 'hoje', se não calcular.
-      // Para manter simples no front, vamos apenas usar o preset na lógica de exibição, 
-      // mas passar as datas customizadas quando applicable.
-      let sDate = startDate;
-      let eDate = endDate;
-
-      if (preset === 'today') {
-        const localToday = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
-        sDate = localToday; eDate = localToday;
-      } else if (preset === 'week') {
-        const now = new Date();
-        const start = new Date(now);
-        start.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
-        sDate = start.toLocaleDateString('en-CA');
-        eDate = new Date().toLocaleDateString('en-CA');
-      } else if (preset === 'month') {
-        const now = new Date();
-        const start = new Date(now.getFullYear(), now.getMonth(), 1);
-        sDate = start.toLocaleDateString('en-CA');
-        eDate = new Date().toLocaleDateString('en-CA');
-      }
-
       // Fetch summary
-      const sumRes = await api.get(`/dashboard/summary?startDate=${sDate}&endDate=${eDate}`);
+      const sumRes = await api.get(`/dashboard/summary?startDate=${computedStartDate}&endDate=${computedEndDate}`);
       setSummary(sumRes.data);
 
       // Fetch transactions history for the table
@@ -463,6 +466,16 @@ export default function SalesDashboard() {
   const filteredSales = useMemo(() => {
     let result = sales;
 
+    // Aplica o filtro de data global do dashboard
+    if (computedStartDate && computedEndDate) {
+      const startObj = new Date(computedStartDate + 'T00:00:00');
+      const endObj = new Date(computedEndDate + 'T23:59:59');
+      result = result.filter(s => {
+        const saleDate = new Date(s.createdAt);
+        return saleDate >= startObj && saleDate <= endObj;
+      });
+    }
+
     // Filtro por método de pagamento
     if (filterPayment !== 'todos') {
       result = result.filter(s => s.payments.some(p => p.method.toLowerCase() === filterPayment.toLowerCase()));
@@ -489,30 +502,69 @@ export default function SalesDashboard() {
   }, [sales, searchTerm, filterPayment, sortBy]);
 
   const handleExportSales = () => {
-    if (filteredSales.length === 0) {
-      toast.error('Não há vendas para exportar com os filtros atuais.');
-      return;
+    try {
+      if (filteredSales.length === 0) {
+        toast.error('Não há vendas para exportar com os filtros atuais.');
+        return;
+      }
+
+      const dataToExport = filteredSales.map(sale => {
+        return {
+          'Data/Hora': new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(sale.createdAt)),
+          'Itens': sale.items.map(i => `${i.quantity}x ${i.product?.name || 'Produto'}`).join(', '),
+          'Pagamento': sale.payments.map(p => `${p.label || getMethodName(p.method)} (R$ ${Number(p.value).toFixed(2)})`).join(', '),
+          'Total (R$)': Number(sale.total).toFixed(2),
+          'Desconto (R$)': sale.discount ? Number(sale.discount).toFixed(2) : '0.00',
+          'Status NFC-e': sale.nfceStatus || 'Não emitida',
+          'Status Venda': sale.status === 'cancelled' ? 'Cancelada' : 'Concluída'
+        };
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Histórico de Vendas');
+      
+      const fileName = `Vendas_Dashboard_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+      toast.success('Exportação concluída!');
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro ao exportar Excel: ' + (err.message || 'Desconhecido'));
     }
+  };
 
-    const dataToExport = filteredSales.map(sale => {
-      return {
-        'Data/Hora': new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(sale.createdAt)),
-        'Itens': sale.items.map(i => `${i.quantity}x ${i.product?.name || 'Produto'}`).join(', '),
-        'Pagamento': sale.payments.map(p => `${p.method} (R$ ${p.value.toFixed(2)})`).join(', '),
-        'Total (R$)': sale.total.toFixed(2),
-        'Desconto (R$)': sale.discount ? sale.discount.toFixed(2) : '0.00',
-        'Status NFC-e': sale.nfceStatus || 'Não emitida',
-        'Status Venda': sale.status === 'cancelled' ? 'Cancelada' : 'Concluída'
-      };
-    });
+  const handleExportPDF = () => {
+    try {
+      if (filteredSales.length === 0) {
+        toast.error('Não há vendas para exportar.');
+        return;
+      }
+      const doc = new jsPDF();
+      doc.setFontSize(14);
+      doc.text('Histórico de Vendas', 14, 20);
+      
+      const tableData = filteredSales.map(sale => [
+        new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(sale.createdAt)),
+        sale.items.map(i => `${i.quantity}x ${i.product?.name || 'Produto'}`).join(', '),
+        sale.payments.map(p => `${p.label || getMethodName(p.method)} (R$ ${Number(p.value).toFixed(2)})`).join(', '),
+        `R$ ${Number(sale.total).toFixed(2)}`
+      ]);
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Histórico de Vendas');
-    
-    const fileName = `Vendas_Dashboard_${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
-    toast.success('Exportação concluída!');
+      autoTable(doc, {
+        startY: 25,
+        head: [['Data/Hora', 'Itens', 'Pagamento', 'Total']],
+        body: tableData,
+        theme: 'grid',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [40, 40, 40] }
+      });
+
+      doc.save(`Vendas_Dashboard_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('PDF exportado com sucesso!');
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro ao exportar PDF: ' + (err.message || 'Desconhecido'));
+    }
   };
 
   // Paginação
@@ -897,13 +949,22 @@ export default function SalesDashboard() {
                 <option value="maior_valor">Maior valor</option>
               </select>
 
-              <button 
-                onClick={handleExportSales}
-                className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded-lg transition-colors border border-zinc-700 text-sm font-semibold w-full sm:w-auto"
-                title="Exportar listagem atual para Excel"
-              >
-                <Download size={16} /> <span className="hidden sm:inline">Exportar</span>
-              </button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button 
+                  onClick={handleExportPDF}
+                  className="flex items-center justify-center gap-1.5 bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-500/30 px-3 py-2 rounded-lg transition-colors text-sm font-semibold flex-1 sm:flex-none"
+                  title="Exportar listagem atual para PDF"
+                >
+                  <FileText size={16} /> PDF
+                </button>
+                <button 
+                  onClick={handleExportSales}
+                  className="flex items-center justify-center gap-1.5 bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 px-3 py-2 rounded-lg transition-colors text-sm font-semibold flex-1 sm:flex-none"
+                  title="Exportar listagem atual para Excel"
+                >
+                  <FileSpreadsheet size={16} /> Excel
+                </button>
+              </div>
             </div>
           </div>
           

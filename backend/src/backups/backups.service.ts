@@ -209,21 +209,27 @@ export class BackupsService implements OnModuleInit {
     try {
       if (!fs.existsSync(this.backupDir)) return;
       const dirs = fs.readdirSync(this.backupDir, { withFileTypes: true });
-      const now = Date.now();
-      const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
       for (const dirent of dirs) {
         if (dirent.isDirectory()) {
           const folderPath = path.join(this.backupDir, dirent.name);
           const files = fs.readdirSync(folderPath);
-          for (const file of files) {
-            if (!file.endsWith('.sql') && !file.endsWith('.sql.gz')) continue;
-            const filePath = path.join(folderPath, file);
-            const stats = fs.statSync(filePath);
-            if (now - stats.mtimeMs > SEVEN_DAYS) {
-              fs.unlinkSync(filePath);
-              this.logger.log(`Backup antigo removido: ${folderPath}/${file}`);
-            }
+          
+          const backupFiles = files
+            .filter(file => file.endsWith('.sql') || file.endsWith('.sql.gz'))
+            .map(file => {
+              const filePath = path.join(folderPath, file);
+              const stats = fs.statSync(filePath);
+              return { file, filePath, mtimeMs: stats.mtimeMs };
+            })
+            .sort((a, b) => b.mtimeMs - a.mtimeMs); // Ordenar por data decrescente (mais novos primeiro)
+            
+          // Manter apenas os 7 mais recentes
+          const filesToDelete = backupFiles.slice(7);
+          
+          for (const { file, filePath } of filesToDelete) {
+            fs.unlinkSync(filePath);
+            this.logger.log(`Backup removido (excedeu limite de 7 por banco): ${folderPath}/${file}`);
           }
         }
       }
