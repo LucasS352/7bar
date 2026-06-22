@@ -13,6 +13,8 @@ interface OperatorLoginModalProps {
 interface OperatorData {
   id: string;
   name: string;
+  isManager?: boolean;
+  jobTitle?: string | null;
   hasOpenRegister?: boolean;
 }
 
@@ -28,9 +30,16 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Busca os operadores da loja.
+    // Busca operadores e filtra apenas quem pode abrir caixa:
+    // isManager=true, jobTitle 'Gerente' ou 'Caixa', ou sem função definida (legado)
+    const CAN_OPEN_REGISTER = ['Gerente', 'Caixa'];
     api.get('/operators')
-      .then(res => setOperators(res.data.filter((u: any) => u.active)))
+      .then(res => setOperators(
+        res.data.filter((u: any) =>
+          u.active &&
+          (u.isManager || !u.jobTitle || CAN_OPEN_REGISTER.includes(u.jobTitle))
+        )
+      ))
       .catch(() => toast.error('Erro ao carregar operadores.'))
       .finally(() => setLoadingOps(false));
   }, []);
@@ -89,7 +98,9 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
                 <div className="flex-1 flex justify-between items-center overflow-hidden">
                   <div>
                     <p className="text-white font-bold truncate">{op.name}</p>
-                    <p className="text-xs text-zinc-500 uppercase tracking-wider">{op.isManager ? 'Gerente' : 'Operador'}</p>
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider">
+                      {op.jobTitle || (op.isManager ? 'Gerente' : 'Operador')}
+                    </p>
                   </div>
                   {op.hasOpenRegister && (
                     <span className="bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider whitespace-nowrap">
@@ -115,7 +126,7 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
                 <User className="text-blue-400" size={32} />
               </div>
               <h3 className="text-xl font-bold text-white">{selectedOp.name}</h3>
-              <p className="text-zinc-500 text-sm">{selectedOp.isManager ? 'Gerente de Caixa' : 'Operador'}</p>
+              <p className="text-zinc-500 text-sm">{selectedOp.jobTitle || (selectedOp.isManager ? 'Gerente de Caixa' : 'Operador')}</p>
             </div>
 
             <div>

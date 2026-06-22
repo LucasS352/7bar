@@ -9,6 +9,7 @@ import {
 interface OperatorConsumption {
   id: string;
   name: string;
+  jobTitle?: string | null;
   pendingBalance: number;
 }
 
@@ -358,7 +359,11 @@ export function ComandasPage() {
                       </div>
                       <div>
                         <span className="font-bold block leading-tight">{op.name}</span>
-                        <span className="text-xs text-zinc-500">Clique para ver histórico</span>
+                        {op.jobTitle ? (
+                          <span className="text-[11px] bg-purple-500/15 text-purple-400 border border-purple-500/25 px-2 py-0.5 rounded font-bold">{op.jobTitle}</span>
+                        ) : (
+                          <span className="text-xs text-zinc-500">Clique para ver histórico</span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -526,7 +531,9 @@ export function ComandasPage() {
                 >
                   <option value="">Selecione o colaborador...</option>
                   {operators.map(op => (
-                    <option key={op.id} value={op.id}>{op.name}</option>
+                    <option key={op.id} value={op.id}>
+                      {op.name}{op.jobTitle ? ` — ${op.jobTitle}` : ''}
+                    </option>
                   ))}
                 </select>
               </div>

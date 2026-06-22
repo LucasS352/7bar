@@ -8,7 +8,7 @@ export class OperatorsController {
   constructor(private readonly operatorsService: OperatorsService) {}
 
   @Post()
-  create(@Request() req: any, @Body() body: { name: string; pin: string; isManager?: boolean }) {
+  create(@Request() req: any, @Body() body: { name: string; pin: string; isManager?: boolean; jobTitle?: string }) {
     return this.operatorsService.create(req.user.tenantId, body);
   }
 
@@ -48,7 +48,7 @@ export class OperatorsController {
   }
 
   @Patch(':id')
-  update(@Request() req: any, @Param('id') id: string, @Body() body: { name?: string; pin?: string; active?: boolean; isManager?: boolean }) {
+  update(@Request() req: any, @Param('id') id: string, @Body() body: { name?: string; pin?: string; active?: boolean; isManager?: boolean; jobTitle?: string }) {
     return this.operatorsService.update(req.user.tenantId, id, body);
   }
 

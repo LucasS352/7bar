@@ -9,6 +9,7 @@ interface Operator {
   name: string;
   active: boolean;
   isManager: boolean;
+  jobTitle?: string | null;
   hasOpenRegister?: boolean;
 }
 
@@ -25,6 +26,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
   const [editId, setEditId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
   const [isManager, setIsManager] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -67,7 +69,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
 
     setSubmitting(true);
     try {
-      const payload: any = { name, isManager };
+      const payload: any = { name, isManager, jobTitle: jobTitle.trim() || null };
       if (pin) payload.pin = pin;
 
       if (editId) {
@@ -87,6 +89,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
       setEditId(null);
       setName("");
       setPin("");
+      setJobTitle("");
       setIsManager(false);
       fetchOperators();
     } catch (err: any) {
@@ -99,6 +102,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
   const handleEdit = (op: Operator) => {
     setEditId(op.id);
     setName(op.name);
+    setJobTitle(op.jobTitle || "");
     setIsManager(op.isManager || false);
     setPin("");
     setShowForm(true);
@@ -128,6 +132,39 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
                 placeholder="Ex: João Silva"
                 className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all outline-none text-white text-sm"
               />
+            </div>
+
+            {/* Função / jobTitle */}
+            <div>
+              <label className="text-sm text-zinc-400 mb-1.5 block">Função <span className="text-zinc-600">(opcional)</span></label>
+              <input
+                type="text"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                placeholder="Ex: Motoqueiro, Garçom, Balconista..."
+                className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500 transition-all outline-none text-white text-sm"
+              />
+              {/* Sugestões rápidas */}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {['Motoqueiro', 'Garçom', 'Cozinheiro', 'Balconista', 'Gerente', 'Caixa'].map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => {
+                      setJobTitle(s);
+                      if (s === 'Gerente') setIsManager(true);
+                      else setIsManager(false);
+                    }}
+                    className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors font-medium ${
+                      jobTitle === s
+                        ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                        : 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="animate-in fade-in slide-in-from-top-2 duration-300">
@@ -162,7 +199,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => { setShowForm(false); setEditId(null); setName(""); setPin(""); setIsManager(false); }}
+                onClick={() => { setShowForm(false); setEditId(null); setName(""); setPin(""); setJobTitle(""); setIsManager(false); }}
                 className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all"
               >
                 Cancelar
@@ -216,7 +253,10 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
                             <span className="bg-blue-500/20 text-blue-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded border border-blue-500/30">Gerente</span>
                           )}
                         </span>
-                        <div className="flex items-center gap-3 mt-1 text-xs">
+                        <div className="flex items-center gap-2 mt-1">
+                          {op.jobTitle && (
+                            <span className="bg-purple-500/15 text-purple-400 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-500/25">{op.jobTitle}</span>
+                          )}
                           {op.active ? (
                             <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">
                               <CheckCircle2 size={10} /> Ativo

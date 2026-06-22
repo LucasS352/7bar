@@ -148,6 +148,7 @@ model Operator {
   id        String   @id @default(uuid())
   name      String
   pin       String   // PIN hasheado do operador (ex: Julio)
+  jobTitle  String?  // Função/cargo do colaborador (ex: Motoqueiro, Garçom)
   active    Boolean  @default(true)
   isManager Boolean  @default(false) // Pode auditar fechamentos e ver totais
   createdAt DateTime @default(now())
