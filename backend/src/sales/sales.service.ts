@@ -22,6 +22,20 @@ const TPAG_MAP: Record<string, string> = {
 export class SalesService {
   private readonly logger = new Logger(SalesService.name);
 
+  /**
+   * Cache de idempotência: evita vendas duplicadas quando o frontend
+   * dispara múltiplas requisições com a mesma chave (Enter + Click, timeout retry, etc.)
+   * Cada entrada expira em 60 segundos.
+   */
+  private readonly idempotencyCache = new Map<string, { sale: any; expiresAt: number }>();
+
+  private cleanIdempotencyCache() {
+    const now = Date.now();
+    for (const [key, entry] of this.idempotencyCache.entries()) {
+      if (now > entry.expiresAt) this.idempotencyCache.delete(key);
+    }
+  }
+
   constructor(
     private tenantManager: TenantConnectionManager,
     private heartPrisma: HeartPrismaService,
@@ -110,6 +124,17 @@ export class SalesService {
     const { userId, tenantId } = this.tenantContext.get();
     let operatorId = data.operatorId || userId;
     const prisma = await this.getPrisma();
+
+    // ── IDEMPOTÊNCIA: se já processamos esta chave, devolve a venda existente ────
+    this.cleanIdempotencyCache();
+    const iKey = data.idempotencyKey as string | undefined;
+    if (iKey) {
+      const cached = this.idempotencyCache.get(`${tenantId}:${iKey}`);
+      if (cached) {
+        this.logger.warn(`[Idempotência] Requisição duplicada bloqueada. Key: ${iKey}`);
+        return cached.sale;
+      }
+    }
 
     const sale = await prisma.$transaction(async (tx: any) => {
       let subtotal = new Prisma.Decimal(0);
@@ -459,6 +484,14 @@ export class SalesService {
       this.productsService.invalidateCache(tenantId);
     } catch (err) {
       this.logger.error(`Erro ao invalidar cache de produtos do tenant ${tenantId}: ${err.message}`);
+    }
+
+    // ── Grava no cache de idempotência (60s) para bloquear duplicatas tardias ──
+    if (iKey) {
+      this.idempotencyCache.set(`${tenantId}:${iKey}`, {
+        sale,
+        expiresAt: Date.now() + 60_000,
+      });
     }
 
     return sale;

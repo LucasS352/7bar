@@ -10,6 +10,7 @@ interface CachedClient {
 export class TenantConnectionManager implements OnModuleDestroy {
   private readonly logger = new Logger(TenantConnectionManager.name);
   private clients = new Map<string, CachedClient>();
+  private connectionPromises = new Map<string, Promise<PrismaClient>>();
   private readonly MAX_CLIENTS = 100;
   private readonly IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutos
 
@@ -28,18 +29,23 @@ export class TenantConnectionManager implements OnModuleDestroy {
       return entry.client;
     }
 
-    // 3. Gerenciamento de capacidade (LRU simples)
+    // 3. Se já existe uma promessa de conexão em andamento, espera por ela (evita race condition)
+    if (this.connectionPromises.has(tenantId)) {
+      return this.connectionPromises.get(tenantId)!;
+    }
+
+    // 4. Gerenciamento de capacidade (LRU simples)
     if (this.clients.size >= this.MAX_CLIENTS) {
       this.evictOldest();
     }
 
-    // 4. Injeta limite de conexões na URL (Bulletproof para escalabilidade)
+    // 5. Injeta limite de conexões na URL (Bulletproof para escalabilidade)
     const url = new URL(databaseUrl);
-    url.searchParams.set('connection_limit', '3');
+    url.searchParams.set('connection_limit', '10');
     url.searchParams.set('pool_timeout', '20'); // segundos
     const optimizedUrl = url.toString();
 
-    this.logger.log(`Iniciando novo Pool Prisma para Tenant: ${tenantId} (limit=3)`);
+    this.logger.log(`Iniciando novo Pool Prisma para Tenant: ${tenantId} (limit=10)`);
 
     const client = new PrismaClient({
       datasources: {
@@ -49,14 +55,21 @@ export class TenantConnectionManager implements OnModuleDestroy {
       },
     });
 
-    try {
-      await client.$connect();
-      this.clients.set(tenantId, { client, lastUsed: Date.now() });
-      return client;
-    } catch (error) {
-      this.logger.error(`Falha ao conectar no banco do tenant ${tenantId}: ${error.message}`);
-      throw error;
-    }
+    const connectPromise = (async () => {
+      try {
+        await client.$connect();
+        this.clients.set(tenantId, { client, lastUsed: Date.now() });
+        return client;
+      } catch (error) {
+        this.logger.error(`Falha ao conectar no banco do tenant ${tenantId}: ${error.message}`);
+        throw error;
+      } finally {
+        this.connectionPromises.delete(tenantId);
+      }
+    })();
+
+    this.connectionPromises.set(tenantId, connectPromise);
+    return connectPromise;
   }
 
   private runCleanup() {

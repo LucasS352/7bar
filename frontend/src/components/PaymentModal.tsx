@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useShift } from '@/contexts/ShiftContext';
@@ -70,6 +70,11 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   const [saleResult, setSaleResult] = useState<Record<string, unknown> | null>(null);
   const [nfcePolling, setNfcePolling] = useState(false);
   const [savedOffline, setSavedOffline] = useState(false);
+
+  // ── Mutex anti-duplicação (useRef é síncrono — imune a race condition de state) ──
+  const isSubmittingRef = useRef(false);
+  // ── Chave de idempotência: gerada 1x por abertura do modal ─────────────────
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   // --- Desconto via PIN ---
   const [discountModalOpen, setDiscountModalOpen] = useState(false);
@@ -263,6 +268,14 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     }
   }, [method, customMethods, items]);
 
+  // Gera nova chave de idempotência cada vez que o modal abre
+  useEffect(() => {
+    if (isOpen) {
+      setIdempotencyKey(crypto.randomUUID());
+      isSubmittingRef.current = false;
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (isOpen && (saleResult || savedOffline) && !nfcePolling) {
       const handler = (e: KeyboardEvent) => {
@@ -331,6 +344,8 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
       if (e.key === 'Enter' && remaining <= 0) {
         e.preventDefault();
+        // Guard: evita duplo disparo pelo teclado
+        if (isSubmittingRef.current) return;
         if (isOnline) handleConfirm(isNfceEnabled && autoNfce ? 'nfce' : 'simple');
         else handleSaveOffline();
       }
@@ -497,6 +512,13 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
       return;
     }
 
+    // ── MUTEX: bloqueia qualquer segundo disparo antes do React atualizar o estado ──
+    if (isSubmittingRef.current) {
+      console.warn('[PaymentModal] handleConfirm bloqueado — já está em processamento.');
+      return;
+    }
+    isSubmittingRef.current = true;
+
     setLoading(true);
     const actualMode = isConsumo ? 'simple' : (isNfceEnabled ? mode : 'simple');
     setPayMode(actualMode);
@@ -527,6 +549,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         operatorId: operator?.id ?? user?.id,
         consumedByOperatorId: isConsumo ? selectedOperatorId : undefined,
         emitirNfce: isConsumo ? false : (actualMode === 'nfce'),
+        idempotencyKey, // Chave única por tentativa — backend rejeita duplicata
         ...(actualMode === 'nfce' ? { customerCpf: customerCpf || undefined, customerName: customerName || undefined } : {}),
       };
       const res = await api.post('/sales/checkout', body);
@@ -540,7 +563,10 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erro ao finalizar venda.';
       toast.error(msg);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+      isSubmittingRef.current = false;
+    }
   };
 
   if (!isOpen) return null;
