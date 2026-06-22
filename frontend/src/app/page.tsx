@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAuthStore } from '@/store/auth';
 import { useCartStore, Product, CartItemModifier } from '@/store/cart';
 import { useNavigate } from 'react-router-dom';
@@ -97,6 +98,42 @@ function PosPageContent() {
     );
   }, [products, search]);
 
+  // ─── Virtualização do grid de produtos ───────────────────────────────────────
+  // Detecta a largura do container para calcular colunas responsivas (2/3/4)
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [colCount, setColCount] = useState(4);
+
+  useLayoutEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const update = (width: number) => {
+      setColCount(width >= 1024 ? 4 : width >= 768 ? 3 : 2);
+    };
+    update(el.clientWidth);
+    const observer = new ResizeObserver(entries => {
+      update(entries[0]?.contentRect.width ?? el.clientWidth);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Agrupa produtos em linhas de `colCount` para o virtualizador de linhas
+  const rows = useMemo(() => {
+    const result: Product[][] = [];
+    for (let i = 0; i < filtered.length; i += colCount) {
+      result.push(filtered.slice(i, i + colCount));
+    }
+    return result;
+  }, [filtered, colCount]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => gridRef.current,
+    estimateSize: () => 196, // altura estimada de cada linha de cards
+    overscan: 3,             // renderiza 3 linhas extras fora da área visível
+  });
+
+
   if (!token) return null; // Wait for redirect
 
   return (
@@ -111,7 +148,7 @@ function PosPageContent() {
               7bar POS
             </h1>
             <p className="text-emerald-400 font-medium text-sm flex items-center gap-2 mt-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
               Operador: {operator?.name || user?.name} ({user?.tenant})
               {cashRegister?.id && <span className="ml-2 text-xs bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 text-emerald-400 uppercase tracking-widest hidden sm:inline-block">Caixa Aberto</span>}
             </p>
@@ -149,7 +186,7 @@ function PosPageContent() {
             id="product-search-input"
             type="text" 
             placeholder="[F2] Bipe ou Digite o Cód Curto e aperte Enter..." 
-            className="w-full py-3 md:py-4 pl-12 pr-4 text-base md:text-2xl font-bold bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-xl md:rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-zinc-500 shadow-inner tracking-tight"
+            className="w-full py-3 md:py-4 pl-12 pr-4 text-base md:text-2xl font-bold bg-zinc-900 border border-zinc-800 rounded-xl md:rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-zinc-500 shadow-inner tracking-tight"
             value={search}
             onChange={e => setSearch(e.target.value)}
             onKeyDown={handleSearchKeyPress}
@@ -157,11 +194,11 @@ function PosPageContent() {
           />
         </div>
 
-        {/* Grid de Produtos */}
-        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+        {/* Grid de Produtos — Virtualizado */}
+        <div ref={gridRef} className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-full text-zinc-500 space-y-4">
-              <PackageOpen size={48} className="opacity-50 animate-pulse" />
+              <PackageOpen size={48} className="opacity-50" />
               <p className="text-lg">Carregando catálogo de produtos...</p>
             </div>
           ) : filtered.length === 0 ? (
@@ -170,9 +207,24 @@ function PosPageContent() {
               <p className="text-lg text-center">A sua loja (Tenant) não possui produtos cadastrados!<br/> Tente recarregar a página!</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 pb-12">
-                              {filtered.map(product => (
-                <div key={product.id} className="group relative bg-zinc-900 border border-zinc-800 p-3 md:p-4 rounded-2xl hover:border-blue-500 transition-all flex flex-col items-center justify-between min-h-[160px] overflow-hidden shadow-sm hover:shadow-md">
+            // Container com altura total virtual — o virtualizador posiciona cada linha
+            <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
+              {rowVirtualizer.getVirtualItems().map(virtualRow => (
+                <div
+                  key={virtualRow.index}
+                  style={{
+                    position: 'absolute',
+                    top: virtualRow.start,
+                    left: 0,
+                    right: 0,
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${colCount}, 1fr)`,
+                    gap: '12px',
+                    paddingBottom: virtualRow.index === rows.length - 1 ? '48px' : '0',
+                  }}
+                >
+                  {rows[virtualRow.index].map(product => (
+                <div key={product.id} className="group relative bg-zinc-900 border border-zinc-800 p-3 md:p-4 rounded-2xl hover:border-blue-500 transition-colors flex flex-col items-center justify-between min-h-[160px] overflow-hidden shadow-sm">
                   {/* Fundo gradiente leve no hover */}
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
                   
@@ -224,6 +276,8 @@ function PosPageContent() {
                     </div>
                   )}
                 </div>
+                  ))}
+                </div>
               ))}
             </div>
           )}
@@ -256,7 +310,7 @@ function PosPageContent() {
         )}
 
         <div className={`
-          w-full md:w-[420px] bg-zinc-900/95 backdrop-blur-3xl md:backdrop-blur-2xl border-l border-zinc-800 flex flex-col shadow-2xl relative
+          w-full md:w-[420px] bg-zinc-900 border-l border-zinc-800 flex flex-col shadow-2xl relative
           ${isCartOpen ? 'h-[85vh] md:h-full rounded-t-3xl md:rounded-none animate-in slide-in-from-bottom-full md:animate-none' : 'h-full'}
         `}>
           {/* Mobile Handle */}
