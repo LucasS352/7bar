@@ -939,9 +939,11 @@ export class SalesService {
       // Estornar cada item consumido de volta aos lotes e produtos
       for (const item of existingSale.items) {
         // Reduzir contagem de vendas do produto pai
+        // Nota: item.quantity vem como Prisma.Decimal; salesCount é Integer,
+        // por isso o cast explícito com Number() é necessário.
         await tx.product.update({
           where: { id: item.productId },
-          data: { salesCount: { decrement: item.quantity } }
+          data: { salesCount: { decrement: Number(item.quantity) } }
         });
 
         for (const consumption of item.lotConsumptions) {

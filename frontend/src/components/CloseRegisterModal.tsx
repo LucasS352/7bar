@@ -6,6 +6,15 @@ import { FileText, Loader2, X, AlertOctagon, Receipt, Trash2, EyeOff } from 'luc
 import { useAuthStore } from '@/store/auth';
 import { useShift } from '@/contexts/ShiftContext';
 
+// Mapa de IDs de métodos padrão → nome legível para exibição na auditoria
+const METHOD_DISPLAY: Record<string, string> = {
+  dinheiro:             'Dinheiro',
+  pix:                  'Pix',
+  credito:              'Crédito',
+  debito:               'Débito',
+  consumo_funcionario:  'Consumo Colaborador',
+};
+
 export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: boolean, onClose: (closed: boolean) => void, registerId: string | undefined }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -362,7 +371,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                       <div className="flex flex-wrap gap-2 pt-4 border-t border-zinc-800/50">
                         {s.payments.map((p: any, idx: number) => (
                           <span key={idx} className="bg-blue-500/10 text-blue-400 text-[10px] uppercase font-bold px-3 py-1.5 rounded-lg border border-blue-500/20 tracking-wider">
-                            {p.method} (R$ {Number(p.value).toFixed(2)})
+                            {p.label || METHOD_DISPLAY[p.method] || p.method} (R$ {Number(p.value).toFixed(2)})
                           </span>
                         ))}
                       </div>
@@ -563,9 +572,78 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
         </div>
       )}
 
+      {/* ═══ Modal de Confirmação de Cancelamento de Venda ═══ */}
+      {cancelSaleId && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-zinc-950 border border-red-500/30 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-zinc-800 bg-red-500/5">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center">
+                  <Trash2 className="text-red-400" size={18} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-base">Cancelar Venda</h4>
+                  <p className="text-xs text-zinc-500 mt-0.5">Esta ação irá estornar o estoque automaticamente</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCancelSaleId(null)}
+                className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-500 hover:text-white transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider block mb-2">
+                  Motivo do Cancelamento <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={e => setCancelReason(e.target.value)}
+                  placeholder="Ex: Pedido errado, cliente desistiu, lançamento duplicado..."
+                  rows={3}
+                  autoFocus
+                  className="w-full bg-zinc-900 border border-zinc-700 focus:border-red-500 focus:ring-1 focus:ring-red-500 rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none transition-colors resize-none"
+                />
+              </div>
+
+              <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-3 flex items-start gap-2">
+                <AlertOctagon size={14} className="text-red-400 mt-0.5 shrink-0" />
+                <p className="text-xs text-red-400/80">
+                  O estoque dos produtos será estornado automaticamente e a venda ficará marcada como cancelada no histórico.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 p-5 border-t border-zinc-800">
+              <button
+                onClick={() => setCancelSaleId(null)}
+                disabled={cancelling}
+                className="flex-1 py-3 rounded-xl font-bold bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-300 hover:text-white transition-all text-sm"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={handleCancelSale}
+                disabled={cancelling || !cancelReason.trim()}
+                className="flex-[2] py-3 rounded-xl font-bold bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all active:scale-95 flex items-center justify-center gap-2 text-sm"
+              >
+                {cancelling ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                {cancelling ? 'Cancelando...' : 'Confirmar Cancelamento'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 
   return createPortal(modalBody, document.body);
 }
-

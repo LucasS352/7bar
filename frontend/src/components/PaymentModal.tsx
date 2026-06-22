@@ -511,7 +511,11 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         items: items.map(i => ({ 
           productId: i.id, 
           quantity: i.quantity, 
-          priceUnit: i.effectivePriceSell ?? i.priceSell,
+          // Quando há preço variável (ex: iFood), usa o preço da plataforma configurado;
+          // caso contrário, usa o preço efetivo/normal do produto.
+          priceUnit: isVariablePricingActive
+            ? (variablePrices[i.id] ?? Number(i.priceSell))
+            : (i.effectivePriceSell ?? i.priceSell),
           modifiers: i.modifiers ? i.modifiers.map(m => ({
             optionId: m.optionId,
             componentProductId: m.componentProductId,
