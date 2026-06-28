@@ -7,3 +7,16 @@ src/generated
 .env.*
 tsconfig.tsbuildinfo
 tsconfig.build.tsbuildinfo
+# Scripts de debug/teste — não entram na imagem Docker
+test-*.js
+test-*.ts
+test_*.ts
+test_*.js
+check*.js
+check*.ts
+dump.js
+list-drive.js
+clear-operator-id.js
+update-all-tenants.js
+google-credentials.json
+uploads/

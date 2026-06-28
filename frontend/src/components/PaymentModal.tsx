@@ -1,4 +1,3 @@
-'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
@@ -8,8 +7,8 @@ import { toast } from 'sonner';
 import { saveOfflineSale } from '@/lib/db';
 import type { OfflineSaleItemSnapshot, OfflineSalePayment } from '@/lib/db';
 import {
-  CreditCard, Banknote, QrCode, X, Loader2, Plus, Trash2,
-  ShoppingBag, Receipt, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, User, WifiOff, Tag, Lock, Printer,
+  CreditCard, Banknote, QrCode, X, Loader2, Plus, Trash2, Delete,
+  ShoppingBag, Receipt, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, User, WifiOff, Tag, Lock, Printer, Settings2,
 } from 'lucide-react';
 
 type PayMode = 'simple' | 'nfce';
@@ -61,6 +60,8 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   const [operatorsList, setOperatorsList] = useState<{ id: string; name: string }[]>([]);
   const [selectedOperatorId, setSelectedOperatorId] = useState('');
   const [inputValue, setInputValue] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [variablePrices, setVariablePrices] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [payMode, setPayMode] = useState<PayMode>('simple');
@@ -70,6 +71,17 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   const [saleResult, setSaleResult] = useState<Record<string, unknown> | null>(null);
   const [nfcePolling, setNfcePolling] = useState(false);
   const [savedOffline, setSavedOffline] = useState(false);
+
+  const [isMobile, setIsMobile] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 767px)');
+    setIsMobile(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   // ── Mutex anti-duplicação (useRef é síncrono — imune a race condition de state) ──
   const isSubmittingRef = useRef(false);
@@ -218,13 +230,22 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
 
 
+  // ── Detecta viewport mobile via matchMedia ──────────────────────────────
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 767px)');
+    setIsMobile(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       setPayments([]); setMethod('dinheiro'); setInputValue('');
       setPayMode('simple'); setShowConsumerForm(false); setCustomerCpf(''); setCustomerName('');
       setSaleResult(null); setNfcePolling(false); setSavedOffline(false);
       setDiscountValue(0); setDiscountPinInput(''); setPinVerified(false); setPendingDiscountStr('');
-      setSelectedOperatorId('');
+      setSelectedOperatorId(''); setAdvancedOpen(false);
       
       api.get('/operators')
         .then(res => setOperatorsList(res.data || []))
@@ -569,6 +590,17 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     }
   };
 
+  // ── Numpad handler para mobile ──────────────────────────────────────────
+  const handleNumpadPress = useCallback((key: string) => {
+    if (key === 'backspace') {
+      setInputValue(prev => prev.slice(0, -1));
+    } else if (key === '.') {
+      setInputValue(prev => prev.includes('.') ? prev : prev + '.');
+    } else {
+      setInputValue(prev => prev + key);
+    }
+  }, []);
+
   if (!isOpen) return null;
 
   // ── Modal de desconto via PIN ────────────────────────────────────────────
@@ -741,7 +773,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[95vh] flex flex-col">
+      <div className={`bg-zinc-900 border border-zinc-800 w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col ${isMobile ? 'rounded-none max-w-none max-h-none h-full' : 'rounded-3xl max-w-2xl max-h-[95vh]'}`}>
         <div className="flex justify-between items-center p-4 md:p-6 border-b border-zinc-800 bg-zinc-900/50 shrink-0">
           <div>
             <h2 className="text-2xl font-bold text-white tracking-tight">Finalizar Pagamento</h2>
@@ -761,15 +793,15 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
               <span className="text-zinc-400 font-medium block mb-3 text-sm">Selecione o Método</span>
               <div className="grid grid-cols-2 gap-2">
                 {BASE_METHOD_CONFIG.map((m, index) => (
-                  <button key={m.id} onClick={() => { setMethod(m.id); document.getElementById('value-input')?.focus(); }}
-                    className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-sm relative overflow-hidden ${method === m.id ? `${m.color} ring-2 ring-offset-2 ring-offset-zinc-900` : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}`}>
-                    <div className="absolute top-0 right-0 bg-zinc-800/50 px-1.5 py-0.5 rounded-bl-lg text-[10px] font-bold text-zinc-500">{index + 1}</div>
+                  <button key={m.id} onClick={() => { setMethod(m.id); if (!isMobile) document.getElementById('value-input')?.focus(); }}
+                    className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-sm relative overflow-hidden ${isMobile ? 'min-h-[52px]' : ''} ${method === m.id ? `${m.color} ring-2 ring-offset-2 ring-offset-zinc-900` : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}`}>
+                    {!isMobile && <div className="absolute top-0 right-0 bg-zinc-800/50 px-1.5 py-0.5 rounded-bl-lg text-[10px] font-bold text-zinc-500">{index + 1}</div>}
                     <m.icon size={18} /><span className="font-semibold">{m.label}</span>
                   </button>
                 ))}
                 {customMethods.map((cm) => (
-                  <button key={cm.id} onClick={() => { setMethod(cm.id); document.getElementById('value-input')?.focus(); }}
-                    className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-sm relative overflow-hidden ${method === cm.id ? `${CUSTOM_COLOR} ring-2 ring-offset-2 ring-offset-zinc-900` : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}`}>
+                  <button key={cm.id} onClick={() => { setMethod(cm.id); if (!isMobile) document.getElementById('value-input')?.focus(); }}
+                    className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-sm relative overflow-hidden ${isMobile ? 'min-h-[52px]' : ''} ${method === cm.id ? `${CUSTOM_COLOR} ring-2 ring-offset-2 ring-offset-zinc-900` : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}`}>
                     <CreditCard size={18} /><span className="font-semibold truncate">{cm.name}</span>
                   </button>
                 ))}
@@ -798,10 +830,14 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                 <div className="flex items-center gap-3">
                   <div className="relative flex-1">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">R$</span>
-                    <input type="number" id="value-input"
+                    <input
+                      type={isMobile ? 'text' : 'number'}
+                      inputMode={isMobile ? 'none' : undefined}
+                      id="value-input"
                       className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-xl font-bold text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      placeholder="0.00" value={inputValue} onChange={e => setInputValue(e.target.value)}
+                      placeholder="0.00" value={inputValue} onChange={e => { if (!isMobile) setInputValue(e.target.value); }}
                       onKeyDown={e => e.key === 'Enter' && handleAddPayment()} disabled={remaining <= 0}
+                      readOnly={isMobile}
                     />
                   </div>
                   <button onClick={handleAddPayment} disabled={remaining <= 0} className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white p-3.5 rounded-xl transition flex-shrink-0"><Plus size={22} /></button>
@@ -817,6 +853,18 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                   <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 mt-4 animate-in zoom-in-95 duration-200 shadow-inner">
                     <p className="text-emerald-400 text-sm font-bold mb-1 uppercase tracking-wider">Troco a devolver</p>
                     <p className="text-emerald-400 font-black text-3xl">R$ {(parseFloat(inputValue) - remaining).toFixed(2)}</p>
+                  </div>
+                )}
+
+                {/* ── Numpad Mobile ──────────────────────────────────────────── */}
+                {isMobile && remaining > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mt-4">
+                    {['1','2','3','4','5','6','7','8','9'].map(k => (
+                      <button key={k} type="button" className="numpad-btn" onClick={() => handleNumpadPress(k)}>{k}</button>
+                    ))}
+                    <button type="button" className="numpad-btn" onClick={() => handleNumpadPress('.')}>.</button>
+                    <button type="button" className="numpad-btn" onClick={() => handleNumpadPress('0')}>0</button>
+                    <button type="button" className="numpad-btn numpad-btn-danger" onClick={() => handleNumpadPress('backspace')}><Delete size={22} /></button>
                   </div>
                 )}
               </div>
@@ -923,52 +971,69 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
         {/* Footer */}
         <div className="p-4 md:p-6 border-t border-zinc-800 bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
-          <div className="flex-1 flex flex-col gap-2">
-             {isNfceEnabled && (
-               <label className={`flex items-center gap-2 font-medium transition ${isOnline ? 'cursor-pointer text-zinc-300 hover:text-white' : 'cursor-not-allowed text-zinc-600'}`}>
+          <div className="flex-1 w-full flex flex-col gap-2">
+            {isMobile && (
+              <button 
+                onClick={() => setAdvancedOpen(!advancedOpen)}
+                className="flex items-center justify-between w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-sm font-semibold text-zinc-300"
+              >
+                <div className="flex items-center gap-2">
+                  <Settings2 size={16} className="text-zinc-400" />
+                  Opções avançadas
+                </div>
+                {advancedOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+            )}
+
+            {(!isMobile || advancedOpen) && (
+              <div className="flex flex-col gap-2 p-3 md:p-0 bg-zinc-950 md:bg-transparent border md:border-none border-zinc-800 rounded-xl mt-1 md:mt-0 animate-in fade-in slide-in-from-top-2 duration-200">
+                {isNfceEnabled && (
+                  <label className={`flex items-center gap-2 font-medium transition ${isOnline ? 'cursor-pointer text-zinc-300 hover:text-white' : 'cursor-not-allowed text-zinc-600'}`}>
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 rounded border-zinc-700 bg-zinc-950 text-blue-500 focus:ring-blue-500 accent-blue-600 disabled:opacity-50" 
+                      checked={autoNfce} 
+                      onChange={(e) => {
+                          setAutoNfce(e.target.checked);
+                          localStorage.setItem('7bar_auto_nfce', String(e.target.checked));
+                      }} 
+                      disabled={!isOnline}
+                    />
+                    Emitir NFC-e automaticamente
+                  </label>
+                )}
+                <label className="flex items-center gap-2 font-medium cursor-pointer text-zinc-300 hover:text-white transition">
                   <input 
                     type="checkbox" 
-                    className="w-5 h-5 rounded border-zinc-700 bg-zinc-950 text-blue-500 focus:ring-blue-500 accent-blue-600 disabled:opacity-50" 
-                    checked={autoNfce} 
+                    className="w-5 h-5 rounded border-zinc-700 bg-zinc-950 text-emerald-500 focus:ring-emerald-500 accent-emerald-600" 
+                    checked={autoPrint} 
                     onChange={(e) => {
-                       setAutoNfce(e.target.checked);
-                       localStorage.setItem('7bar_auto_nfce', String(e.target.checked));
+                        setAutoPrint(e.target.checked);
+                        localStorage.setItem('7bar_auto_print', String(e.target.checked));
                     }} 
-                    disabled={!isOnline}
                   />
-                  Emitir NFC-e automaticamente
-               </label>
-             )}
-             <label className="flex items-center gap-2 font-medium cursor-pointer text-zinc-300 hover:text-white transition">
-                <input 
-                  type="checkbox" 
-                  className="w-5 h-5 rounded border-zinc-700 bg-zinc-950 text-emerald-500 focus:ring-emerald-500 accent-emerald-600" 
-                  checked={autoPrint} 
-                  onChange={(e) => {
-                     setAutoPrint(e.target.checked);
-                     localStorage.setItem('7bar_auto_print', String(e.target.checked));
-                  }} 
-                />
-                <Printer size={15} className="text-emerald-400" />
-                Imprimir Cupom automaticamente
-             </label>
-             {!isOnline && isNfceEnabled && <span className="text-xs text-orange-400 font-bold bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded-lg w-fit">NFC-e Indisponível Offline</span>}
+                  <Printer size={15} className="text-emerald-400" />
+                  Imprimir Cupom automaticamente
+                </label>
+                {!isOnline && isNfceEnabled && <span className="text-xs text-orange-400 font-bold bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded-lg w-fit">NFC-e Indisponível Offline</span>}
+              </div>
+            )}
           </div>
           
           <div className="w-full sm:w-auto">
             {isOnline ? (
               <button onClick={() => handleConfirm(isNfceEnabled && autoNfce ? 'nfce' : 'simple')} disabled={loading || !(customMethods.find(cm => cm.id === method)?.hasVariablePricing ? payments.length === 0 : remaining <= 0)}
-                className="w-full sm:w-64 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(37,99,235,0.2)] disabled:shadow-none relative">
+                className={`w-full sm:w-64 rounded-xl font-bold text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(37,99,235,0.2)] disabled:shadow-none relative ${isMobile ? 'py-5' : 'py-4'}`}>
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <ShoppingBag size={20} />}
                 Finalizar Venda
-                <span className="absolute top-1.5 right-2 text-[10px] font-mono bg-black/20 text-blue-200 px-1.5 py-0.5 rounded">Enter</span>
+                {!isMobile && <span className="absolute top-1.5 right-2 text-[10px] font-mono bg-black/20 text-blue-200 px-1.5 py-0.5 rounded">Enter</span>}
               </button>
             ) : (
               <button onClick={handleSaveOffline} disabled={loading || !(customMethods.find(cm => cm.id === method)?.hasVariablePricing ? payments.length === 0 : remaining <= 0)}
-                className="w-full sm:w-64 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(234,88,12,0.2)] disabled:shadow-none relative">
+                className={`w-full sm:w-64 rounded-xl font-bold text-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(234,88,12,0.2)] disabled:shadow-none relative ${isMobile ? 'py-5' : 'py-4'}`}>
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <ShoppingBag size={20} />}
                 Salvar Offline
-                <span className="absolute top-1.5 right-2 text-[10px] font-mono bg-black/20 text-orange-200 px-1.5 py-0.5 rounded">Enter</span>
+                {!isMobile && <span className="absolute top-1.5 right-2 text-[10px] font-mono bg-black/20 text-orange-200 px-1.5 py-0.5 rounded">Enter</span>}
               </button>
             )}
           </div>

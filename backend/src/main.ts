@@ -14,4 +14,3 @@ async function bootstrap() {
   logger.log(`🚀 PDV Pro rodando em: http://localhost:${port}/api`);
 }
 bootstrap();
-// Force reload

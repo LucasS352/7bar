@@ -1,4 +1,4 @@
-import { useState, useEffect, useDeferredValue, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useDeferredValue, useMemo, useRef, useCallback, type TouchEvent as ReactTouchEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { useCartStore, type Product, type CartItemModifier } from '@/store/cart';
@@ -31,6 +31,14 @@ function PosPageContent() {
   const [isPaymentOpen,      setIsPaymentOpen]      = useState(false);
   const [isCloseRegisterOpen,setIsCloseRegisterOpen]= useState(false);
   const [isMobileCartOpen,   setIsMobileCartOpen]   = useState(false);
+  const [lastTappedId,       setLastTappedId]       = useState<string | null>(null);
+  const [badgeBounce,        setBadgeBounce]        = useState(false);
+
+  // Bottom sheet drag state
+  const [sheetExpanded,      setSheetExpanded]      = useState(false);
+  const touchStartY = useRef<number>(0);
+  const touchDeltaY  = useRef<number>(0);
+  const isDragging   = useRef<boolean>(false);
   const [isMovementOpen,     setIsMovementOpen]     = useState(false);
   const [isLoading,          setIsLoading]          = useState(true);
   const [isOfflineCatalog,   setIsOfflineCatalog]   = useState(false);
@@ -47,10 +55,40 @@ function PosPageContent() {
     localStorage.setItem('7bar_promptQuantity', String(promptQuantity));
   }, [promptQuantity]);
 
+  // --- Bottom sheet touch handlers ---
+  const handleSheetTouchStart = (e: ReactTouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchDeltaY.current = 0;
+    isDragging.current = true;
+  };
+  const handleSheetTouchMove = (e: ReactTouchEvent) => {
+    if (!isDragging.current) return;
+    touchDeltaY.current = e.touches[0].clientY - touchStartY.current;
+  };
+  const handleSheetTouchEnd = () => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    if (touchDeltaY.current < -50) {
+      setSheetExpanded(true);
+    } else if (touchDeltaY.current > 50) {
+      setSheetExpanded(false);
+    }
+    touchDeltaY.current = 0;
+  };
+
+  // --- Micro-animation helper ---
+  const triggerTapAnimation = (productId: string) => {
+    setLastTappedId(productId);
+    setBadgeBounce(true);
+    setTimeout(() => setLastTappedId(null), 200);
+    setTimeout(() => setBadgeBounce(false), 300);
+  };
+
   const handleClickProduct = (product: Product) => {
     // Busca o produto com os modifierGroups completos do array de products em memória
     const fullProduct = products.find(p => p.id === product.id) || product;
     setSearch('');
+    triggerTapAnimation(product.id);
     if (fullProduct.isComposite && fullProduct.modifierGroups && fullProduct.modifierGroups.length > 0) {
       setCompositeProduct(fullProduct);
     } else if (promptQuantity) {
@@ -268,37 +306,24 @@ function PosPageContent() {
               </div>
             </div>
             
-            {/* Mobile Actions and Mobile Operator Info */}
-            <div className="flex flex-col items-end gap-2 md:hidden">
-              <div className="flex items-center gap-1.5">
-                  <ConnectionStatus syncState={syncState} />
-                  {cashRegister?.id && (
-                    <button onClick={() => setIsMovementOpen(true)} className="p-2 text-zinc-400 hover:text-emerald-400 bg-zinc-900 rounded-xl transition">
-                      <ArrowDownUp size={18} />
-                    </button>
-                  )}
-                  <button onClick={() => setIsCloseRegisterOpen(true)} className="p-2 text-zinc-400 hover:text-amber-400 bg-zinc-900 rounded-xl transition">
-                    <FileText size={18} />
-                  </button>
-                  <button onClick={handleLogout} className="p-2 text-zinc-400 hover:text-red-400 bg-zinc-900 rounded-xl transition">
-                    <LogOut size={18} />
-                  </button>
-              </div>
-              <div className="flex items-center gap-2">
-                 <label className="flex items-center gap-1.5 text-[10px] text-zinc-400 bg-zinc-900 px-2 py-1 rounded-lg">
-                   <input type="checkbox" checked={promptQuantity} onChange={e => setPromptQuantity(e.target.checked)} className="w-3 h-3 rounded border-zinc-700 bg-zinc-800 text-blue-500" />
-                   Unidade
-                 </label>
-                 <p className="text-emerald-400 font-medium text-xs flex items-center gap-1.5 truncate max-w-[150px]">
-                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
-                   <span className="truncate">Op: {operator?.name || user?.name}</span>
-                 </p>
-                 {cashRegister?.id && (
-                   <span className="text-[9px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 text-emerald-400 uppercase tracking-widest font-bold">
-                     ABERTO
-                   </span>
-                 )}
-              </div>
+            {/* Mobile Actions — condensed single row */}
+            <div className="flex items-center gap-1.5 md:hidden">
+              <p className="text-emerald-400 font-medium text-[10px] flex items-center gap-1 truncate max-w-[100px] mr-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
+                <span className="truncate">Op: {operator?.name || user?.name}</span>
+              </p>
+              <ConnectionStatus syncState={syncState} />
+              {cashRegister?.id && (
+                <button onClick={() => setIsMovementOpen(true)} className="p-2 text-zinc-400 hover:text-emerald-400 bg-zinc-900 rounded-xl transition">
+                  <ArrowDownUp size={18} />
+                </button>
+              )}
+              <button onClick={() => setIsCloseRegisterOpen(true)} className="p-2 text-zinc-400 hover:text-amber-400 bg-zinc-900 rounded-xl transition">
+                <FileText size={18} />
+              </button>
+              <button onClick={handleLogout} className="p-2 text-zinc-400 hover:text-red-400 bg-zinc-900 rounded-xl transition">
+                <LogOut size={18} />
+              </button>
             </div>
           </div>
 
@@ -339,18 +364,25 @@ function PosPageContent() {
           </div>
         </div>
 
-        {/* Busca */}
-        <div className="relative mb-3 md:mb-6 shrink-0">
-          <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
-            <Search size={20} className="text-blue-500" />
+        {/* Busca + toggle Unidade (mobile) */}
+        <div className="relative mb-3 md:mb-6 shrink-0 flex items-center gap-2">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+              <Search size={20} className="text-blue-500" />
+            </div>
+            <input
+              id="product-search-input"
+              type="text"
+              placeholder="Buscar por nome, código ou EAN..."
+              className="w-full py-3 md:py-4 pl-10 md:pl-12 pr-4 text-lg md:text-2xl font-bold bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-xl md:rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-zinc-500 shadow-inner tracking-tight"
+              value={search} onChange={e => setSearch(e.target.value)} onKeyDown={handleSearchKeyPress}
+            />
           </div>
-          <input
-            id="product-search-input"
-            type="text"
-            placeholder="Buscar por nome, código ou EAN..."
-            className="w-full py-3 md:py-4 pl-10 md:pl-12 pr-4 text-lg md:text-2xl font-bold bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-xl md:rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-zinc-500 shadow-inner tracking-tight"
-            value={search} onChange={e => setSearch(e.target.value)} onKeyDown={handleSearchKeyPress}
-          />
+          {/* Compact Unidade toggle — mobile only */}
+          <label className="md:hidden flex items-center gap-1.5 text-[10px] text-zinc-400 bg-zinc-900 border border-zinc-800 px-2.5 py-3 rounded-xl cursor-pointer select-none shrink-0 transition hover:border-zinc-700">
+            <input type="checkbox" checked={promptQuantity} onChange={e => setPromptQuantity(e.target.checked)} className="w-3 h-3 rounded border-zinc-700 bg-zinc-800 text-blue-500" />
+            Qtd
+          </label>
         </div>
 
         {/* Grid de Produtos */}
@@ -368,9 +400,9 @@ function PosPageContent() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 pb-24 md:pb-12">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 pb-[200px] md:pb-12">
               {displayedProducts.map((product, idx) => (
-                <div key={product.id} className={`group relative bg-zinc-900 border-2 p-3 rounded-2xl hover:border-blue-500 transition-all flex flex-col items-center justify-between min-h-[160px] overflow-hidden shadow-sm hover:shadow-md ${focusedProductIdx === idx ? 'border-blue-400 ring-2 ring-blue-400/30' : 'border-zinc-800'}`}>
+                <div key={product.id} className={`group relative bg-zinc-900 border-2 p-3 rounded-2xl hover:border-blue-500 transition-all flex flex-col items-center justify-between min-h-[120px] md:min-h-[160px] overflow-hidden shadow-sm hover:shadow-md ${focusedProductIdx === idx ? 'border-blue-400 ring-2 ring-blue-400/30' : 'border-zinc-800'} ${lastTappedId === product.id ? 'card-tap' : ''}`}>
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
                   <button
                     ref={el => { productRefs.current[idx] = el; }}
@@ -392,7 +424,7 @@ function PosPageContent() {
                     )}
                     
                     {product.imageUrl && (
-                      <div className="w-full h-32 mb-3 bg-white rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
+                      <div className="w-full h-20 md:h-32 mb-3 bg-white rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
                         <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply transition-transform group-hover:scale-105" loading="lazy" />
                       </div>
                     )}
@@ -404,10 +436,10 @@ function PosPageContent() {
                     </div>
                   </button>
                   {!product.isComposite && (
-                    <div className="w-full flex justify-center gap-1 mt-3 z-20 sm:opacity-0 group-hover:opacity-100 transition-all sm:translate-y-2 group-hover:translate-y-0">
+                    <div className="w-full hidden md:flex justify-center gap-1 mt-3 z-20 md:opacity-0 group-hover:opacity-100 transition-all md:translate-y-2 group-hover:translate-y-0">
                       {[4, 6, 12, 16, 24].map(qt => (
-                        <button key={qt} onClick={(e) => { e.stopPropagation(); addItem(product, qt); }}
-                          className="bg-zinc-800 hover:bg-blue-600 text-zinc-300 hover:text-white font-bold text-[10px] sm:text-xs py-1.5 px-2 rounded-lg transition-colors active:scale-90">
+                        <button key={qt} onClick={(e) => { e.stopPropagation(); triggerTapAnimation(product.id); addItem(product, qt); }}
+                          className="bg-zinc-800 hover:bg-blue-600 text-zinc-300 hover:text-white font-bold text-xs py-1.5 px-2 rounded-lg transition-colors active:scale-90">
                           +{qt}
                         </button>
                       ))}
@@ -496,24 +528,120 @@ function PosPageContent() {
         </div>
       </div>
 
-      {/* Botão Flutuante (FAB) Mobile */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 p-3 bg-zinc-950/90 backdrop-blur-xl border-t border-zinc-800 z-40 pb-safe">
-        <button
-          onClick={() => setIsMobileCartOpen(true)}
-          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl flex justify-between items-center shadow-lg active:scale-95 transition-transform"
+      {/* ── Bottom Sheet Mobile ── */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40">
+        {/* Backdrop (only when expanded) */}
+        {sheetExpanded && (
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 transition-opacity"
+            onClick={() => setSheetExpanded(false)}
+          />
+        )}
+
+        <div
+          className={`relative z-40 bg-zinc-950 border-t border-zinc-800 shadow-2xl transition-all duration-300 ease-out pb-safe ${
+            sheetExpanded ? 'max-h-[75dvh]' : totalItemsCount > 0 ? 'max-h-[220px]' : 'max-h-[56px]'
+          }`}
+          style={{ willChange: 'max-height' }}
         >
-          <div className="flex items-center gap-2 flex-1 min-w-0 mr-3 text-left">
-            <ShoppingCart size={20} className="shrink-0" />
-            {items.length > 0 ? (
-              <span className="bg-black/20 px-2 py-0.5 rounded-full text-xs font-bold truncate block w-full">
-                {items.map(item => `${item.product?.shortCode || (item.product?.name || 'Item').split(' ')[0]}(${item.quantity})`).join(' ')}
-              </span>
-            ) : (
-              <span className="bg-black/20 px-2 py-0.5 rounded-full text-xs font-bold">0</span>
-            )}
+          {/* Drag handle */}
+          <div
+            className="flex flex-col items-center cursor-grab active:cursor-grabbing touch-none"
+            onTouchStart={handleSheetTouchStart}
+            onTouchMove={handleSheetTouchMove}
+            onTouchEnd={handleSheetTouchEnd}
+            onClick={() => totalItemsCount > 0 && setSheetExpanded(prev => !prev)}
+          >
+            <div className="drag-handle mt-2 mb-1" />
           </div>
-          <span className="text-lg tracking-tight shrink-0">R$ {total.toFixed(2)}</span>
-        </button>
+
+          {totalItemsCount === 0 ? (
+            /* ── Empty state ── */
+            <div className="flex items-center justify-center gap-2 px-4 py-2 text-zinc-500 text-sm">
+              <ShoppingCart size={16} />
+              <span>Carrinho vazio</span>
+            </div>
+          ) : sheetExpanded ? (
+            /* ── Expanded: full list with controls ── */
+            <div className="flex flex-col" style={{ maxHeight: 'calc(75dvh - 40px)' }}>
+              <div className="flex-1 overflow-y-auto px-4 pt-1 pb-2 space-y-2 custom-scrollbar" style={{ maxHeight: 'calc(75dvh - 130px)' }}>
+                {items.map(item => (
+                  <div key={item.cartKey} className="flex flex-col p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1 pr-2">
+                        <div className="font-semibold text-sm text-zinc-200 line-clamp-1 leading-tight">{item.name}</div>
+                        {item.modifiers && item.modifiers.length > 0 && (
+                          <div className="mt-0.5 space-y-0.5">
+                            {item.modifiers.map((mod, idx) => (
+                              <div key={idx} className="text-[10px] text-indigo-400 font-medium">
+                                {mod.groupName}: <span className="text-zinc-300">{mod.optionName}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-emerald-400 font-bold text-sm whitespace-nowrap">R$ {item.subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-zinc-950 rounded-lg overflow-hidden border border-zinc-800">
+                      <button onClick={() => updateQuantity(item.cartKey, item.quantity - 1)} className="p-1.5 hover:bg-zinc-800 text-zinc-400 hover:text-white transition"><Minus size={16} /></button>
+                      <span className="font-bold w-8 text-center text-sm">{item.quantity}</span>
+                      <button onClick={() => updateQuantity(item.cartKey, item.quantity + 1)} className="p-1.5 hover:bg-zinc-800 text-zinc-400 hover:text-white transition"><Plus size={16} /></button>
+                      <div className="w-px h-5 bg-zinc-800 mx-0.5"></div>
+                      <button onClick={() => removeItem(item.cartKey)} className="p-1.5 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition flex-1 flex justify-center"><Trash2 size={16} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Expanded footer */}
+              <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-950">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-zinc-400 font-medium text-sm">Total</span>
+                  <span className="text-2xl font-black text-white">R$ {total.toFixed(2)}</span>
+                </div>
+                <button
+                  disabled={totalItemsCount === 0}
+                  onClick={() => setIsPaymentOpen(true)}
+                  className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-bold py-3 px-4 rounded-xl text-lg transition-all shadow-lg active:scale-95 flex justify-center items-center gap-2"
+                >
+                  Cobrar — R$ {total.toFixed(2)}
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ── Collapsed: last 3 items + summary bar ── */
+            <div className="flex flex-col">
+              {/* Item preview rows */}
+              <div className="px-4 pt-1 pb-1 space-y-1">
+                {items.slice(-3).map(item => (
+                  <div key={item.cartKey} className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-300 truncate flex-1 mr-2 font-medium">{item.name}</span>
+                    <span className="text-zinc-500 shrink-0 mr-2">×{item.quantity}</span>
+                    <span className="text-zinc-400 font-semibold shrink-0">R$ {item.subtotal.toFixed(2)}</span>
+                  </div>
+                ))}
+                {items.length > 3 && (
+                  <div className="text-[10px] text-zinc-500 font-medium">+ {items.length - 3} {items.length - 3 === 1 ? 'item' : 'itens'}</div>
+                )}
+              </div>
+
+              {/* Summary bar with COBRAR */}
+              <div className="flex items-center justify-between px-4 py-2 border-t border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <ShoppingCart size={16} className="text-blue-400" />
+                  <span className={`text-xs font-bold text-zinc-300 ${badgeBounce ? 'badge-bounce' : ''}`}>{totalItemsCount} {totalItemsCount === 1 ? 'item' : 'itens'}</span>
+                  <span className="text-white font-black text-sm">R$ {total.toFixed(2)}</span>
+                </div>
+                <button
+                  onClick={() => setIsPaymentOpen(true)}
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm py-2 px-5 rounded-xl shadow-lg active:scale-95 transition-transform"
+                >
+                  COBRAR
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modais de Operador e Turno */}

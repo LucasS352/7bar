@@ -37,3 +37,85 @@
 .slide-in-from-left-2 {
   animation-name: slide-in-left;
 }
+
+/* ─── Mobile PDV Animations ───────────────────────────────────────────────── */
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes card-tap {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+.card-tap {
+  animation: card-tap 200ms ease-out;
+}
+
+@keyframes badge-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+}
+.badge-bounce {
+  animation: badge-bounce 300ms ease-out;
+}
+
+@keyframes item-added {
+  0% { background-color: rgba(59, 130, 246, 0.2); }
+  100% { background-color: transparent; }
+}
+.item-added {
+  animation: item-added 500ms ease-out;
+}
+
+/* Safe area padding for notched devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Bottom sheet drag handle */
+.drag-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #52525b;
+  margin: 8px auto;
+}
+
+/* Numpad button styles */
+.numpad-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  border-radius: 0.75rem;
+  background: #18181b;
+  border: 1px solid #27272a;
+  color: #fff;
+  min-height: 56px;
+  transition: all 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.numpad-btn:active {
+  transform: scale(0.93);
+  background: #27272a;
+}
+.numpad-btn-action {
+  background: #2563eb;
+  border-color: #3b82f6;
+}
+.numpad-btn-action:active {
+  background: #1d4ed8;
+}
+.numpad-btn-danger {
+  background: #7f1d1d;
+  border-color: #991b1b;
+  color: #fca5a5;
+}
+.numpad-btn-danger:active {
+  background: #991b1b;
+}

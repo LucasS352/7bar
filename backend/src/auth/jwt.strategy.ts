@@ -11,11 +11,11 @@ export interface JwtPayload {
 }
 
 /**
- * Secret do JWT: usa env JWT_SECRET em produção,
- * fallback para valor de dev se não estiver definido.
+ * Secret do JWT: obrigatoriamente definido via env JWT_SECRET.
+ * Se não estiver definido, a aplicação falha na inicialização.
  */
 export const jwtConstants = {
-  secret: process.env.JWT_SECRET || '7bar-super-secret-key-321',
+  secret: process.env.JWT_SECRET,
 };
 
 @Injectable()
