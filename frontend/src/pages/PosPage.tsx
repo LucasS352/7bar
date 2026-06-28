@@ -673,13 +673,15 @@ function PosPageContent() {
         isOpen={isPaymentOpen}
         onClose={() => {
           setIsPaymentOpen(false);
-          let checks = 0;
-          const interval = setInterval(() => {
-            const input = document.getElementById('product-search-input');
-            if (input) input.focus();
-            checks++;
-            if (checks > 10) clearInterval(interval);
-          }, 50);
+          if (window.innerWidth >= 768) {
+            let checks = 0;
+            const interval = setInterval(() => {
+              const input = document.getElementById('product-search-input');
+              if (input) input.focus();
+              checks++;
+              if (checks > 10) clearInterval(interval);
+            }, 50);
+          }
         }}
         isOnline={syncState.isOnline}
         onPendingCountChange={syncState.syncNow}
@@ -725,7 +727,11 @@ function PosPageContent() {
                 addItem(productToSetQuantity, tempQuantity);
                 setProductToSetQuantity(null);
                 setTempQuantity(1);
-                setTimeout(() => (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus(), 10);
+                setTimeout(() => {
+                  if (window.innerWidth >= 768) {
+                    (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus();
+                  }
+                }, 10);
               }
             }}>
               <input
@@ -739,7 +745,14 @@ function PosPageContent() {
                 className="w-full text-center text-4xl font-black bg-zinc-950 border border-zinc-800 rounded-2xl py-6 text-blue-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 mb-6 shadow-inner"
               />
               <div className="flex gap-3">
-                <button type="button" onClick={() => { setProductToSetQuantity(null); setTimeout(() => (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus(), 10); }} className="flex-1 py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition text-lg active:scale-95">
+                <button type="button" onClick={() => { 
+                  setProductToSetQuantity(null); 
+                  setTimeout(() => {
+                    if (window.innerWidth >= 768) {
+                      (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus();
+                    }
+                  }, 10); 
+                }} className="flex-1 py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition text-lg active:scale-95">
                   Cancelar
                 </button>
                 <button type="submit" disabled={tempQuantity <= 0} className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 disabled:text-white/50 text-white font-bold rounded-xl transition text-lg active:scale-95 shadow-lg shadow-blue-500/20">
