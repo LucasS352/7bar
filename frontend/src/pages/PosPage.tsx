@@ -97,7 +97,7 @@ function PosPageContent() {
     } else {
       addItem(fullProduct);
       setTimeout(() => {
-        if (window.innerWidth >= 768) {
+        if (!('ontouchstart' in window)) {
           const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
           if (searchInput) searchInput.focus();
         }
@@ -673,7 +673,7 @@ function PosPageContent() {
         isOpen={isPaymentOpen}
         onClose={() => {
           setIsPaymentOpen(false);
-          if (window.innerWidth >= 768) {
+          if (!('ontouchstart' in window)) {
             let checks = 0;
             const interval = setInterval(() => {
               const input = document.getElementById('product-search-input');
@@ -716,8 +716,8 @@ function PosPageContent() {
 
       {/* Modal de Quantidade */}
       {productToSetQuantity && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl flex flex-col">
+        <div className="fixed inset-0 z-[100] flex items-start pt-[10dvh] md:pt-0 md:items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl flex flex-col mb-auto">
             <h3 className="text-xl font-bold text-white mb-2 text-center line-clamp-2">{productToSetQuantity.name}</h3>
             <p className="text-zinc-400 mb-6 text-sm text-center">Informe a quantidade desejada:</p>
             
@@ -728,7 +728,7 @@ function PosPageContent() {
                 setProductToSetQuantity(null);
                 setTempQuantity(1);
                 setTimeout(() => {
-                  if (window.innerWidth >= 768) {
+                  if (!('ontouchstart' in window)) {
                     (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus();
                   }
                 }, 10);
@@ -736,6 +736,7 @@ function PosPageContent() {
             }}>
               <input
                 type="number"
+                inputMode="decimal"
                 min="0.001"
                 step="any"
                 autoFocus
@@ -748,7 +749,7 @@ function PosPageContent() {
                 <button type="button" onClick={() => { 
                   setProductToSetQuantity(null); 
                   setTimeout(() => {
-                    if (window.innerWidth >= 768) {
+                    if (!('ontouchstart' in window)) {
                       (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus();
                     }
                   }, 10); 
