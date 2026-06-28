@@ -9,7 +9,7 @@ COPY . .
 
 # Build sem VITE_API_URL pois agora usamos caminho relativo /api
 
-RUN npm run build
+RUN NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
 # ---- Production stage (Nginx) ----
 # Nginx com proxy /api/ → backend para que imagens e uploads funcionem
