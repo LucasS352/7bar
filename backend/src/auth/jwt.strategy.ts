@@ -15,7 +15,7 @@ export interface JwtPayload {
  * Se não estiver definido, a aplicação falha na inicialização.
  */
 export const jwtConstants = {
-  secret: process.env.JWT_SECRET,
+  secret: process.env.JWT_SECRET as string,
 };
 
 @Injectable()
