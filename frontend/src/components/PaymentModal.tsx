@@ -828,13 +828,11 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                   <div className="relative flex-1">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">R$</span>
                     <input
-                      type={isMobile ? 'text' : 'number'}
-                      inputMode={isMobile ? 'none' : undefined}
+                      type="number"
                       id="value-input"
                       className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-xl font-bold text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      placeholder="0.00" value={inputValue} onChange={e => { if (!isMobile) setInputValue(e.target.value); }}
+                      placeholder="0.00" value={inputValue} onChange={e => setInputValue(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleAddPayment()} disabled={remaining <= 0}
-                      readOnly={isMobile}
                     />
                   </div>
                   <button onClick={handleAddPayment} disabled={remaining <= 0} className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white p-3.5 rounded-xl transition flex-shrink-0"><Plus size={22} /></button>
@@ -853,17 +851,6 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                   </div>
                 )}
 
-                {/* ── Numpad Mobile ──────────────────────────────────────────── */}
-                {isMobile && remaining > 0 && (
-                  <div className="grid grid-cols-3 gap-2 mt-4">
-                    {['1','2','3','4','5','6','7','8','9'].map(k => (
-                      <button key={k} type="button" className="numpad-btn" onClick={() => handleNumpadPress(k)}>{k}</button>
-                    ))}
-                    <button type="button" className="numpad-btn" onClick={() => handleNumpadPress('.')}>.</button>
-                    <button type="button" className="numpad-btn" onClick={() => handleNumpadPress('0')}>0</button>
-                    <button type="button" className="numpad-btn numpad-btn-danger" onClick={() => handleNumpadPress('backspace')}><Delete size={22} /></button>
-                  </div>
-                )}
               </div>
             )}
 
@@ -943,7 +930,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                         </span>
                         <div className="flex items-center gap-3">
                           <span className="font-bold">R$ {p.value.toFixed(2)}</span>
-                          <button onClick={() => setPayments(payments.filter(x => x.id !== p.id))} className="text-zinc-500 hover:text-red-400 transition opacity-0 group-hover:opacity-100"><Trash2 size={14} /></button>
+                          <button onClick={() => setPayments(payments.filter(x => x.id !== p.id))} className="text-zinc-500 hover:text-red-400 transition opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1"><Trash2 size={16} /></button>
                         </div>
                       </div>
                     ))}

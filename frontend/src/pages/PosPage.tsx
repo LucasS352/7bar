@@ -97,8 +97,10 @@ function PosPageContent() {
     } else {
       addItem(fullProduct);
       setTimeout(() => {
-        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
-        if (searchInput) searchInput.focus();
+        if (window.innerWidth >= 768) {
+          const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+          if (searchInput) searchInput.focus();
+        }
       }, 10);
     }
   };
