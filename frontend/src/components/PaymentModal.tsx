@@ -72,9 +72,6 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   const [nfcePolling, setNfcePolling] = useState(false);
   const [savedOffline, setSavedOffline] = useState(false);
 
-  const [isMobile, setIsMobile] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 767px)');
     setIsMobile(mql.matches);
