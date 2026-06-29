@@ -331,7 +331,7 @@ function PosPageContent() {
               <button onClick={handleLogout} className="p-2 text-zinc-400 hover:text-red-400 bg-zinc-900 rounded-xl transition shrink-0">
                 <LogOut size={18} />
               </button>
-            </div>      </div>
+            </div>
           </div>
 
           <div className="hidden md:flex items-center gap-2">
