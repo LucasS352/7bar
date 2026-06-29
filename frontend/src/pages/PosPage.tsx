@@ -455,7 +455,7 @@ function PosPageContent() {
       </div>
 
       {/* Carrinho (direita) */}
-      <div className={`fixed inset-0 z-50 flex flex-col bg-zinc-950 transition-transform duration-300 md:relative md:z-10 md:w-[420px] md:bg-zinc-900/90 md:backdrop-blur-2xl md:border-l md:border-zinc-800 md:shadow-2xl ${isMobileCartOpen ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}`}>
+      <div className={`fixed inset-0 z-50 flex flex-col bg-zinc-950 transition-transform duration-300 md:relative md:z-10 md:w-[450px] lg:w-[550px] xl:w-[600px] md:bg-zinc-900/90 md:backdrop-blur-2xl md:border-l md:border-zinc-800 md:shadow-2xl ${isMobileCartOpen ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}`}>
         <div className="p-4 md:p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-950 md:bg-transparent">
           <h2 className="text-xl md:text-2xl font-bold flex items-center gap-3">
             <ShoppingCart className="text-blue-500" /> Carrinho
@@ -477,15 +477,15 @@ function PosPageContent() {
           ) : (
             items.map(item => (
               <div key={item.cartKey} className="flex flex-col p-4 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-sm hover:border-zinc-700 transition-colors group">
-                <div className="flex gap-3 mb-3">
+                <div className="flex gap-4 mb-4">
                   {item.imageUrl && (
-                    <div className="w-12 h-12 flex-shrink-0 bg-white/5 rounded-lg flex items-center justify-center p-1 border border-white/5">
+                    <div className="w-16 h-16 flex-shrink-0 bg-white/5 rounded-xl flex items-center justify-center p-1.5 border border-white/5">
                       <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
                     </div>
                   )}
                   <div className="flex-1 flex justify-between items-start">
-                    <div className="flex-1 pr-2">
-                      <div className="font-semibold text-zinc-200 line-clamp-2 leading-tight">{item.name}</div>
+                    <div className="flex-1 pr-3">
+                      <div className="font-bold text-lg text-zinc-100 line-clamp-2 leading-tight">{item.name}</div>
                       {item.modifiers && item.modifiers.length > 0 && (
                         <div className="mt-1 space-y-0.5">
                           {item.modifiers.map((mod, idx) => (
@@ -496,17 +496,17 @@ function PosPageContent() {
                         </div>
                       )}
                     </div>
-                    <div className="font-bold text-lg text-emerald-400 whitespace-nowrap pl-2">
+                    <div className="font-black text-xl text-emerald-400 whitespace-nowrap pl-2">
                       R$ {item.subtotal.toFixed(2)}
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-between items-center bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800">
-                  <button onClick={() => updateQuantity(item.cartKey, item.quantity - 1)} className="p-2 hover:bg-zinc-800 text-zinc-400 hover:text-white transition"><Minus size={18} /></button>
-                  <span className="font-bold w-10 text-center">{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item.cartKey, item.quantity + 1)} className="p-2 hover:bg-zinc-800 text-zinc-400 hover:text-white transition"><Plus size={18} /></button>
-                  <div className="w-px h-6 bg-zinc-800 mx-1"></div>
-                  <button onClick={() => removeItem(item.cartKey)} className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition w-full flex justify-center"><Trash2 size={18} /></button>
+                <div className="flex justify-between items-center bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 mt-1">
+                  <button onClick={() => updateQuantity(item.cartKey, item.quantity - 1)} className="p-4 md:p-3 hover:bg-zinc-800 text-zinc-400 hover:text-white transition active:scale-95"><Minus size={22} /></button>
+                  <span className="font-black text-2xl w-16 text-center text-white">{item.quantity}</span>
+                  <button onClick={() => updateQuantity(item.cartKey, item.quantity + 1)} className="p-4 md:p-3 hover:bg-zinc-800 text-zinc-400 hover:text-white transition active:scale-95"><Plus size={22} /></button>
+                  <div className="w-px h-8 bg-zinc-800 mx-2"></div>
+                  <button onClick={() => removeItem(item.cartKey)} className="p-4 md:p-3 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition flex-1 flex justify-center active:scale-95"><Trash2 size={22} /></button>
                 </div>
               </div>
             ))
