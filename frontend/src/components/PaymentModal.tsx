@@ -626,7 +626,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
               type="password"
               value={discountPinInput}
               onChange={e => setDiscountPinInput(e.target.value.replace(/\D/g, '').slice(0, 8))}
-              onKeyDown={e => e.key === 'Enter' && handleVerifyDiscountPin()}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleVerifyDiscountPin(); } }}
               placeholder="••••"
               autoFocus
               className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white text-center text-2xl font-mono tracking-[0.5em] focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
@@ -651,7 +651,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                 type="number"
                 value={pendingDiscountStr}
                 onChange={e => setPendingDiscountStr(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleApplyDiscount()}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleApplyDiscount(); } }}
                 placeholder="0,00"
                 autoFocus
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-xl font-bold text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
@@ -832,7 +832,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                       id="value-input"
                       className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-xl font-bold text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       placeholder="0.00" value={inputValue} onChange={e => setInputValue(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleAddPayment()} disabled={remaining <= 0}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddPayment(); } }} disabled={remaining <= 0}
                     />
                   </div>
                   <button onClick={handleAddPayment} disabled={remaining <= 0} className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white p-3.5 rounded-xl transition flex-shrink-0"><Plus size={22} /></button>
@@ -1006,14 +1006,14 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
           
           <div className="w-full sm:w-auto">
             {isOnline ? (
-              <button onClick={() => handleConfirm(isNfceEnabled && autoNfce ? 'nfce' : 'simple')} disabled={loading || !(customMethods.find(cm => cm.id === method)?.hasVariablePricing ? payments.length === 0 : remaining <= 0)}
+              <button type="button" onClick={() => handleConfirm(isNfceEnabled && autoNfce ? 'nfce' : 'simple')} disabled={loading || !(customMethods.find(cm => cm.id === method)?.hasVariablePricing ? payments.length === 0 : remaining <= 0)}
                 className={`w-full sm:w-64 rounded-xl font-bold text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(37,99,235,0.2)] disabled:shadow-none relative ${isMobile ? 'py-5' : 'py-4'}`}>
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <ShoppingBag size={20} />}
                 Finalizar Venda
                 {!isMobile && <span className="absolute top-1.5 right-2 text-[10px] font-mono bg-black/20 text-blue-200 px-1.5 py-0.5 rounded">Enter</span>}
               </button>
             ) : (
-              <button onClick={handleSaveOffline} disabled={loading || !(customMethods.find(cm => cm.id === method)?.hasVariablePricing ? payments.length === 0 : remaining <= 0)}
+              <button type="button" onClick={handleSaveOffline} disabled={loading || !(customMethods.find(cm => cm.id === method)?.hasVariablePricing ? payments.length === 0 : remaining <= 0)}
                 className={`w-full sm:w-64 rounded-xl font-bold text-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(234,88,12,0.2)] disabled:shadow-none relative ${isMobile ? 'py-5' : 'py-4'}`}>
                 {loading ? <Loader2 className="animate-spin" size={20} /> : <ShoppingBag size={20} />}
                 Salvar Offline

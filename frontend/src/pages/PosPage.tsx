@@ -307,26 +307,31 @@ function PosPageContent() {
                  )}
               </div>
             </div>
-            
-            {/* Mobile Actions — condensed single row */}
-            <div className="flex items-center gap-1.5 md:hidden">
-              <p className="text-emerald-400 font-medium text-[10px] flex items-center gap-1 truncate max-w-[100px] mr-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
-                <span className="truncate">Op: {operator?.name || user?.name}</span>
-              </p>
-              <ConnectionStatus syncState={syncState} />
+                {/* Mobile Actions - condensed single row */}
+            <div className="flex items-center gap-2 md:hidden">
+              <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl px-2 py-1 shadow-inner">
+                <p className="text-emerald-400 font-medium text-[10px] flex items-center gap-1.5 truncate max-w-[80px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
+                  <span className="truncate">{operator?.name || user?.name}</span>
+                </p>
+                <div className="w-px h-3 bg-zinc-700 mx-2" />
+                <div className="scale-90 origin-left -ml-1">
+                  <ConnectionStatus syncState={syncState} />
+                </div>
+              </div>
+              
               {cashRegister?.id && (
-                <button onClick={() => setIsMovementOpen(true)} className="p-2 text-zinc-400 hover:text-emerald-400 bg-zinc-900 rounded-xl transition">
+                <button onClick={() => setIsMovementOpen(true)} className="p-2 text-zinc-400 hover:text-emerald-400 bg-zinc-900 rounded-xl transition shrink-0">
                   <ArrowDownUp size={18} />
                 </button>
               )}
-              <button onClick={() => setIsCloseRegisterOpen(true)} className="p-2 text-zinc-400 hover:text-amber-400 bg-zinc-900 rounded-xl transition">
+              <button onClick={() => setIsCloseRegisterOpen(true)} className="p-2 text-zinc-400 hover:text-amber-400 bg-zinc-900 rounded-xl transition shrink-0">
                 <FileText size={18} />
               </button>
-              <button onClick={handleLogout} className="p-2 text-zinc-400 hover:text-red-400 bg-zinc-900 rounded-xl transition">
+              <button onClick={handleLogout} className="p-2 text-zinc-400 hover:text-red-400 bg-zinc-900 rounded-xl transition shrink-0">
                 <LogOut size={18} />
               </button>
-            </div>
+            </div>      </div>
           </div>
 
           <div className="hidden md:flex items-center gap-2">
