@@ -358,14 +358,12 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
           document.getElementById('value-input')?.focus();
           return;
         }
-      }
-
-      if (e.key === 'Enter' && remaining <= 0) {
-        e.preventDefault();
-        // Guard: evita duplo disparo pelo teclado
-        if (isSubmittingRef.current) return;
-        if (isOnline) handleConfirm(isNfceEnabled && autoNfce ? 'nfce' : 'simple');
-        else handleSaveOffline();
+        if (e.key === 'Enter' && remaining <= 0) {
+          e.preventDefault();
+          if (isSubmittingRef.current) return;
+          if (isOnline) handleConfirm(isNfceEnabled && autoNfce ? 'nfce' : 'simple');
+          else handleSaveOffline();
+        }
       }
     };
     window.addEventListener('keydown', handler);
@@ -824,7 +822,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
             {customMethods.find(cm => cm.id === method)?.hasVariablePricing ? null : (
               <div>
                 <label className="text-zinc-400 text-sm font-medium mb-2 block">Deseja passar qual valor?</label>
-                <div className="flex items-center gap-3">
+                <form onSubmit={e => { e.preventDefault(); handleAddPayment(); }} className="flex items-center gap-3">
                   <div className="relative flex-1">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">R$</span>
                     <input
@@ -832,18 +830,19 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                       id="value-input"
                       className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-xl font-bold text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       placeholder="0.00" value={inputValue} onChange={e => setInputValue(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddPayment(); } }} disabled={remaining <= 0}
+                      disabled={remaining <= 0}
                     />
                   </div>
-                  <button onClick={handleAddPayment} disabled={remaining <= 0} className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white p-3.5 rounded-xl transition flex-shrink-0"><Plus size={22} /></button>
+                  <button type="submit" disabled={remaining <= 0} className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white p-3.5 rounded-xl transition flex-shrink-0"><Plus size={22} /></button>
                   <button
+                    type="button"
                     onClick={() => { setDiscountModalOpen(true); setPinVerified(false); setDiscountPinInput(''); }}
                     className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-500/40 text-amber-400 p-3.5 rounded-xl transition flex-shrink-0"
                     title="Aplicar desconto (requer PIN)"
                   >
                     <Tag size={20} />
                   </button>
-                </div>
+                </form>
                 {method === 'dinheiro' && parseFloat(inputValue) > remaining && remaining > 0 && (
                   <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 mt-4 animate-in zoom-in-95 duration-200 shadow-inner">
                     <p className="text-emerald-400 text-sm font-bold mb-1 uppercase tracking-wider">Troco a devolver</p>
