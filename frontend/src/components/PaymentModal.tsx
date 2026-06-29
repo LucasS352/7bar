@@ -783,7 +783,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
           <button onClick={onClose} className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full transition text-zinc-400 hover:text-white"><X size={20} /></button>
         </div>
 
-        <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 flex-1 overflow-y-auto custom-scrollbar">
+        <div className="p-4 md:p-6 flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-8 flex-1 overflow-y-auto custom-scrollbar">
           {/* Painel Esquerdo */}
           <div className="space-y-5">
             <div>
@@ -870,8 +870,8 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
           </div>
 
           {/* Painel Direito: Resumo */}
-          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
+          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex flex-col justify-between relative shrink-0 h-fit md:h-auto">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-t-2xl" />
             
             {customMethods.find(cm => cm.id === method)?.hasVariablePricing ? (
               <div className="flex flex-col h-full">
