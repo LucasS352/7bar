@@ -42,15 +42,21 @@ import { TermsAcceptanceModal } from './components/TermsAcceptanceModal';
 // Em desenvolvimento (npm run dev), o SW roda em modo simulado se devOptions.enabled=true
 import { registerSW } from 'virtual:pwa-register';
 
-registerSW({
-  // Quando uma nova versão do SW estiver disponível, recarrega a página
+const updateSW = registerSW({
+  // Quando uma nova versão do SW estiver disponível, recarrega silenciosamente
   onNeedRefresh() {
-    // Você pode customizar isso com um toast "Nova versão disponível"
-    window.location.reload();
+    updateSW(true); // força atualização imediata sem prompt
   },
   onOfflineReady() {
     console.log('[7bar PWA] App pronto para uso offline!');
   },
+});
+
+// Verifica por atualizações sempre que o usuário retorna ao app (troca de aba, desbloqueia celular, etc.)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    updateSW(); // checa se há nova versão do SW disponível
+  }
 });
 
 // ── Componentes de Rota Protegida ────────────────────────────────────────────
