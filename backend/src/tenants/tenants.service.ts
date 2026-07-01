@@ -182,20 +182,8 @@ export class TenantsService {
     for (const tenant of tenants) {
       this.logger.log(`[Migracao] Iniciando atualizacao de schema do tenant: ${tenant.name} (${tenant.databaseName})`);
       
-      // 1. Limpeza de chaves orfas pre-migracao
-      const TenantPrismaClient = require('@prisma/client').PrismaClient;
-      const tenantPrisma = new TenantPrismaClient({
-        datasources: { db: { url: tenant.databaseUrl } }
-      });
-
-      try {
-        await tenantPrisma.$executeRawUnsafe(`UPDATE sales SET operatorId = NULL`).catch(() => {});
-        await tenantPrisma.$executeRawUnsafe(`UPDATE cash_registers SET operatorId = NULL`).catch(() => {});
-      } catch (e: any) {
-        this.logger.warn(`Aviso na limpeza pre-migracao de ${tenant.name}: ${e.message}`);
-      } finally {
-        await tenantPrisma.$disconnect();
-      }
+      // Nota: removida limpeza de operatorId que fechava os caixas abertos.
+      // O db push com --accept-data-loss trata mudanças de schema sem precisar disso.
 
       // 2. Executar db push
       try {
