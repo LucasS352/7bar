@@ -829,7 +829,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                       type="number"
                       id="value-input"
                       step="any"
-                      inputMode="decimal"
+                      min="0"
                       className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3 pl-12 pr-4 text-xl font-bold text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       placeholder="0.00" value={inputValue} onChange={e => setInputValue(e.target.value)}
                       disabled={remaining <= 0}
