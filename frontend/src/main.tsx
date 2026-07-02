@@ -23,6 +23,7 @@ import MassEntryPage from './app/dashboard/inventory/purchases/page';
 import StockEntryPage from './app/dashboard/inventory/stock-entry/page';
 import StockCountPage from './app/dashboard/inventory/stock-count/page';
 import SysInitPage from './app/sys-init/page';
+import GroupPortalPage from './pages/GroupPortalPage';
 import SuppliersPage from './app/dashboard/suppliers/page';
 import PurchaseOrdersPage from './app/dashboard/purchase-orders/page';
 import PayablesPage from './app/dashboard/finance/payables/page';
@@ -81,6 +82,7 @@ function App() {
         {/* Rota pública */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/sys-init" element={<SysInitPage />} />
+        <Route path="/grupo-portal" element={<GroupPortalPage />} />
 
         {/* PDV — rota raiz protegida */}
         <Route

@@ -37,7 +37,9 @@ export function LoginPage() {
       const { data } = await api.post('/auth/login', { email, password });
       login(data.access_token, data.user);
       toast.success(`Bem vindo ao ${data.user.tenant}, ${data.user.name}!`);
-      if (data.user.role === 'admin' || data.user.role === 'superadmin') {
+      if (data.user.role === 'group_owner' || data.user.groupId) {
+        navigate('/grupo-portal');
+      } else if (data.user.role === 'admin' || data.user.role === 'superadmin') {
         navigate('/dashboard');
       } else {
         navigate('/');

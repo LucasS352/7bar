@@ -17,7 +17,7 @@ export class AuthService {
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.heartPrisma.user.findUnique({
       where: { email },
-      include: { tenant: true }, // Inclui as conexões do tenant atual!
+      include: { tenant: true, group: { include: { members: { include: { tenant: { select: { id: true, databaseUrl: true } } } } } } },
     });
 
     if (user && await bcrypt.compare(pass, user.password)) {
@@ -52,7 +52,8 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       tenantId: user.tenant.id,
-      role: user.role
+      role: user.role,
+      groupId: user.groupId ?? null,
     };
     return {
       access_token: this.jwtService.sign(payload),
@@ -60,6 +61,7 @@ export class AuthService {
         id: user.id,
         name: user.name,
         role: user.role,
+        groupId: user.groupId ?? null,
         tenant: user.tenant.name,
         termsAccepted: !!user.tenant.termsAcceptedAt
       }

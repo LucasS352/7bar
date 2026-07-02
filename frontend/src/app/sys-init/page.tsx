@@ -8,7 +8,7 @@ import {
   ShieldCheck, Building2, User, Mail, Lock, Database, Loader2, CheckCircle2,
   AlertCircle, ArrowRight, Eye, EyeOff, Search, Edit, Image as ImageIcon,
   Settings, ToggleLeft, ToggleRight, AlertTriangle, Upload, X, Terminal,
-  ChevronDown, ChevronRight, Trash2, DollarSign
+  ChevronDown, ChevronRight, Trash2, DollarSign, Users, Plus
 } from "lucide-react";
 
 const PIN_LENGTH = 10;
@@ -27,12 +27,32 @@ function slugify(text: string) {
 export default function SysInitPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("pin");
+  
+  const [activeTab, setActiveTab] = useState<"tenants" | "groups">("tenants");
 
   // ── TENANT LIST ───────────────────────────────────────────────────────
   const [tenants, setTenants] = useState<any[]>([]);
   const [loadingTenants, setLoadingTenants] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
+
+  // ── GROUPS LIST ───────────────────────────────────────────────────────
+  const [groups, setGroups] = useState<any[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  
+  const [selectedGroup, setSelectedGroup] = useState<any>(null);
+  const [groupUsers, setGroupUsers] = useState<any[]>([]);
+  const [loadingGroupUsers, setLoadingGroupUsers] = useState(false);
+  const [newMemberTenantId, setNewMemberTenantId] = useState("");
+  const [newMemberAlias, setNewMemberAlias] = useState("");
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [addingMember, setAddingMember] = useState(false);
+  const [addingUser, setAddingUser] = useState(false);
 
   // ── DATABASE MIGRATION STATE ──────────────────────────────────────────
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
@@ -150,11 +170,45 @@ export default function SysInitPage() {
     }
   };
 
+  const loadGroups = async () => {
+    setLoadingGroups(true);
+    try {
+      const pin = pinDigits.join('');
+      const res = await api.get('/groups/setup/list', {
+        headers: { 'x-setup-pin': pin },
+      });
+      setGroups(res.data);
+    } catch (err) {
+      toast.error('Erro ao carregar grupos.');
+    } finally {
+      setLoadingGroups(false);
+    }
+  };
+
+  const loadGroupUsers = async (groupId: string) => {
+    setLoadingGroupUsers(true);
+    try {
+      const pin = pinDigits.join('');
+      const res = await api.get(`/groups/setup/${groupId}/users`, {
+        headers: { 'x-setup-pin': pin },
+      });
+      setGroupUsers(res.data);
+    } catch (err) {
+      toast.error('Erro ao carregar usuários do grupo.');
+    } finally {
+      setLoadingGroupUsers(false);
+    }
+  };
+
   useEffect(() => {
     if (step === "list") {
-      loadTenants();
+      if (activeTab === "tenants") {
+        loadTenants();
+      } else if (activeTab === "groups") {
+        loadGroups();
+      }
     }
-  }, [step]);
+  }, [step, activeTab]);
 
   // Auto-fill dbName from tenantName
   useEffect(() => {
@@ -162,6 +216,70 @@ export default function SysInitPage() {
       setDbName(slugify(tenantName));
     }
   }, [tenantName, dbNameManual]);
+
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName.trim()) return;
+    setCreatingGroup(true);
+    try {
+      const pin = pinDigits.join('');
+      await api.post('/groups/setup/create', { name: newGroupName }, { headers: { 'x-setup-pin': pin } });
+      toast.success('Grupo criado com sucesso!');
+      setIsCreateGroupOpen(false);
+      setNewGroupName("");
+      loadGroups();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Erro ao criar grupo.');
+    } finally {
+      setCreatingGroup(false);
+    }
+  };
+
+  const handleAddGroupMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedGroup || !newMemberTenantId) return;
+    setAddingMember(true);
+    try {
+      const pin = pinDigits.join('');
+      await api.post(`/groups/setup/${selectedGroup.id}/members`, { 
+        tenantId: newMemberTenantId, 
+        alias: newMemberAlias 
+      }, { headers: { 'x-setup-pin': pin } });
+      toast.success('Membro adicionado com sucesso!');
+      setNewMemberTenantId("");
+      setNewMemberAlias("");
+      loadGroups();
+      const updatedGroup = groups.find(g => g.id === selectedGroup.id);
+      if (updatedGroup) setSelectedGroup(updatedGroup);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Erro ao adicionar membro.');
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  const handleAddGroupUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedGroup) return;
+    setAddingUser(true);
+    try {
+      const pin = pinDigits.join('');
+      await api.post(`/groups/setup/${selectedGroup.id}/users`, { 
+        name: newUserName,
+        email: newUserEmail,
+        password: newUserPassword
+      }, { headers: { 'x-setup-pin': pin } });
+      toast.success('Usuário adicionado com sucesso!');
+      setNewUserName("");
+      setNewUserEmail("");
+      setNewUserPassword("");
+      loadGroupUsers(selectedGroup.id);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Erro ao adicionar usuário.');
+    } finally {
+      setAddingUser(false);
+    }
+  };
 
   const handlePinKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -501,210 +619,274 @@ export default function SysInitPage() {
           <div className="animate-[fadeIn_0.3s_ease] flex flex-col flex-1">
             <div className="flex justify-between items-center mb-8 mt-4">
               <div>
-                <h1 className="text-3xl font-black bg-gradient-to-r from-violet-400 to-indigo-500 bg-clip-text text-transparent">Gestão de Tenants</h1>
-                <p className="text-zinc-400 mt-1">Gerencie os clientes SaaS, módulos e identidades visuais.</p>
+                <h1 className="text-3xl font-black bg-gradient-to-r from-violet-400 to-indigo-500 bg-clip-text text-transparent">
+                  {activeTab === 'tenants' ? 'Gestão de Tenants' : 'Gestão de Grupos'}
+                </h1>
+                <p className="text-zinc-400 mt-1">
+                  {activeTab === 'tenants' ? 'Gerencie os clientes SaaS, módulos e identidades visuais.' : 'Gerencie os grupos de lojas e redes corporativas.'}
+                </p>
               </div>
               
               <div className="flex gap-3">
-                {selectedTenantIds.length > 0 && (
-                  <button onClick={handleMigrateBancos} className="bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-violet-500/20">
-                    <Database size={18} /> Atualizar Bancos ({selectedTenantIds.length})
+                {activeTab === 'tenants' ? (
+                  <>
+                    {selectedTenantIds.length > 0 && (
+                      <button onClick={handleMigrateBancos} className="bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-violet-500/20">
+                        <Database size={18} /> Atualizar Bancos ({selectedTenantIds.length})
+                      </button>
+                    )}
+                    <button onClick={() => { setStep("backups"); loadBackups(); }} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-blue-500/20">
+                      <Database size={18} /> Gerenciar Backups
+                    </button>
+                    <button onClick={() => setStep("create")} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
+                      <Building2 size={18} /> Novo Tenant
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={() => setIsCreateGroupOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
+                    <Users size={18} /> Novo Grupo
                   </button>
                 )}
-                <button onClick={() => { setStep("backups"); loadBackups(); }} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-blue-500/20">
-                  <Database size={18} /> Gerenciar Backups
-                </button>
-                <button onClick={() => setStep("create")} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
-                  <Building2 size={18} /> Novo Tenant
-                </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 flex items-center gap-4">
-                <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl"><Building2 size={24} /></div>
-                <div><p className="text-zinc-400 text-sm">Total de Clientes</p><p className="text-2xl font-bold">{tenants.length}</p></div>
-              </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 flex items-center gap-4">
-                <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><DollarSign size={24} /></div>
-                <div>
-                  <p className="text-zinc-400 text-sm">Faturamento Mensal</p>
-                  <p className="text-2xl font-bold">R$ {faturamentoEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                </div>
-              </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 flex items-center gap-4">
-                <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl"><AlertTriangle size={24} /></div>
-                <div>
-                  <p className="text-zinc-400 text-sm">Atrasados</p>
-                  <p className="text-2xl font-bold text-rose-400">{mensalidadesAtrasadas}</p>
-                </div>
-              </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 flex items-center gap-4">
-                <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl"><AlertTriangle size={24} /></div>
-                <div>
-                  <p className="text-zinc-400 text-sm">Certificados a Vencer</p>
-                  <p className="text-2xl font-bold">{tenants.filter(t => isCertExpiringSoon(t.certValidade)).length}</p>
-                </div>
-              </div>
+            <div className="flex gap-4 mb-6 border-b border-zinc-800">
+              <button 
+                onClick={() => setActiveTab('tenants')} 
+                className={`py-2 px-4 font-bold border-b-2 transition-colors ${activeTab === 'tenants' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
+              >
+                Tenants
+              </button>
+              <button 
+                onClick={() => setActiveTab('groups')} 
+                className={`py-2 px-4 font-bold border-b-2 transition-colors ${activeTab === 'groups' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
+              >
+                Grupos
+              </button>
             </div>
 
-            <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl flex-1 flex flex-col overflow-hidden">
-              <div className="p-4 border-b border-zinc-800 flex items-center gap-4">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
-                  <input type="text" placeholder="Buscar por nome ou CNPJ..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-violet-500" />
+            {activeTab === 'tenants' ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 flex items-center gap-4">
+                    <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl"><Building2 size={24} /></div>
+                    <div><p className="text-zinc-400 text-sm">Total de Clientes</p><p className="text-2xl font-bold">{tenants.length}</p></div>
+                  </div>
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 flex items-center gap-4">
+                    <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><DollarSign size={24} /></div>
+                    <div>
+                      <p className="text-zinc-400 text-sm">Faturamento Mensal</p>
+                      <p className="text-2xl font-bold">R$ {faturamentoEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                  </div>
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 flex items-center gap-4">
+                    <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl"><AlertTriangle size={24} /></div>
+                    <div>
+                      <p className="text-zinc-400 text-sm">Atrasados</p>
+                      <p className="text-2xl font-bold text-rose-400">{mensalidadesAtrasadas}</p>
+                    </div>
+                  </div>
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 flex items-center gap-4">
+                    <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl"><AlertTriangle size={24} /></div>
+                    <div>
+                      <p className="text-zinc-400 text-sm">Certificados a Vencer</p>
+                      <p className="text-2xl font-bold">{tenants.filter(t => isCertExpiringSoon(t.certValidade)).length}</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="flex-1 overflow-auto custom-scrollbar">
-                <table className="w-full text-left text-sm whitespace-nowrap">
-                  <thead className="bg-zinc-950/50 text-zinc-400 sticky top-0 z-10 border-b border-zinc-800">
-                    <tr>
-                      <th className="px-6 py-4 font-medium w-12">
-                        <input
-                          type="checkbox"
-                          checked={filteredTenants.length > 0 && selectedTenantIds.length === filteredTenants.length}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedTenantIds(filteredTenants.map(t => t.id));
-                            } else {
-                              setSelectedTenantIds([]);
-                            }
-                          }}
-                          className="rounded border-zinc-700 bg-zinc-950 text-violet-600 focus:ring-violet-500"
-                        />
-                      </th>
-                      <th className="px-6 py-4 font-medium">Tenant</th>
-                      <th className="px-6 py-4 font-medium">Banco / CNPJ</th>
-                      <th className="px-6 py-4 font-medium">Status</th>
-                      <th className="px-6 py-4 font-medium">Mensalidade</th>
-                      <th className="px-6 py-4 font-medium">Módulos</th>
-                      <th className="px-6 py-4 font-medium text-right">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-800/50">
-                    {loadingTenants ? (
-                      <tr><td colSpan={7} className="px-6 py-12 text-center text-zinc-500"><Loader2 className="animate-spin inline-block mr-2" /> Carregando...</td></tr>
-                    ) : filteredTenants.length === 0 ? (
-                      <tr><td colSpan={7} className="px-6 py-12 text-center text-zinc-500">Nenhum tenant encontrado.</td></tr>
-                    ) : (
-                      filteredTenants.map(t => {
-                        const isSelected = selectedTenantIds.includes(t.id);
-                        return (
-                          <tr key={t.id} className={`hover:bg-zinc-800/30 transition ${isSelected ? 'bg-violet-950/10' : ''}`}>
-                            <td className="px-6 py-4">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedTenantIds(prev => [...prev, t.id]);
-                                  } else {
-                                    setSelectedTenantIds(prev => prev.filter(id => id !== t.id));
-                                  }
-                                }}
-                                className="rounded border-zinc-700 bg-zinc-950 text-violet-600 focus:ring-violet-500"
-                              />
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                {t.logoUrl ? (
-                                  <img src={getFullUrl(t.logoUrl)} alt="Logo" className="w-8 h-8 rounded object-cover bg-zinc-950" />
-                                ) : (
-                                  <div className="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center text-xs font-bold">{t.name?.charAt(0).toUpperCase()}</div>
-                                )}
-                                <div>
-                                  <p className="font-semibold text-zinc-200">{t.name || t.nomeFantasia}</p>
-                                  <p className="text-xs text-zinc-500">
-                                    {t.users?.find((u: any) => u.role === 'admin')?.email || t.users?.[0]?.email || 'Sem admin'}
-                                  </p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <p className="font-mono text-zinc-300">{t.databaseName}</p>
-                              <p className="text-xs text-zinc-500">{t.cnpj || 'CNPJ não informado'}</p>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${t.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                                {t.status === 'active' ? 'Ativo' : 'Inativo'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div>
-                                <p className="font-semibold text-zinc-200">
-                                  R$ {Number(t.mensalidadeValor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </p>
-                                {t.mensalidadeVencimento ? (() => {
-                                  const today = new Date();
-                                  today.setHours(0, 0, 0, 0);
-                                  const venc = new Date(t.mensalidadeVencimento);
-                                  const diffTime = venc.getTime() - today.getTime();
-                                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                                  
-                                  let color = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-                                  let statusText = `Vence em ${venc.toLocaleDateString("pt-BR")}`;
-                                  
-                                  if (diffDays < 0) {
-                                    color = "text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse";
-                                    statusText = `Atrasado desde ${venc.toLocaleDateString("pt-BR")}`;
-                                  } else if (diffDays <= 5) {
-                                    color = "text-amber-400 bg-amber-500/10 border-amber-500/20";
-                                    statusText = diffDays === 0 ? "Vence hoje!" : `Vence em ${diffDays} dias`;
-                                  }
 
-                                  return (
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${color} block w-max mt-1`}>
-                                      {statusText}
-                                    </span>
-                                  );
-                                })() : (
-                                  <span className="text-zinc-500 text-xs">Sem vencimento</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="flex gap-1">
-                                {(() => {
-                                  let m = { nfce: true, estoque: true, dashboardMobile: true };
-                                  try {
-                                    if (t.modulos) {
-                                      m = typeof t.modulos === 'string' ? JSON.parse(t.modulos) : t.modulos;
-                                    }
-                                  } catch (e) {
-                                    console.error("Erro ao renderizar módulos do tenant:", e);
-                                  }
-                                  return (
-                                    <>
-                                      <span className={`w-2 h-2 rounded-full ${m.nfce ? 'bg-blue-500' : 'bg-zinc-700'}`} title="NFC-e" />
-                                      <span className={`w-2 h-2 rounded-full ${m.estoque ? 'bg-indigo-500' : 'bg-zinc-700'}`} title="Estoque" />
-                                      <span className={`w-2 h-2 rounded-full ${m.dashboardMobile ? 'bg-violet-500' : 'bg-zinc-700'}`} title="App Mobile" />
-                                    </>
-                                  )
-                                })()}
-                              </div>
-                            </td>
+                <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl flex-1 flex flex-col overflow-hidden">
+                  <div className="p-4 border-b border-zinc-800 flex items-center gap-4">
+                    <div className="relative flex-1 max-w-md">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                      <input type="text" placeholder="Buscar por nome ou CNPJ..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-violet-500" />
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1 overflow-auto custom-scrollbar">
+                    <table className="w-full text-left text-sm whitespace-nowrap">
+                      <thead className="bg-zinc-950/50 text-zinc-400 sticky top-0 z-10 border-b border-zinc-800">
+                        <tr>
+                          <th className="px-6 py-4 font-medium w-12">
+                            <input
+                              type="checkbox"
+                              checked={filteredTenants.length > 0 && selectedTenantIds.length === filteredTenants.length}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedTenantIds(filteredTenants.map(t => t.id));
+                                } else {
+                                  setSelectedTenantIds([]);
+                                }
+                              }}
+                              className="rounded border-zinc-700 bg-zinc-950 text-violet-600 focus:ring-violet-500"
+                            />
+                          </th>
+                          <th className="px-6 py-4 font-medium">Tenant</th>
+                          <th className="px-6 py-4 font-medium">Banco / CNPJ</th>
+                          <th className="px-6 py-4 font-medium">Status</th>
+                          <th className="px-6 py-4 font-medium">Mensalidade</th>
+                          <th className="px-6 py-4 font-medium">Módulos</th>
+                          <th className="px-6 py-4 font-medium text-right">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-800/50">
+                        {loadingTenants ? (
+                          <tr><td colSpan={7} className="px-6 py-12 text-center text-zinc-500"><Loader2 className="animate-spin inline-block mr-2" /> Carregando...</td></tr>
+                        ) : filteredTenants.length === 0 ? (
+                          <tr><td colSpan={7} className="px-6 py-12 text-center text-zinc-500">Nenhum tenant encontrado.</td></tr>
+                        ) : (
+                          filteredTenants.map(t => {
+                            const isSelected = selectedTenantIds.includes(t.id);
+                            return (
+                              <tr key={t.id} className={`hover:bg-zinc-800/30 transition ${isSelected ? 'bg-violet-950/10' : ''}`}>
+                                <td className="px-6 py-4">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedTenantIds(prev => [...prev, t.id]);
+                                      } else {
+                                        setSelectedTenantIds(prev => prev.filter(id => id !== t.id));
+                                      }
+                                    }}
+                                    className="rounded border-zinc-700 bg-zinc-950 text-violet-600 focus:ring-violet-500"
+                                  />
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center gap-3">
+                                    {t.logoUrl ? (
+                                      <img src={getFullUrl(t.logoUrl)} alt="Logo" className="w-8 h-8 rounded object-cover bg-zinc-950" />
+                                    ) : (
+                                      <div className="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center text-xs font-bold">{t.name?.charAt(0).toUpperCase()}</div>
+                                    )}
+                                    <div>
+                                      <p className="font-semibold text-zinc-200">{t.name || t.nomeFantasia}</p>
+                                      <p className="text-xs text-zinc-500">
+                                        {t.users?.find((u: any) => u.role === 'admin')?.email || t.users?.[0]?.email || 'Sem admin'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <p className="font-mono text-zinc-300">{t.databaseName}</p>
+                                  <p className="text-xs text-zinc-500">{t.cnpj || 'CNPJ não informado'}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${t.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                                    {t.status === 'active' ? 'Ativo' : 'Inativo'}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div>
+                                    <p className="font-semibold text-zinc-200">
+                                      R$ {Number(t.mensalidadeValor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
+                                    {t.mensalidadeVencimento ? (() => {
+                                      const today = new Date();
+                                      today.setHours(0, 0, 0, 0);
+                                      const venc = new Date(t.mensalidadeVencimento);
+                                      const diffTime = venc.getTime() - today.getTime();
+                                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                      
+                                      let color = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+                                      let statusText = `Vence em ${venc.toLocaleDateString("pt-BR")}`;
+                                      
+                                      if (diffDays < 0) {
+                                        color = "text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse";
+                                        statusText = `Atrasado desde ${venc.toLocaleDateString("pt-BR")}`;
+                                      } else if (diffDays <= 5) {
+                                        color = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+                                        statusText = diffDays === 0 ? "Vence hoje!" : `Vence em ${diffDays} dias`;
+                                      }
+
+                                      return (
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${color} block w-max mt-1`}>
+                                          {statusText}
+                                        </span>
+                                      );
+                                    })() : (
+                                      <span className="text-zinc-500 text-xs">Sem vencimento</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="flex gap-1">
+                                    {(() => {
+                                      let m = { nfce: true, estoque: true, dashboardMobile: true };
+                                      try {
+                                        if (t.modulos) {
+                                          m = typeof t.modulos === 'string' ? JSON.parse(t.modulos) : t.modulos;
+                                        }
+                                      } catch (e) {
+                                        console.error("Erro ao renderizar módulos do tenant:", e);
+                                      }
+                                      return (
+                                        <>
+                                          <span className={`w-2 h-2 rounded-full ${m.nfce ? 'bg-blue-500' : 'bg-zinc-700'}`} title="NFC-e" />
+                                          <span className={`w-2 h-2 rounded-full ${m.estoque ? 'bg-indigo-500' : 'bg-zinc-700'}`} title="Estoque" />
+                                          <span className={`w-2 h-2 rounded-full ${m.dashboardMobile ? 'bg-violet-500' : 'bg-zinc-700'}`} title="App Mobile" />
+                                        </>
+                                      )
+                                    })()}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <div className="flex justify-end gap-1">
+                                    <button onClick={() => handleRegistrarPagamento(t.id)} className="p-2 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition" title="Registrar Pagamento">
+                                      <DollarSign size={18} />
+                                    </button>
+                                    <button onClick={() => openEdit(t)} className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition" title="Editar">
+                                      <Edit size={18} />
+                                    </button>
+                                    <button onClick={() => handleDeleteTenant(t)} className="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition" title="Excluir">
+                                      <Trash2 size={18} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-auto custom-scrollbar">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-zinc-950/50 text-zinc-400 sticky top-0 z-10 border-b border-zinc-800">
+                      <tr>
+                        <th className="px-6 py-4 font-medium">Nome do Grupo</th>
+                        <th className="px-6 py-4 font-medium">Membros</th>
+                        <th className="px-6 py-4 font-medium text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/50">
+                      {loadingGroups ? (
+                        <tr><td colSpan={3} className="px-6 py-12 text-center text-zinc-500"><Loader2 className="animate-spin inline-block mr-2" /> Carregando...</td></tr>
+                      ) : groups.length === 0 ? (
+                        <tr><td colSpan={3} className="px-6 py-12 text-center text-zinc-500">Nenhum grupo encontrado.</td></tr>
+                      ) : (
+                        groups.map(g => (
+                          <tr key={g.id} className="hover:bg-zinc-800/30 transition">
+                            <td className="px-6 py-4 font-semibold text-zinc-200">{g.name}</td>
+                            <td className="px-6 py-4 text-zinc-400">{g.members?.length || 0} membros</td>
                             <td className="px-6 py-4 text-right">
-                              <div className="flex justify-end gap-1">
-                                <button onClick={() => handleRegistrarPagamento(t.id)} className="p-2 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition" title="Registrar Pagamento">
-                                  <DollarSign size={18} />
-                                </button>
-                                <button onClick={() => openEdit(t)} className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition" title="Editar">
-                                  <Edit size={18} />
-                                </button>
-                                <button onClick={() => handleDeleteTenant(t)} className="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition" title="Excluir">
-                                  <Trash2 size={18} />
-                                </button>
-                              </div>
+                              <button onClick={() => { setSelectedGroup(g); loadGroupUsers(g.id); }} className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition" title="Gerenciar">
+                                <Settings size={18} />
+                              </button>
                             </td>
                           </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -1457,6 +1639,114 @@ export default function SysInitPage() {
                 >
                   {migrating ? 'Migrando bancos...' : 'Fechar'}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL CRIAR GRUPO */}
+        {isCreateGroupOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-[fadeIn_0.2s_ease]">
+            <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
+              <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/40">
+                <h2 className="text-xl font-bold flex items-center gap-2 text-emerald-400">Novo Grupo</h2>
+                <button onClick={() => setIsCreateGroupOpen(false)} className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition"><X size={20} /></button>
+              </div>
+              <form onSubmit={handleCreateGroup} className="p-6 space-y-4">
+                <div>
+                  <label className="text-xs text-zinc-400 uppercase">Nome do Grupo</label>
+                  <input required value={newGroupName} onChange={e => setNewGroupName(e.target.value)} className="w-full p-3 bg-zinc-950 border border-zinc-700 rounded-xl mt-1 text-white focus:border-emerald-500 outline-none" placeholder="Ex: Rede XYZ" />
+                </div>
+                <button type="submit" disabled={creatingGroup} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition mt-4">
+                  {creatingGroup ? <Loader2 className="animate-spin mx-auto" /> : "Criar Grupo"}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL GERENCIAR GRUPO */}
+        {selectedGroup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-[fadeIn_0.2s_ease]">
+            <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+              <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/40">
+                <h2 className="text-xl font-bold flex items-center gap-2 text-violet-400">
+                  Gerenciar Grupo: {selectedGroup.name}
+                </h2>
+                <button onClick={() => { setSelectedGroup(null); loadGroups(); }} className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition"><X size={20} /></button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Membros */}
+                <div className="space-y-4">
+                  <h3 className="font-bold text-zinc-200 border-b border-zinc-800 pb-2 flex justify-between items-center">
+                    Membros (Tenants)
+                  </h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                    {selectedGroup.members?.map((m: any) => (
+                      <div key={m.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-zinc-200 text-sm">{m.tenant?.name || m.tenant?.nomeFantasia}</p>
+                          {m.alias && <p className="text-xs text-zinc-500">Alias: {m.alias}</p>}
+                        </div>
+                      </div>
+                    ))}
+                    {(!selectedGroup.members || selectedGroup.members.length === 0) && (
+                      <p className="text-zinc-500 text-sm italic">Nenhum membro neste grupo.</p>
+                    )}
+                  </div>
+                  
+                  <form onSubmit={handleAddGroupMember} className="bg-zinc-950/50 p-4 border border-zinc-800 rounded-xl space-y-3 mt-4">
+                    <h4 className="text-sm font-bold text-zinc-300">Adicionar Membro</h4>
+                    <div>
+                      <select required value={newMemberTenantId} onChange={e => setNewMemberTenantId(e.target.value)} className="w-full p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm focus:border-violet-500 outline-none">
+                        <option value="">Selecione um Tenant...</option>
+                        {tenants.map(t => (
+                          <option key={t.id} value={t.id}>{t.name || t.nomeFantasia}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <input type="text" value={newMemberAlias} onChange={e => setNewMemberAlias(e.target.value)} placeholder="Alias (Opcional, ex: Loja Matriz)" className="w-full p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm focus:border-violet-500 outline-none" />
+                    </div>
+                    <button type="submit" disabled={addingMember} className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-bold py-2.5 rounded-lg transition">
+                      {addingMember ? <Loader2 className="animate-spin mx-auto" size={18} /> : "Adicionar"}
+                    </button>
+                  </form>
+                </div>
+                
+                {/* Usuários do Grupo */}
+                <div className="space-y-4">
+                  <h3 className="font-bold text-zinc-200 border-b border-zinc-800 pb-2 flex justify-between items-center">
+                    Usuários Proprietários
+                  </h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                    {loadingGroupUsers ? (
+                      <div className="text-center py-4 text-zinc-500"><Loader2 className="animate-spin inline-block mx-auto" size={18} /></div>
+                    ) : groupUsers.length === 0 ? (
+                      <p className="text-zinc-500 text-sm italic">Nenhum usuário proprietário.</p>
+                    ) : (
+                      groupUsers.map((u: any) => (
+                        <div key={u.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex justify-between items-center">
+                          <div>
+                            <p className="font-semibold text-zinc-200 text-sm">{u.name}</p>
+                            <p className="text-xs text-zinc-500">{u.email}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  
+                  <form onSubmit={handleAddGroupUser} className="bg-zinc-950/50 p-4 border border-zinc-800 rounded-xl space-y-3 mt-4">
+                    <h4 className="text-sm font-bold text-zinc-300">Novo Usuário do Grupo</h4>
+                    <input required type="text" value={newUserName} onChange={e => setNewUserName(e.target.value)} placeholder="Nome" className="w-full p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm focus:border-violet-500 outline-none" />
+                    <input required type="email" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} placeholder="Email" className="w-full p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm focus:border-violet-500 outline-none" />
+                    <input required type="password" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} placeholder="Senha" className="w-full p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm focus:border-violet-500 outline-none" />
+                    <button type="submit" disabled={addingUser} className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-bold py-2.5 rounded-lg transition">
+                      {addingUser ? <Loader2 className="animate-spin mx-auto" size={18} /> : "Criar Usuário"}
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
           </div>

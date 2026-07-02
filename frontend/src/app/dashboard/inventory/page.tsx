@@ -426,19 +426,19 @@ export default function InventoryDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center">
           <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><Package size={16}/> SKUs / Físico</div>
-          <div className="text-xl md:text-2xl font-black text-white">{totalVarieties} <span className="text-xs md:text-sm font-medium text-zinc-500">tipos</span> / {totalItemsCount} <span className="text-xs md:text-sm font-medium text-zinc-500">unid.</span></div>
+          <div className="text-xl md:text-2xl font-black text-white">{totalVarieties.toLocaleString('pt-BR')} <span className="text-xs md:text-sm font-medium text-zinc-500">tipos</span> / {Math.round(totalItemsCount).toLocaleString('pt-BR')} <span className="text-xs md:text-sm font-medium text-zinc-500">unid.</span></div>
         </div>
         <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-rose-500/50">
           <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><BarChart3 size={16} className="text-rose-400"/> <span className="hidden sm:inline">Custo Imobilizado</span><span className="sm:hidden">Custo</span></div>
-          <div className="text-xl md:text-2xl font-black text-rose-400 truncate">R$ {totalCostValue.toFixed(2)}</div>
+          <div className="text-xl md:text-2xl font-black text-rose-400 truncate">{totalCostValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
         </div>
         <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-blue-500/50">
           <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><DollarSign size={16} className="text-blue-400"/> <span className="hidden sm:inline">Valor Bruto de Venda</span><span className="sm:hidden">Varejo</span></div>
-          <div className="text-xl md:text-2xl font-black text-blue-400 truncate">R$ {totalGrossValue.toFixed(2)}</div>
+          <div className="text-xl md:text-2xl font-black text-blue-400 truncate">{totalGrossValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
         </div>
         <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-emerald-500/50">
           <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><TrendingUp size={16} className="text-emerald-400"/> Lucro Projetado</div>
-          <div className="text-xl md:text-2xl font-black text-emerald-400 truncate">R$ {expectedProfit.toFixed(2)}</div>
+          <div className="text-xl md:text-2xl font-black text-emerald-400 truncate">{expectedProfit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
         </div>
       </div>
 
