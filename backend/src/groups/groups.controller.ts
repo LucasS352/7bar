@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Body,
+  Query,
   Headers,
   UnauthorizedException,
   UseGuards,
@@ -78,9 +79,11 @@ export class GroupsController {
   async dashboard(
     @Headers('x-setup-pin') pin: string,
     @Param('id') id: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     this.checkPin(pin);
-    return this.groupsService.getDashboard(id);
+    return this.groupsService.getDashboard(id, startDate, endDate);
   }
 
   // ── Stock ─────────────────────────────────────────────────────────────────
@@ -180,9 +183,13 @@ export class GroupsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('my/dashboard')
-  async myDashboard(@Request() req: any) {
+  async myDashboard(
+    @Request() req: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
     if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
-    return this.groupsService.getDashboard(req.user.groupId);
+    return this.groupsService.getDashboard(req.user.groupId, startDate, endDate);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -237,5 +244,16 @@ export class GroupsController {
   ) {
     if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
     return this.groupsService.updatePriceAllTenants(req.user.groupId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('my/purchase-forecast')
+  async myPurchaseForecast(
+    @Request() req: any,
+    @Query('daysToForecast') daysToForecast?: string,
+  ) {
+    if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
+    const days = daysToForecast ? parseInt(daysToForecast, 10) : 15;
+    return this.groupsService.getPurchaseForecast(req.user.groupId, days);
   }
 }

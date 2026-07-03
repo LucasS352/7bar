@@ -75,57 +75,129 @@ export class GroupsService {
 
   // ── Dashboard ──────────────────────────────────────────────────────────────
 
-  async getDashboard(groupId: string) {
+  async getDashboard(groupId: string, startDate?: string, endDate?: string) {
     const group = await this.getGroupWithMembers(groupId);
     const results: any[] = [];
+    const salesByDateMap = new Map<string, number>();
+    const salesByHourMap = new Map<string, number>();
+    const salesByDayOfWeekMap = new Map<string, number>();
+    const salesByWeekMap = new Map<string, number>();
+    const salesByMonthMap = new Map<string, number>();
+    const paymentsMap = new Map<string, number>();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const start = startDate ? new Date(startDate) : new Date(today.getFullYear(), today.getMonth(), 1);
+    const end = endDate ? new Date(endDate) : new Date();
+    if (endDate) {
+      end.setHours(23, 59, 59, 999);
+    }
 
     for (const member of group.members) {
       const client = this.createTenantClient(member.tenant.databaseUrl);
       try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-
-        const [salesTodayAgg, salesMonthAgg, salesTodayCount, topProducts] = await Promise.all([
+        const [salesTodayAgg, salesPeriodAgg, salesPeriodCount, topProducts, dailySales, paymentsData] = await Promise.all([
           client.sale.aggregate({
             where: { createdAt: { gte: today }, status: { not: 'cancelled' } },
             _sum: { total: true },
           }),
           client.sale.aggregate({
-            where: { createdAt: { gte: monthStart }, status: { not: 'cancelled' } },
+            where: { createdAt: { gte: start, lte: end }, status: { not: 'cancelled' } },
             _sum: { total: true },
           }),
           client.sale.count({
-            where: { createdAt: { gte: today }, status: { not: 'cancelled' } },
+            where: { createdAt: { gte: start, lte: end }, status: { not: 'cancelled' } },
           }),
           client.saleItem.groupBy({
             by: ['productId'],
-            where: { sale: { createdAt: { gte: monthStart }, status: { not: 'cancelled' } } },
+            where: { sale: { createdAt: { gte: start, lte: end }, status: { not: 'cancelled' } } },
             _sum: { quantity: true },
             orderBy: { _sum: { quantity: 'desc' } },
-            take: 10,
+            take: 15,
+          }),
+          client.sale.findMany({
+            where: { createdAt: { gte: start, lte: end }, status: { not: 'cancelled' } },
+            select: { createdAt: true, total: true },
+          }),
+          client.payment.groupBy({
+            by: ['method'],
+            where: { sale: { createdAt: { gte: start, lte: end }, status: { not: 'cancelled' } } },
+            _sum: { value: true },
           }),
         ]);
 
-        // Enrich top products with names
+        // Aggregate daily and hourly sales
+        const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+        const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        
+        for (const sale of dailySales) {
+          const dt = sale.createdAt;
+          const dStr = dt.toISOString().split('T')[0];
+          const hourStr = dt.getHours().toString() + 'h';
+          const dayOfWeekStr = DIAS_SEMANA[dt.getDay()];
+          const startOfWeek = new Date(dt);
+          startOfWeek.setDate(dt.getDate() - dt.getDay());
+          const endOfWeek = new Date(startOfWeek);
+          endOfWeek.setDate(startOfWeek.getDate() + 6);
+          const fmtDt = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}`;
+          const weekStr = `${fmtDt(startOfWeek)} a ${fmtDt(endOfWeek)}`;
+          const monthStr = MESES[dt.getMonth()];
+          
+          const val = Number(sale.total);
+          salesByDateMap.set(dStr, (salesByDateMap.get(dStr) || 0) + val);
+          salesByHourMap.set(hourStr, (salesByHourMap.get(hourStr) || 0) + val);
+          salesByDayOfWeekMap.set(dayOfWeekStr, (salesByDayOfWeekMap.get(dayOfWeekStr) || 0) + val);
+          salesByWeekMap.set(weekStr, (salesByWeekMap.get(weekStr) || 0) + val);
+          salesByMonthMap.set(monthStr, (salesByMonthMap.get(monthStr) || 0) + val);
+        }
+
+        // Aggregate payments
+        const tenantPaymentMethods = await client.tenantPaymentMethod.findMany({
+          select: { id: true, name: true }
+        });
+        const paymentMethodNames = new Map(tenantPaymentMethods.map((t: any) => [t.id, t.name]));
+
+        for (const p of paymentsData) {
+          let method = p.method || 'outros';
+          
+          if (paymentMethodNames.has(method)) {
+            method = paymentMethodNames.get(method)!;
+          } else {
+            // map common types
+            if (method === 'credit') method = 'Cartão de Crédito';
+            else if (method === 'debit') method = 'Cartão de Débito';
+            else if (method === 'pix') method = 'Pix';
+            else if (method === 'cash') method = 'Dinheiro';
+            else method = method.charAt(0).toUpperCase() + method.slice(1);
+          }
+          
+          const val = Number(p._sum.value ?? 0);
+          paymentsMap.set(method, (paymentsMap.get(method) || 0) + val);
+        }
+
         const productIds = topProducts.map((p: any) => p.productId);
         const products = await client.product.findMany({
           where: { id: { in: productIds } },
-          select: { id: true, name: true },
+          select: { id: true, name: true, imageUrl: true },
         });
-        const productMap = new Map(products.map((p: any) => [p.id, p.name]));
+        const productMap = new Map<string, { name: string; imageUrl: string | null }>(products.map((p: any) => [p.id, { name: p.name, imageUrl: p.imageUrl }]));
 
         results.push({
           tenantId: member.tenantId,
           alias: member.alias ?? member.tenant.nomeFantasia ?? member.tenant.name,
           salesToday: Number(salesTodayAgg._sum.total ?? 0),
-          salesMonth: Number(salesMonthAgg._sum.total ?? 0),
-          countToday: salesTodayCount,
-          topProducts: topProducts.map((p: any) => ({
-            productId: p.productId,
-            name: productMap.get(p.productId) ?? 'Desconhecido',
-            totalQty: Number(p._sum.quantity ?? 0),
-          })),
+          salesMonth: Number(salesPeriodAgg._sum.total ?? 0),
+          countToday: salesPeriodCount,
+          topProducts: topProducts.map((p: any) => {
+            const prodData = productMap.get(p.productId) || { name: 'Desconhecido', imageUrl: null };
+            return {
+              productId: p.productId,
+              name: prodData.name,
+              imageUrl: prodData.imageUrl,
+              totalQty: Number(p._sum.quantity ?? 0),
+            };
+          }),
         });
       } catch (err: any) {
         this.logger.warn(`Dashboard erro tenant ${member.tenantId}: ${err.message}`);
@@ -143,7 +215,41 @@ export class GroupsService {
       }
     }
 
-    return { groupId, groupName: group.name, tenants: results };
+    const salesByDate = Array.from(salesByDateMap.entries())
+      .map(([date, total]) => ({ date, total }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Sort Hours numerically: 0h, 1h, ... 23h
+    const sortedHours = Array.from(salesByHourMap.keys()).sort((a, b) => parseInt(a) - parseInt(b));
+    const salesByHour = sortedHours.map(h => ({ hour: h, total: salesByHourMap.get(h)! }));
+
+    // Sort Days of Week naturally
+    const orderDay = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const sortedDaysOfWeek = Array.from(salesByDayOfWeekMap.keys()).sort((a, b) => orderDay.indexOf(a) - orderDay.indexOf(b));
+    const salesByDayOfWeek = sortedDaysOfWeek.map(d => ({ name: d, total: salesByDayOfWeekMap.get(d)! }));
+
+    // Sort Weeks naturally
+    const sortedWeeks = Array.from(salesByWeekMap.keys()).sort();
+    const salesByWeek = sortedWeeks.map(w => ({ name: w, total: salesByWeekMap.get(w)! }));
+
+    // Sort Months naturally
+    const orderMonth = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const sortedMonths = Array.from(salesByMonthMap.keys()).sort((a, b) => orderMonth.indexOf(a) - orderMonth.indexOf(b));
+    const salesByMonth = sortedMonths.map(m => ({ name: m, total: salesByMonthMap.get(m)! }));
+
+    const payments = Array.from(paymentsMap.keys()).map(m => ({ method: m, total: paymentsMap.get(m)! }));
+
+    return {
+      groupId,
+      groupName: group.name,
+      tenants: results,
+      salesByDate,
+      salesByHour,
+      salesByDayOfWeek,
+      salesByWeek,
+      salesByMonth,
+      payments,
+    };
   }
 
   // ── Stock ──────────────────────────────────────────────────────────────────
@@ -407,5 +513,69 @@ export class GroupsService {
     if (!user) throw new NotFoundException('Usuário não encontrado neste grupo');
     await this.heartPrisma.user.delete({ where: { id: userId } });
     return { success: true };
+  }
+
+  // ── Forecast ───────────────────────────────────────────────────────────────
+
+  async getPurchaseForecast(groupId: string, daysToForecast: number = 15) {
+    const group = await this.getGroupWithMembers(groupId);
+    const productAgg = new Map<string, { name: string, totalStock: number, totalSold30d: number }>();
+    
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    for (const member of group.members) {
+      const client = this.createTenantClient(member.tenant.databaseUrl);
+      try {
+        const [products, sales30d] = await Promise.all([
+          client.product.findMany({ select: { id: true, name: true, stock: true }, where: { active: true } }),
+          client.saleItem.groupBy({
+            by: ['productId'],
+            where: { sale: { createdAt: { gte: thirtyDaysAgo }, status: { not: 'cancelled' } } },
+            _sum: { quantity: true },
+          })
+        ]);
+
+        const salesMap = new Map<string, number>(sales30d.map((s: any) => [s.productId, Number(s._sum.quantity ?? 0)]));
+
+        for (const p of products) {
+          const currentStock = Number(p.stock);
+          const sold = salesMap.has(p.id) ? salesMap.get(p.id)! : 0;
+          
+          if (!productAgg.has(p.id)) {
+            productAgg.set(p.id, { name: p.name, totalStock: 0, totalSold30d: 0 });
+          }
+          const agg = productAgg.get(p.id)!;
+          agg.totalStock += currentStock;
+          agg.totalSold30d += sold;
+        }
+
+      } catch (err: any) {
+        this.logger.warn(`Forecast erro tenant ${member.tenantId}: ${err.message}`);
+      } finally {
+        await client.$disconnect();
+      }
+    }
+
+    const forecast = Array.from(productAgg.entries()).map(([productId, data]) => {
+      const avgDailySales = data.totalSold30d / 30;
+      const autonomyDays = avgDailySales > 0 ? data.totalStock / avgDailySales : 999;
+      
+      const targetStock = avgDailySales * daysToForecast;
+      const suggestion = targetStock - data.totalStock;
+
+      return {
+        productId,
+        name: data.name,
+        totalStock: data.totalStock,
+        avgDailySales: Number(avgDailySales.toFixed(2)),
+        autonomyDays: Number(autonomyDays.toFixed(1)),
+        suggestion: suggestion > 0 ? Math.ceil(suggestion) : 0,
+      };
+    });
+
+    forecast.sort((a, b) => b.suggestion - a.suggestion || a.autonomyDays - b.autonomyDays);
+
+    return forecast;
   }
 }
