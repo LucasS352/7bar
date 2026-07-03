@@ -564,110 +564,145 @@ function PosPageContent() {
         {/* Backdrop (only when expanded) */}
         {sheetExpanded && (
           <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 transition-opacity"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 transition-opacity"
             onClick={() => setSheetExpanded(false)}
           />
         )}
 
         <div
-          className={`relative z-40 bg-zinc-950 border-t border-zinc-800 shadow-2xl transition-all duration-300 ease-out pb-safe ${
-            sheetExpanded ? 'max-h-[75dvh]' : totalItemsCount > 0 ? 'max-h-[220px]' : 'max-h-[56px]'
+          className={`relative z-40 bg-zinc-950 border-t-2 border-zinc-800 shadow-2xl transition-all duration-350 ease-out pb-safe ${
+            sheetExpanded ? 'max-h-[88dvh]' : totalItemsCount > 0 ? 'max-h-[130px]' : 'max-h-[60px]'
           }`}
           style={{ willChange: 'max-height' }}
+          onTouchStart={handleSheetTouchStart}
+          onTouchMove={handleSheetTouchMove}
+          onTouchEnd={handleSheetTouchEnd}
         >
-          {/* Drag handle */}
-          <div
-            className="flex flex-col items-center cursor-grab active:cursor-grabbing touch-none"
-            onTouchStart={handleSheetTouchStart}
-            onTouchMove={handleSheetTouchMove}
-            onTouchEnd={handleSheetTouchEnd}
-            onClick={() => totalItemsCount > 0 && setSheetExpanded(prev => !prev)}
-          >
-            <div className="drag-handle mt-2 mb-1" />
-          </div>
+          {/* ── COLLAPSED / SUMMARY BAR (totalmente clicável) ── */}
+          {!sheetExpanded && (
+            <div
+              className="cursor-pointer select-none"
+              onClick={() => totalItemsCount > 0 && setSheetExpanded(true)}
+            >
+              {/* Drag pill */}
+              <div className="flex justify-center pt-2 pb-1">
+                <div className="w-10 h-1 rounded-full bg-zinc-700" />
+              </div>
 
-          {totalItemsCount === 0 ? (
-            /* ── Empty state ── */
-            <div className="flex items-center justify-center gap-2 px-4 py-2 text-zinc-500 text-sm">
-              <ShoppingCart size={16} />
-              <span>Carrinho vazio</span>
-            </div>
-          ) : sheetExpanded ? (
-            /* ── Expanded: full list with controls ── */
-            <div className="flex flex-col" style={{ maxHeight: 'calc(75dvh - 40px)' }}>
-              <div className="flex-1 overflow-y-auto px-4 pt-1 pb-2 space-y-2 custom-scrollbar" style={{ maxHeight: 'calc(75dvh - 130px)' }}>
-                {items.map(item => (
-                  <div key={item.cartKey} className="flex flex-col p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1 pr-2">
-                        <div className="font-semibold text-sm text-zinc-200 line-clamp-1 leading-tight">{item.name}</div>
-                        {item.modifiers && item.modifiers.length > 0 && (
-                          <div className="mt-0.5 space-y-0.5">
-                            {item.modifiers.map((mod, idx) => (
-                              <div key={idx} className="text-[10px] text-indigo-400 font-medium">
-                                {mod.groupName}: <span className="text-zinc-300">{mod.optionName}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+              {totalItemsCount === 0 ? (
+                <div className="flex items-center justify-center gap-2 px-4 py-3 text-zinc-500 text-sm">
+                  <ShoppingCart size={16} />
+                  <span>Carrinho vazio</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 px-4 pb-3">
+                  {/* Avatars dos últimos 3 produtos */}
+                  <div className="flex -space-x-2 shrink-0">
+                    {items.slice(-3).map((item, i) => (
+                      <div key={item.cartKey} className="w-9 h-9 rounded-full bg-white border-2 border-zinc-900 overflow-hidden flex items-center justify-center" style={{ zIndex: 3 - i }}>
+                        {item.imageUrl
+                          ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
+                          : <ShoppingCart size={14} className="text-zinc-500" />
+                        }
                       </div>
-                      <span className="text-emerald-400 font-bold text-sm whitespace-nowrap">R$ {item.subtotal.toFixed(2)}</span>
+                    ))}
+                  </div>
+
+                  {/* Contagem + total */}
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-xs text-zinc-400 font-medium ${badgeBounce ? 'badge-bounce' : ''}`}>
+                      {totalItemsCount} {totalItemsCount === 1 ? 'item' : 'itens'} no carrinho
                     </div>
-                    <div className="flex justify-between items-center bg-zinc-950 rounded-lg overflow-hidden border border-zinc-800">
-                      <button onClick={() => updateQuantity(item.cartKey, item.quantity - 1)} className="p-1.5 hover:bg-zinc-800 text-zinc-400 hover:text-white transition"><Minus size={16} /></button>
-                      <span className="font-bold w-8 text-center text-sm">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.cartKey, item.quantity + 1)} className="p-1.5 hover:bg-zinc-800 text-zinc-400 hover:text-white transition"><Plus size={16} /></button>
-                      <div className="w-px h-5 bg-zinc-800 mx-0.5"></div>
-                      <button onClick={() => removeItem(item.cartKey)} className="p-1.5 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition flex-1 flex justify-center"><Trash2 size={16} /></button>
+                    <div className="text-white font-black text-lg leading-tight">
+                      R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
+                  </div>
+
+                  {/* Botão COBRAR */}
+                  <button
+                    onClick={e => { e.stopPropagation(); setIsPaymentOpen(true); }}
+                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm py-2.5 px-5 rounded-xl shadow-lg active:scale-95 transition-transform shrink-0"
+                  >
+                    COBRAR
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── EXPANDED: premium card list ── */}
+          {sheetExpanded && (
+            <div className="flex flex-col" style={{ maxHeight: '88dvh' }}>
+
+              {/* Header do carrinho expandido */}
+              <div
+                className="flex items-center justify-between px-4 pt-3 pb-3 border-b border-zinc-800 cursor-pointer"
+                onClick={() => setSheetExpanded(false)}
+              >
+                <div className="flex items-center gap-2">
+                  <ShoppingCart size={18} className="text-blue-400" />
+                  <span className="text-white font-bold text-base">Seu Pedido</span>
+                  <span className="text-xs bg-blue-600 text-white font-bold px-2 py-0.5 rounded-full">{totalItemsCount}</span>
+                </div>
+                <div className="flex flex-col items-center gap-0.5">
+                  <div className="w-8 h-1 rounded-full bg-zinc-600" />
+                  <span className="text-[10px] text-zinc-500">fechar</span>
+                </div>
+              </div>
+
+              {/* Lista de itens com imagens */}
+              <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 custom-scrollbar" style={{ maxHeight: 'calc(88dvh - 145px)' }}>
+                {items.map(item => (
+                  <div key={item.cartKey} className="flex items-center gap-3 p-2.5 bg-zinc-900 border border-zinc-800 rounded-2xl">
+                    {/* Imagem do produto */}
+                    <div className="w-14 h-14 rounded-xl bg-white overflow-hidden flex items-center justify-center shrink-0">
+                      {item.imageUrl
+                        ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
+                        : <ShoppingCart size={20} className="text-zinc-400" />
+                      }
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm text-white line-clamp-2 leading-tight">{item.name}</div>
+                      {item.modifiers && item.modifiers.length > 0 && (
+                        <div className="text-[10px] text-indigo-400 font-medium mt-0.5 line-clamp-1">
+                          {item.modifiers.map((m: any) => m.optionName).join(', ')}
+                        </div>
+                      )}
+                      <div className="text-emerald-400 font-black text-base mt-0.5">
+                        R$ {item.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                    </div>
+
+                    {/* Controles de quantidade */}
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                      <button onClick={() => updateQuantity(item.cartKey, item.quantity + 1)} className="w-8 h-8 flex items-center justify-center bg-zinc-800 hover:bg-blue-600 text-white rounded-lg transition active:scale-90"><Plus size={14} /></button>
+                      <span className="font-bold text-sm text-white w-8 text-center">{item.quantity}</span>
+                      <button onClick={() => updateQuantity(item.cartKey, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center bg-zinc-800 hover:bg-red-600/60 text-zinc-400 hover:text-white rounded-lg transition active:scale-90"><Minus size={14} /></button>
+                    </div>
+
+                    {/* Remover */}
+                    <button onClick={() => removeItem(item.cartKey)} className="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-red-400 transition shrink-0 active:scale-90">
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 ))}
               </div>
 
-              {/* Expanded footer */}
+              {/* Footer com total e cobrar */}
               <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-950">
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-zinc-400 font-medium text-sm">Total</span>
-                  <span className="text-2xl font-black text-white">R$ {total.toFixed(2)}</span>
+                  <span className="text-zinc-400 font-medium">Total</span>
+                  <span className="text-2xl font-black text-white">R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
                 <button
                   disabled={totalItemsCount === 0}
                   onClick={() => setIsPaymentOpen(true)}
-                  className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-bold py-3 px-4 rounded-xl text-lg transition-all shadow-lg active:scale-95 flex justify-center items-center gap-2"
+                  className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-black py-4 px-4 rounded-2xl text-lg transition-all shadow-lg active:scale-95 flex justify-center items-center gap-2"
                 >
-                  Cobrar — R$ {total.toFixed(2)}
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* ── Collapsed: last 3 items + summary bar ── */
-            <div className="flex flex-col">
-              {/* Item preview rows */}
-              <div className="px-4 pt-1 pb-1 space-y-1">
-                {items.slice(-3).map(item => (
-                  <div key={item.cartKey} className="flex items-center justify-between text-xs">
-                    <span className="text-zinc-300 truncate flex-1 mr-2 font-medium">{item.name}</span>
-                    <span className="text-zinc-500 shrink-0 mr-2">×{item.quantity}</span>
-                    <span className="text-zinc-400 font-semibold shrink-0">R$ {item.subtotal.toFixed(2)}</span>
-                  </div>
-                ))}
-                {items.length > 3 && (
-                  <div className="text-[10px] text-zinc-500 font-medium">+ {items.length - 3} {items.length - 3 === 1 ? 'item' : 'itens'}</div>
-                )}
-              </div>
-
-              {/* Summary bar with COBRAR */}
-              <div className="flex items-center justify-between px-4 py-2 border-t border-zinc-800">
-                <div className="flex items-center gap-2">
-                  <ShoppingCart size={16} className="text-blue-400" />
-                  <span className={`text-xs font-bold text-zinc-300 ${badgeBounce ? 'badge-bounce' : ''}`}>{totalItemsCount} {totalItemsCount === 1 ? 'item' : 'itens'}</span>
-                  <span className="text-white font-black text-sm">R$ {total.toFixed(2)}</span>
-                </div>
-                <button
-                  onClick={() => setIsPaymentOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm py-2 px-5 rounded-xl shadow-lg active:scale-95 transition-transform"
-                >
-                  COBRAR
+                  <ShoppingCart size={20} />
+                  Cobrar — R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </button>
               </div>
             </div>
