@@ -41,7 +41,8 @@ function PosPageContent() {
   const isDragging   = useRef<boolean>(false);
   const [isMovementOpen,     setIsMovementOpen]     = useState(false);
   const [isLoading,          setIsLoading]          = useState(true);
-  const [isOfflineCatalog,   setIsOfflineCatalog]   = useState(false);
+  const [isOfflineCatalog,   setOfflineCatalog]   = useState(false);
+  const [forceDesktop, setForceDesktop] = useState(() => localStorage.getItem('7bar_forceDesktop') === 'true');
   const [tenantConfig,       setTenantConfig]       = useState<any>(null);
   const [compositeProduct,   setCompositeProduct]   = useState<Product | null>(null);
   const [focusedProductIdx,  setFocusedProductIdx]  = useState<number>(-1);
@@ -54,6 +55,18 @@ function PosPageContent() {
   useEffect(() => {
     localStorage.setItem('7bar_promptQuantity', String(promptQuantity));
   }, [promptQuantity]);
+
+  useEffect(() => {
+    localStorage.setItem('7bar_forceDesktop', String(forceDesktop));
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (meta) {
+      if (forceDesktop) {
+        meta.setAttribute('content', 'width=1200, maximum-scale=1.0');
+      } else {
+        meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover');
+      }
+    }
+  }, [forceDesktop]);
 
   // --- Bottom sheet touch handlers ---
   const handleSheetTouchStart = (e: ReactTouchEvent) => {
@@ -344,6 +357,12 @@ function PosPageContent() {
               Selecionar Unidade
             </label>
 
+            {/* Toggle Modo PC */}
+            <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-zinc-800/50 text-zinc-400 hover:text-white cursor-pointer transition select-none text-sm font-semibold">
+              <input type="checkbox" checked={forceDesktop} onChange={e => setForceDesktop(e.target.checked)} className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-950" />
+              Modo PC (Tablet)
+            </label>
+
             {/* Badge de catálogo offline */}
             {isOfflineCatalog && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-400 text-xs font-medium">
@@ -389,6 +408,11 @@ function PosPageContent() {
           <label className="lg:hidden flex items-center gap-1.5 text-[10px] text-zinc-400 bg-zinc-900 border border-zinc-800 px-2.5 py-3 rounded-xl cursor-pointer select-none shrink-0 transition hover:border-zinc-700">
             <input type="checkbox" checked={promptQuantity} onChange={e => setPromptQuantity(e.target.checked)} className="w-3 h-3 rounded border-zinc-700 bg-zinc-800 text-blue-500" />
             Qtd
+          </label>
+          {/* Toggle Modo PC mobile */}
+          <label className="lg:hidden flex items-center gap-1.5 text-[10px] text-zinc-400 bg-zinc-900 border border-zinc-800 px-2.5 py-3 rounded-xl cursor-pointer select-none shrink-0 transition hover:border-zinc-700">
+            <input type="checkbox" checked={forceDesktop} onChange={e => setForceDesktop(e.target.checked)} className="w-3 h-3 rounded border-zinc-700 bg-zinc-800 text-blue-500" />
+            PC
           </label>
         </div>
 
