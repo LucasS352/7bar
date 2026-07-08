@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Check, Clock, X, Phone, Save, Trash, Edit2, Copy } from 'lucide-react';
+import { ShoppingCart, Plus, Check, Clock, X, Phone, Save, Trash, Edit2, Copy, Package } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 
