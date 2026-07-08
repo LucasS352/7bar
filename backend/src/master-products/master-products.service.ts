@@ -5,7 +5,7 @@ export interface MasterProductLookupResult {
   found: boolean;
   source?: 'cache' | 'cosmos';
   product: {
-    ean: string;
+    ean: string | null;
     name: string;
     brand: string | null;
     ncm: string | null;

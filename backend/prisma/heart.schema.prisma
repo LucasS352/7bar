@@ -109,7 +109,7 @@ model User {
 // ------------------------------------------------------------
 model MasterProduct {
   id        String   @id @default(uuid())
-  ean       String   @unique // EAN-13 (13 dígitos)
+  ean       String?  @unique // EAN-13 (13 dígitos)
   name      String           // Nome comercial padronizado (PT-BR)
   brand     String?          // Marca (ex: Heineken, Ambev)
   ncm       String?          // NCM 8 dígitos — obrigatório NFC-e
@@ -122,6 +122,7 @@ model MasterProduct {
   createdAt DateTime @default(now())
 
   @@index([ean])
+  @@index([name])
   @@map("master_products")
 }
 

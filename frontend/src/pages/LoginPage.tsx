@@ -1,34 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
-import { ShoppingCart, Lock, Mail, Loader2, Trophy } from 'lucide-react';
-
-const COPA_IMAGES = [
-  '/copa/162679014360f6d9000011c_1626790143_3x2_md.jpg',
-  '/copa/GettyImages-1446999450.jpg',
-  '/copa/brasil_servia_richarlison_2_gol_2.jpg.jpg',
-  '/copa/brazil-national-football-team-hall-of-fame-players-t0xddwnsw6y45tyi.jpg',
-  '/copa/brazil-national-football-team-neymar-richarlison-silva-noae0e4xn0xferzq.jpg',
-  '/copa/jpg.jpg',
-  '/copa/neymar.jpg'
-];
+import { ShoppingCart, Lock, Mail, Loader2, Zap } from 'lucide-react';
 
 export function LoginPage() {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { login } = useAuthStore();
   const navigate   = useNavigate();
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % COPA_IMAGES.length);
-    }, 3500);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,41 +27,43 @@ export function LoginPage() {
         navigate('/');
       }
     } catch {
-      toast.error('Credenciais inválidas. Tente novamente.');
+      toast.error('Credenciais invalidas. Tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white relative overflow-hidden">
-      {/* Carrossel de Imagens */}
-      {COPA_IMAGES.map((src, index) => (
-        <div
-          key={src}
-          className={`absolute inset-0 bg-cover bg-center transition-all duration-[2000ms] ease-in-out z-0 ${
-            index === currentImageIndex ? 'opacity-50 scale-105' : 'opacity-0 scale-100'
-          }`}
-          style={{ backgroundImage: `url('${src}')` }}
-        />
-      ))}
-      
-      {/* Overlay Escuro para Legibilidade */}
-      <div className="absolute inset-0 bg-gradient-to-br from-zinc-950/90 via-zinc-950/70 to-black/90 z-0 pointer-events-none"></div>
-
-      {/* Slogan Copa */}
-      <div className="absolute top-12 left-0 right-0 flex justify-center z-10 pointer-events-none">
-         <div className="flex flex-col items-center gap-2">
-           <Trophy size={48} className="text-yellow-400 drop-shadow-lg" />
-           <h2 className="text-4xl md:text-6xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-green-400 to-blue-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.3)]">
-             Rumo ao Hexa
-           </h2>
-         </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-white relative overflow-hidden py-12 px-4">
+      {/* Animated background blobs */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-blue-600/20 blur-[120px] animate-pulse" style={{animationDuration:'8s'}} />
+        <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full bg-blue-500/15 blur-[140px] animate-pulse" style={{animationDuration:'10s',animationDelay:'1s'}} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-indigo-600/10 blur-[100px] animate-pulse" style={{animationDuration:'12s',animationDelay:'2s'}} />
+        <div className="absolute inset-0 opacity-[0.04]" style={{backgroundImage:'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',backgroundSize:'40px 40px'}} />
       </div>
 
-      <div className="w-full max-w-md z-10 p-8 rounded-3xl bg-zinc-900/60 backdrop-blur-xl border border-zinc-700/50 shadow-[0_0_50px_rgba(34,197,94,0.15)] relative mt-16">
+      {/* Slogan topo */}
+      <div className="flex flex-col items-center gap-4 text-center max-w-2xl z-10 mb-8 mt-4">
+        <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-blue-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)] pb-1">
+          PDV pra você
+        </h2>
+        <p className="text-base md:text-lg text-zinc-400 leading-relaxed max-w-lg px-2">
+          Gerencie seu estoque, vendas e caixa de qualquer lugar. Simples, rápido e do jeito que você precisa.
+        </p>
+        <div className="flex flex-wrap justify-center gap-2 mt-2">
+          {['Controle de Estoque', 'PDV Mobile', 'Relatórios', 'NFC-e'].map(f => (
+            <span key={f} className="flex items-center gap-1.5 text-xs font-semibold text-blue-300 bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-full backdrop-blur-sm">
+              <Zap size={11} className="shrink-0" />
+              {f}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="w-full max-w-md z-10 p-8 rounded-3xl bg-zinc-900/60 backdrop-blur-xl border border-zinc-700/50 shadow-[0_0_50px_rgba(59,130,246,0.15)] relative mb-4">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-green-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-green-500/30 border border-yellow-400/30">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/30 border border-blue-400/30">
             <ShoppingCart size={32} className="text-white" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Adega PDV</h1>
@@ -95,7 +79,7 @@ export function LoginPage() {
               </div>
               <input
                 type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-zinc-950/60 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-white placeholder-zinc-500"
+                className="w-full pl-10 pr-4 py-3 bg-zinc-950/60 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-white placeholder-zinc-500"
                 placeholder="seu@email.com.br"
               />
             </div>
@@ -109,17 +93,17 @@ export function LoginPage() {
               </div>
               <input
                 type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-zinc-950/60 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-white placeholder-zinc-500"
-                placeholder="••••••••"
+                className="w-full pl-10 pr-4 py-3 bg-zinc-950/60 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-white placeholder-zinc-500"
+                placeholder="........"
               />
             </div>
           </div>
 
           <button
             type="submit" disabled={loading}
-            className="w-full mt-4 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-500 hover:to-blue-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-green-600/30 active:scale-95 flex justify-center items-center"
+            className="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-600/30 active:scale-95 flex justify-center items-center"
           >
-            {loading ? <Loader2 className="animate-spin" /> : 'Entrar na Torcida'}
+            {loading ? <Loader2 className="animate-spin" /> : 'Entrar'}
           </button>
         </form>
       </div>

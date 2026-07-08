@@ -20,6 +20,7 @@ import { ComandasPage } from './pages/dashboard/ComandasPage';
 import UsersPage from './app/dashboard/users/page';
 import CategoriesPage from './app/dashboard/inventory/categories/page';
 import MassEntryPage from './app/dashboard/inventory/purchases/page';
+import MassEditPage from './app/dashboard/inventory/mass-edit/page';
 import StockEntryPage from './app/dashboard/inventory/stock-entry/page';
 import StockCountPage from './app/dashboard/inventory/stock-count/page';
 import SysInitPage from './app/sys-init/page';
@@ -107,6 +108,7 @@ function App() {
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="inventory/categories" element={<CategoriesPage />} />
           <Route path="inventory/purchases" element={<MassEntryPage />} />
+          <Route path="inventory/mass-edit" element={<MassEditPage />} />
           <Route path="inventory/stock-entry" element={<StockEntryPage />} />
           <Route path="inventory/stock-count" element={<StockCountPage />} />
           <Route path="registers" element={<RegistersPage />} />

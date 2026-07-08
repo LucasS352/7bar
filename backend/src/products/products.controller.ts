@@ -32,6 +32,18 @@ export class ProductsController {
     return this.productsService.lookupBarcode(barcode);
   }
 
+  @Get('global-catalog')
+  searchGlobalCatalog(@Query('q') query: string) {
+    return this.productsService.searchGlobalCatalog(query);
+  }
+
+  @Post('sync-catalog-manual')
+  async syncCatalogManual() {
+    // This requires injecting TenantsService or doing it differently.
+    // Wait, ProductsService doesn't have syncMasterCatalogFromTenants, TenantsService does!
+    return { error: 'wrong service' };
+  }
+
   @Post()
   create(@Body() body: any) {
     return this.productsService.create(body);

@@ -297,15 +297,15 @@ function PosPageContent() {
               {tenantConfig === null ? (
                  <div className="h-10 lg:h-12 w-10 lg:w-12 bg-zinc-800/50 animate-pulse rounded-xl shrink-0"></div>
               ) : tenantConfig?.logoUrl ? (
-                <div className="bg-white p-1.5 lg:p-2 rounded-xl flex items-center justify-center shrink-0">
-                  <img src={getFullUrl(tenantConfig.logoUrl)} alt="Logo" className="h-8 w-8 lg:h-10 lg:w-10 object-contain drop-shadow-md" />
-                </div>
+                <button onClick={() => navigate('/dashboard')} className="flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform focus:outline-none" title="Voltar ao Dashboard">
+                  <img src={getFullUrl(tenantConfig.logoUrl)} alt="Logo" className="h-10 w-10 lg:h-12 lg:w-12 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]" />
+                </button>
               ) : (
-                <div className="bg-white p-1.5 lg:p-2 rounded-xl flex items-center justify-center shrink-0">
-                  <h1 className="text-xl lg:text-2xl font-black text-zinc-900 truncate max-w-[100px]">
+                <button onClick={() => navigate('/dashboard')} className="bg-zinc-800 border border-zinc-700 p-1.5 lg:p-2 rounded-xl flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform focus:outline-none" title="Voltar ao Dashboard">
+                  <h1 className="text-xl lg:text-2xl font-black text-white truncate max-w-[100px]">
                     {tenantConfig?.nomeFantasia?.substring(0, 2) || tenantConfig?.razaoSocial?.substring(0, 2) || '7B'}
                   </h1>
-                </div>
+                </button>
               )}
               
               <div className="hidden lg:flex items-center gap-3">

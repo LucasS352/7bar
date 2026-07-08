@@ -147,6 +147,32 @@ export class ProductsService {
 
   // ── Rota Mágica (Lookup MasterProduct) ────────────────────────────────────
 
+  async searchGlobalCatalog(query: string) {
+    if (!query || query.trim().length < 2) return [];
+    
+    // Busca no catálogo mestre os produtos que contenham o termo no nome (limitado a 20)
+    const products = await this.heartPrisma.masterProduct.findMany({
+      where: {
+        name: { contains: query.trim() }
+      },
+      take: 20,
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        ean: true,
+        ncm: true,
+        cest: true,
+      }
+    });
+
+    return products.map(p => ({
+      ...p,
+      barcode: p.ean // padroniza para o frontend
+    }));
+  }
+
   async lookupBarcode(barcode: string) {
     const prisma = await this.getPrisma();
     

@@ -351,82 +351,144 @@ export class TenantsService {
 
     try {
       await client.$connect();
+      this.logger.log(`⏳ Injetando catálogo curado de Disk Bebidas no tenant...`);
 
-      this.logger.log(`⏳ Buscando produtos essenciais na Base Mestre para o tenant...`);
+      // ─── Catálogo curado — apenas os produtos que REALMENTE vendem em Disk ───
+      // Preços zerados: o cliente configura pela tela de Edição em Massa
+      const diskProducts = [
+        // ── CERVEJAS ──────────────────────────────────────────────────────────
+        { name: 'Heineken Long Neck 330ml',          ean: '7896045506873', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Heineken Latão 473ml',              ean: '7896045503667', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Heineken Puro Malte Lata 350ml',    ean: '7896045503728', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Budweiser Lata 350ml',              ean: '7891991010931', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Budweiser Long Neck 330ml',         ean: '7891991011723', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Brahma Duplo Malte Latão 473ml',    ean: '7891149408537', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Brahma Duplo Malte Lata 350ml',     ean: '7891149408001', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Brahma Chopp Lata 350ml',           ean: '7891149102181', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Skol Pilsen Lata 350ml',            ean: '7891149103102', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Skol Pilsen Latão 473ml',           ean: '7891149103904', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Amstel Lata 350ml',                 ean: '7896045505609', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Amstel Latão 473ml',                ean: '7896045505920', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Spaten Lager Latão 473ml',          ean: '7896045508877', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Spaten Long Neck 355ml',            ean: '7896045508853', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Corona Long Neck 330ml',            ean: '7501064144427', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Stella Artois Long Neck 330ml',     ean: '7891149150700', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Itaipava Lata 350ml',               ean: '7897395020101', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Itaipava Latão 473ml',              ean: '7897395020217', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
+        { name: 'Bohemia Puro Malte Long Neck 350ml',ean: '7891149174003', ncm: '22030000', cest: '0300100', cat: 'Cervejas' },
 
-      const targetCategories = [
-        'Cerveja Lata', 'Cerveja Long Neck', 'Cerveja Garrafa', 
-        'Refrigerante Lata', 'Energético', 
-        'Salgadinho Elma Chips', 'Salgadinho', 
-        'Cachaça', 'Whisky', 'Vodka', 'Gin', 
-        'Vinho', 'Vinho Tinto', 
-        'Isqueiro', 'Gelo', 'Fósforo', 
-        'Detergente Líquido', 'Corote', 'Conhaque', 
-        'Água Mineral', 'Água Tônica'
+        // ── DESTILADOS ─────────────────────────────────────────────────────────
+        { name: 'Vodka Smirnoff 998ml',              ean: '5000067022795', ncm: '22084000', cest: '0300600', cat: 'Destilados' },
+        { name: 'Vodka Smirnoff 600ml',              ean: '5000067000120', ncm: '22084000', cest: '0300600', cat: 'Destilados' },
+        { name: 'Vodka Absolut 750ml',               ean: '7312040017072', ncm: '22084000', cest: '0300600', cat: 'Destilados' },
+        { name: 'Gin Tanqueray 750ml',               ean: '5000281002161', ncm: '22085000', cest: '0300600', cat: 'Destilados' },
+        { name: 'Gin Gordon\'s 750ml',               ean: '5000289019022', ncm: '22085000', cest: '0300600', cat: 'Destilados' },
+        { name: 'Whisky JW Red Label 1L',            ean: '5000267014159', ncm: '22083000', cest: '0300600', cat: 'Destilados' },
+        { name: 'Whisky JW Black Label 1L',          ean: '5000267024448', ncm: '22083000', cest: '0300600', cat: 'Destilados' },
+        { name: 'Whisky Jack Daniels 1L',            ean: '5099873003701', ncm: '22083000', cest: '0300600', cat: 'Destilados' },
+        { name: 'Cachaça 51 965ml',                  ean: '7891050000513', ncm: '22087000', cest: '0300600', cat: 'Destilados' },
+        { name: 'Campari 900ml',                     ean: '8001110055903', ncm: '22089000', cest: '0300600', cat: 'Destilados' },
+        { name: 'Aperol 1L',                         ean: '8001110902209', ncm: '22089000', cest: '0300600', cat: 'Destilados' },
+
+        // ── ENERGÉTICOS ────────────────────────────────────────────────────────
+        { name: 'Red Bull Energy Drink 250ml',       ean: '9002490100070', ncm: '22021000', cest: '0300200', cat: 'Energéticos' },
+        { name: 'Red Bull Tropical 250ml',           ean: '9002490259427', ncm: '22021000', cest: '0300200', cat: 'Energéticos' },
+        { name: 'Red Bull Melancia 250ml',           ean: '9002490256648', ncm: '22021000', cest: '0300200', cat: 'Energéticos' },
+        { name: 'Monster Energy Green 473ml',        ean: '5060466511344', ncm: '22021000', cest: '0300200', cat: 'Energéticos' },
+        { name: 'Monster Mango Loco 473ml',          ean: '5060466511382', ncm: '22021000', cest: '0300200', cat: 'Energéticos' },
+        { name: 'Baly Tradicional 2L',               ean: '7898381900037', ncm: '22021000', cest: '0300200', cat: 'Energéticos' },
+        { name: 'Baly Morango 2L',                   ean: '7898381900068', ncm: '22021000', cest: '0300200', cat: 'Energéticos' },
+
+        // ── REFRIGERANTES ──────────────────────────────────────────────────────
+        { name: 'Coca-Cola 2L',                      ean: '7894900011517', ncm: '22021000', cest: '0300200', cat: 'Refrigerantes' },
+        { name: 'Coca-Cola 1L',                      ean: '7894900011500', ncm: '22021000', cest: '0300200', cat: 'Refrigerantes' },
+        { name: 'Coca-Cola Lata 350ml',              ean: '7894900700824', ncm: '22021000', cest: '0300200', cat: 'Refrigerantes' },
+        { name: 'Guaraná Antarctica 2L',             ean: '7891149001008', ncm: '22021000', cest: '0300200', cat: 'Refrigerantes' },
+        { name: 'Guaraná Antarctica Lata 350ml',     ean: '7891149400716', ncm: '22021000', cest: '0300200', cat: 'Refrigerantes' },
+        { name: 'Sprite 2L',                         ean: '7894900011555', ncm: '22021000', cest: '0300200', cat: 'Refrigerantes' },
+        { name: 'Fanta Laranja 2L',                  ean: '7894900011531', ncm: '22021000', cest: '0300200', cat: 'Refrigerantes' },
+        { name: 'Schweppes Citrus 350ml',            ean: '7896020100157', ncm: '22021000', cest: '0300200', cat: 'Refrigerantes' },
+        { name: 'Schweppes Tônica 350ml',            ean: '7896020100133', ncm: '22021000', cest: '0300200', cat: 'Refrigerantes' },
+
+        // ── ÁGUA E SUCOS ───────────────────────────────────────────────────────
+        { name: 'Água Mineral s/ Gás 500ml',         ean: '7896102105025', ncm: '22011000', cest: '0300300', cat: 'Água e Sucos' },
+        { name: 'Água Mineral c/ Gás 500ml',         ean: '7896102100174', ncm: '22011000', cest: '0300300', cat: 'Água e Sucos' },
+        { name: 'Água Mineral 1,5L',                 ean: '7896102107104', ncm: '22011000', cest: '0300300', cat: 'Água e Sucos' },
+        { name: 'Suco Del Valle Uva 1L',             ean: '7894900700701', ncm: '20099000', cest: '0300200', cat: 'Água e Sucos' },
+        { name: 'Suco Del Valle Pêssego 1L',         ean: '7894900700718', ncm: '20099000', cest: '0300200', cat: 'Água e Sucos' },
+        { name: 'Suco Tropicana 1L',                 ean: '7891991220021', ncm: '20099000', cest: '0300200', cat: 'Água e Sucos' },
+
+        // ── CONVENIÊNCIA ───────────────────────────────────────────────────────
+        { name: 'Gelo em Escamas 5kg',               ean: '', ncm: '22011000', cest: '',        cat: 'Conveniência' },
+        { name: 'Carvão 3kg',                        ean: '', ncm: '44029000', cest: '',        cat: 'Conveniência' },
+        { name: 'Copo Descartável 300ml (50un)',      ean: '', ncm: '39241000', cest: '',        cat: 'Conveniência' },
+        { name: 'Copo Descartável 400ml (50un)',      ean: '', ncm: '39241000', cest: '',        cat: 'Conveniência' },
+        { name: 'Guardanapo Pacote',                 ean: '', ncm: '48189000', cest: '',        cat: 'Conveniência' },
+        { name: 'Isqueiro BIC',                      ean: '', ncm: '96131000', cest: '',        cat: 'Conveniência' },
+
+        // ── TABACARIA ──────────────────────────────────────────────────────────
+        { name: 'Cigarro Marlboro Vermelho',         ean: '', ncm: '24022000', cest: '0300700', cat: 'Tabacaria' },
+        { name: 'Cigarro Marlboro Gold',             ean: '', ncm: '24022000', cest: '0300700', cat: 'Tabacaria' },
+        { name: 'Cigarro Philip Morris',             ean: '', ncm: '24022000', cest: '0300700', cat: 'Tabacaria' },
+
+        // ── PETISCOS ───────────────────────────────────────────────────────────
+        { name: 'Amendoim Japonês 200g',             ean: '', ncm: '20081900', cest: '',        cat: 'Petiscos' },
+        { name: 'Ruffles Original 76g',              ean: '', ncm: '19059000', cest: '',        cat: 'Petiscos' },
+        { name: 'Doritos Queijo 76g',                ean: '', ncm: '19059000', cest: '',        cat: 'Petiscos' },
+        { name: 'Pringles Original 114g',            ean: '', ncm: '19059000', cest: '',        cat: 'Petiscos' },
+        { name: 'Trident Menta c/21',                ean: '', ncm: '17049000', cest: '',        cat: 'Petiscos' },
       ];
 
-      // Busca até 1500 produtos dessas categorias na base mestre
-      const masterProducts = await this.heartPrisma.masterProduct.findMany({
-        where: {
-          category: { in: targetCategories }
-        },
-        take: 1500,
-        orderBy: { category: 'asc' }
-      });
-
-      if (masterProducts.length === 0) {
-        this.logger.warn(`Aviso: Nenhum produto encontrado na Base Mestre para o seed inicial.`);
-        return;
+      // Tenta enriquecer com imagem da base mestre quando tiver EAN
+      const eans = diskProducts.map(p => p.ean).filter(Boolean);
+      const masterMap = new Map<string, { imageUrl?: string | null }>();
+      if (eans.length > 0) {
+        const masterHits = await this.heartPrisma.masterProduct.findMany({
+          where: { ean: { in: eans as string[] } },
+          select: { ean: true, imageUrl: true },
+        });
+        for (const m of masterHits) {
+          if (m.ean) masterMap.set(m.ean, m);
+        }
       }
 
-      this.logger.log(`✅ ${masterProducts.length} produtos encontrados na Base Mestre. Injetando no Tenant...`);
-
-      // Extrai categorias únicas e cadastra no banco do Tenant
-      const uniqueCategories = [...new Set(masterProducts.map(p => p.category).filter(Boolean))];
-      
+      // Cria categorias únicas
+      const uniqueCats = [...new Set(diskProducts.map(p => p.cat))];
       await client.category.createMany({
-        data: uniqueCategories.map(name => ({ name: name as string })),
+        data: uniqueCats.map(name => ({ name })),
         skipDuplicates: true,
       });
-
       const tenantCategories = await client.category.findMany();
-      const getCatId = (name: string | null) => {
-        if (!name) return undefined;
-        return tenantCategories.find(c => c.name === name)?.id;
-      };
+      const getCatId = (name: string) => tenantCategories.find(c => c.name === name)?.id;
 
-      // Mapeia os produtos para inserção
-      const productsData = masterProducts.map((p, index) => {
-        const catId = getCatId(p.category);
-        if (!catId) return null; // Ignora se não houver categoria (improvável)
+      // Insere produtos (pula duplicados por nome)
+      let inserted = 0;
+      for (const p of diskProducts) {
+        const catId = getCatId(p.cat);
+        if (!catId) continue;
+        const existing = await client.product.findFirst({ where: { name: p.name } });
+        if (existing) continue;
 
-        return {
-          name: p.name + (p.brand ? ` - ${p.brand}` : ''),
-          shortCode: (index + 1).toString(), // Gera códigos curtos sequenciais de 1 a 1500
-          barcode: p.ean || null,
-          priceCost: 0,
-          priceSell: 0,
-          stock: 0,
-          categoryId: catId,
-          imageUrl: p.imageUrl || null,
-          ncm: p.ncm || null,
-          cest: p.cest || null,
-          active: true,
-          unit: 'UN'
-        };
-      }).filter(Boolean);
-
-      // Insere em lotes caso seja muito grande
-      const batchSize = 500;
-      for (let i = 0; i < productsData.length; i += batchSize) {
-        const batch = productsData.slice(i, i + batchSize);
-        await client.product.createMany({
-          data: batch as any,
-          skipDuplicates: true,
+        const masterData = p.ean ? masterMap.get(p.ean) : null;
+        await client.product.create({
+          data: {
+            name: p.name,
+            barcode: p.ean || null,
+            priceCost: 0,
+            priceSell: 0,
+            stock: 0,
+            categoryId: catId,
+            ncm: p.ncm || null,
+            cest: p.cest || null,
+            active: true,
+            unit: 'UN',
+            imageUrl: masterData?.imageUrl || null,
+          },
         });
+        inserted++;
       }
 
-      this.logger.log(`✅ Produtos base populados com SUCESSO no banco: ${databaseUrl}`);
+      this.logger.log(`✅ Catálogo Disk inserido: ${inserted} produtos no banco ${databaseUrl}`);
     } catch (err) {
       this.logger.error(`❌ Erro ao popular produtos base: ${err.message}`, err.stack);
       throw err;
@@ -539,4 +601,104 @@ export class TenantsService {
       data: { pin: newPin }
     });
   }
+
+  /**
+   * Varre todos os tenants ativos e sincroniza produtos com EAN
+   * para a tabela master_products do banco heart.
+   * Atualiza nome, imagem e dados fiscais se o tenant tiver informações mais ricas.
+   */
+  async syncMasterCatalogFromTenants(): Promise<{ synced: number; tenants: number; errors: string[] }> {
+    const allTenants = await this.heartPrisma.tenant.findMany({
+      where: { status: 'active' },
+      select: { id: true, name: true, databaseUrl: true },
+    });
+
+    let synced = 0;
+    let tenantsProcessed = 0;
+    const errors: string[] = [];
+
+    for (const tenant of allTenants) {
+      if (!tenant.databaseUrl) continue;
+      const client = new PrismaClient({
+        datasources: { db: { url: tenant.databaseUrl } },
+      });
+
+      try {
+        await client.$connect();
+
+        // Pega todos os produtos com EAN e imagem ou dados fiscais válidos
+        const products = await client.product.findMany({
+          where: {
+            barcode: { not: null },
+            OR: [
+              { imageUrl: { not: null } },
+              { ncm: { not: null } },
+            ],
+          },
+          select: {
+            barcode: true,
+            name: true,
+            imageUrl: true,
+            ncm: true,
+            cest: true,
+          },
+        });
+
+        for (const p of products) {
+          if (!p.barcode) continue;
+
+          // Busca se já existe no master
+          const existing = await this.heartPrisma.masterProduct.findUnique({
+            where: { ean: p.barcode },
+          });
+
+          if (!existing) {
+            // Cria novo no master
+            await this.heartPrisma.masterProduct.create({
+              data: {
+                ean: p.barcode,
+                name: p.name,
+                imageUrl: p.imageUrl || null,
+                ncm: p.ncm || null,
+                cest: (p.cest || null) as string | null,
+                source: `tenant:${tenant.name}`,
+              },
+            });
+            synced++;
+          } else {
+            // Atualiza se o tenant tem imagem e o master não tem, ou tem NCM e o master não
+            const needsUpdate =
+              (!existing.imageUrl && p.imageUrl) ||
+              (!existing.ncm && p.ncm);
+
+            if (needsUpdate) {
+              await this.heartPrisma.masterProduct.update({
+                where: { ean: p.barcode },
+                data: {
+                  imageUrl: existing.imageUrl || p.imageUrl || null,
+                  ncm: existing.ncm || p.ncm || null,
+                  cest: existing.cest || (p.cest as string | null) || null,
+                },
+              });
+              synced++;
+            }
+          }
+        }
+
+        tenantsProcessed++;
+        this.logger.log(`✅ Tenant "${tenant.name}": ${products.length} produtos verificados.`);
+      } catch (err: any) {
+        const msg = `Erro ao processar tenant "${tenant.name}": ${err.message}`;
+        this.logger.warn(msg);
+        errors.push(msg);
+      } finally {
+        await client.$disconnect();
+      }
+    }
+
+    this.logger.log(`🎯 Sincronização completa: ${synced} produtos atualizados em ${tenantsProcessed} tenants.`);
+    return { synced, tenants: tenantsProcessed, errors };
+  }
+
 }
+

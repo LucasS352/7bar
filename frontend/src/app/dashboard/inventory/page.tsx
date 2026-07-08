@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useDeferredValue, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
-import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert, X, Truck, ShoppingCart, FileSpreadsheet } from 'lucide-react';
+import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert, X, Truck, ShoppingCart, FileSpreadsheet, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { AddProductModal } from '@/components/AddProductModal';
@@ -375,7 +375,13 @@ export default function InventoryDashboard() {
             to="/dashboard/inventory/purchases"
             className="hidden md:flex snap-start shrink-0 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-4 py-2.5 rounded-xl font-bold items-center gap-2 transition text-sm md:text-base whitespace-nowrap"
           >
-            <Plus size={20} /> <span className="hidden sm:inline">Novos Produtos (Fast Grid)</span><span className="sm:hidden">Grid Lote</span>
+            <Plus size={20} /> <span className="hidden sm:inline">Lançamento de Produtos</span><span className="sm:hidden">Lançamento</span>
+          </Link>
+          <Link
+            to="/dashboard/inventory/mass-edit"
+            className="hidden md:flex snap-start shrink-0 bg-purple-600/10 hover:bg-purple-600/20 border border-purple-600/30 text-purple-400 px-4 py-2.5 rounded-xl font-bold items-center gap-2 transition text-sm md:text-base whitespace-nowrap"
+          >
+            <Save size={20} /> <span className="hidden sm:inline">Edição em Massa</span><span className="sm:hidden">Editar</span>
           </Link>
           <button
             onClick={() => setIsAddOpen(true)}

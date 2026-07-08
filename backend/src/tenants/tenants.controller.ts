@@ -265,4 +265,9 @@ export class TenantsController {
     if (!valid) throw new UnauthorizedException('PIN inválido.');
     return this.tenantsService.getTenantCategories(id);
   }
+
+  @Post('trigger-sync')
+  async triggerSync() {
+    return this.tenantsService.syncMasterCatalogFromTenants();
+  }
 }
