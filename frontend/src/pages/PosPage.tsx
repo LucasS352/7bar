@@ -805,7 +805,7 @@ function PosPageContent() {
 
       {/* Modal de Quantidade */}
       {productToSetQuantity && (
-        <div className="fixed inset-0 z-[100] flex items-start pt-[10dvh] lg:pt-0 lg:items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-start pt-[20dvh] justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl flex flex-col mb-auto">
             <h3 className="text-xl font-bold text-white mb-2 text-center line-clamp-2">{productToSetQuantity.name}</h3>
             <p className="text-zinc-400 mb-6 text-sm text-center">Informe a quantidade desejada:</p>
