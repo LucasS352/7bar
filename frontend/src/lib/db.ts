@@ -142,8 +142,14 @@ export interface CachedProduct {
   cstCofins:  string;
   aliqCofins: number;
 
+  // Produto composto / com adicionais
+  isComposite?: boolean;
+  modifierGroups?: any[];  // grupos de modificadores/adicionais
+
   // Metadados do cache
   cachedAt: number;   // Date.now() — para expiração do cache
+  salesCount?: number;
+  imageUrl?: string | null;
 }
 
 // ── Definição do banco Dexie ─────────────────────────────────────────────────

@@ -178,14 +178,17 @@ function PosPageContent() {
             cstCofins:  '99', aliqCofins: 0,
             cachedAt:   Date.now(),
             imageUrl:   p.imageUrl,
+            // ─── Produto composto / adicionais ─────────────────────────────
+            isComposite:    p.isComposite ?? false,
+            modifierGroups: p.modifierGroups ?? [],
           })));
-          setIsOfflineCatalog(false);
+          setOfflineCatalog(false);
         })
         .catch(async () => {
           // Falhou mesmo online — tenta o cache
           const cached = await getCachedProducts();
           setProducts(sortProducts(cached as unknown as Product[]));
-          setIsOfflineCatalog(true);
+          setOfflineCatalog(true);
         })
         .finally(() => setIsLoading(false));
     } else {
@@ -193,7 +196,7 @@ function PosPageContent() {
       getCachedProducts()
         .then(cached => {
           setProducts(sortProducts(cached as unknown as Product[]));
-          setIsOfflineCatalog(true);
+          setOfflineCatalog(true);
         })
         .finally(() => setIsLoading(false));
     }
