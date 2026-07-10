@@ -60,7 +60,7 @@ export function EditProductModal({
     name: '', barcode: '', unit: 'UN',
     priceCost: '', priceSell: '', stock: '', categoryId: '',
     ncm: '', cest: '', origem: 0, grupoTributacaoId: '', imageUrl: '',
-    isComposite: false, volumeUnit: '', volumeCapacity: '',
+    isComposite: false, volumeUnit: '', volumeCapacity: '', minStock: '',
   });
 
   useEffect(() => {
@@ -81,6 +81,7 @@ export function EditProductModal({
         isComposite:        product.isComposite    ?? false,
         volumeUnit:         product.volumeUnit     || '',
         volumeCapacity:     product.volumeCapacity?.toString() || '',
+        minStock:           (product as any).minStock != null ? Number((product as any).minStock).toString() : '',
       });
 
       // Carregar composição atual
@@ -259,6 +260,7 @@ export function EditProductModal({
         isComposite:        formData.isComposite,
         volumeUnit:         formData.volumeUnit || null,
         volumeCapacity:     formData.volumeCapacity ? parseFloat(formData.volumeCapacity) : null,
+        minStock:           formData.minStock ? parseFloat(formData.minStock) : null,
         modifierGroups:     formData.isComposite ? payloadGroups : [],
       });
       toast.success('Produto atualizado com sucesso!');
@@ -441,6 +443,19 @@ export function EditProductModal({
                 placeholder={formData.isComposite ? 'Produto composto' : '0'}
                 value={formData.isComposite ? '' : formData.stock}
                 onChange={e => f('stock', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={lbl}>
+                Estoque Mínimo <span className="ml-1 text-zinc-600 normal-case font-normal">(Opcional — deixe vazio para usar padrão global)</span>
+              </label>
+              <input
+                type="number" step="0.001" min="0"
+                className={`${inp} text-amber-400 font-bold`}
+                placeholder="Padrão global"
+                value={formData.minStock}
+                onChange={e => f('minStock', e.target.value)}
+                title="Deixe vazio para usar o limite global de alerta de reposição"
               />
             </div>
           </div>

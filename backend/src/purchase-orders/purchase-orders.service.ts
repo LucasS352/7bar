@@ -282,4 +282,47 @@ export class PurchaseOrdersService {
       where: { id }
     });
   }
+
+  async createOrdersFromLowStock(items: { productId: string; supplierId: string; quantity: number; expectedCost: number }[]) {
+    const prisma = await this.getPrisma();
+
+    // Group items by supplierId
+    const bySupplier = new Map<string, typeof items>();
+    for (const item of items) {
+      const list = bySupplier.get(item.supplierId) || [];
+      list.push(item);
+      bySupplier.set(item.supplierId, list);
+    }
+
+    const createdOrders: any[] = [];
+
+    for (const [supplierId, supplierItems] of bySupplier.entries()) {
+      const totalEstimated = supplierItems.reduce((acc, item) => acc + item.quantity * item.expectedCost, 0);
+
+      const order = await prisma.purchaseOrder.create({
+        data: {
+          supplierId,
+          status: 'DRAFT',
+          totalEstimated,
+          items: {
+            create: supplierItems.map(item => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              expectedCost: new Prisma.Decimal(item.expectedCost),
+              unitMultiplier: 1,
+              unitName: 'UN',
+            })),
+          },
+        },
+        include: {
+          supplier: true,
+          items: { include: { product: true } },
+        },
+      });
+
+      createdOrders.push(order);
+    }
+
+    return createdOrders;
+  }
 }

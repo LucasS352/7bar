@@ -74,15 +74,40 @@ export class ProductsController {
     return this.productsService.bulkEntry(items);
   }
 
-  /** Entrada de estoque incremental — usa Prisma increment (sem condição de corrida) */
   @Post('add-stock/:id')
   addStock(
     @Param('id') id: string,
     @Body('quantity') quantity: number,
     @Body('costPrice') costPrice?: number,
     @Body('reason') reason?: string,
+    @Body('lotNumber') lotNumber?: string,
+    @Body('expiresAt') expiresAt?: string,
+    @Body('supplierId') supplierId?: string,
   ) {
-    return this.productsService.addStock(id, Number(quantity), costPrice !== undefined ? Number(costPrice) : undefined, reason);
+    return this.productsService.addStock(
+      id,
+      Number(quantity),
+      costPrice !== undefined ? Number(costPrice) : undefined,
+      reason,
+      lotNumber,
+      expiresAt,
+      supplierId,
+    );
+  }
+
+  @Patch('lots/:id')
+  updateLot(@Param('id') lotId: string, @Body() data: { expiresAt?: Date | null, lotNumber?: string }) {
+    return this.productsService.updateLot(lotId, data);
+  }
+
+  @Post('lots/:id/split')
+  splitLot(
+    @Param('id') lotId: string, 
+    @Body('splitQty') splitQty: number, 
+    @Body('newExpiresAt') newExpiresAt?: Date, 
+    @Body('newLotNumber') newLotNumber?: string
+  ) {
+    return this.productsService.splitLot(lotId, Number(splitQty), newExpiresAt, newLotNumber);
   }
 
   /** Lê configurações globais do tenant (ex: allowNegativeStock) */
@@ -93,13 +118,25 @@ export class ProductsController {
 
   /** Salva configurações globais do tenant */
   @Patch('settings')
-  saveSettings(@Body() body: { allowNegativeStock: boolean }): Promise<TenantSettingsDto> {
+  saveSettings(@Body() body: TenantSettingsDto): Promise<TenantSettingsDto> {
     return this.productsService.saveSettings(body);
   }
 
   @Get(':id/composition')
   getComposition(@Param('id') id: string) {
     return this.productsService.getComposition(id);
+  }
+
+  /** Lotes com validade próxima (padrão: próximos 30 dias) */
+  @Get('lots/expiring')
+  getExpiringLots(@Query('days') days?: number) {
+    return this.productsService.getExpiringLots(days ? Number(days) : 30);
+  }
+
+  /** Lotes já vencidos com estoque restante */
+  @Get('lots/expired')
+  getExpiredLots() {
+    return this.productsService.getExpiredLots();
   }
 
   @Patch(':id')

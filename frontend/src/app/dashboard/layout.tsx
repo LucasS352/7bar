@@ -1,8 +1,9 @@
 "use client";
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Banknote, Store, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Banknote, Store, CreditCard, CalendarClock } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { useEffect, useState } from 'react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -14,12 +15,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     window.location.href = '/login';
   };
 
+  const [expiryEnabled, setExpiryEnabled] = useState(false);
+
+  useEffect(() => {
+    // Verifica se o modulo de validade esta ativo para mostrar o link no menu
+    import('@/lib/api').then(({ api }) => {
+      api.get('/products/settings')
+        .then(res => setExpiryEnabled(res.data?.enableExpiryControl ?? false))
+        .catch(() => {});
+    });
+  }, []);
+
   const navItems = [
     { name: 'Analytics', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Frente de Caixa (PDV)', href: '/', icon: Store },
     { name: 'Contas a Pagar', href: '/dashboard/finance/payables', icon: Banknote },
-    { name: 'Catálogo e Estoque', href: '/dashboard/inventory', icon: Package },
-    { name: 'Histórico de Caixas', href: '/dashboard/registers', icon: History },
+    { name: 'Catalogo e Estoque', href: '/dashboard/inventory', icon: Package },
+    ...(expiryEnabled ? [{ name: 'Validades de Lotes', href: '/dashboard/inventory/expiry-alerts', icon: CalendarClock }] : []),
+    { name: 'Historico de Caixas', href: '/dashboard/registers', icon: History },
   ];
 
   const configItems = [

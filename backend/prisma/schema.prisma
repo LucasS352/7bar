@@ -94,6 +94,7 @@ model Product {
 
   // Estoque e Vendas
   stock     Decimal  @default(0) @db.Decimal(10, 3) // Decimal para fracionados
+  minStock  Decimal? @db.Decimal(10, 3)             // Estoque mínimo (alerta de reposição). Null = usa default global
   salesCount Int     @default(0) // Contador de vendas para ranking no PDV
 
   // Campos Fiscais (NCM, CEST vindos do Packon PRO_NCM / PRO_CEST)
@@ -420,7 +421,13 @@ model TenantSettings {
   /// Permite que o PDV finalize vendas mesmo com estoque zerado ou negativo
   allowNegativeStock Boolean @default(false)
   /// PIN numérico (hasheado) para autorizar descontos no PDV
-  discountPin        String? 
+  discountPin        String?
+  /// Módulo de Controle de Validade de Lotes
+  enableExpiryControl Boolean @default(false)
+  /// Dias de antecedência para alerta de vencimento
+  expiryAlertDays    Int     @default(30)
+  /// Limite padrão de estoque baixo (para produtos sem minStock definido)
+  lowStockAlertDefault Int   @default(5)
 
   @@map("tenant_settings")
 }
@@ -482,10 +489,16 @@ model StockLot {
   costPrice    Decimal               @db.Decimal(10, 4) // Custo de aquisição unitário
   quantity     Decimal               @db.Decimal(10, 3) // Quantidade comprada originalmente
   remaining    Decimal               @db.Decimal(10, 3) // Quantidade restante no lote
+  // ── Controle de Validade (módulo opcional) ────────────────
+  lotNumber    String?               // Ex: "LT-2025-001" — para rastreabilidade
+  expiresAt    DateTime?             // Data de validade do lote
+  supplierId   String?               // Fornecedor deste lote
+  supplier     Supplier?             @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
   consumptions StockLotConsumption[]
 
+  @@index([expiresAt])
   @@map("stock_lots")
 }
 
@@ -519,6 +532,7 @@ model Supplier {
   products       SupplierProduct[]
   purchaseOrders PurchaseOrder[]
   payables       Payable[]
+  stockLots      StockLot[]
 
   @@map("suppliers")
 }

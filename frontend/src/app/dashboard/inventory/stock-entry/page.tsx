@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useDeferredValue, useMemo } from 'rea
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, PackagePlus, Search, Loader2, Plus, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, PackagePlus, Search, Loader2, Plus, CheckCircle2, AlertTriangle, CalendarClock } from 'lucide-react';
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -15,12 +15,16 @@ interface Product {
   priceCost: number;
   category?: { name: string };
   shortCode?: string | null;
+  imageUrl?: string | null;
 }
 
 interface StockRow {
   product: Product;
-  qty: string;   // Controlled como string para o input
-  costPrice: string; // Controlled como string para o input
+  qty: string;
+  costPrice: string;
+  lotNumber: string;
+  expiresAt: string;
+  supplierId: string;
   saving: boolean;
   saved: boolean;
 }
@@ -32,14 +36,23 @@ export default function StockEntryPage() {
   const [rows,       setRows]       = useState<StockRow[]>([]);
   const [search,     setSearch]     = useState('');
   const [loading,    setLoading]    = useState(true);
+  const [suppliers,  setSuppliers]  = useState<{ id: string; name: string }[]>([]);
+
+  // Verifica se o módulo de validade está ativo
+  const [expiryEnabled, setExpiryEnabled] = useState(false);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/products?limit=2000');
-      // A API retorna { data: [...], total, page } — extraímos o array
-      const list = (res.data as any)?.data ?? res.data ?? [];
+      const [prodRes, supRes, settingsRes] = await Promise.all([
+        api.get('/products?limit=2000'),
+        api.get('/suppliers'),
+        api.get('/products/settings'),
+      ]);
+      const list = (prodRes.data as any)?.data ?? prodRes.data ?? [];
       setProducts((list as Product[]).filter(p => p !== null));
+      setSuppliers(supRes.data || []);
+      setExpiryEnabled(settingsRes.data?.enableExpiryControl ?? false);
     } catch {
       toast.error('Erro ao carregar produtos.');
     } finally {
@@ -68,7 +81,22 @@ export default function StockEntryPage() {
   /** Adiciona produto à lista de entrada se não estiver lá */
   const addToEntry = (product: Product) => {
     if (rows.find(r => r.product.id === product.id)) return; // já na lista
-    setRows(prev => [...prev, { product, qty: '', costPrice: product.priceCost?.toString() || '', saving: false, saved: false }]);
+    
+    // Gera um numero de lote sugerido (ex: LT-260710-X8J3)
+    const datePart = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+    const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const suggestedLot = `LT-${datePart}-${randomPart}`;
+
+    setRows(prev => [...prev, {
+      product,
+      qty: '',
+      costPrice: product.priceCost?.toString() || '',
+      lotNumber: suggestedLot,
+      expiresAt: '',
+      supplierId: '',
+      saving: false,
+      saved: false,
+    }]);
     setSearch(''); // limpa busca ao adicionar
   };
 
@@ -78,6 +106,10 @@ export default function StockEntryPage() {
 
   const updateCostPrice = (productId: string, costPrice: string) => {
     setRows(prev => prev.map(r => r.product.id === productId ? { ...r, costPrice, saved: false } : r));
+  };
+
+  const updateLotField = (productId: string, field: 'lotNumber' | 'expiresAt' | 'supplierId', value: string) => {
+    setRows(prev => prev.map(r => r.product.id === productId ? { ...r, [field]: value, saved: false } : r));
   };
 
   const removeRow = (productId: string) => {
@@ -108,6 +140,9 @@ export default function StockEntryPage() {
         quantity: qty,
         costPrice: costNum,
         reason: 'Entrada de Estoque — Reposição via App',
+        ...(expiryEnabled && row.lotNumber    ? { lotNumber: row.lotNumber }  : {}),
+        ...(expiryEnabled && row.expiresAt    ? { expiresAt: row.expiresAt }  : {}),
+        ...(expiryEnabled && row.supplierId   ? { supplierId: row.supplierId } : {}),
       });
 
       toast.success(`+${qty} unidades adicionadas a "${row.product.name}"!`);
@@ -213,9 +248,20 @@ export default function StockEntryPage() {
                   disabled={rows.some(r => r.product.id === product.id)}
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-800/60 transition-colors border-b border-zinc-800/50 last:border-0 text-left disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <div>
-                    <p className="text-white font-semibold text-sm">{product.name}</p>
-                    <p className="text-zinc-500 text-xs">{product.category?.name} • Estoque atual: <span className={`font-bold ${Number(product.stock) <= 0 ? 'text-red-400' : 'text-emerald-400'}`}>{Number(product.stock)}</span> {product.unit}</p>
+                  <div className="flex items-center gap-3">
+                    {product.imageUrl ? (
+                      <div className="w-10 h-10 shrink-0 bg-white rounded-lg flex items-center justify-center p-0.5 shadow-sm">
+                        <img src={product.imageUrl} alt="" className="w-full h-full object-contain mix-blend-multiply" />
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 shrink-0 bg-zinc-800 rounded-lg flex items-center justify-center shadow-sm">
+                        <PackagePlus size={18} className="text-zinc-500" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-white font-semibold text-sm">{product.name}</p>
+                      <p className="text-zinc-500 text-xs">{product.category?.name} • Estoque atual: <span className={`font-bold ${Number(product.stock) <= 0 ? 'text-red-400' : 'text-emerald-400'}`}>{Number(product.stock)}</span> {product.unit}</p>
+                    </div>
                   </div>
                   <Plus size={20} className="text-emerald-400 shrink-0" />
                 </button>
@@ -237,52 +283,113 @@ export default function StockEntryPage() {
               <div key={row.product.id} className={`px-6 py-4 flex items-center gap-4 transition-colors ${row.saved ? 'bg-emerald-950/20' : 'hover:bg-zinc-800/30'}`}>
 
                 {/* Info do produto */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-bold truncate">{row.product.name}</p>
-                  <p className="text-zinc-500 text-xs mt-0.5">
-                    Estoque atual: <span className={`font-bold ${Number(row.product.stock) <= 0 ? 'text-red-400' : 'text-zinc-300'}`}>{Number(row.product.stock)}</span> {row.product.unit}
-                  </p>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {row.product.imageUrl ? (
+                    <div className="w-12 h-12 shrink-0 bg-white rounded-lg flex items-center justify-center p-1 shadow-sm">
+                      <img src={row.product.imageUrl} alt="" className="w-full h-full object-contain mix-blend-multiply" />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 shrink-0 bg-zinc-800/50 border border-zinc-800 rounded-lg flex items-center justify-center">
+                      <PackagePlus size={20} className="text-zinc-600" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-bold truncate">{row.product.name}</p>
+                    <p className="text-zinc-500 text-xs mt-0.5">
+                      Estoque atual: <span className={`font-bold ${Number(row.product.stock) <= 0 ? 'text-red-400' : 'text-zinc-300'}`}>{Number(row.product.stock)}</span> {row.product.unit}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Inputs de Entrada (Quantidade e Custo) */}
-                <div className="flex flex-wrap items-center gap-4">
-                  {/* Campo de quantidade */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-zinc-500 text-sm font-semibold whitespace-nowrap">Qtd. a Adicionar:</label>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      placeholder="0"
-                      value={row.qty}
-                      onChange={e => {
-                        const val = e.target.value.replace(/[^0-9]/g, '');
-                        updateQty(row.product.id, val);
-                      }}
-                      onKeyDown={e => e.key === 'Enter' && confirmEntry(row.product.id)}
-                      disabled={row.saving || row.saved}
-                      className="w-24 bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 rounded-xl px-2 py-2 text-emerald-400 font-black text-lg text-center focus:outline-none transition-colors disabled:opacity-50"
-                    />
-                  </div>
-
-                  {/* Campo de custo de aquisição */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-zinc-500 text-sm font-semibold whitespace-nowrap">Custo Unitário:</label>
-                    <div className="relative">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-bold">R$</span>
+                {/* Inputs de Entrada (Quantidade, Custo e Validade) */}
+                <div className="flex flex-col gap-3 flex-1">
+                  <div className="flex flex-wrap items-center gap-4">
+                    {/* Campo de quantidade */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-zinc-500 text-sm font-semibold whitespace-nowrap">Qtd. a Adicionar:</label>
                       <input
                         type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={row.costPrice}
-                        onChange={e => updateCostPrice(row.product.id, e.target.value)}
+                        min="1"
+                        step="1"
+                        placeholder="0"
+                        value={row.qty}
+                        onChange={e => {
+                          const val = e.target.value.replace(/[^0-9]/g, '');
+                          updateQty(row.product.id, val);
+                        }}
                         onKeyDown={e => e.key === 'Enter' && confirmEntry(row.product.id)}
                         disabled={row.saving || row.saved}
-                        className="w-28 bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 rounded-xl pl-7 pr-2 py-2 text-rose-400 font-black text-lg text-center focus:outline-none transition-colors disabled:opacity-50"
+                        className="w-24 bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 rounded-xl px-2 py-2 text-emerald-400 font-black text-lg text-center focus:outline-none transition-colors disabled:opacity-50"
                       />
                     </div>
+
+                    {/* Campo de custo de aquisição */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-zinc-500 text-sm font-semibold whitespace-nowrap">Custo Unitário:</label>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-bold">R$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={row.costPrice}
+                          onChange={e => updateCostPrice(row.product.id, e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && confirmEntry(row.product.id)}
+                          disabled={row.saving || row.saved}
+                          className="w-28 bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 rounded-xl pl-7 pr-2 py-2 text-rose-400 font-black text-lg text-center focus:outline-none transition-colors disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Campos opcionais de validade */}
+                  {expiryEnabled && !row.saved && (
+                    <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-zinc-800/60">
+                      <CalendarClock size={14} className="text-blue-400 shrink-0" />
+
+                      {/* Número do lote */}
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-zinc-500 text-xs font-semibold whitespace-nowrap">Nº Lote:</label>
+                        <input
+                          type="text"
+                          placeholder="LT-001"
+                          value={row.lotNumber}
+                          onChange={e => updateLotField(row.product.id, 'lotNumber', e.target.value)}
+                          disabled={row.saving}
+                          className="w-24 bg-zinc-950 border border-zinc-700 focus:border-blue-500 rounded-lg px-2 py-1.5 text-blue-300 text-sm font-mono focus:outline-none transition-colors disabled:opacity-50"
+                        />
+                      </div>
+
+                      {/* Data de validade */}
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-zinc-500 text-xs font-semibold whitespace-nowrap">Validade:</label>
+                        <input
+                          type="date"
+                          value={row.expiresAt}
+                          onChange={e => updateLotField(row.product.id, 'expiresAt', e.target.value)}
+                          disabled={row.saving}
+                          className="bg-zinc-950 border border-zinc-700 focus:border-blue-500 rounded-lg px-2 py-1.5 text-blue-300 text-sm focus:outline-none transition-colors disabled:opacity-50"
+                        />
+                      </div>
+
+                      {/* Fornecedor */}
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-zinc-500 text-xs font-semibold whitespace-nowrap">Fornecedor:</label>
+                        <select
+                          value={row.supplierId}
+                          onChange={e => updateLotField(row.product.id, 'supplierId', e.target.value)}
+                          disabled={row.saving}
+                          className="bg-zinc-950 border border-zinc-700 focus:border-blue-500 rounded-lg px-2 py-1.5 text-blue-300 text-sm focus:outline-none transition-colors disabled:opacity-50"
+                        >
+                          <option value="">Sem fornecedor</option>
+                          {suppliers.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Botão confirmar */}

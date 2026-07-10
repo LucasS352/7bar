@@ -384,8 +384,9 @@ function PosPageContent() {
                 <LayoutDashboard size={18} /> Dashboard
               </button>
             )}
+
             <button onClick={async () => { await refreshShift(); setIsCloseRegisterOpen(true); }} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-xl transition font-semibold text-sm whitespace-nowrap">
-              <FileText size={18} /> Relatório de Caixa
+              <FileText size={18} /> Relatorio de Caixa
             </button>
             <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition font-semibold">
               <LogOut size={18} /> Sair

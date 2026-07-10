@@ -37,6 +37,7 @@ interface ProductCreateDto {
   isComposite?: boolean;
   volumeUnit?: string | null;
   volumeCapacity?: number | null;
+  minStock?: number | null;
   modifierGroups?: ModifierGroupInputDto[];
 }
 
@@ -58,6 +59,7 @@ interface ProductUpdateDto {
   isComposite?: boolean;
   volumeUnit?: string | null;
   volumeCapacity?: number | null;
+  minStock?: number | null;
   modifierGroups?: ModifierGroupInputDto[];
 }
 
@@ -82,6 +84,9 @@ interface BulkItem {
 // Exported so the controller can reference the return type without TS4053
 export interface TenantSettingsDto {
   allowNegativeStock: boolean;
+  enableExpiryControl: boolean;
+  expiryAlertDays: number;
+  lowStockAlertDefault: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -345,6 +350,7 @@ export class ProductsService {
         isComposite,
         volumeUnit,
         volumeCapacity,
+        minStock: data.minStock !== undefined && data.minStock !== null ? new Prisma.Decimal(data.minStock) : null,
         ...(isComposite && modifierGroups && modifierGroups.length > 0 ? {
           modifierGroups: {
             create: modifierGroups.map(group => ({
@@ -423,6 +429,9 @@ export class ProductsService {
       productPayload.volumeCapacity = data.volumeCapacity !== undefined 
         ? (data.volumeCapacity !== null ? new Prisma.Decimal(data.volumeCapacity) : null)
         : oldProduct.volumeCapacity;
+      if (data.minStock !== undefined) {
+        productPayload.minStock = data.minStock !== null ? new Prisma.Decimal(data.minStock) : null;
+      }
 
       const product = await tx.product.update({ 
         where: { id }, 
@@ -662,7 +671,15 @@ export class ProductsService {
    * Adiciona quantidade ao estoque de forma segura usando Prisma increment.
    * Executado dentro de uma transaction para evitar condições de corrida.
    */
-  async addStock(productId: string, quantity: number, costPrice?: number, reason?: string) {
+  async addStock(
+    productId: string,
+    quantity: number,
+    costPrice?: number,
+    reason?: string,
+    lotNumber?: string,
+    expiresAt?: string,
+    supplierId?: string,
+  ) {
     if (quantity <= 0) {
       throw new BadRequestException('A quantidade de entrada deve ser maior que zero.');
     }
@@ -689,6 +706,9 @@ export class ProductsService {
           costPrice: finalCost,
           quantity: new Prisma.Decimal(quantity),
           remaining: new Prisma.Decimal(quantity),
+          lotNumber: lotNumber || null,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+          supplierId: supplierId || null,
         }
       });
 
@@ -869,9 +889,14 @@ export class ProductsService {
     const settings = await prisma.tenantSettings.upsert({
       where:  { id: 'singleton' },
       update: {},
-      create: { id: 'singleton', allowNegativeStock: false },
+      create: { id: 'singleton', allowNegativeStock: false, enableExpiryControl: false, expiryAlertDays: 30, lowStockAlertDefault: 5 },
     });
-    return { allowNegativeStock: settings.allowNegativeStock };
+    return {
+      allowNegativeStock: settings.allowNegativeStock,
+      enableExpiryControl: settings.enableExpiryControl,
+      expiryAlertDays: settings.expiryAlertDays,
+      lowStockAlertDefault: settings.lowStockAlertDefault,
+    };
   }
 
   /** Atualiza configurações globais do tenant */
@@ -879,10 +904,26 @@ export class ProductsService {
     const prisma = await this.getPrisma();
     const settings = await prisma.tenantSettings.upsert({
       where:  { id: 'singleton' },
-      update: { allowNegativeStock: data.allowNegativeStock },
-      create: { id: 'singleton', allowNegativeStock: data.allowNegativeStock },
+      update: {
+        allowNegativeStock: data.allowNegativeStock,
+        enableExpiryControl: data.enableExpiryControl,
+        expiryAlertDays: data.expiryAlertDays,
+        lowStockAlertDefault: data.lowStockAlertDefault ?? 5,
+      },
+      create: {
+        id: 'singleton',
+        allowNegativeStock: data.allowNegativeStock,
+        enableExpiryControl: data.enableExpiryControl ?? false,
+        expiryAlertDays: data.expiryAlertDays ?? 30,
+        lowStockAlertDefault: data.lowStockAlertDefault ?? 5,
+      },
     });
-    return { allowNegativeStock: settings.allowNegativeStock };
+    return {
+      allowNegativeStock: settings.allowNegativeStock,
+      enableExpiryControl: settings.enableExpiryControl,
+      expiryAlertDays: settings.expiryAlertDays,
+      lowStockAlertDefault: settings.lowStockAlertDefault,
+    };
   }
 
   /** Normaliza string para comparação: remove acentos, lowercase, trim, espaços duplos */
@@ -1000,6 +1041,7 @@ export class ProductsService {
     
     const lots = await prisma.stockLot.findMany({
       where: { productId },
+      include: { supplier: { select: { id: true, name: true } } },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -1008,7 +1050,139 @@ export class ProductsService {
       costPrice: Number(lot.costPrice),
       quantity: Number(lot.quantity),
       remaining: Number(lot.remaining),
+      lotNumber: lot.lotNumber,
+      expiresAt: lot.expiresAt,
+      supplierId: lot.supplierId,
+      supplierName: lot.supplier?.name ?? null,
       createdAt: lot.createdAt
     }));
+  }
+
+  /** Retorna lotes com validade próxima ou vencida */
+  async getExpiringLots(days = 30) {
+    const prisma = await this.getPrisma();
+    const now = new Date();
+    const limit = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+    const lots = await prisma.stockLot.findMany({
+      where: {
+        expiresAt: { not: null, lte: limit },
+        remaining: { gt: 0 },
+      },
+      include: {
+        product: { select: { id: true, name: true, unit: true } },
+        supplier: { select: { id: true, name: true } },
+      },
+      orderBy: { expiresAt: 'asc' },
+    });
+
+    return lots.map(lot => ({
+      id: lot.id,
+      productId: lot.productId,
+      productName: lot.product.name,
+      productUnit: lot.product.unit,
+      supplierId: lot.supplierId,
+      supplierName: lot.supplier?.name ?? null,
+      lotNumber: lot.lotNumber,
+      costPrice: Number(lot.costPrice),
+      quantity: Number(lot.quantity),
+      remaining: Number(lot.remaining),
+      expiresAt: lot.expiresAt,
+      isExpired: lot.expiresAt ? lot.expiresAt < now : false,
+      daysUntilExpiry: lot.expiresAt
+        ? Math.ceil((lot.expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        : null,
+      createdAt: lot.createdAt,
+    }));
+  }
+
+  /** Retorna apenas lotes já vencidos com estoque restante */
+  async getExpiredLots() {
+    const prisma = await this.getPrisma();
+    const now = new Date();
+
+    const lots = await prisma.stockLot.findMany({
+      where: {
+        expiresAt: { not: null, lt: now },
+        remaining: { gt: 0 },
+      },
+      include: {
+        product: { select: { id: true, name: true, unit: true } },
+        supplier: { select: { id: true, name: true } },
+      },
+      orderBy: { expiresAt: 'asc' },
+    });
+
+    return lots.map(lot => ({
+      id: lot.id,
+      productId: lot.productId,
+      productName: lot.product.name,
+      productUnit: lot.product.unit,
+      supplierId: lot.supplierId,
+      supplierName: lot.supplier?.name ?? null,
+      lotNumber: lot.lotNumber,
+      costPrice: Number(lot.costPrice),
+      remaining: Number(lot.remaining),
+      expiresAt: lot.expiresAt,
+      daysUntilExpiry: lot.expiresAt
+        ? Math.ceil((lot.expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        : null,
+      createdAt: lot.createdAt,
+    }));
+  }
+
+  async updateLot(lotId: string, data: { expiresAt?: string | Date | null, lotNumber?: string }) {
+    const prisma = await this.getPrisma();
+    
+    const lot = await prisma.stockLot.findUnique({ where: { id: lotId } });
+    if (!lot) {
+      throw new NotFoundException('Lote não encontrado.');
+    }
+
+    return prisma.stockLot.update({
+      where: { id: lotId },
+      data: {
+        ...(data.expiresAt !== undefined && { expiresAt: data.expiresAt ? new Date(data.expiresAt) : null }),
+        ...(data.lotNumber !== undefined && { lotNumber: data.lotNumber }),
+      }
+    });
+  }
+
+  async splitLot(lotId: string, splitQty: number, newExpiresAt?: string | Date | null, newLotNumber?: string) {
+    const prisma = await this.getPrisma();
+    
+    return prisma.$transaction(async (tx) => {
+      const lot = await tx.stockLot.findUnique({ where: { id: lotId } });
+      if (!lot) throw new NotFoundException('Lote não encontrado.');
+      
+      const remainingNum = Number(lot.remaining);
+      if (splitQty <= 0 || splitQty >= remainingNum) {
+        throw new Error('A quantidade para dividir deve ser maior que 0 e menor que a quantidade restante do lote.');
+      }
+      
+      // Subtrai do lote original
+      await tx.stockLot.update({
+        where: { id: lotId },
+        data: {
+          remaining: new Prisma.Decimal(remainingNum - splitQty),
+          quantity: new Prisma.Decimal(Number(lot.quantity) - splitQty),
+        }
+      });
+      
+      // Cria o novo lote
+      const newLot = await tx.stockLot.create({
+        data: {
+          productId: lot.productId,
+          costPrice: lot.costPrice,
+          quantity: new Prisma.Decimal(splitQty),
+          remaining: new Prisma.Decimal(splitQty),
+          lotNumber: newLotNumber ?? (lot.lotNumber ? `${lot.lotNumber}-A` : null),
+          expiresAt: newExpiresAt !== undefined ? (newExpiresAt ? new Date(newExpiresAt) : null) : lot.expiresAt,
+          supplierId: lot.supplierId,
+        }
+      });
+      
+      return newLot;
+    });
   }
 }

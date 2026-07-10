@@ -7,6 +7,11 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class PurchaseOrdersController {
   constructor(private readonly purchaseOrdersService: PurchaseOrdersService) {}
 
+  @Post('auto-from-low-stock')
+  createAutoFromLowStock(@Body() body: { items: { productId: string; supplierId: string; quantity: number; expectedCost: number }[] }) {
+    return this.purchaseOrdersService.createOrdersFromLowStock(body.items);
+  }
+
   @Post()
   createPurchaseOrder(@Request() req: any, @Body() body: { supplierId: string; items: any[] }) {
     return this.purchaseOrdersService.createPurchaseOrder(body.supplierId, body.items);

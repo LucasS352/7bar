@@ -94,6 +94,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
     isComposite: false,
     volumeUnit: '',
     volumeCapacity: '',
+    minStock: '',
   };
 
   const [formData, setFormData] = useState(emptyForm);
@@ -286,6 +287,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
         isComposite:       formData.isComposite,
         volumeUnit:        formData.volumeUnit || undefined,
         volumeCapacity:    formData.volumeCapacity ? parseFloat(formData.volumeCapacity) : undefined,
+        minStock:          formData.minStock ? parseFloat(formData.minStock) : null,
         modifierGroups:    formData.isComposite ? payloadGroups : undefined,
       });
       toast.success('Produto cadastrado com sucesso!');
@@ -510,6 +512,17 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
                   placeholder={formData.isComposite ? "Composto" : "0"}
                   value={formData.isComposite ? "" : formData.stock}
                   onChange={e => f('stock', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Estoque Mínimo <span className="text-zinc-600 font-normal">(Opcional)</span></label>
+                <input
+                  type="number" step="0.001" min="0"
+                  className={`${inputCls} text-amber-400 font-bold`}
+                  placeholder="Padrão global"
+                  value={formData.minStock}
+                  onChange={e => f('minStock', e.target.value)}
+                  title="Deixe vazio para usar o limite global de alerta de reposição"
                 />
               </div>
             </div>
