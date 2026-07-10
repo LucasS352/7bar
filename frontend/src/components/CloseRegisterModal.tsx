@@ -55,7 +55,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
       await api.post(`/sales/${cancelSaleId}/cancel`, { reason: cancelReason });
       toast.success('Venda cancelada com sucesso. Estoque e caixa atualizados.');
       
-      const res = await api.get(`/cash-registers/${registerId}/report`);
+      const res = await api.get(`/cash-registers/${registerId}/report?_t=${Date.now()}`);
       setData(res.data);
       setClosingValue(res.data.report.expectedDinheiro);
       setCancelSaleId(null);
@@ -71,7 +71,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
     setLoading(true);
     setData(null);
     setStep(1);
-    api.get(`/cash-registers/${registerId}/report`)
+    api.get(`/cash-registers/${registerId}/report?_t=${Date.now()}`)
       .then(res => {
         setData(res.data);
         setClosingValue(res.data.report.expectedDinheiro);
