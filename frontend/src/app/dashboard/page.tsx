@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useState, useMemo } from 'react';
 import { api } from '@/lib/api';
-import { ExportXmlModal } from '@/components/ExportXmlModal';
 import { ReemitNfceModal } from '@/components/ReemitNfceModal';
 import { PeriodReportModal } from '@/components/PeriodReportModal';
 import { 
@@ -160,7 +159,6 @@ export default function SalesDashboard() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [emittingId, setEmittingId] = useState<string | null>(null);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isReemitModalOpen, setIsReemitModalOpen] = useState(false);
   const [saleToReemit, setSaleToReemit] = useState<Sale | null>(null);
   const [tenantConfig, setTenantConfig] = useState<any>(null);
@@ -587,7 +585,7 @@ export default function SalesDashboard() {
         </div>
         
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-          <div className="flex bg-zinc-900 p-2 rounded-2xl border border-zinc-800 overflow-x-auto custom-scrollbar">
+          <div className="flex flex-col lg:flex-row bg-zinc-900 p-2 rounded-2xl border border-zinc-800 gap-2 overflow-x-auto custom-scrollbar">
             <div className="flex bg-zinc-950 p-1 rounded-xl min-w-max">
             {(['today', 'week', 'month', 'custom'] as const).map(p => (
               <button 
@@ -601,7 +599,7 @@ export default function SalesDashboard() {
           </div>
 
           {preset === 'custom' && (
-            <div className="flex items-center gap-2 px-2 pb-2 sm:pb-0 overflow-x-auto min-w-max">
+            <div className="flex items-center gap-2 px-1 py-1 overflow-x-auto min-w-max">
               <input 
                 type="date" 
                 value={startDate} 
@@ -631,18 +629,7 @@ export default function SalesDashboard() {
           
           <div className="w-px h-8 bg-zinc-800 mx-1 hidden lg:block"></div>
 
-          {preset === 'custom' && (
-            <button 
-              onClick={() => setIsReportModalOpen(true)} 
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-3 sm:py-2 rounded-xl transition-colors font-bold w-full sm:w-auto mt-2 sm:mt-0 shadow-lg shadow-blue-500/10"
-            >
-              <TrendingUp size={18} /> <span>Relatório de Vendas</span>
-            </button>
           )}
-
-          <button onClick={() => setIsExportModalOpen(true)} className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-3 sm:py-2 rounded-xl transition-colors font-medium border border-zinc-700 w-full sm:w-auto mt-2 sm:mt-0">
-            <Download size={18} /> <span className="sm:hidden md:inline">Exportar XML</span>
-          </button>
         </div>
       </div>
       
@@ -1219,7 +1206,7 @@ export default function SalesDashboard() {
 
       </div>
 
-      <ExportXmlModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
+
       {isReportModalOpen && (
         <PeriodReportModal 
           isOpen={isReportModalOpen} 

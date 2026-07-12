@@ -1,7 +1,8 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { BarChart2, Package, User, LogOut, X, History, Banknote, Store } from 'lucide-react';
+import { BarChart2, Package, User, LogOut, X, History, Banknote, Store, Download } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth';
+import ExportXmlModal from '@/components/ExportXmlModal';
 
 const navItems = [
   {
@@ -38,6 +39,7 @@ export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -202,6 +204,13 @@ export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
                 Comandas / Consumo
               </button>
               <button
+                onClick={() => { setProfileOpen(false); setIsExportModalOpen(true); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-zinc-800 border border-zinc-700 text-zinc-300 font-semibold text-left active:scale-[0.98] transition-all"
+              >
+                <Download size={20} />
+                Exportar XML
+              </button>
+              <button
                 onClick={() => setProfileOpen(false)}
                 className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-zinc-800 text-zinc-300 font-semibold text-left active:scale-[0.98] transition-all"
               >
@@ -219,6 +228,8 @@ export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
           </div>
         </>
       )}
+
+      <ExportXmlModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
     </>
   );
 }
