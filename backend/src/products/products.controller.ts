@@ -93,6 +93,8 @@ export class ProductsController {
       expiresAt,
       supplierId,
     );
+  }
+
   @Post('lots/register-existing/:id')
   registerExistingLot(
     @Param('id') id: string,
