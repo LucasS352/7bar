@@ -27,7 +27,18 @@ export class AppController {
         throw new NotFoundException('Image not found');
       }
 
+      // Cache imutável: ID é UUID único por imagem — conteúdo nunca muda
       res.setHeader('Content-Type', image.mimeType);
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('ETag', `"${id}"`);
+      res.setHeader('Vary', 'Accept-Encoding');
+
+      // Suporte a conditional GET (If-None-Match)
+      const ifNoneMatch = res.req?.headers?.['if-none-match'];
+      if (ifNoneMatch === `"${id}"`) {
+        return res.status(304).end();
+      }
+
       res.send(image.data);
     } catch (err) {
       res.status(404).send('Product image not found');

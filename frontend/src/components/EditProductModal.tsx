@@ -153,17 +153,43 @@ export function EditProductModal({
 
   const f = (key: string, val: unknown) => setFormData(prev => ({ ...prev, [key]: val }));
 
+  // ── Compressor de imagem (Canvas API nativa, zero deps) ──────────────────
+  const compressImage = (file: File, maxPx = 1200, quality = 0.82): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const img = new window.Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.width  * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          blob => blob ? resolve(blob) : reject(new Error('Falha ao comprimir imagem')),
+          'image/webp',
+          quality,
+        );
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+
   const uploadFile = async (file: File) => {
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('A imagem deve ter no máximo 5MB.');
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 15MB.');
       return;
     }
 
-    const formDataObj = new FormData();
-    formDataObj.append('file', file);
-
     setIsUploading(true);
     try {
+      // Comprimir antes de enviar: foto de 5MB vira ~100KB
+      const compressed = await compressImage(file);
+      const compressedFile = new File([compressed], 'product.webp', { type: 'image/webp' });
+
+      const formDataObj = new FormData();
+      formDataObj.append('file', compressedFile);
+
       const res = await api.post('/products/upload', formDataObj, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
