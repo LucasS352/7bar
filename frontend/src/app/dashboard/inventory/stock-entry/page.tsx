@@ -280,10 +280,11 @@ export default function StockEntryPage() {
 
           <div className="divide-y divide-zinc-800/60">
             {rows.map(row => (
-              <div key={row.product.id} className={`px-6 py-4 flex items-center gap-4 transition-colors ${row.saved ? 'bg-emerald-950/20' : 'hover:bg-zinc-800/30'}`}>
+              <div key={row.product.id} className={`px-4 lg:px-6 py-4 flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 transition-colors ${row.saved ? 'bg-emerald-950/20' : 'hover:bg-zinc-800/30'}`}>
 
                 {/* Info do produto */}
-                <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="flex items-center justify-between w-full lg:w-auto lg:flex-1 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
                   {row.product.imageUrl ? (
                     <div className="w-12 h-12 shrink-0 bg-white rounded-lg flex items-center justify-center p-1 shadow-sm">
                       <img src={row.product.imageUrl} alt="" className="w-full h-full object-contain mix-blend-multiply" />
@@ -299,14 +300,21 @@ export default function StockEntryPage() {
                       Estoque atual: <span className={`font-bold ${Number(row.product.stock) <= 0 ? 'text-red-400' : 'text-zinc-300'}`}>{Number(row.product.stock)}</span> {row.product.unit}
                     </p>
                   </div>
+                  </div>
+                  <button
+                    onClick={() => removeRow(row.product.id)}
+                    className="lg:hidden text-zinc-500 hover:text-red-400 p-2 rounded-lg bg-zinc-900/50"
+                  >
+                    <AlertTriangle size={16} />
+                  </button>
                 </div>
 
                 {/* Inputs de Entrada (Quantidade, Custo e Validade) */}
-                <div className="flex flex-col gap-3 flex-1">
-                  <div className="flex flex-wrap items-center gap-4">
+                <div className="flex flex-col gap-3 w-full lg:flex-1 bg-zinc-900/30 lg:bg-transparent p-3 lg:p-0 rounded-xl">
+                  <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 lg:gap-4">
                     {/* Campo de quantidade */}
-                    <div className="flex items-center gap-2">
-                      <label className="text-zinc-500 text-sm font-semibold whitespace-nowrap">Qtd. a Adicionar:</label>
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-2 flex-1 min-w-[120px]">
+                      <label className="text-zinc-500 text-xs lg:text-sm font-semibold whitespace-nowrap">Qtd. a Adicionar:</label>
                       <input
                         type="number"
                         min="1"
@@ -319,14 +327,14 @@ export default function StockEntryPage() {
                         }}
                         onKeyDown={e => e.key === 'Enter' && confirmEntry(row.product.id)}
                         disabled={row.saving || row.saved}
-                        className="w-24 bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 rounded-xl px-2 py-2 text-emerald-400 font-black text-lg text-center focus:outline-none transition-colors disabled:opacity-50"
+                        className="w-full lg:w-24 bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 rounded-xl px-2 py-2 text-emerald-400 font-black text-lg text-center focus:outline-none transition-colors disabled:opacity-50"
                       />
                     </div>
 
                     {/* Campo de custo de aquisição */}
-                    <div className="flex items-center gap-2">
-                      <label className="text-zinc-500 text-sm font-semibold whitespace-nowrap">Custo Unitário:</label>
-                      <div className="relative">
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-2 flex-1 min-w-[120px]">
+                      <label className="text-zinc-500 text-xs lg:text-sm font-semibold whitespace-nowrap">Custo Unitário:</label>
+                      <div className="relative w-full lg:w-28">
                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-bold">R$</span>
                         <input
                           type="number"
@@ -337,7 +345,7 @@ export default function StockEntryPage() {
                           onChange={e => updateCostPrice(row.product.id, e.target.value)}
                           onKeyDown={e => e.key === 'Enter' && confirmEntry(row.product.id)}
                           disabled={row.saving || row.saved}
-                          className="w-28 bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 rounded-xl pl-7 pr-2 py-2 text-rose-400 font-black text-lg text-center focus:outline-none transition-colors disabled:opacity-50"
+                          className="w-full bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 rounded-xl pl-7 pr-2 py-2 text-rose-400 font-black text-lg text-center focus:outline-none transition-colors disabled:opacity-50"
                         />
                       </div>
                     </div>
@@ -345,11 +353,15 @@ export default function StockEntryPage() {
 
                   {/* Campos opcionais de validade */}
                   {expiryEnabled && !row.saved && (
-                    <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-zinc-800/60">
-                      <CalendarClock size={14} className="text-blue-400 shrink-0" />
+                    <div className="grid grid-cols-2 lg:flex lg:flex-wrap items-end gap-3 pt-3 lg:pt-1 border-t border-zinc-800/60 mt-1 lg:mt-0">
+                      <div className="col-span-2 lg:hidden flex items-center gap-2 mb-1">
+                        <CalendarClock size={14} className="text-blue-400" />
+                        <span className="text-xs font-bold text-blue-400">Rastreabilidade</span>
+                      </div>
+                      <CalendarClock size={14} className="hidden lg:block text-blue-400 shrink-0" />
 
                       {/* Número do lote */}
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex flex-col gap-1 lg:flex-row lg:items-center lg:gap-1.5">
                         <label className="text-zinc-500 text-xs font-semibold whitespace-nowrap">Nº Lote:</label>
                         <input
                           type="text"
@@ -357,30 +369,30 @@ export default function StockEntryPage() {
                           value={row.lotNumber}
                           onChange={e => updateLotField(row.product.id, 'lotNumber', e.target.value)}
                           disabled={row.saving}
-                          className="w-24 bg-zinc-950 border border-zinc-700 focus:border-blue-500 rounded-lg px-2 py-1.5 text-blue-300 text-sm font-mono focus:outline-none transition-colors disabled:opacity-50"
+                          className="w-full lg:w-24 bg-zinc-950 border border-zinc-700 focus:border-blue-500 rounded-lg px-2 py-1.5 text-blue-300 text-sm font-mono focus:outline-none transition-colors disabled:opacity-50"
                         />
                       </div>
 
                       {/* Data de validade */}
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex flex-col gap-1 lg:flex-row lg:items-center lg:gap-1.5">
                         <label className="text-zinc-500 text-xs font-semibold whitespace-nowrap">Validade:</label>
                         <input
                           type="date"
                           value={row.expiresAt}
                           onChange={e => updateLotField(row.product.id, 'expiresAt', e.target.value)}
                           disabled={row.saving}
-                          className="bg-zinc-950 border border-zinc-700 focus:border-blue-500 rounded-lg px-2 py-1.5 text-blue-300 text-sm focus:outline-none transition-colors disabled:opacity-50"
+                          className="w-full lg:w-auto bg-zinc-950 border border-zinc-700 focus:border-blue-500 rounded-lg px-2 py-1.5 text-blue-300 text-sm focus:outline-none transition-colors disabled:opacity-50"
                         />
                       </div>
 
                       {/* Fornecedor */}
-                      <div className="flex items-center gap-1.5">
+                      <div className="col-span-2 flex flex-col gap-1 lg:flex-row lg:items-center lg:gap-1.5 mt-1 lg:mt-0">
                         <label className="text-zinc-500 text-xs font-semibold whitespace-nowrap">Fornecedor:</label>
                         <select
                           value={row.supplierId}
                           onChange={e => updateLotField(row.product.id, 'supplierId', e.target.value)}
                           disabled={row.saving}
-                          className="bg-zinc-950 border border-zinc-700 focus:border-blue-500 rounded-lg px-2 py-1.5 text-blue-300 text-sm focus:outline-none transition-colors disabled:opacity-50"
+                          className="w-full lg:w-auto bg-zinc-950 border border-zinc-700 focus:border-blue-500 rounded-lg px-2 py-1.5 text-blue-300 text-sm focus:outline-none transition-colors disabled:opacity-50"
                         >
                           <option value="">Sem fornecedor</option>
                           {suppliers.map(s => (
@@ -391,31 +403,32 @@ export default function StockEntryPage() {
                     </div>
                   )}
                 </div>
+                <div className="flex items-center justify-between lg:justify-end gap-3 w-full lg:w-auto pt-2 lg:pt-0">
+                  {/* Botão confirmar */}
+                  {row.saved ? (
+                    <span className="flex items-center gap-1.5 text-emerald-400 font-bold text-sm whitespace-nowrap w-full lg:w-auto justify-center bg-emerald-950/40 lg:bg-transparent py-2 rounded-xl lg:py-0">
+                      <CheckCircle2 size={18} /> Salvo!
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => confirmEntry(row.product.id)}
+                      disabled={row.saving || !row.qty || parseInt(row.qty, 10) <= 0}
+                      className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-3 lg:py-2 rounded-xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap w-full lg:w-auto"
+                    >
+                      {row.saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                      Confirmar
+                    </button>
+                  )}
 
-                {/* Botão confirmar */}
-                {row.saved ? (
-                  <span className="flex items-center gap-1.5 text-emerald-400 font-bold text-sm whitespace-nowrap">
-                    <CheckCircle2 size={18} /> Salvo!
-                  </span>
-                ) : (
+                  {/* Remover linha (Desktop) */}
                   <button
-                    onClick={() => confirmEntry(row.product.id)}
-                    disabled={row.saving || !row.qty || parseInt(row.qty, 10) <= 0}
-                    className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2 rounded-xl font-bold text-sm transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap"
+                    onClick={() => removeRow(row.product.id)}
+                    className="hidden lg:block text-zinc-600 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-500/10 shrink-0"
+                    title="Remover da lista"
                   >
-                    {row.saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                    Confirmar
+                    <AlertTriangle size={18} />
                   </button>
-                )}
-
-                {/* Remover linha */}
-                <button
-                  onClick={() => removeRow(row.product.id)}
-                  className="text-zinc-600 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-500/10"
-                  title="Remover da lista"
-                >
-                  <AlertTriangle size={16} />
-                </button>
+                </div>
               </div>
             ))}
           </div>
