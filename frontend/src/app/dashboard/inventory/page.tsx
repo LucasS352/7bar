@@ -208,6 +208,13 @@ export default function InventoryDashboard() {
   const [splitDate, setSplitDate] = useState('');
   const [isSplitting, setIsSplitting] = useState(false);
 
+  // ── Registrar Lote Atual (converter estoque sem lote em lote rastreado) ──
+  const [isRegisterLotOpen, setIsRegisterLotOpen] = useState(false);
+  const [registerLotQty, setRegisterLotQty] = useState('');
+  const [registerLotExpiry, setRegisterLotExpiry] = useState('');
+  const [registerLotNumber, setRegisterLotNumber] = useState('');
+  const [isRegisteringLot, setIsRegisteringLot] = useState(false);
+
   const fetchExpiryData = useCallback((daysToUse: number) => {
     api.get(`/products/lots/expiring?days=${daysToUse}`)
       .then(lotsRes => {
@@ -264,6 +271,10 @@ export default function InventoryDashboard() {
     setLotModalProduct(product);
     setLoadingLots(true);
     setProductLots([]);
+    setIsRegisterLotOpen(false);
+    setRegisterLotQty('');
+    setRegisterLotExpiry('');
+    setRegisterLotNumber('');
     try {
       const res = await api.get(`/products/${product.id}/lots`);
       setProductLots(res.data || []);
@@ -271,6 +282,32 @@ export default function InventoryDashboard() {
       toast.error('Erro ao carregar lotes de estoque.');
     } finally {
       setLoadingLots(false);
+    }
+  };
+
+  const handleRegisterLot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lotModalProduct || !registerLotQty || Number(registerLotQty) <= 0) return;
+    try {
+      setIsRegisteringLot(true);
+      await api.post(`/products/add-stock/${lotModalProduct.id}`, {
+        quantity: Number(registerLotQty),
+        costPrice: Number(lotModalProduct.priceCost) || 0,
+        reason: 'Registro de lote a partir de estoque existente',
+        lotNumber: registerLotNumber || undefined,
+        expiresAt: registerLotExpiry || undefined,
+      });
+      toast.success(`Lote registrado: ${registerLotQty} un.`);
+      setIsRegisterLotOpen(false);
+      setRegisterLotQty('');
+      setRegisterLotExpiry('');
+      setRegisterLotNumber('');
+      handleOpenLotsModal(lotModalProduct);
+      fetchProducts();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Erro ao registrar lote.');
+    } finally {
+      setIsRegisteringLot(false);
     }
   };
 
@@ -1252,13 +1289,88 @@ export default function InventoryDashboard() {
               )}
             </div>
 
-            <div className="p-6 border-t border-zinc-800 bg-zinc-900/30 flex justify-end">
-              <button
-                onClick={() => setLotModalProduct(null)}
-                className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl text-sm transition-colors cursor-pointer"
-              >
-                Fechar Detalhes
-              </button>
+            <div className="p-6 border-t border-zinc-800 bg-zinc-900/30 flex flex-col gap-3">
+              {/* Formulário de Registro de Lote — aparece ao clicar no botão */}
+              {isRegisterLotOpen && (
+                <form onSubmit={handleRegisterLot} className="bg-zinc-950 border border-emerald-500/20 rounded-2xl p-4 flex flex-col gap-3 animate-in slide-in-from-bottom-2 duration-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <PackagePlus size={16} className="text-emerald-400" />
+                    <span className="text-sm font-bold text-white">Registrar Lote no Estoque Atual</span>
+                    <span className="text-[10px] text-zinc-500 ml-auto">O estoque do produto NÃO será alterado</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                        Quantidade <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0.001"
+                        step="any"
+                        required
+                        autoFocus
+                        value={registerLotQty}
+                        onChange={e => setRegisterLotQty(e.target.value)}
+                        placeholder={`Ex: ${Math.max(1, Math.round(Number(lotModalProduct?.stock || 1)))}`}
+                        className="bg-zinc-900 border border-zinc-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-white text-sm outline-none transition-colors"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Data de Validade</label>
+                      <input
+                        type="date"
+                        value={registerLotExpiry}
+                        onChange={e => setRegisterLotExpiry(e.target.value)}
+                        className="bg-zinc-900 border border-zinc-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-white text-sm outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Número do Lote (opcional)</label>
+                    <input
+                      type="text"
+                      value={registerLotNumber}
+                      onChange={e => setRegisterLotNumber(e.target.value)}
+                      placeholder="Ex: L2025-07-001"
+                      className="bg-zinc-900 border border-zinc-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-white text-sm outline-none transition-colors"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsRegisterLotOpen(false)}
+                      className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-bold rounded-xl text-sm transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isRegisteringLot || !registerLotQty || Number(registerLotQty) <= 0}
+                      className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
+                    >
+                      {isRegisteringLot ? <Loader2 size={14} className="animate-spin" /> : <PackagePlus size={14} />}
+                      Registrar Lote
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              <div className="flex justify-between items-center gap-3">
+                {!isRegisterLotOpen && (
+                  <button
+                    onClick={() => setIsRegisterLotOpen(true)}
+                    className="px-4 py-2.5 bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-400 font-bold rounded-xl text-sm transition-colors border border-emerald-500/20 flex items-center gap-2 cursor-pointer"
+                  >
+                    <PackagePlus size={16} /> Registrar Lote Atual
+                  </button>
+                )}
+                <button
+                  onClick={() => setLotModalProduct(null)}
+                  className="ml-auto px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl text-sm transition-colors cursor-pointer"
+                >
+                  Fechar Detalhes
+                </button>
+              </div>
             </div>
           </div>
         </div>

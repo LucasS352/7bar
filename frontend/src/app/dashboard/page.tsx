@@ -176,6 +176,18 @@ export default function SalesDashboard() {
   const [chartGrouping, setChartGrouping] = useState<'hour' | 'day' | 'week' | 'month'>('hour');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
+  // Debounce para evitar busca a cada tecla em datas customizadas
+  const [debouncedStart, setDebouncedStart] = useState(startDate);
+  const [debouncedEnd, setDebouncedEnd] = useState(endDate);
+  useEffect(() => {
+    if (preset !== 'custom') return;
+    const t = setTimeout(() => {
+      setDebouncedStart(startDate);
+      setDebouncedEnd(endDate);
+    }, 700);
+    return () => clearTimeout(t);
+  }, [startDate, endDate, preset]);
+
   // Paginação e busca na tabela
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPayment, setFilterPayment] = useState<string>('todos');
@@ -184,8 +196,8 @@ export default function SalesDashboard() {
   const itemsPerPage = 15;
 
   const { computedStartDate, computedEndDate } = useMemo(() => {
-    let sDate = startDate;
-    let eDate = endDate;
+    let sDate = preset === 'custom' ? debouncedStart : startDate;
+    let eDate = preset === 'custom' ? debouncedEnd : endDate;
 
     if (preset === 'today') {
       const localToday = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
@@ -203,7 +215,7 @@ export default function SalesDashboard() {
       eDate = new Date().toLocaleDateString('en-CA');
     }
     return { computedStartDate: sDate, computedEndDate: eDate };
-  }, [preset, startDate, endDate]);
+  }, [preset, debouncedStart, debouncedEnd, startDate, endDate]);
 
   const fetchDashboardData = async () => {
     try {
@@ -231,7 +243,7 @@ export default function SalesDashboard() {
     // Auto-refresh a cada 60 segundos
     const intervalId = setInterval(fetchDashboardData, 60000);
     return () => clearInterval(intervalId);
-  }, [preset, startDate, endDate]);
+  }, [preset, computedStartDate, computedEndDate]);
 
   const handleEmitNfce = async (saleId: string, forceNewNumber = false) => {
     setEmittingId(saleId);

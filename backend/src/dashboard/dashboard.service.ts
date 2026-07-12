@@ -43,13 +43,77 @@ export class DashboardService {
     const periodStart = new Date(`${startDate}T00:00:00-03:00`);
     const periodEnd   = new Date(`${endDate}T23:59:59-03:00`);
 
-    // ── 1. Todos os caixas abertos ──────────────────────────────────────────
-    const openRegisters = await prisma.cashRegister.findMany({
-      where: { status: 'open' },
-      include: { operator: { select: { name: true } } },
-      orderBy: { openingTime: 'asc' },
-    });
+    // ── Todas as queries em PARALELO para máxima performance ──────────────
+    const [
+      openRegisters,
+      todayAgg,
+      weekAgg,
+      prevWeekAgg,
+      monthAgg,
+      periodSales,
+      payablesAlerts,
+    ] = await Promise.all([
+      // 1. Caixas abertos
+      prisma.cashRegister.findMany({
+        where: { status: 'open' },
+        include: { operator: { select: { name: true } } },
+        orderBy: { openingTime: 'asc' },
+      }),
 
+      // 2. Faturamento de Hoje
+      prisma.sale.aggregate({
+        where: { createdAt: { gte: todayStart, lte: todayEnd }, NOT: { status: 'cancelled' } },
+        _sum: { total: true },
+        _count: { id: true },
+      }),
+
+      // 3. Faturamento da Semana
+      prisma.sale.aggregate({
+        where: { createdAt: { gte: weekStart, lte: todayEnd }, NOT: { status: 'cancelled' } },
+        _sum: { total: true },
+      }),
+
+      // 4. Semana anterior
+      prisma.sale.aggregate({
+        where: { createdAt: { gte: prevWeekStart, lte: prevWeekEnd }, NOT: { status: 'cancelled' } },
+        _sum: { total: true },
+      }),
+
+      // 5. Faturamento do Mês
+      prisma.sale.aggregate({
+        where: { createdAt: { gte: monthStart, lte: todayEnd }, NOT: { status: 'cancelled' } },
+        _sum: { total: true },
+      }),
+
+      // 6. Dados do período filtrado — limitado a 2000 vendas para evitar OOM em ranges grandes
+      prisma.sale.findMany({
+        where: { createdAt: { gte: periodStart, lte: periodEnd }, NOT: { status: 'cancelled' } },
+        include: {
+          payments: { select: { method: true, value: true, label: true } },
+          items: {
+            select: {
+              quantity: true,
+              priceUnit: true,
+              subtotal: true,
+              productName: true,
+              productId: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 2000,
+      }),
+
+      // 7. Alertas de contas a pagar (próximos 3 dias)
+      prisma.payable.findMany({
+        where: {
+          status: 'PENDING',
+          dueDate: { lte: new Date(new Date(todayEnd).setDate(new Date(todayEnd).getDate() + 3)) },
+        },
+        orderBy: { dueDate: 'asc' },
+      }),
+    ]);
+    // Calcula receita por caixa (paralelo para os caixas abertos)
     const openRegistersWithRevenue = await Promise.all(
       openRegisters.map(async (reg) => {
         const regSales = await prisma.sale.aggregate({
@@ -69,52 +133,11 @@ export class DashboardService {
       })
     );
 
-    // ── 2. Faturamento de Hoje ─────────────────────────────────────────────
-    const todayAgg = await prisma.sale.aggregate({
-      where: { createdAt: { gte: todayStart, lte: todayEnd }, NOT: { status: 'cancelled' } },
-      _sum: { total: true },
-      _count: { id: true },
-    });
-
-    // ── 3. Faturamento da Semana ───────────────────────────────────────────
-    const weekAgg = await prisma.sale.aggregate({
-      where: { createdAt: { gte: weekStart, lte: todayEnd }, NOT: { status: 'cancelled' } },
-      _sum: { total: true },
-    });
-
-    const prevWeekAgg = await prisma.sale.aggregate({
-      where: { createdAt: { gte: prevWeekStart, lte: prevWeekEnd }, NOT: { status: 'cancelled' } },
-      _sum: { total: true },
-    });
-
     const weekRevenue = Number(weekAgg._sum.total ?? 0);
     const prevWeekRevenue = Number(prevWeekAgg._sum.total ?? 0);
     const vsLastWeek = prevWeekRevenue > 0
       ? ((weekRevenue - prevWeekRevenue) / prevWeekRevenue) * 100
       : null;
-
-    // ── 4. Faturamento do Mês ──────────────────────────────────────────────
-    const monthAgg = await prisma.sale.aggregate({
-      where: { createdAt: { gte: monthStart, lte: todayEnd }, NOT: { status: 'cancelled' } },
-      _sum: { total: true },
-    });
-
-    // ── 5. Dados do período filtrado ──────────────────────────────────────
-    const periodSales = await prisma.sale.findMany({
-      where: { createdAt: { gte: periodStart, lte: periodEnd }, NOT: { status: 'cancelled' } },
-      include: {
-        payments: { select: { method: true, value: true, label: true } },
-        items: {
-          select: {
-            quantity: true,
-            priceUnit: true,
-            subtotal: true,
-            productName: true,
-            productId: true,
-          },
-        },
-      },
-    });
 
     // Agrega pagamentos por método
     const byPaymentMethod: Record<string, number> = {
@@ -194,18 +217,6 @@ export class DashboardService {
     const avgTicket = periodSales.length > 0
       ? periodRevenue / periodSales.length
       : 0;
-
-    // ── 6. Alertas de Contas a Pagar ─────────────────────────────────────────
-    const alertThreshold = new Date(todayEnd);
-    alertThreshold.setDate(alertThreshold.getDate() + 3); // Próximos 3 dias
-
-    const payablesAlerts = await prisma.payable.findMany({
-      where: {
-        status: 'PENDING',
-        dueDate: { lte: alertThreshold }
-      },
-      orderBy: { dueDate: 'asc' }
-    });
 
     const overduePayables = payablesAlerts.filter(p => p.dueDate < todayStart);
     const upcomingPayables = payablesAlerts.filter(p => p.dueDate >= todayStart);
