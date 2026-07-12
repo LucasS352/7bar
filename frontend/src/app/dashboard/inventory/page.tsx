@@ -1053,12 +1053,21 @@ export default function InventoryDashboard() {
                       </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleToggleActive(product.id, product.active !== false)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none shadow-inner ${product.active !== false ? 'bg-emerald-500' : 'bg-zinc-700'}`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.active !== false ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setEditingProduct(product)}
+                      className="p-1.5 text-zinc-400 hover:text-blue-400 bg-zinc-800 active:bg-blue-500/15 rounded-lg transition-colors border border-zinc-700 shadow-sm"
+                      title="Editar Produto"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleToggleActive(product.id, product.active !== false)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none shadow-inner ${product.active !== false ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.active !== false ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Preços e Margem */}
@@ -1106,13 +1115,6 @@ export default function InventoryDashboard() {
                   >
                     <span className="text-[10px] uppercase tracking-wider opacity-60 mr-1.5">Qtd</span>
                     <span className="text-base leading-none">{Math.round(Number(product.stock))}</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => setEditingProduct(product)}
-                    className="p-2.5 text-zinc-400 hover:text-blue-400 bg-zinc-800 active:bg-blue-500/15 rounded-lg transition-colors border border-zinc-700 shadow-sm"
-                  >
-                    <Edit3 size={18} />
                   </button>
                 </div>
               </div>
