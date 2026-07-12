@@ -18,7 +18,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       login: (token, user) => set({ token, user }),
       logout: () => {
-        sessionStorage.removeItem('currentOperator');
+        localStorage.removeItem('currentOperator');
         set({ token: null, user: null });
       },
       setTermsAccepted: () => set((state) => ({ user: state.user ? { ...state.user, termsAccepted: true } : null })),

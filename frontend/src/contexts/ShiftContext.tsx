@@ -41,7 +41,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     const resolvedId = operatorId
       ?? (() => {
         try {
-          const saved = sessionStorage.getItem('currentOperator');
+          const saved = localStorage.getItem('currentOperator');
           return saved ? JSON.parse(saved).id : null;
         } catch { return null; }
       })()
@@ -69,7 +69,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     const init = async () => {
       setIsLoading(true);
       try {
-        const savedOp = sessionStorage.getItem('currentOperator');
+        const savedOp = localStorage.getItem('currentOperator');
         const currentOp = savedOp ? JSON.parse(savedOp) : null;
 
         if (currentOp) {
@@ -92,7 +92,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     // Polling a cada 30s para detectar fechamentos feitos em outro dispositivo/aba
     const interval = setInterval(async () => {
       try {
-        const savedOp = sessionStorage.getItem('currentOperator');
+        const savedOp = localStorage.getItem('currentOperator');
         const currentOp = savedOp ? JSON.parse(savedOp) : null;
         if (currentOp) {
           const res = await api.get(`/cash-registers/current?operatorId=${currentOp.id}`);
@@ -107,7 +107,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
   // ─── Ao trocar de operador: limpa caixa IMEDIATAMENTE e busca o novo ────────
   useEffect(() => {
     if (operator) {
-      sessionStorage.setItem('currentOperator', JSON.stringify(operator));
+      localStorage.setItem('currentOperator', JSON.stringify(operator));
       // 1. Limpa o caixa anterior de forma SÍNCRONA antes do fetch
       setCashRegister(null);
       // 2. Busca o caixa do novo operador passando o ID EXPLICITAMENTE
@@ -122,7 +122,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       };
       fetchRegister();
     } else {
-      sessionStorage.removeItem('currentOperator');
+      localStorage.removeItem('currentOperator');
       setCashRegister(null);
     }
   }, [operator?.id]);
