@@ -101,7 +101,6 @@ export class DashboardService {
           },
         },
         orderBy: { createdAt: 'desc' },
-        take: 2000,
       }),
 
       // 7. Alertas de contas a pagar (próximos 3 dias)
