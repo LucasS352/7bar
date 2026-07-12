@@ -975,86 +975,111 @@ export default function InventoryDashboard() {
         </div>
 
         {/* Cards de Produtos (Mobile) */}
-        <div className="md:hidden flex flex-col divide-y divide-zinc-800/60">
-          {displayedProducts.map(product => (
-            <div key={product.id} className={`p-4 flex flex-col gap-3 ${product.active === false ? 'opacity-50 grayscale' : ''}`}>
-              <div className="flex justify-between items-start gap-2">
-                <div className="flex items-start gap-3 flex-1">
-                  {product.imageUrl && (
-                    <div className="w-12 h-12 shrink-0 bg-white rounded-lg flex items-center justify-center p-1 shadow-inner">
-                      <img src={product.imageUrl} alt="" className="w-full h-full object-contain mix-blend-multiply" loading="lazy" />
+        <div className="md:hidden flex flex-col gap-4 mb-4">
+          {displayedProducts.map(product => {
+            const cost = Number(product.priceCost) || 0;
+            const sell = Number(product.priceSell) || 0;
+            const profit = sell - cost;
+            const margin = sell > 0 ? (profit / sell) * 100 : 0;
+            const isProfit = profit >= 0;
+
+            return (
+              <div key={product.id} className={`bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-3 shadow-lg relative ${product.active === false ? 'opacity-60 grayscale' : ''}`}>
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex items-start gap-3 flex-1">
+                    {product.imageUrl ? (
+                      <div className="w-14 h-14 shrink-0 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-inner">
+                        <img src={product.imageUrl} alt="" className="w-full h-full object-contain mix-blend-multiply" loading="lazy" />
+                      </div>
+                    ) : (
+                      <div className="w-14 h-14 shrink-0 bg-zinc-800 rounded-xl flex items-center justify-center border border-zinc-700">
+                        <Package size={24} className="text-zinc-500" />
+                      </div>
+                    )}
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <div className="font-bold text-white text-base leading-tight line-clamp-2 pr-2">{product.name}</div>
+                      <div className="text-xs font-mono text-zinc-500 mt-1 truncate">{product.barcode || 'Sem cód. barras'}</div>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {product.shortCode && (
+                          <span className="bg-blue-500/15 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[10px] font-bold">
+                            Atalho: {product.shortCode}
+                          </span>
+                        )}
+                        {(!product.ncm || !product.grupoTributacaoId) ? (
+                          <span className="bg-yellow-500/10 text-yellow-500/90 border border-yellow-500/20 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold"><AlertOctagon size={10}/> Faltam Dados</span>
+                        ) : (
+                          <span className="bg-indigo-500/10 text-indigo-400/90 border border-indigo-500/20 px-1.5 py-0.5 rounded text-[10px] font-bold truncate">{product.grupoTributacao?.nome || 'Fiscal OK'}</span>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  <div>
-                    <div className="font-semibold text-zinc-200 line-clamp-2">{product.name}</div>
-                    <div className="text-sm font-mono text-zinc-500 mt-1">{product.barcode || 'Sem cód. barras'}</div>
+                  </div>
+                  <button
+                    onClick={() => handleToggleActive(product.id, product.active !== false)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none shadow-inner ${product.active !== false ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.active !== false ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+
+                {/* Preços e Margem */}
+                <div className="bg-zinc-950/80 rounded-xl border border-zinc-800 p-3 mt-1 grid grid-cols-2 gap-y-3 gap-x-2">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Custo</span>
+                    <span className="text-zinc-300 font-semibold">R$ {cost.toFixed(2)}</span>
+                  </div>
+                  <div className="flex flex-col text-right">
+                    <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Varejo</span>
+                    <span className="text-emerald-400 font-bold text-lg leading-none mt-0.5">R$ {sell.toFixed(2)}</span>
+                  </div>
+                  <div className="flex flex-col col-span-2 pt-2 border-t border-zinc-800/80">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Lucro Estimado</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-bold ${isProfit ? 'text-emerald-400' : 'text-red-400'}`}>
+                          R$ {profit.toFixed(2)}
+                        </span>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-black ${isProfit ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                          {margin.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleToggleActive(product.id, product.active !== false)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-950 ${product.active !== false ? 'bg-emerald-500' : 'bg-zinc-700'}`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.active !== false ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-              </div>
 
-              <div className="flex flex-wrap gap-2 text-xs font-bold items-center">
-                {product.shortCode && (
-                  <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded">
-                    Atalho: {product.shortCode}
-                  </span>
-                )}
-                {(!product.ncm || !product.grupoTributacaoId) ? (
-                  <span className="text-yellow-500/80 flex items-center gap-1"><AlertOctagon size={12}/> Faltam Dados</span>
-                ) : (
-                  <span className="text-indigo-400/80">{product.grupoTributacao?.nome || 'Fiscal OK'}</span>
-                )}
-              </div>
-              
-              <div className="flex justify-between items-center bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/80">
-                 <span className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">Fornecedores:</span>
-                 <SupplierSelector
-                    product={product}
-                    suppliers={suppliers}
-                    onToggle={(supplierId, isLinked) => handleToggleSupplier(product.id, supplierId, isLinked)}
-                  />
-              </div>
-
-              <div className="flex justify-between items-end border-t border-zinc-800 pt-3 mt-1 gap-2">
-                <div className="flex flex-col gap-1 flex-1">
-                  <span className="text-zinc-500 text-xs">Varejo / Margem de Lucro</span>
-                  <div className="flex items-center flex-wrap gap-2">
-                    <span className="text-emerald-400 font-bold text-lg">
-                      R$ {Number(product.priceSell).toFixed(2)}
-                    </span>
-                    <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${Number(product.priceSell) > Number(product.priceCost) ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                      {Number(product.priceSell) > 0 ? (((Number(product.priceSell) - Number(product.priceCost)) / Number(product.priceSell)) * 100).toFixed(1) : '0.0'}%
-                    </span>
+                {/* Ações e Estoque */}
+                <div className="flex justify-between items-center mt-1 gap-2">
+                  <div className="flex items-center bg-zinc-950/50 rounded-lg border border-zinc-800/80 p-1.5 flex-1 min-w-0">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mx-2">Forn:</span>
+                    <div className="flex-1 min-w-0 flex justify-end">
+                      <SupplierSelector
+                        product={product}
+                        suppliers={suppliers}
+                        onToggle={(supplierId, isLinked) => handleToggleSupplier(product.id, supplierId, isLinked)}
+                      />
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-2 shrink-0">
+
                   <button
                     onClick={() => handleOpenLotsModal(product)}
-                    className={`flex flex-col items-center justify-center min-w-[4rem] px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors cursor-pointer ${Number(product.stock) <= 0 ? 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20' : Number(product.stock) <= 10 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700'}`}
+                    className={`flex items-center justify-center min-w-[4rem] px-3 py-2.5 rounded-lg text-sm font-bold border transition-colors cursor-pointer shadow-sm ${Number(product.stock) <= 0 ? 'bg-red-500/15 text-red-400 border-red-500/30 active:bg-red-500/30' : Number(product.stock) <= 10 ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 active:bg-amber-500/30' : 'bg-zinc-800 text-zinc-200 border-zinc-700 active:bg-zinc-700'}`}
                     title="Ver detalhes de lotes físicos e virtuais"
                   >
-                    <span className="text-[10px] uppercase tracking-wider opacity-70">Físico</span>
-                    <span className="text-lg leading-none mt-0.5">{Math.round(Number(product.stock))}</span>
+                    <span className="text-[10px] uppercase tracking-wider opacity-60 mr-1.5">Qtd</span>
+                    <span className="text-base leading-none">{Math.round(Number(product.stock))}</span>
                   </button>
                   
                   <button
                     onClick={() => setEditingProduct(product)}
-                    className="p-3 text-zinc-400 hover:text-blue-400 bg-zinc-800 hover:bg-blue-500/10 rounded-lg transition-colors border border-zinc-700 self-stretch flex items-center"
+                    className="p-2.5 text-zinc-400 hover:text-blue-400 bg-zinc-800 active:bg-blue-500/15 rounded-lg transition-colors border border-zinc-700 shadow-sm"
                   >
-                    <Edit3 size={20} />
+                    <Edit3 size={18} />
                   </button>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {displayedProducts.length === 0 && (
-            <div className="p-8 text-center text-zinc-500">
+            <div className="p-8 text-center text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-2xl">
               Nenhum produto encontrado.
             </div>
           )}
