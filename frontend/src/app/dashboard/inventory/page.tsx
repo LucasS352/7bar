@@ -1294,12 +1294,15 @@ export default function InventoryDashboard() {
 
             <div className="p-6 border-t border-zinc-800 bg-zinc-900/30 flex flex-col gap-3">
               {/* Formulário de Registro de Lote — aparece ao clicar no botão */}
-              {isRegisterLotOpen && (
+              {isRegisterLotOpen && (() => {
+                const totalLotRemaining = productLots.reduce((acc, lot) => acc + Number(lot.remaining), 0);
+                const unassignedStock = Math.max(0, Number(lotModalProduct?.stock || 0) - totalLotRemaining);
+                return (
                 <form onSubmit={handleRegisterLot} className="bg-zinc-950 border border-emerald-500/20 rounded-2xl p-4 flex flex-col gap-3 animate-in slide-in-from-bottom-2 duration-200">
                   <div className="flex items-center gap-2 mb-1">
                     <PackagePlus size={16} className="text-emerald-400" />
                     <span className="text-sm font-bold text-white">Registrar Lote no Estoque Atual</span>
-                    <span className="text-[10px] text-zinc-500 ml-auto">O estoque do produto NÃO será alterado</span>
+                    <span className="text-[10px] text-zinc-500 ml-auto hidden sm:inline">Disponível: {unassignedStock} un</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
@@ -1309,12 +1312,13 @@ export default function InventoryDashboard() {
                       <input
                         type="number"
                         min="0.001"
+                        max={unassignedStock}
                         step="any"
                         required
                         autoFocus
                         value={registerLotQty}
                         onChange={e => setRegisterLotQty(e.target.value)}
-                        placeholder={`Ex: ${Math.max(1, Math.round(Number(lotModalProduct?.stock || 1)))}`}
+                        placeholder={`Ex: ${Math.max(1, Math.round(unassignedStock))}`}
                         className="bg-zinc-900 border border-zinc-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-white text-sm outline-none transition-colors"
                       />
                     </div>
@@ -1348,7 +1352,7 @@ export default function InventoryDashboard() {
                     </button>
                     <button
                       type="submit"
-                      disabled={isRegisteringLot || !registerLotQty || Number(registerLotQty) <= 0}
+                      disabled={isRegisteringLot || !registerLotQty || Number(registerLotQty) <= 0 || Number(registerLotQty) > unassignedStock}
                       className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
                     >
                       {isRegisteringLot ? <Loader2 size={14} className="animate-spin" /> : <PackagePlus size={14} />}
@@ -1356,7 +1360,8 @@ export default function InventoryDashboard() {
                     </button>
                   </div>
                 </form>
-              )}
+                );
+              })()}
 
               <div className="flex justify-between items-center gap-3">
                 {!isRegisterLotOpen && (

@@ -751,6 +751,15 @@ export class ProductsService {
     const product = await prisma.product.findUnique({ where: { id: productId } });
     if (!product) throw new NotFoundException('Produto não encontrado.');
 
+    // Verificar estoque sem lote
+    const lots = await prisma.stockLot.findMany({ where: { productId } });
+    const lotStock = lots.reduce((acc, lot) => acc + Number(lot.remaining), 0);
+    const unassignedStock = Number(product.stock) - lotStock;
+
+    if (quantity > unassignedStock) {
+      throw new BadRequestException(`Quantidade inválida. O estoque atual sem lote é de apenas ${unassignedStock} un.`);
+    }
+
     const finalCost = costPrice !== undefined ? new Prisma.Decimal(costPrice) : product.priceCost;
     const finalLotNumber = lotNumber || `L${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}`;
 
