@@ -144,7 +144,19 @@ export class TenantsController {
   }
 
   @Get('uploads/logos/:filename')
-  serveLogo(@Param('filename') filename: string, @Res() res: Response) {
+  async serveLogo(@Param('filename') filename: string, @Res() res: Response) {
+    try {
+      const image = await this.tenantsService.getLogoImage(filename);
+      if (image) {
+        res.setHeader('Content-Type', image.mimeType);
+        res.send(image.data);
+        return;
+      }
+    } catch (e) {
+      // Fallback para arquivo físico em caso de erro (ex: UUID inválido)
+    }
+
+    // Fallback: Busca arquivo físico (Logos antigos)
     const filePath = join(process.cwd(), 'uploads/logos', filename);
     if (!existsSync(filePath)) {
       res.status(404).send('Logo not found');

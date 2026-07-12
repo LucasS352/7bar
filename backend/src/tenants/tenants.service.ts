@@ -131,22 +131,19 @@ export class TenantsService {
     }
   }
 
+  async getLogoImage(id: string) {
+    return this.heartPrisma.image.findUnique({ where: { id } });
+  }
+
   async uploadLogo(tenantId: string, file: Express.Multer.File) {
-    const fs = require('fs');
-    const crypto = require('crypto');
+    const image = await this.heartPrisma.image.create({
+      data: {
+        data: Buffer.from(file.buffer),
+        mimeType: file.mimetype,
+      }
+    });
     
-    const dir = path.join(process.cwd(), 'uploads', 'logos');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    
-    const ext = path.extname(file.originalname);
-    const filename = `${tenantId}_${crypto.randomBytes(4).toString('hex')}${ext}`;
-    const filePath = path.join(dir, filename);
-    
-    fs.writeFileSync(filePath, file.buffer);
-    
-    const logoUrl = `/api/tenants/uploads/logos/${filename}`;
+    const logoUrl = `/api/tenants/uploads/logos/${image.id}`;
     
     return this.heartPrisma.tenant.update({
       where: { id: tenantId },
