@@ -176,17 +176,9 @@ export default function SalesDashboard() {
   const [chartGrouping, setChartGrouping] = useState<'hour' | 'day' | 'week' | 'month'>('hour');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
-  // Debounce para evitar busca a cada tecla em datas customizadas
-  const [debouncedStart, setDebouncedStart] = useState(startDate);
-  const [debouncedEnd, setDebouncedEnd] = useState(endDate);
-  useEffect(() => {
-    if (preset !== 'custom') return;
-    const t = setTimeout(() => {
-      setDebouncedStart(startDate);
-      setDebouncedEnd(endDate);
-    }, 700);
-    return () => clearTimeout(t);
-  }, [startDate, endDate, preset]);
+  // Busca manual para datas customizadas
+  const [appliedStartDate, setAppliedStartDate] = useState(startDate);
+  const [appliedEndDate, setAppliedEndDate] = useState(endDate);
 
   // Paginação e busca na tabela
   const [searchTerm, setSearchTerm] = useState('');
@@ -196,8 +188,8 @@ export default function SalesDashboard() {
   const itemsPerPage = 15;
 
   const { computedStartDate, computedEndDate } = useMemo(() => {
-    let sDate = preset === 'custom' ? debouncedStart : startDate;
-    let eDate = preset === 'custom' ? debouncedEnd : endDate;
+    let sDate = preset === 'custom' ? appliedStartDate : startDate;
+    let eDate = preset === 'custom' ? appliedEndDate : endDate;
 
     if (preset === 'today') {
       const localToday = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
@@ -215,7 +207,7 @@ export default function SalesDashboard() {
       eDate = new Date().toLocaleDateString('en-CA');
     }
     return { computedStartDate: sDate, computedEndDate: eDate };
-  }, [preset, debouncedStart, debouncedEnd, startDate, endDate]);
+  }, [preset, appliedStartDate, appliedEndDate, startDate, endDate]);
 
   const fetchDashboardData = async () => {
     try {
@@ -623,6 +615,16 @@ export default function SalesDashboard() {
                 onChange={e => setEndDate(e.target.value)}
                 className="bg-zinc-950 border border-zinc-800 text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none"
               />
+              <button
+                onClick={() => {
+                  setAppliedStartDate(startDate);
+                  setAppliedEndDate(endDate);
+                }}
+                className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg transition-colors cursor-pointer"
+                title="Procurar"
+              >
+                <Search size={18} />
+              </button>
             </div>
           )}
           </div>
