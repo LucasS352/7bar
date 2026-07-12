@@ -27,6 +27,10 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
   const [eanLookupInfo, setEanLookupInfo] = useState<string | null>(null);
   const eanDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
   // ── Compressor de imagem (Canvas API nativa, zero deps) ──────────────────
   const compressImage = (file: File, maxPx = 1200, quality = 0.82): Promise<Blob> =>
     new Promise((resolve, reject) => {
