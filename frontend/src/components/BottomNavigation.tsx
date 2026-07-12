@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { BarChart2, Package, User, LogOut, X, History, Banknote, Store, Download } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth';
-import ExportXmlModal from '@/components/ExportXmlModal';
+import { ExportXmlModal } from '@/components/ExportXmlModal';
 
 const navItems = [
   {
