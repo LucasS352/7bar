@@ -260,7 +260,7 @@ function PosPageContent() {
     }
   };
 
-  const handleProductGridKeyDown = useCallback((e: React.KeyboardEvent, index: number) => {
+  const handleProductGridKeyDown = (e: React.KeyboardEvent, index: number) => {
     const cols = window.innerWidth >= 1024 ? 4 : window.innerWidth >= 768 ? 3 : 2;
     let next = index;
     if (e.key === 'ArrowRight') { e.preventDefault(); next = Math.min(index + 1, displayedProducts.length - 1); }
@@ -290,8 +290,7 @@ function PosPageContent() {
       setFocusedProductIdx(next);
       setTimeout(() => productRefs.current[next]?.focus(), 0);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayedProducts]);
+  };
 
   const totalItemsCount = items.reduce((acc, item) => acc + item.quantity, 0);
 
