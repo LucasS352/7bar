@@ -4,7 +4,7 @@ services:
     image: mysql:8.0
     container_name: 7bar_mysql
     restart: unless-stopped
-    command: --default-authentication-plugin=mysql_native_password
+    command: --default-authentication-plugin=mysql_native_password --innodb-redo-log-capacity=536870912
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-7bar@2025}
       MYSQL_DATABASE: 7bar
@@ -73,6 +73,8 @@ services:
       PORT: 3521
     depends_on:
       - backend
+    volumes:
+      - uploads_data:/usr/share/nginx/html/uploads:ro
     networks:
       - 7bar_network
 
