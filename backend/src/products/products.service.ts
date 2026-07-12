@@ -728,8 +728,46 @@ export class ProductsService {
     this.invalidateCache(this.tenantContext.get().tenantId);
     
     this.integrationsService.syncProductStock(this.tenantContext.get().tenantId, [productId]).catch(e => console.error(e));
-
     return result;
+  }
+
+  /**
+   * Registra um lote para unidades que já estão no estoque do produto,
+   * sem alterar o saldo total (Product.stock).
+   */
+  async registerExistingLot(
+    productId: string,
+    quantity: number,
+    costPrice?: number,
+    lotNumber?: string,
+    expiresAt?: string,
+  ) {
+    if (quantity <= 0) {
+      throw new BadRequestException('A quantidade deve ser maior que zero.');
+    }
+
+    const prisma = await this.getPrisma();
+
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) throw new NotFoundException('Produto não encontrado.');
+
+    const finalCost = costPrice !== undefined ? new Prisma.Decimal(costPrice) : product.priceCost;
+    const finalLotNumber = lotNumber || `L${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}`;
+
+    const lot = await prisma.stockLot.create({
+      data: {
+        productId,
+        costPrice: finalCost,
+        quantity: new Prisma.Decimal(quantity),
+        remaining: new Prisma.Decimal(quantity),
+        lotNumber: finalLotNumber,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      }
+    });
+
+    this.invalidateCache(this.tenantContext.get().tenantId);
+    
+    return { product, lot, quantityRegistered: quantity };
   }
 
   // ── Importação em Lote (Fast Grid) ────────────────────────────────────────

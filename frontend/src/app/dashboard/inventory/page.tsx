@@ -274,7 +274,11 @@ export default function InventoryDashboard() {
     setIsRegisterLotOpen(false);
     setRegisterLotQty('');
     setRegisterLotExpiry('');
-    setRegisterLotNumber('');
+    
+    // Auto-generate lot number
+    const autoLot = `L${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}`;
+    setRegisterLotNumber(autoLot);
+    
     try {
       const res = await api.get(`/products/${product.id}/lots`);
       setProductLots(res.data || []);
@@ -290,10 +294,9 @@ export default function InventoryDashboard() {
     if (!lotModalProduct || !registerLotQty || Number(registerLotQty) <= 0) return;
     try {
       setIsRegisteringLot(true);
-      await api.post(`/products/add-stock/${lotModalProduct.id}`, {
+      await api.post(`/products/lots/register-existing/${lotModalProduct.id}`, {
         quantity: Number(registerLotQty),
         costPrice: Number(lotModalProduct.priceCost) || 0,
-        reason: 'Registro de lote a partir de estoque existente',
         lotNumber: registerLotNumber || undefined,
         expiresAt: registerLotExpiry || undefined,
       });

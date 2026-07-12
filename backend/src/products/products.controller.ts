@@ -93,6 +93,21 @@ export class ProductsController {
       expiresAt,
       supplierId,
     );
+  @Post('lots/register-existing/:id')
+  registerExistingLot(
+    @Param('id') id: string,
+    @Body('quantity') quantity: number,
+    @Body('costPrice') costPrice?: number,
+    @Body('lotNumber') lotNumber?: string,
+    @Body('expiresAt') expiresAt?: string,
+  ) {
+    return this.productsService.registerExistingLot(
+      id,
+      Number(quantity),
+      costPrice !== undefined ? Number(costPrice) : undefined,
+      lotNumber,
+      expiresAt,
+    );
   }
 
   @Patch('lots/:id')
