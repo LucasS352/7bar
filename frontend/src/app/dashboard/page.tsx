@@ -629,6 +629,13 @@ export default function SalesDashboard() {
           
           <div className="w-px h-8 bg-zinc-800 mx-1 hidden lg:block"></div>
 
+          {preset === 'custom' && (
+            <button 
+              onClick={() => setIsReportModalOpen(true)} 
+              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-3 sm:py-2 rounded-xl transition-colors font-bold w-full sm:w-auto mt-2 sm:mt-0 shadow-lg shadow-blue-500/10"
+            >
+              <TrendingUp size={18} /> <span>Relatório de Vendas</span>
+            </button>
           )}
         </div>
       </div>
