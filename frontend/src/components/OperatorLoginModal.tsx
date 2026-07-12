@@ -85,7 +85,7 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
             <Loader2 className="animate-spin text-blue-500" size={32} />
           </div>
         ) : !selectedOp ? (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {operators.map(op => (
               <button
                 key={op.id}
@@ -95,15 +95,15 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
                 <div className="w-12 h-12 bg-zinc-800 group-hover:bg-blue-500/20 rounded-full flex items-center justify-center shrink-0 transition-colors">
                   <User className="text-zinc-400 group-hover:text-blue-400 transition-colors" size={24} />
                 </div>
-                <div className="flex-1 flex justify-between items-center overflow-hidden">
-                  <div>
+                <div className="flex-1 flex justify-between items-center overflow-hidden gap-2">
+                  <div className="min-w-0 flex-1">
                     <p className="text-white font-bold truncate">{op.name}</p>
-                    <p className="text-xs text-zinc-500 uppercase tracking-wider">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider truncate">
                       {op.jobTitle || (op.isManager ? 'Gerente' : 'Operador')}
                     </p>
                   </div>
                   {op.hasOpenRegister && (
-                    <span className="bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider whitespace-nowrap">
+                    <span className="bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider whitespace-nowrap shrink-0">
                       Ativo
                     </span>
                   )}
