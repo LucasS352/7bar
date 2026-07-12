@@ -1,4 +1,5 @@
 import { useState, useEffect, useDeferredValue, useMemo, useRef, useCallback, type TouchEvent as ReactTouchEvent } from 'react';
+import { LazyImage } from '@/components/LazyImage';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { useCartStore, type Product, type CartItemModifier } from '@/store/cart';
@@ -46,6 +47,7 @@ function PosPageContent() {
   const [tenantConfig,       setTenantConfig]       = useState<any>(null);
   const [compositeProduct,   setCompositeProduct]   = useState<Product | null>(null);
   const [focusedProductIdx,  setFocusedProductIdx]  = useState<number>(-1);
+  const [visibleCount,       setVisibleCount]       = useState<number>(40);
   const [promptQuantity,      setPromptQuantity]      = useState(() => localStorage.getItem('7bar_promptQuantity') === 'true');
   const [productToSetQuantity,setProductToSetQuantity]= useState<Product | null>(null);
   const [tempQuantity,        setTempQuantity]        = useState<number>(1);
@@ -161,6 +163,7 @@ function PosPageContent() {
           const data = (res.data as any).data || [];
           const sorted = sortProducts(data);
           setProducts(sorted);
+          setVisibleCount(40); // reset ao recarregar
           // Persiste no IndexedDB para uso offline futuro
           await updateProductsCache(sorted.map((p: any) => ({
             id:         p.id,
@@ -218,6 +221,11 @@ function PosPageContent() {
   };
 
   const deferredSearch = useDeferredValue(search);
+
+  // Quando a busca muda, resetar visibleCount
+  useEffect(() => {
+    setVisibleCount(40);
+  }, [deferredSearch]);
   
   const displayedProducts = useMemo(() => {
     const normalizeStr = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -435,54 +443,78 @@ function PosPageContent() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4 pb-[200px] lg:pb-12">
-              {displayedProducts.map((product, idx) => (
-                <div key={product.id} className={`group relative bg-zinc-900 border-2 p-3 rounded-2xl hover:border-blue-500 transition-all flex flex-col items-center justify-between min-h-[120px] lg:min-h-[160px] overflow-hidden shadow-sm hover:shadow-md ${focusedProductIdx === idx ? 'border-blue-400 ring-2 ring-blue-400/30' : 'border-zinc-800'} ${lastTappedId === product.id ? 'card-tap' : ''}`}>
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-                  <button
-                    ref={el => { productRefs.current[idx] = el; }}
-                    onClick={() => handleClickProduct(product)}
-                    onKeyDown={e => handleProductGridKeyDown(e, idx)}
-                    onFocus={() => setFocusedProductIdx(idx)}
-                    tabIndex={focusedProductIdx === idx || (focusedProductIdx === -1 && idx === 0) ? 0 : -1}
-                    className="w-full flex-1 flex flex-col items-center justify-start z-10 active:scale-95 transition-transform focus:outline-none">
-                    {product.isComposite && (
-                      <span className="absolute top-3 left-3 bg-indigo-600 border border-indigo-500 text-white font-extrabold text-[10px] px-2 py-0.5 rounded shadow-sm z-20 flex items-center gap-1">
-                        <Layers size={10} /> Combo
-                      </span>
-                    )}
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4 pb-4">
+                {displayedProducts.slice(0, visibleCount).map((product, idx) => (
+                  <div key={product.id} className={`group relative bg-zinc-900 border-2 p-3 rounded-2xl hover:border-blue-500 transition-all flex flex-col items-center justify-between min-h-[120px] lg:min-h-[160px] overflow-hidden shadow-sm hover:shadow-md ${focusedProductIdx === idx ? 'border-blue-400 ring-2 ring-blue-400/30' : 'border-zinc-800'} ${lastTappedId === product.id ? 'card-tap' : ''}`}>
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                    <button
+                      ref={el => { productRefs.current[idx] = el; }}
+                      onClick={() => handleClickProduct(product)}
+                      onKeyDown={e => handleProductGridKeyDown(e, idx)}
+                      onFocus={() => setFocusedProductIdx(idx)}
+                      tabIndex={focusedProductIdx === idx || (focusedProductIdx === -1 && idx === 0) ? 0 : -1}
+                      className="w-full flex-1 flex flex-col items-center justify-start z-10 active:scale-95 transition-transform focus:outline-none">
+                      {product.isComposite && (
+                        <span className="absolute top-3 left-3 bg-indigo-600 border border-indigo-500 text-white font-extrabold text-[10px] px-2 py-0.5 rounded shadow-sm z-20 flex items-center gap-1">
+                          <Layers size={10} /> Combo
+                        </span>
+                      )}
 
-                    {product.shortCode && (
-                      <span className="absolute top-3 right-3 bg-zinc-900/80 backdrop-blur-md border border-blue-500/30 text-blue-400 font-extrabold text-[11px] px-2 py-0.5 rounded shadow-sm z-20">
-                        {product.shortCode}
-                      </span>
-                    )}
-                    
-                    {product.imageUrl && (
-                      <div className="w-full h-20 lg:h-32 mb-3 bg-white rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
-                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply transition-transform group-hover:scale-105" loading="lazy" />
+                      {product.shortCode && (
+                        <span className="absolute top-3 right-3 bg-zinc-900/80 backdrop-blur-md border border-blue-500/30 text-blue-400 font-extrabold text-[11px] px-2 py-0.5 rounded shadow-sm z-20">
+                          {product.shortCode}
+                        </span>
+                      )}
+                      
+                      {product.imageUrl && (
+                        <div className="w-full h-20 lg:h-32 mb-3 bg-white rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
+                          <LazyImage src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
+                        </div>
+                      )}
+                      
+                      <span className="font-semibold text-[1.05rem] text-center leading-snug z-10 line-clamp-2 px-1 text-zinc-100 mt-auto">{product.name}</span>
+                      <span className="text-blue-400 font-bold mt-2 text-xl z-10">R$ {Number(product.priceSell).toFixed(2)}</span>
+                      <div className="text-xs text-zinc-500 mt-2 z-10 border border-zinc-700 px-2 py-0.5 rounded-full bg-zinc-950 flex items-center gap-1 font-medium">
+                        Estoque: {Math.round(Number(product.stock))}
+                      </div>
+                    </button>
+                    {!product.isComposite && (
+                      <div className="w-full hidden lg:flex justify-center gap-1 mt-3 z-20 lg:opacity-0 group-hover:opacity-100 transition-all lg:translate-y-2 group-hover:translate-y-0">
+                        {[4, 6, 12, 16, 24].map(qt => (
+                          <button key={qt} onClick={(e) => { e.stopPropagation(); triggerTapAnimation(product.id); addItem(product, qt); }}
+                            className="bg-zinc-800 hover:bg-blue-600 text-zinc-300 hover:text-white font-bold text-xs py-1.5 px-2 rounded-lg transition-colors active:scale-90">
+                            +{qt}
+                          </button>
+                        ))}
                       </div>
                     )}
-                    
-                    <span className="font-semibold text-[1.05rem] text-center leading-snug z-10 line-clamp-2 px-1 text-zinc-100 mt-auto">{product.name}</span>
-                    <span className="text-blue-400 font-bold mt-2 text-xl z-10">R$ {Number(product.priceSell).toFixed(2)}</span>
-                    <div className="text-xs text-zinc-500 mt-2 z-10 border border-zinc-700 px-2 py-0.5 rounded-full bg-zinc-950 flex items-center gap-1 font-medium">
-                      Estoque: {Math.round(Number(product.stock))}
-                    </div>
-                  </button>
-                  {!product.isComposite && (
-                    <div className="w-full hidden lg:flex justify-center gap-1 mt-3 z-20 lg:opacity-0 group-hover:opacity-100 transition-all lg:translate-y-2 group-hover:translate-y-0">
-                      {[4, 6, 12, 16, 24].map(qt => (
-                        <button key={qt} onClick={(e) => { e.stopPropagation(); triggerTapAnimation(product.id); addItem(product, qt); }}
-                          className="bg-zinc-800 hover:bg-blue-600 text-zinc-300 hover:text-white font-bold text-xs py-1.5 px-2 rounded-lg transition-colors active:scale-90">
-                          +{qt}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Sentinela de scroll infinito */}
+              {visibleCount < displayedProducts.length && (
+                <div
+                  className="flex items-center justify-center py-6 pb-[200px] lg:pb-12"
+                  ref={el => {
+                    if (!el) return;
+                    const obs = new IntersectionObserver(([entry]) => {
+                      if (entry.isIntersecting) {
+                        setVisibleCount(c => Math.min(c + 40, displayedProducts.length));
+                      }
+                    }, { rootMargin: '200px' });
+                    obs.observe(el);
+                    // Cleanup via GC — ref element será destruído quando não for mais visível
+                  }}
+                >
+                  <span className="text-xs text-zinc-600">Mostrando {Math.min(visibleCount, displayedProducts.length)} de {displayedProducts.length} produtos</span>
                 </div>
-              ))}
-            </div>
+              )}
+              {visibleCount >= displayedProducts.length && (
+                <div className="pb-[200px] lg:pb-12" />
+              )}
+            </>
           )}
         </div>
       </div>
