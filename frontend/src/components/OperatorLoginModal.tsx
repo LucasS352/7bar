@@ -92,8 +92,11 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
                 onClick={() => setSelectedOp(op)}
                 className="bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 hover:border-blue-500/50 p-4 rounded-2xl flex items-center gap-4 transition-all text-left group"
               >
-                <div className="w-12 h-12 bg-zinc-800 group-hover:bg-blue-500/20 rounded-full flex items-center justify-center shrink-0 transition-colors">
-                  <User className="text-zinc-400 group-hover:text-blue-400 transition-colors" size={24} />
+                <div className="relative w-10 h-10 bg-zinc-800 group-hover:bg-blue-500/20 rounded-full flex items-center justify-center shrink-0 transition-colors">
+                  <User className="text-zinc-400 group-hover:text-blue-400 transition-colors" size={20} />
+                  {op.hasOpenRegister && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-zinc-950 rounded-full" title="Ativo no caixa"></span>
+                  )}
                 </div>
                 <div className="flex-1 flex justify-between items-center overflow-hidden gap-2">
                   <div className="min-w-0 flex-1">
@@ -102,11 +105,6 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
                       {op.jobTitle || (op.isManager ? 'Gerente' : 'Operador')}
                     </p>
                   </div>
-                  {op.hasOpenRegister && (
-                    <span className="bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider whitespace-nowrap shrink-0">
-                      Ativo
-                    </span>
-                  )}
                 </div>
               </button>
             ))}
