@@ -1030,5 +1030,61 @@ export class SalesService {
 
     return sale;
   }
+  async updatePayments(saleId: string, payments: { method: string; value: number; tPag?: string }[]) {
+    const prisma = await this.getPrisma();
+
+    return await prisma.$transaction(async (tx) => {
+      const sale = await tx.sale.findUnique({
+        where: { id: saleId },
+        include: { payments: true }
+      });
+
+      if (!sale) {
+        throw new NotFoundException('Venda não encontrada.');
+      }
+
+      if (sale.status === 'cancelled') {
+        throw new BadRequestException('Não é possível editar pagamentos de uma venda cancelada.');
+      }
+
+      const totalNewPayments = payments.reduce((acc, p) => acc + Number(p.value), 0);
+      const saleTotal = Number(sale.total);
+
+      // Tolerate tiny float differences
+      if (Math.abs(totalNewPayments - saleTotal) > 0.01) {
+        throw new BadRequestException(`A soma dos pagamentos (R$ ${totalNewPayments.toFixed(2)}) não bate com o total da venda (R$ ${saleTotal.toFixed(2)}).`);
+      }
+
+      // Apaga pagamentos antigos
+      await tx.payment.deleteMany({
+        where: { saleId: sale.id }
+      });
+
+      // Cria os novos
+      const newPaymentRecords = payments.map(p => {
+        let tPag = p.tPag || TPAG_MAP[p.method];
+        if (!tPag) {
+          tPag = p.method.length > 20 ? '99' : '99'; // fallback
+        }
+        
+        return {
+          saleId: sale.id,
+          method: p.method,
+          tPag,
+          value: p.value,
+          troco: 0 // Troco é ignorado na reedição, pois o valor do pagamento deve ser exato ao total. Se havia troco, a venda original considerou.
+        };
+      });
+
+      await tx.payment.createMany({
+        data: newPaymentRecords
+      });
+
+      return await tx.sale.findUnique({
+        where: { id: saleId },
+        include: { payments: true, items: true }
+      });
+    });
+  }
 }
 

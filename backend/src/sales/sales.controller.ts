@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, UseGuards, Request, Param, NotFoundException, BadRequestException, Query, Res } from '@nestjs/common';
+import { Controller, Post, Put, Get, Body, UseGuards, Request, Param, NotFoundException, BadRequestException, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { SalesService } from './sales.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -84,6 +84,17 @@ export class SalesController {
       throw new BadRequestException('O motivo do cancelamento é obrigatório.');
     }
     return this.salesService.cancel(id, reason);
+  }
+
+  @Put(':id/payments')
+  async updatePayments(
+    @Param('id') id: string,
+    @Body('payments') payments: { method: string; value: number; tPag?: string }[]
+  ) {
+    if (!payments || !Array.isArray(payments) || payments.length === 0) {
+      throw new BadRequestException('Nenhum pagamento informado.');
+    }
+    return this.salesService.updatePayments(id, payments);
   }
 }
 

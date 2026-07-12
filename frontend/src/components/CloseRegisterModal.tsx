@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { FileText, Loader2, X, AlertOctagon, Receipt, Trash2, EyeOff } from 'lucide-react';
+import { FileText, Loader2, X, AlertOctagon, Receipt, Trash2, EyeOff, Edit2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useShift } from '@/contexts/ShiftContext';
+import { EditPaymentModal } from './EditPaymentModal';
 
 // Mapa de IDs de métodos padrão → nome legível para exibição na auditoria
 const METHOD_DISPLAY: Record<string, string> = {
@@ -35,6 +36,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
   const [cancelSaleId, setCancelSaleId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
   const [cancelling, setCancelling] = useState<boolean>(false);
+  const [editingSale, setEditingSale] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -63,6 +65,20 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
       toast.error(e.response?.data?.message || 'Erro ao cancelar venda.');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handlePaymentEdited = async () => {
+    setEditingSale(null);
+    setLoading(true);
+    try {
+      const res = await api.get(`/cash-registers/${registerId}/report?_t=${Date.now()}`);
+      setData(res.data);
+      setClosingValue(res.data.report.expectedDinheiro);
+    } catch (e) {
+      toast.error('Erro ao recarregar auditoria.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -368,12 +384,23 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                         ))}
                       </ul>
                       
-                      <div className="flex flex-wrap gap-2 pt-4 border-t border-zinc-800/50">
-                        {s.payments.map((p: any, idx: number) => (
-                          <span key={idx} className="bg-blue-500/10 text-blue-400 text-[10px] uppercase font-bold px-3 py-1.5 rounded-lg border border-blue-500/20 tracking-wider">
-                            {p.label || METHOD_DISPLAY[p.method] || p.method} (R$ {Number(p.value).toFixed(2)})
-                          </span>
-                        ))}
+                      <div className="flex items-center justify-between gap-4 pt-4 border-t border-zinc-800/50">
+                        <div className="flex flex-wrap gap-2">
+                          {s.payments.map((p: any, idx: number) => (
+                            <span key={idx} className="bg-blue-500/10 text-blue-400 text-[10px] uppercase font-bold px-3 py-1.5 rounded-lg border border-blue-500/20 tracking-wider">
+                              {p.label || METHOD_DISPLAY[p.method] || p.method} (R$ {Number(p.value).toFixed(2)})
+                            </span>
+                          ))}
+                        </div>
+                        {isAdmin && s.status !== 'cancelled' && data.register.status === 'open' && (
+                          <button
+                            onClick={() => setEditingSale(s)}
+                            className="p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors border border-transparent hover:border-blue-500/20 shrink-0"
+                            title="Editar Pagamento"
+                          >
+                            <Edit2 size={15} />
+                          </button>
+                        )}
                       </div>
 
                       {s.status === 'cancelled' && s.cancelReason && (
@@ -402,6 +429,13 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
           </div>
         )}
       </div>
+
+      <EditPaymentModal
+        isOpen={!!editingSale}
+        onClose={() => setEditingSale(null)}
+        onSuccess={handlePaymentEdited}
+        sale={editingSale}
+      />
 
       {/* ═══ PASSO 2 — Confirmação Final de Fechamento ═══ */}
       {step === 2 && data && (
