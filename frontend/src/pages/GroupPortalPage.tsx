@@ -799,7 +799,7 @@ function TabProdutos() {
   const [priceValue, setPriceValue] = useState('');
   const [savingPrice, setSavingPrice] = useState(false);
   const [equalizeModal, setEqualizeModal] = useState<string | null>(null);
-  const [equalizePrice, setEqualizePrice] = useState('');
+  const [equalizePriceValue, setEqualizePriceValue] = useState('');
 
   // Create form
   const [form, setForm] = useState({ name: '', barcode: '', ncm: '', unit: 'UN', categoryName: 'Geral', priceCost: '' });
@@ -830,7 +830,7 @@ function TabProdutos() {
     finally { setSavingPrice(false); }
   };
 
-  const equalizePrice = async (productName: string, price: number) => {
+  const doEqualizePrice = async (productName: string, price: number) => {
     if (!catalog) return;
     setSavingPrice(true);
     try {
@@ -869,11 +869,11 @@ function TabProdutos() {
       <Modal open={!!equalizeModal} onClose={() => setEqualizeModal(null)} title={`Equalizar Preço — ${equalizeModal}`}>
         <p style={{ color: '#a1a1aa', fontSize: '0.85rem', marginBottom: '1.25rem' }}>Define o mesmo preço de venda para <strong style={{ color: '#f4f4f5' }}>todas as lojas</strong>.</p>
         <FF label="Novo Preço de Venda (todas as lojas)">
-          <input type="number" step="0.01" min="0" placeholder="Ex: 15.90" value={equalizePrice} onChange={e => setEqualizePrice(e.target.value)} style={IS} autoFocus />
+          <input type="number" step="0.01" min="0" placeholder="Ex: 15.90" value={equalizePriceValue} onChange={e => setEqualizePriceValue(e.target.value)} style={IS} autoFocus />
         </FF>
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
           <Btn onClick={() => setEqualizeModal(null)} color="#52525b" outline>Cancelar</Btn>
-          <Btn onClick={() => equalizePrice && equalizeModal && equalizePrice(equalizeModal, parseFloat(equalizePrice))} color="#3b82f6" disabled={!equalizePrice || savingPrice}>
+          <Btn onClick={() => equalizePriceValue && equalizeModal && doEqualizePrice(equalizeModal, parseFloat(equalizePriceValue))} color="#3b82f6" disabled={!equalizePriceValue || savingPrice}>
             {savingPrice ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />}
             Equalizar
           </Btn>
