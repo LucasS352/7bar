@@ -256,4 +256,68 @@ export class GroupsController {
     const days = daysToForecast ? parseInt(daysToForecast, 10) : 15;
     return this.groupsService.getPurchaseForecast(req.user.groupId, days);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('my/tenant-detail/:tenantId')
+  async myTenantDetail(
+    @Request() req: any,
+    @Param('tenantId') tenantId: string,
+  ) {
+    if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
+    return this.groupsService.getTenantDetail(req.user.groupId, tenantId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('my/stock-adjust')
+  async myStockAdjust(
+    @Request() req: any,
+    @Body() body: { tenantId: string; productId: string; newStock: number },
+  ) {
+    if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
+    return this.groupsService.stockAdjust(req.user.groupId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('my/products-catalog')
+  async myProductsCatalog(@Request() req: any) {
+    if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
+    return this.groupsService.getProductsCatalog(req.user.groupId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('my/products/price-per-tenant')
+  async myUpdatePricePerTenant(
+    @Request() req: any,
+    @Body() body: { productName: string; updates: { tenantId: string; priceSell: number; priceCost?: number }[] },
+  ) {
+    if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
+    return this.groupsService.updatePricePerTenant(req.user.groupId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('my/products/create-in-tenants')
+  async myCreateProductInTenants(
+    @Request() req: any,
+    @Body() body: any,
+  ) {
+    if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
+    return this.groupsService.createProductInTenants(req.user.groupId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('my/products/sync-status')
+  async mySyncStatus(@Request() req: any) {
+    if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
+    return this.groupsService.getSyncStatus(req.user.groupId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('my/products/sync')
+  async mySyncProducts(
+    @Request() req: any,
+    @Body() body: { products: { name: string; targetTenantIds: string[] }[] },
+  ) {
+    if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
+    return this.groupsService.syncProductsToTenants(req.user.groupId, body);
+  }
 }

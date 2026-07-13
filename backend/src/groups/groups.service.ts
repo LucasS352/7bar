@@ -578,4 +578,338 @@ export class GroupsService {
 
     return forecast;
   }
+
+  // ── Tenant Detail (recent sales + critical stock) ─────────────────────────
+
+  async getTenantDetail(groupId: string, tenantId: string) {
+    const group = await this.getGroupWithMembers(groupId);
+    const member = group.members.find((m) => m.tenantId === tenantId);
+    if (!member) throw new NotFoundException('Tenant não faz parte deste grupo');
+
+    const client = this.createTenantClient(member.tenant.databaseUrl);
+    try {
+      const [recentSales, criticalStock] = await Promise.all([
+        client.sale.findMany({
+          where: { status: 'completed' },
+          orderBy: { createdAt: 'desc' },
+          take: 8,
+          include: {
+            items: { include: { product: { select: { name: true } } }, take: 3 },
+            payments: { select: { method: true, label: true, value: true } },
+          },
+        }),
+        client.product.findMany({
+          where: { active: true, stock: { lt: 3 } },
+          select: { id: true, name: true, stock: true, unit: true },
+          orderBy: { stock: 'asc' },
+          take: 10,
+        }),
+      ]);
+
+      return {
+        tenantId,
+        alias: member.alias ?? member.tenant.nomeFantasia ?? member.tenant.name,
+        recentSales: recentSales.map((s) => ({
+          id: s.id,
+          total: Number(s.total),
+          createdAt: s.createdAt,
+          itemsCount: s.items.length,
+          firstItems: s.items.slice(0, 3).map((i) => i.product?.name ?? 'Produto'),
+          payments: s.payments.map((p) => ({
+            method: p.method,
+            label: p.label,
+            value: Number(p.value),
+          })),
+        })),
+        criticalStock: criticalStock.map((p) => ({
+          id: p.id,
+          name: p.name,
+          stock: Number(p.stock),
+          unit: p.unit,
+        })),
+      };
+    } finally {
+      await client.$disconnect();
+    }
+  }
+
+  // ── Stock Adjust (direct quantity set) ───────────────────────────────────
+
+  async stockAdjust(
+    groupId: string,
+    body: { tenantId: string; productId: string; newStock: number },
+  ) {
+    const group = await this.getGroupWithMembers(groupId);
+    const member = group.members.find((m) => m.tenantId === body.tenantId);
+    if (!member) throw new NotFoundException('Tenant não faz parte deste grupo');
+
+    const client = this.createTenantClient(member.tenant.databaseUrl);
+    try {
+      const product = await client.product.findUnique({ where: { id: body.productId } });
+      if (!product) throw new NotFoundException('Produto não encontrado');
+
+      const diff = body.newStock - Number(product.stock ?? 0);
+      await client.product.update({
+        where: { id: body.productId },
+        data: { stock: body.newStock },
+      });
+      await client.inventoryLog.create({
+        data: {
+          productId: body.productId,
+          type: diff >= 0 ? 'IN' : 'OUT',
+          quantity: Math.abs(diff),
+          reason: 'Ajuste via Portal Grupo',
+        },
+      });
+      return { success: true, newStock: body.newStock };
+    } finally {
+      await client.$disconnect();
+    }
+  }
+
+  // ── Products Catalog (consolidated with prices per tenant) ────────────────
+
+  async getProductsCatalog(groupId: string) {
+    const group = await this.getGroupWithMembers(groupId);
+    // Map: productName -> { tenantId -> { id, priceSell, priceCost, stock, unit, barcode, ncm } }
+    const catalogMap: Record<string, Record<string, any>> = {};
+    const tenantLabels: Record<string, string> = {};
+
+    for (const member of group.members) {
+      const label = member.alias ?? member.tenant.nomeFantasia ?? member.tenant.name;
+      tenantLabels[member.tenantId] = label;
+      const client = this.createTenantClient(member.tenant.databaseUrl);
+      try {
+        const products = await client.product.findMany({
+          where: { active: true },
+          select: { id: true, name: true, priceSell: true, priceCost: true, stock: true, unit: true, barcode: true, ncm: true, imageUrl: true },
+        });
+        for (const p of products) {
+          if (!catalogMap[p.name]) catalogMap[p.name] = {};
+          catalogMap[p.name][member.tenantId] = {
+            id: p.id,
+            priceSell: Number(p.priceSell ?? 0),
+            priceCost: Number(p.priceCost ?? 0),
+            stock: Number(p.stock ?? 0),
+            unit: p.unit,
+            barcode: p.barcode,
+            ncm: p.ncm,
+            imageUrl: p.imageUrl,
+          };
+        }
+      } catch (err: any) {
+        this.logger.warn(`Catalog erro tenant ${member.tenantId}: ${err.message}`);
+      } finally {
+        await client.$disconnect();
+      }
+    }
+
+    const rows = Object.entries(catalogMap).map(([name, tenants]) => ({ name, tenants }));
+    rows.sort((a, b) => a.name.localeCompare(b.name));
+    return { groupId, groupName: group.name, tenantLabels, rows };
+  }
+
+  // ── Update price per tenant (individual or all) ───────────────────────────
+
+  async updatePricePerTenant(
+    groupId: string,
+    body: { productName: string; updates: { tenantId: string; priceSell: number; priceCost?: number }[] },
+  ) {
+    const group = await this.getGroupWithMembers(groupId);
+    const results: any[] = [];
+
+    for (const update of body.updates) {
+      const member = group.members.find((m) => m.tenantId === update.tenantId);
+      if (!member) { results.push({ tenantId: update.tenantId, success: false, error: 'Tenant não no grupo' }); continue; }
+
+      const client = this.createTenantClient(member.tenant.databaseUrl);
+      try {
+        const data: any = { priceSell: update.priceSell };
+        if (update.priceCost !== undefined) data.priceCost = update.priceCost;
+        const updated = await client.product.updateMany({ where: { name: body.productName }, data });
+        results.push({ tenantId: update.tenantId, success: true, updatedCount: updated.count });
+      } catch (err: any) {
+        results.push({ tenantId: update.tenantId, success: false, error: err.message });
+      } finally {
+        await client.$disconnect();
+      }
+    }
+    return { groupId, results };
+  }
+
+  // ── Create product in selected tenants ────────────────────────────────────
+
+  async createProductInTenants(
+    groupId: string,
+    body: {
+      name: string;
+      barcode?: string;
+      ncm?: string;
+      unit: string;
+      categoryName: string;
+      priceCost: number;
+      tenantPrices: { tenantId: string; priceSell: number }[];
+    },
+  ) {
+    const group = await this.getGroupWithMembers(groupId);
+    const results: any[] = [];
+
+    for (const tp of body.tenantPrices) {
+      const member = group.members.find((m) => m.tenantId === tp.tenantId);
+      if (!member) { results.push({ tenantId: tp.tenantId, success: false, error: 'Tenant não no grupo' }); continue; }
+
+      const client = this.createTenantClient(member.tenant.databaseUrl);
+      try {
+        let category = await client.category.findFirst({ where: { name: body.categoryName } });
+        if (!category) category = await client.category.create({ data: { name: body.categoryName } });
+
+        const product = await client.product.upsert({
+          where: { name: body.name } as any,
+          update: { priceSell: tp.priceSell, priceCost: body.priceCost, unit: body.unit, ...(body.barcode ? { barcode: body.barcode } : {}), ...(body.ncm ? { ncm: body.ncm } : {}) },
+          create: {
+            name: body.name,
+            priceSell: tp.priceSell,
+            priceCost: body.priceCost,
+            unit: body.unit,
+            categoryId: category.id,
+            stock: 0,
+            ...(body.barcode ? { barcode: body.barcode } : {}),
+            ...(body.ncm ? { ncm: body.ncm } : {}),
+          },
+        });
+        results.push({ tenantId: tp.tenantId, success: true, productId: product.id });
+      } catch (err: any) {
+        results.push({ tenantId: tp.tenantId, success: false, error: err.message });
+      } finally {
+        await client.$disconnect();
+      }
+    }
+    return { groupId, results };
+  }
+
+  // ── Sync Check: products present in some tenants but not others ───────────
+
+  async getSyncStatus(groupId: string) {
+    const group = await this.getGroupWithMembers(groupId);
+    const tenantProductNames: Record<string, Set<string>> = {};
+    const tenantLabels: Record<string, string> = {};
+    const tenantData: Record<string, any[]> = {};
+    const allTenantIds = group.members.map((m) => m.tenantId);
+
+    for (const member of group.members) {
+      const label = member.alias ?? member.tenant.nomeFantasia ?? member.tenant.name;
+      tenantLabels[member.tenantId] = label;
+      tenantProductNames[member.tenantId] = new Set();
+      tenantData[member.tenantId] = [];
+      const client = this.createTenantClient(member.tenant.databaseUrl);
+      try {
+        const products = await client.product.findMany({
+          where: { active: true },
+          select: { id: true, name: true, priceSell: true, priceCost: true, unit: true, barcode: true, ncm: true, imageUrl: true },
+        });
+        for (const p of products) {
+          tenantProductNames[member.tenantId].add(p.name);
+          tenantData[member.tenantId].push({ ...p, priceSell: Number(p.priceSell), priceCost: Number(p.priceCost) });
+        }
+      } catch (err: any) {
+        this.logger.warn(`SyncCheck erro tenant ${member.tenantId}: ${err.message}`);
+      } finally {
+        await client.$disconnect();
+      }
+    }
+
+    // Find products missing from at least one tenant
+    const allNames = new Set<string>();
+    for (const names of Object.values(tenantProductNames)) {
+      for (const n of names) allNames.add(n);
+    }
+
+    const missingProducts: any[] = [];
+    for (const name of allNames) {
+      const presentIn: string[] = [];
+      const missingIn: string[] = [];
+      for (const tid of allTenantIds) {
+        if (tenantProductNames[tid]?.has(name)) presentIn.push(tid);
+        else missingIn.push(tid);
+      }
+      if (missingIn.length > 0) {
+        // Get product data from the first tenant that has it
+        const sourceTenantId = presentIn[0];
+        const productData = tenantData[sourceTenantId]?.find((p) => p.name === name);
+        missingProducts.push({ name, presentIn, missingIn, productData });
+      }
+    }
+
+    return {
+      groupId,
+      tenantLabels,
+      hasDifferences: missingProducts.length > 0,
+      missingProducts,
+    };
+  }
+
+  // ── Sync Products to missing tenants ─────────────────────────────────────
+
+  async syncProductsToTenants(
+    groupId: string,
+    body: { products: { name: string; targetTenantIds: string[] }[] },
+  ) {
+    const group = await this.getGroupWithMembers(groupId);
+    const results: any[] = [];
+
+    for (const item of body.products) {
+      // Find source data (from any tenant that has the product)
+      let sourceData: any = null;
+      let sourceCategoryName = 'Geral';
+
+      for (const member of group.members) {
+        if (item.targetTenantIds.includes(member.tenantId)) continue; // skip targets
+        const client = this.createTenantClient(member.tenant.databaseUrl);
+        try {
+          const p = await client.product.findFirst({
+            where: { name: item.name },
+            include: { category: { select: { name: true } } },
+          });
+          if (p) {
+            sourceData = p;
+            sourceCategoryName = (p as any).category?.name ?? 'Geral';
+            break;
+          }
+        } catch { } finally { await client.$disconnect(); }
+      }
+
+      if (!sourceData) { results.push({ name: item.name, success: false, error: 'Produto não encontrado em nenhuma loja origem' }); continue; }
+
+      // Create in target tenants
+      for (const targetTenantId of item.targetTenantIds) {
+        const member = group.members.find((m) => m.tenantId === targetTenantId);
+        if (!member) continue;
+        const client = this.createTenantClient(member.tenant.databaseUrl);
+        try {
+          let category = await client.category.findFirst({ where: { name: sourceCategoryName } });
+          if (!category) category = await client.category.create({ data: { name: sourceCategoryName } });
+          await client.product.upsert({
+            where: { name: item.name } as any,
+            update: { priceSell: sourceData.priceSell, priceCost: sourceData.priceCost, unit: sourceData.unit },
+            create: {
+              name: item.name,
+              priceSell: sourceData.priceSell,
+              priceCost: sourceData.priceCost,
+              unit: sourceData.unit,
+              categoryId: category.id,
+              stock: 0,
+              ...(sourceData.barcode ? { barcode: sourceData.barcode } : {}),
+              ...(sourceData.ncm ? { ncm: sourceData.ncm } : {}),
+            },
+          });
+          results.push({ name: item.name, tenantId: targetTenantId, success: true });
+        } catch (err: any) {
+          results.push({ name: item.name, tenantId: targetTenantId, success: false, error: err.message });
+        } finally {
+          await client.$disconnect();
+        }
+      }
+    }
+    return { groupId, results };
+  }
 }
