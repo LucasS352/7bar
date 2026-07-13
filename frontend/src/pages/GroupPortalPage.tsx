@@ -111,11 +111,21 @@ function KpiCard({ label, value, sub, color, icon }: { label: string; value: str
 function TenantDetailDrawer({ tenantId, tenantAlias, color, onClose }: { tenantId: string; tenantAlias: string; color: string; onClose: () => void }) {
   const [data, setData] = useState<TenantDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
 
   useEffect(() => {
     setLoading(true);
+    setFetchError('');
     fetch(`/api/groups/my/tenant-detail/${tenantId}`, { headers: authHeaders() })
-      .then(r => r.json()).then(setData).finally(() => setLoading(false));
+      .then(async r => {
+        const json = await r.json();
+        if (!r.ok) throw new Error(json?.message || `HTTP ${r.status}`);
+        // Validate expected shape
+        if (!Array.isArray(json?.recentSales)) throw new Error('Resposta inválida do servidor');
+        setData(json);
+      })
+      .catch(e => setFetchError(e.message || 'Erro desconhecido'))
+      .finally(() => setLoading(false));
   }, [tenantId]);
 
   return (
@@ -141,12 +151,16 @@ function TenantDetailDrawer({ tenantId, tenantAlias, color, onClose }: { tenantI
             <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
             <span style={{ fontSize: '0.85rem' }}>Conectando à loja...</span>
           </div>
-        ) : !data ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171', fontSize: '0.85rem' }}>Erro ao carregar detalhes</div>
+        ) : fetchError ? (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', padding: '2rem' }}>
+            <AlertTriangle size={28} color="#f59e0b" />
+            <div style={{ color: '#f87171', fontWeight: 600, fontSize: '0.85rem', textAlign: 'center' }}>Não foi possível carregar os detalhes</div>
+            <div style={{ color: '#71717a', fontSize: '0.75rem', textAlign: 'center' }}>{fetchError}</div>
+          </div>
         ) : (
           <div style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Critical Stock */}
-            {data.criticalStock.length > 0 && (
+            {(data.criticalStock?.length ?? 0) > 0 && (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
                   <AlertTriangle size={16} color="#ef4444" />
@@ -169,19 +183,19 @@ function TenantDetailDrawer({ tenantId, tenantAlias, color, onClose }: { tenantI
                 <Clock size={16} color="#60a5fa" />
                 <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#e4e4e7' }}>Vendas Recentes</span>
               </div>
-              {data.recentSales.length === 0 ? (
+              {(data.recentSales?.length ?? 0) === 0 ? (
                 <div style={{ color: '#52525b', fontSize: '0.8rem', textAlign: 'center', padding: '2rem' }}>Nenhuma venda recente</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                  {data.recentSales.map(s => (
+                  {(data.recentSales ?? []).map(s => (
                     <div key={s.id} style={{ background: 'rgba(39,39,42,0.4)', border: '1px solid rgba(63,63,70,0.4)', borderRadius: '0.75rem', padding: '0.875rem 1rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                         <span style={{ fontSize: '0.72rem', color: '#71717a', fontFamily: 'monospace' }}>{new Date(s.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                         <span style={{ fontWeight: 800, color: '#4ade80', fontSize: '0.9rem' }}>{fmt(s.total)}</span>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#a1a1aa', marginBottom: '0.4rem' }}>{s.firstItems.join(', ')}{s.itemsCount > 3 ? ` +${s.itemsCount - 3}` : ''}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#a1a1aa', marginBottom: '0.4rem' }}>{(s.firstItems ?? []).join(', ')}{(s.itemsCount ?? 0) > 3 ? ` +${s.itemsCount - 3}` : ''}</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
-                        {s.payments.map((p, i) => (
+                        {(s.payments ?? []).map((p, i) => (
                           <span key={i} style={{ fontSize: '0.6rem', fontWeight: 700, color: '#60a5fa', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '999px', padding: '0.1rem 0.5rem' }}>
                             {p.label || METHOD_DISPLAY[p.method] || p.method}
                           </span>
