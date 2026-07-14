@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
+import { ProductsService } from '../products/products.service';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { PrismaClient } = require('@prisma/client');
@@ -8,7 +9,10 @@ const { PrismaClient } = require('@prisma/client');
 export class GroupsService {
   private readonly logger = new Logger(GroupsService.name);
 
-  constructor(private heartPrisma: HeartPrismaService) {}
+  constructor(
+    private heartPrisma: HeartPrismaService,
+    private productsService: ProductsService,
+  ) {}
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -653,14 +657,26 @@ export class GroupsService {
         where: { id: body.productId },
         data: { stock: body.newStock },
       });
-      await client.inventoryLog.create({
-        data: {
-          productId: body.productId,
-          type: diff >= 0 ? 'IN' : 'OUT',
-          quantity: Math.abs(diff),
-          reason: 'Ajuste via Portal Grupo',
-        },
-      });
+
+      // Registra no log de inventário
+      try {
+        await client.inventoryLog.create({
+          data: {
+            productId: body.productId,
+            type: diff >= 0 ? 'IN' : 'OUT',
+            quantity: Math.abs(diff),
+            notes: 'Ajuste via Portal Grupo',
+          },
+        });
+      } catch (logErr) {
+        // Log silencioso — o ajuste de estoque já foi salvo
+        this.logger.warn(`inventoryLog falhou para produto ${body.productId}: ${logErr}`);
+      }
+
+      // Invalida o cache do catálogo deste tenant para que a tela de estoque
+      // mostre o valor atualizado imediatamente sem esperar os 10 min de TTL
+      this.productsService.invalidateCache(body.tenantId);
+
       return { success: true, newStock: body.newStock };
     } finally {
       await client.$disconnect();
