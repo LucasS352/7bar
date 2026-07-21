@@ -127,6 +127,11 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [showCopyModal, setShowCopyModal] = useState(false);
 
+  // ── Auto-sugestão tributária ──
+  const [suggestedGroupName, setSuggestedGroupName] = useState<string | null>(null);
+  const [suggestedGroupId, setSuggestedGroupId] = useState<string | null>(null);
+  const suggestDebounceRef = useRef<any | null>(null);
+
   useEffect(() => {
     if (!isOpen) return;
     setFormData(emptyForm);
@@ -219,6 +224,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
         const product = res.data.data;
 
         if (product) {
+          const finalName = formData.name || product.name;
           // Preenche automaticamente os campos — mantém editáveis
           setFormData(prev => ({
             ...prev,
@@ -230,6 +236,8 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
           }));
           setEanStatus('found');
           setEanLookupInfo(`${product.name}${product.brand ? ` · ${product.brand}` : ''}`);
+          // Trigger suggestion
+          fetchTaxGroupSuggestion(finalName);
         } else {
           setEanStatus('not_found');
         }
@@ -247,6 +255,37 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
   if (!isOpen) return null;
 
   const f = (key: string, val: unknown) => setFormData(prev => ({ ...prev, [key]: val }));
+
+  // ── Auto-sugestão tributária ──
+
+  const fetchTaxGroupSuggestion = (name: string) => {
+    if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current);
+    if (!name || name.trim().length < 3) {
+      setSuggestedGroupName(null);
+      setSuggestedGroupId(null);
+      return;
+    }
+
+    suggestDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await api.get(`/tributacao/suggest?q=${encodeURIComponent(name)}`);
+        if (res.data && res.data.sugestao) {
+          setSuggestedGroupName(res.data.nomesSugerido);
+          setSuggestedGroupId(res.data.sugestao.id);
+        } else {
+          setSuggestedGroupName(null);
+          setSuggestedGroupId(null);
+        }
+      } catch (err) {
+        // Silencioso
+      }
+    }, 300);
+  };
+
+  const handleNameChange = (name: string) => {
+    f('name', name);
+    fetchTaxGroupSuggestion(name);
+  };
 
   // Margem estimada
   const cost = parseFloat(formData.priceCost) || 0;
@@ -430,8 +469,25 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
                 className={inputCls}
                 placeholder="Ex: Cerveja Heineken Long Neck 330ml"
                 value={formData.name}
-                onChange={e => f('name', e.target.value)}
+                onChange={e => handleNameChange(e.target.value)}
               />
+              
+              {suggestedGroupName && suggestedGroupId && formData.grupoTributacaoId !== suggestedGroupId && (
+                <div className="mt-1.5 flex items-center justify-between bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1.5 rounded-xl text-[11px] text-indigo-400">
+                  <span>💡 Sugestão Fiscal: <strong>{suggestedGroupName}</strong></span>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      f('grupoTributacaoId', suggestedGroupId);
+                      setSuggestedGroupName(null);
+                      setSuggestedGroupId(null);
+                    }}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-2 py-0.5 rounded transition text-[10px] cursor-pointer"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

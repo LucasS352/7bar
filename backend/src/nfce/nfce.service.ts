@@ -34,18 +34,12 @@ export class NfceService {
   }): Promise<NfceResultado> {
     const serviceUrl = process.env.NFCE_SERVICE_URL || 'http://nfce-service:8080';
 
-    // Proteção: bloquear emissão em produção enquanto em desenvolvimento
-    if (payload.ambiente === 1) {
-      this.logger.warn('Tentativa de emissão em PRODUÇÃO bloqueada — use ambiente 2 (Homologação) para testes.');
-      throw new BadGatewayException('Emissão em produção não habilitada neste ambiente. Configure nfceAmbiente=2.');
-    }
-
-    this.logger.log(`Enviando NFC-e ao microsserviço PHP: ${serviceUrl}/emitir`);
+    this.logger.log(`Enviando NFC-e ao microsserviço PHP (${payload.ambiente === 1 ? 'PRODUÇÃO' : 'HOMOLOGAÇÃO'}): ${serviceUrl}/emitir`);
 
     try {
       const { data } = await firstValueFrom(
         this.httpService.post<NfceResultado>(`${serviceUrl}/emitir`, payload, {
-          timeout: 30_000, // SEFAZ pode demorar até 30s
+          timeout: 90_000, // SEFAZ pode demorar se houver retentativas
         }),
       );
       this.logger.log(`NFC-e resultado: ${data.status} | chave: ${data.chave ?? 'N/A'}`);

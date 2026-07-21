@@ -3,7 +3,10 @@ FROM php:8.2-apache-bullseye
 # ─── 1. Dependências do sistema e extensões PHP ───────────────────────────────
 RUN apt-get update && apt-get install -y \
     libzip-dev zip unzip git libxml2-dev libssl-dev curl ca-certificates openssl \
-    && docker-php-ext-install zip soap \
+    libfreetype6-dev libjpeg62-turbo-dev libpng-dev libonig-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install zip soap gd \
+    && docker-php-ext-install mbstring \
     && rm -rf /var/lib/apt/lists/*
 
 # ─── 2. CORREÇÃO OPENSSL 3.x / Bullseye: SECLEVEL=1 + TLS 1.2 ───────────────

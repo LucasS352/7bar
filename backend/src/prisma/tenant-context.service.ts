@@ -14,8 +14,8 @@ export interface TenantContext {
 export class TenantContextService {
   private static readonly storage = new AsyncLocalStorage<TenantContext>();
 
-  run(context: TenantContext, callback: () => void) {
-    TenantContextService.storage.run(context, callback);
+  run<R>(context: TenantContext, callback: () => R): R {
+    return TenantContextService.storage.run(context, callback);
   }
 
   get(): TenantContext {

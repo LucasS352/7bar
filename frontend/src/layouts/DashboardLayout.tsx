@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Users, ChevronLeft, ChevronRight, AlertTriangle, Truck, ShoppingCart, Banknote, CreditCard, FileSpreadsheet, Images } from 'lucide-react';
+import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Users, ChevronLeft, ChevronRight, AlertTriangle, Truck, ShoppingCart, Banknote, CreditCard, FileSpreadsheet, Images, FileDown, ReceiptText } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { api } from '@/lib/api';
 import { getFullUrl } from '@/lib/getFullUrl';
@@ -55,11 +55,16 @@ export function DashboardLayout() {
   const inventoryToolItems = [
     { name: 'Contagem de Estoque', to: '/dashboard/inventory/stock-count', icon: FileSpreadsheet },
     { name: 'Imagens em Massa',   to: '/dashboard/bulk-images',            icon: Images },
+    ...(modules.nfce !== false ? [
+      { name: 'Importar XML (Sefaz)',     to: '/dashboard/inventory/purchases/imports', icon: FileDown },
+      { name: 'Gestão & Relatório NFC-e', to: '/dashboard/fiscal/gestao',                 icon: ReceiptText },
+      { name: 'Ajuste Fiscal',           to: '/dashboard/configuracoes/ajuste-fiscal',     icon: FileSpreadsheet },
+    ] : []),
   ];
   const configItems = [
     { name: 'Empresa',            to: '/dashboard/configuracoes/empresa',           icon: Building2 },
     ...(modules.nfce !== false ? [
-      { name: 'Grupos Tributários', to: '/dashboard/configuracoes/tributacao',        icon: FileText }
+      { name: 'Grupos Tributários', to: '/dashboard/configuracoes/tributacao',        icon: FileText },
     ] : []),
     { name: 'Formas de Pagamento', to: '/dashboard/configuracoes/payment-methods',   icon: CreditCard },
     { name: 'Gestão de Equipe',   to: '/dashboard/equipe',                           icon: Users },
@@ -67,7 +72,12 @@ export function DashboardLayout() {
 
   const pathname = window.location.pathname;
   const isEstoqueBlocked = modules.estoque === false && pathname.startsWith('/dashboard/inventory');
-  const isNfceBlocked = modules.nfce === false && pathname.startsWith('/dashboard/configuracoes/tributacao');
+  const isNfceBlocked = modules.nfce === false && (
+    pathname.startsWith('/dashboard/configuracoes/tributacao') ||
+    pathname.startsWith('/dashboard/configuracoes/ajuste-fiscal') ||
+    pathname.startsWith('/dashboard/fiscal/gestao') ||
+    pathname.startsWith('/dashboard/inventory/purchases/imports')
+  );
 
   return (
     <div className="flex h-screen bg-zinc-950 text-white font-sans overflow-hidden">

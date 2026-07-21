@@ -106,7 +106,7 @@ export class CashRegistersService {
     if (!register) throw new BadRequestException('Caixa não encontrado');
 
     const sales = await prisma.sale.findMany({
-      where: { cashRegisterId: id },
+      where: { cashRegisterId: id, NOT: { source: 'ajuste_fiscal' } },
       include: { payments: true, items: { include: { product: true } } },
       orderBy: { createdAt: 'desc' }
     });
@@ -120,7 +120,7 @@ export class CashRegistersService {
     const customMethodTotals: Record<string, { label: string; total: Prisma.Decimal }> = {};
 
     sales.forEach(sale => {
-      if (sale.status === 'cancelled') return;
+      if (sale.status === 'cancelled' || sale.source === 'ajuste_fiscal') return;
       sale.payments.forEach((p: any) => {
         const v = new Prisma.Decimal(p.value as any);
         if (p.method === 'dinheiro')      totalDinheiro = totalDinheiro.add(v);

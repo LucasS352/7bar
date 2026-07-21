@@ -20,6 +20,7 @@ import { ComandasPage } from './pages/dashboard/ComandasPage';
 import UsersPage from './app/dashboard/users/page';
 import CategoriesPage from './app/dashboard/inventory/categories/page';
 import MassEntryPage from './app/dashboard/inventory/purchases/page';
+import XmlImportPage from './app/dashboard/inventory/purchases/imports/page';
 import MassEditPage from './app/dashboard/inventory/mass-edit/page';
 import StockEntryPage from './app/dashboard/inventory/stock-entry/page';
 import StockCountPage from './app/dashboard/inventory/stock-count/page';
@@ -29,6 +30,8 @@ import SuppliersPage from './app/dashboard/suppliers/page';
 import PurchaseOrdersPage from './app/dashboard/purchase-orders/page';
 import PayablesPage from './app/dashboard/finance/payables/page';
 import PaymentMethodsPage from './app/dashboard/configuracoes/payment-methods/page';
+import AjusteFiscalPage from './app/dashboard/configuracoes/ajuste-fiscal/page';
+import FiscalManagementPage from './app/dashboard/fiscal/gestao/page';
 import BulkImagesPage from './pages/dashboard/BulkImagesPage';
 
 // Stores
@@ -108,6 +111,7 @@ function App() {
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="inventory/categories" element={<CategoriesPage />} />
           <Route path="inventory/purchases" element={<MassEntryPage />} />
+          <Route path="inventory/purchases/imports" element={<XmlImportPage />} />
           <Route path="inventory/mass-edit" element={<MassEditPage />} />
           <Route path="inventory/stock-entry" element={<StockEntryPage />} />
           <Route path="inventory/stock-count" element={<StockCountPage />} />
@@ -120,6 +124,8 @@ function App() {
           <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
           <Route path="finance/payables" element={<PayablesPage />} />
           <Route path="configuracoes/payment-methods" element={<PaymentMethodsPage />} />
+          <Route path="configuracoes/ajuste-fiscal" element={<AjusteFiscalPage />} />
+          <Route path="fiscal/gestao" element={<FiscalManagementPage />} />
           <Route path="bulk-images" element={<BulkImagesPage />} />
         </Route>
 
@@ -128,7 +134,19 @@ function App() {
       </Routes>
 
       {/* Toast global */}
-      <Toaster theme="dark" position="top-center" richColors />
+      <Toaster 
+        theme="dark" 
+        position="top-center" 
+        richColors 
+        toastOptions={{
+          style: { 
+            fontSize: '0.95rem', 
+            padding: '16px', 
+            borderRadius: '16px',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }
+        }} 
+      />
       <TermsAcceptanceModal />
     </BrowserRouter>
   );

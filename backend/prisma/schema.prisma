@@ -14,6 +14,36 @@ datasource db {
 }
 
 // ------------------------------------------------------------
+//  Enums do Módulo Fiscal
+// ------------------------------------------------------------
+enum FiscalImportStatus {
+  RECEBIDA
+  PROCESSANDO
+  AGUARDANDO_CONCILIACAO
+  PRONTA_IMPORTAR
+  IMPORTANDO
+  IMPORTADA
+  CANCELADA
+  ERRO
+}
+
+enum FiscalEventType {
+  IMPORT_STARTED
+  IMPORT_FINISHED
+  IMPORT_PARTIAL
+  SUPPLIER_CREATED
+  PRODUCT_MATCHED
+  PRODUCT_CREATED
+  NFE_DOWNLOADED
+  XML_UPLOADED
+  SEFAZ_ERROR
+  NFE_CANCELLED
+  STATUS_CHECK
+  XML_GENERATED
+  DANFE_GENERATED
+}
+
+// ------------------------------------------------------------
 //  GrupoTributacao — regras fiscais por grupo de produtos
 //  Baseado na estrutura GRUPO_TRIBUTACAO + TRIBUTACAO do Packon
 // ------------------------------------------------------------
@@ -21,6 +51,7 @@ model GrupoTributacao {
   id    String @id @default(uuid())
   nome  String // ex: "TRIBUTADOS - Consumidor Final SP"
   ativo Boolean @default(true)
+  isPadrao Boolean @default(false)
 
   // ICMS — Simples Nacional
   csosn     String? // 102=SN s/ crédito, 400=Isento ST, 500=ST recolhido
@@ -103,6 +134,10 @@ model Product {
   origem  Int     @default(0)
   // 0=Nacional, 1=Estrangeiro import direta, 2=Estrangeiro adquirido no mercado interno
 
+  // Sistema de Perfis Fiscais
+  fiscalProfileId String?
+  emiteNfce       Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -119,6 +154,7 @@ model Product {
 
   supplierProducts    SupplierProduct[]
   purchaseOrderItems  PurchaseOrderItem[]
+  nfeEntradaItens     NfeEntradaItem[]
 
   @@map("products")
 }
@@ -394,6 +430,10 @@ model InventoryLog {
   costPrice Decimal? @db.Decimal(10, 4)
   reason    String?
 
+  origin       String? @default("MANUAL") // IMPORT_XML, IMPORT_DFE, MANUAL, AJUSTE, PERDA, DEVOLUCAO
+  referenceId  String?                    // ID referencial (ex: ID da NfeEntrada)
+  referenceKey String?                    // Chave referencial (ex: chave de 44 digitos da nota)
+
   createdAt DateTime @default(now())
 
   @@map("inventory_logs")
@@ -490,10 +530,14 @@ model StockLot {
   quantity     Decimal               @db.Decimal(10, 3) // Quantidade comprada originalmente
   remaining    Decimal               @db.Decimal(10, 3) // Quantidade restante no lote
   // ── Controle de Validade (módulo opcional) ────────────────
-  lotNumber    String?               // Ex: "LT-2025-001" — para rastreabilidade
-  expiresAt    DateTime?             // Data de validade do lote
-  supplierId   String?               // Fornecedor deste lote
-  supplier     Supplier?             @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  lotNumber       String?               // Ex: "LT-2025-001" — para rastreabilidade
+  expiresAt       DateTime?             // Data de validade do lote
+  supplierId      String?               // Fornecedor deste lote
+  supplier        Supplier?             @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  cProdFornecedor String?               // Código interno de produto do fornecedor
+  loteFornecedor  String?               // Lote impresso pelo fornecedor
+  dataFabricacao  DateTime?             // Data de fabricação do lote
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
   consumptions StockLotConsumption[]
@@ -525,7 +569,14 @@ model Supplier {
   whatsapp  String?
   cnpjCpf   String?
   email     String?
-  
+  ie        String?  // Inscrição Estadual
+  logradouro String?
+  numero    String?
+  bairro    String?
+  municipio String?
+  uf        String?
+  cep       String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -533,6 +584,7 @@ model Supplier {
   purchaseOrders PurchaseOrder[]
   payables       Payable[]
   stockLots      StockLot[]
+  nfeEntradas    NfeEntrada[]
 
   @@map("suppliers")
 }
@@ -544,11 +596,14 @@ model Supplier {
 //  SupplierProduct — produtos fornecidos pelo fornecedor
 // ------------------------------------------------------------
 model SupplierProduct {
-  id         String   @id @default(uuid())
-  supplierId String
-  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id              String   @id @default(uuid())
+  supplierId      String
+  supplier        Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Código interno que este fornecedor específico usa para este produto (cProd no XML)
+  cProdFornecedor String?
 
   // Preço estimado que o fornecedor cobra
   expectedCost  Decimal? @db.Decimal(10, 4)
@@ -632,4 +687,145 @@ model Payable {
 
   @@index([status, dueDate])
   @@map("payables")
+}
+
+// ------------------------------------------------------------
+//  NfeEntrada — NF-es de fornecedores (entrada de mercadoria)
+// ------------------------------------------------------------
+model NfeEntrada {
+  id              String             @id @default(uuid())
+  chave           String             @unique // Chave 44 dígitos — garante idempotência
+  numero          String
+  serie           String
+  dataEmissao     DateTime
+  cnpjFornecedor  String
+  nomeFornecedor  String
+  valorTotal      Decimal            @db.Decimal(10, 2)
+  quantItens      Int                @default(0)
+
+  // Status granular do processo de importação
+  status          FiscalImportStatus @default(RECEBIDA)
+
+  // Storage de XML (não salva LongText no banco — salva no disco)
+  xmlPath         String?            // Caminho no storage local: /uploads/fiscal/YYYY/MM/chave.xml
+  xmlHash         String?            @unique // SHA-256 do XML para auditoria de integridade
+  xmlSize         Int?               // Tamanho em bytes
+  xmlVersion      String?            // Versão do layout (ex: "4.00")
+  schemaVersion   String?            // Schema do layout (ex: "PL_009_V4")
+
+  importadaEm     DateTime?
+  nsu             String?            // NSU da distribuição DF-e
+
+  supplierId      String?
+  supplier        Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  itens           NfeEntradaItem[]
+  eventos         FiscalEvent[]
+
+  @@index([status])
+  @@index([cnpjFornecedor])
+  @@index([createdAt])
+  @@map("nfe_entradas")
+}
+
+// ------------------------------------------------------------
+//  NfeEntradaItem — Itens da NF-e de entrada
+// ------------------------------------------------------------
+model NfeEntradaItem {
+  id               String             @id @default(uuid())
+  nfeEntradaId     String
+  nfeEntrada       NfeEntrada         @relation(fields: [nfeEntradaId], references: [id], onDelete: Cascade)
+
+  // Dados extraídos do XML
+  descricao        String
+  codigoFornecedor String?            // cProd do XML (código interno do fornecedor)
+  codigoBarras     String?            // EAN-13 / GTIN
+  ncm              String?
+  cest             String?
+  cfop             String?
+  unidade          String             @default("UN")
+  quantidade       Decimal            @db.Decimal(10, 3)
+  custoUnitario    Decimal            @db.Decimal(10, 4)
+  custoTotal       Decimal            @db.Decimal(10, 2)
+
+  // Conversão de unidades (Caixa vs Unidade/Lata)
+  uCom             String?            // Unidade comercial (ex: CX)
+  qCom             Decimal?           @db.Decimal(10, 3) // Quantidade comercial (ex: 1.00)
+  vUnCom           Decimal?           @db.Decimal(10, 4) // Valor unitário comercial (ex: 48.61)
+  cEANTrib         String?            // EAN do item individual tributado (ex: 7898938890090)
+
+  // Impostos extraídos para fins de auditoria histórica
+  cstIcms          String?
+  aliqIcms         Decimal?           @db.Decimal(5, 2)
+  vBCIcms          Decimal?           @db.Decimal(10, 2)
+  vIcms            Decimal?           @db.Decimal(10, 2)
+  cstPis           String?
+  aliqPis          Decimal?           @db.Decimal(5, 2)
+  vPis             Decimal?           @db.Decimal(10, 2)
+  cstCofins        String?
+  aliqCofins       Decimal?           @db.Decimal(5, 2)
+  vCofins          Decimal?           @db.Decimal(10, 2)
+  cstIpi           String?
+  aliqIpi          Decimal?           @db.Decimal(5, 2)
+  vIpi             Decimal?           @db.Decimal(10, 2)
+  ibsCst           String?
+  ibsAliq          Decimal?           @db.Decimal(5, 2)
+  vIbs             Decimal?           @db.Decimal(10, 2)
+  cbsCst           String?
+  cbsAliq          Decimal?           @db.Decimal(5, 2)
+  vCbs             Decimal?           @db.Decimal(10, 2)
+
+  // Status individual do item (suporta importação parcial)
+  status           FiscalImportStatus @default(RECEBIDA)
+
+  // Produto relacionado no sistema (após match ou criação)
+  productId        String?
+  product          Product?           @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([nfeEntradaId])
+  @@index([codigoBarras])
+  @@map("nfe_entrada_itens")
+}
+
+// ------------------------------------------------------------
+//  FiscalEvent — Auditoria completa de eventos fiscais
+// ------------------------------------------------------------
+model FiscalEvent {
+  id                  String          @id @default(uuid())
+  nfeEntradaId        String?
+  nfeEntrada          NfeEntrada?     @relation(fields: [nfeEntradaId], references: [id], onDelete: Cascade)
+
+  type                FiscalEventType
+  description         String          @db.Text
+  performedByUserId   String?         // Usuário que realizou a ação
+  correlationId       String?         // ID de rastreamento end-to-end (fiscal_xxx)
+
+  createdAt           DateTime        @default(now())
+
+  @@index([nfeEntradaId])
+  @@index([type])
+  @@index([correlationId])
+  @@map("fiscal_events")
+}
+
+// ------------------------------------------------------------
+//  FiscalFailedJob — Dead Letter Queue para falhas de processamento
+// ------------------------------------------------------------
+model FiscalFailedJob {
+  id            String   @id @default(uuid())
+  correlationId String
+  action        String   // Ex: "DISTRIBUICAO_DFE", "IMPORT_XML", "CANCELAMENTO"
+  payload       Json?    // Payload original que falhou
+  error         String   @db.Text
+  resolved      Boolean  @default(false)
+  resolvedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([resolved])
+  @@index([action])
+  @@map("fiscal_failed_jobs")
 }

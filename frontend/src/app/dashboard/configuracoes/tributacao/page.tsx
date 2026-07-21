@@ -3,8 +3,15 @@ import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import {
-  FileText, Plus, Pencil, Trash2, Loader2, X, Save, ChevronDown, ChevronUp, CheckCircle
+  FileText, Plus, Pencil, Trash2, Loader2, X, Save, ChevronDown, ChevronUp, CheckCircle, Download, Tag
 } from 'lucide-react';
+import { ExportXmlModal } from '@/components/ExportXmlModal';
+
+interface Category {
+  id: string;
+  name: string;
+  grupoTributacaoId?: string | null;
+}
 
 interface GrupoTributacao {
   id: string;
@@ -21,6 +28,8 @@ interface GrupoTributacao {
   aliqCofins: number;
   cstIpi?: string;
   aliqIpi: number;
+  isPadrao?: boolean;
+  categories?: Category[];
 }
 
 const EMPTY_FORM: Omit<GrupoTributacao, 'id'> = {
@@ -47,18 +56,27 @@ const CST_PIS_COFINS_OPTIONS = [
 
 export default function TributacaoPage() {
   const [grupos, setGrupos] = useState<GrupoTributacao[]>([]);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<GrupoTributacao | null>(null);
   const [form, setForm] = useState<Omit<GrupoTributacao, 'id'>>(EMPTY_FORM);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const load = () => {
     setLoading(true);
-    api.get('/tributacao')
-      .then(res => setGrupos(res.data))
-      .catch(() => toast.error('Erro ao carregar grupos tributários.'))
+    Promise.all([
+      api.get('/tributacao'),
+      api.get('/categories')
+    ])
+      .then(([resGrupos, resCats]) => {
+        setGrupos(resGrupos.data);
+        setAllCategories(resCats.data);
+      })
+      .catch(() => toast.error('Erro ao carregar dados de tributação e categorias.'))
       .finally(() => setLoading(false));
   };
 
@@ -67,14 +85,22 @@ export default function TributacaoPage() {
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setSelectedCategoryIds([]);
     setModalOpen(true);
   };
 
   const openEdit = (g: GrupoTributacao) => {
     setEditing(g);
-    const { id, ...rest } = g;
+    const { id, categories, ...rest } = g;
     setForm(rest);
+    setSelectedCategoryIds(categories?.map(c => c.id) || []);
     setModalOpen(true);
+  };
+
+  const toggleCategory = (catId: string) => {
+    setSelectedCategoryIds(prev =>
+      prev.includes(catId) ? prev.filter(id => id !== catId) : [...prev, catId]
+    );
   };
 
   const handleSave = async () => {
@@ -83,13 +109,17 @@ export default function TributacaoPage() {
       return;
     }
     setSaving(true);
+    const payload = {
+      ...form,
+      categoryIds: selectedCategoryIds,
+    };
     try {
       if (editing) {
-        await api.patch(`/tributacao/${editing.id}`, form);
-        toast.success('Grupo atualizado!');
+        await api.patch(`/tributacao/${editing.id}`, payload);
+        toast.success('Grupo e vinculação de categorias atualizados!');
       } else {
-        await api.post('/tributacao', form);
-        toast.success('Grupo criado!');
+        await api.post('/tributacao', payload);
+        toast.success('Grupo criado com sucesso!');
       }
       setModalOpen(false);
       load();
@@ -101,7 +131,7 @@ export default function TributacaoPage() {
   };
 
   const handleDelete = async (g: GrupoTributacao) => {
-    if (!confirm(`Remover "${g.nome}"? Produtos vinculados perderão o grupo.`)) return;
+    if (!confirm(`Remover "${g.nome}"? Produtos e categorias vinculados perderão o grupo.`)) return;
     try {
       await api.delete(`/tributacao/${g.id}`);
       toast.success('Grupo removido.');
@@ -116,6 +146,39 @@ export default function TributacaoPage() {
   const inputCls = 'w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors text-sm';
   const labelCls = 'text-xs font-semibold text-zinc-400 mb-1 block uppercase tracking-wider';
 
+  const [restoring, setRestoring] = useState(false);
+
+  const handleRestoreDefaults = async () => {
+    if (!confirm('Deseja restaurar os grupos tributários padrões? Isso criará os 10 grupos essenciais caso ainda não existam. Grupos customizados existentes não serão afetados.')) return;
+    setRestoring(true);
+    try {
+      const res = await api.post('/tributacao/seed-defaults');
+      toast.success(`Grupos padrões restaurados! ${res.data.criados} criados, ${res.data.existentes} já existiam.`);
+      load();
+    } catch (err: any) {
+      toast.error('Erro ao restaurar grupos padrões.');
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  const getGrupoBadge = (nome: string, csosn?: string) => {
+    const lower = nome.toLowerCase();
+    if (lower.includes('não fiscal') || lower.includes('sem nota')) {
+      return <span className="text-[10px] bg-red-500/10 border border-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-bold">NÃO FISCAL</span>;
+    }
+    if (csosn === '500') {
+      return <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-bold">SUBSTITUIÇÃO TRIBUTÁRIA (ST)</span>;
+    }
+    if (csosn === '102') {
+      return <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold">TRIBUTAÇÃO NORMAL (SN)</span>;
+    }
+    if (csosn === '400') {
+      return <span className="text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold">ISENTO</span>;
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex justify-between items-center">
@@ -123,17 +186,36 @@ export default function TributacaoPage() {
           <FileText className="text-blue-500" size={30} />
           Grupos Tributários
         </h1>
-        <button
-          onClick={openCreate}
-          className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition active:scale-95"
-        >
-          <Plus size={18} /> Novo Grupo
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleRestoreDefaults}
+            disabled={restoring}
+            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition active:scale-95 disabled:opacity-50"
+          >
+            {restoring ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+            Restaurar Padrões
+          </button>
+          <button
+            onClick={() => setIsExportModalOpen(true)}
+            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition active:scale-95"
+          >
+            <Download size={18} /> Exportar XML
+          </button>
+          <button
+            onClick={openCreate}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition active:scale-95"
+          >
+            <Plus size={18} /> Novo Grupo
+          </button>
+        </div>
       </div>
 
-      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 text-sm text-zinc-400">
-        Os grupos tributários definem as regras fiscais (CSOSN, CFOP, PIS, COFINS) aplicadas por produto na emissão da NFC-e.
-        Para o Simples Nacional com CSOSN 102 e CFOP 5102, crie um grupo padrão e vincule aos produtos.
+      <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 flex gap-3 text-sm text-amber-400/90 leading-relaxed">
+        <span className="text-lg">⚠️</span>
+        <div>
+          <strong className="text-white block mb-0.5">Atenção sobre conformidade fiscal:</strong>
+          Os perfis fiscais foram pré-configurados com base nas regras gerais do Simples Nacional para o segmento de adegas e distribuidoras. É essencial exportar essa lista ou validar com a contabilidade da empresa para garantir a correta aplicação de alíquotas conforme a legislação do seu estado.
+        </div>
       </div>
 
       {loading ? (
@@ -142,7 +224,8 @@ export default function TributacaoPage() {
         <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
           <FileText size={48} className="mb-4 opacity-30" />
           <p className="text-lg">Nenhum grupo cadastrado.</p>
-          <p className="text-sm">Crie um grupo para vincular aos produtos.</p>
+          <p className="text-sm mb-4">Crie um grupo ou clique em Restaurar Padrões para inicializar os 10 grupos essenciais.</p>
+          <button onClick={handleRestoreDefaults} className="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-xl text-xs font-bold text-white transition">Restaurar Padrões</button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -151,26 +234,51 @@ export default function TributacaoPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="font-bold text-white text-lg">{g.nome}</span>
+                  {getGrupoBadge(g.nome, g.csosn)}
                   {g.ativo
-                    ? <span className="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Ativo</span>
-                    : <span className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-500 px-2 py-0.5 rounded-full">Inativo</span>
+                    ? <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Ativo</span>
+                    : <span className="text-[10px] bg-zinc-800 border border-zinc-700 text-zinc-500 px-2 py-0.5 rounded-full">Inativo</span>
                   }
                 </div>
-                <div className="flex flex-wrap gap-3 text-xs font-mono">
+                <div className="flex flex-wrap gap-3 text-xs font-mono mb-2.5">
                   <span className="bg-blue-500/10 border border-blue-500/20 text-blue-400 px-2 py-1 rounded-lg">CSOSN: {g.csosn || '—'}</span>
                   <span className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2 py-1 rounded-lg">CFOP: {g.cfop}</span>
                   <span className="bg-zinc-800 border border-zinc-700 text-zinc-400 px-2 py-1 rounded-lg">CST PIS: {g.cstPis}</span>
                   <span className="bg-zinc-800 border border-zinc-700 text-zinc-400 px-2 py-1 rounded-lg">CST COFINS: {g.cstCofins}</span>
                   {Number(g.aliqIcms) > 0 && <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-1 rounded-lg">ICMS: {g.aliqIcms}%</span>}
                 </div>
+
+                {/* Categorias Vinculadas */}
+                {g.categories && g.categories.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1">
+                      <Tag size={11} className="text-sky-400" /> Categorias:
+                    </span>
+                    {g.categories.map(cat => (
+                      <span key={cat.id} className="text-xs bg-sky-500/10 border border-sky-500/25 text-sky-300 px-2 py-0.5 rounded-md font-semibold">
+                        {cat.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-zinc-600 italic">
+                    Nenhuma categoria vinculada a este grupo.
+                  </div>
+                )}
               </div>
               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => openEdit(g)} className="p-2 bg-zinc-800 hover:bg-blue-600 rounded-xl transition text-zinc-400 hover:text-white">
+                <button onClick={() => openEdit(g)} className="p-2 bg-zinc-800 hover:bg-blue-600 rounded-xl transition text-zinc-400 hover:text-white cursor-pointer" title="Editar Grupo e Categorias">
                   <Pencil size={16} />
                 </button>
-                <button onClick={() => handleDelete(g)} className="p-2 bg-zinc-800 hover:bg-red-500/20 rounded-xl transition text-zinc-400 hover:text-red-400">
-                  <Trash2 size={16} />
-                </button>
+                {!g.isPadrao ? (
+                  <button onClick={() => handleDelete(g)} className="p-2 bg-zinc-800 hover:bg-red-500/20 rounded-xl transition text-zinc-400 hover:text-red-400 cursor-pointer" title="Remover Grupo">
+                    <Trash2 size={16} />
+                  </button>
+                ) : (
+                  <button disabled className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-600 cursor-not-allowed" title="Perfis fiscais padrão do sistema não podem ser excluídos">
+                    <Trash2 size={16} />
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -182,7 +290,7 @@ export default function TributacaoPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b border-zinc-800">
-              <h3 className="text-lg font-bold text-white">{editing ? 'Editar Grupo' : 'Novo Grupo Tributário'}</h3>
+              <h3 className="text-lg font-bold text-white">{editing ? 'Editar Grupo Tributário' : 'Novo Grupo Tributário'}</h3>
               <button onClick={() => setModalOpen(false)} className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full transition text-zinc-400 hover:text-white">
                 <X size={18} />
               </button>
@@ -192,6 +300,52 @@ export default function TributacaoPage() {
               <div>
                 <label className={labelCls}>Nome do Grupo *</label>
                 <input className={inputCls} value={form.nome} onChange={e => f('nome', e.target.value)} placeholder="Ex: TRIBUTADOS - Consumidor Final SP" />
+              </div>
+
+              {/* Seção de Seleção de Categorias Vinculadas */}
+              <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-4 space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Tag size={14} /> Categorias Vinculadas a Este Grupo
+                  </label>
+                  <p className="text-zinc-400 text-xs mt-0.5">
+                    Selecione quais categorias de produtos receberão automaticamente este perfil tributário:
+                  </p>
+                </div>
+
+                {allCategories.length === 0 ? (
+                  <p className="text-zinc-600 text-xs italic">Nenhuma categoria cadastrada no sistema.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                    {allCategories.map(cat => {
+                      const isChecked = selectedCategoryIds.includes(cat.id);
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => toggleCategory(cat.id)}
+                          className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all text-left ${
+                            isChecked
+                              ? 'bg-sky-500/15 border-sky-500/40 text-sky-300 shadow-sm'
+                              : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-300'
+                          }`}
+                        >
+                          <span className="truncate mr-1">{cat.name}</span>
+                          <span className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 border transition-all ${
+                            isChecked ? 'bg-sky-500 border-sky-400 text-white' : 'border-zinc-700 bg-zinc-950'
+                          }`}>
+                            {isChecked && <CheckCircle size={12} className="stroke-[3]" />}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {selectedCategoryIds.length > 0 && (
+                  <p className="text-[11px] text-emerald-400 font-semibold">
+                    ✓ {selectedCategoryIds.length} {selectedCategoryIds.length === 1 ? 'categoria selecionada' : 'categorias selecionadas'}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -291,6 +445,8 @@ export default function TributacaoPage() {
           </div>
         </div>
       )}
+
+      <ExportXmlModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} />
     </div>
   );
 }

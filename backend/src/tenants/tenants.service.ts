@@ -11,6 +11,7 @@ import * as path from 'path';
 const execAsync = promisify(exec);
 
 import { ProvisionTenantDto } from './provision-tenant.dto';
+import { seedDefaultGruposStatic } from '../tributacao/tributacao.service';
 
 @Injectable()
 export class TenantsService {
@@ -193,12 +194,26 @@ export class TenantsService {
           timeout: 60000,
         });
 
+        // Após atualizar o schema, popular grupos tributários padrão (upsert — seguro)
+        let seedResult = { criados: 0, existentes: 0 };
+        try {
+          const tenantClient = new PrismaClient({
+            datasources: { db: { url: tenant.databaseUrl } },
+          });
+          await tenantClient.$connect();
+          seedResult = await seedDefaultGruposStatic(tenantClient);
+          await tenantClient.$disconnect();
+        } catch (seedErr: any) {
+          this.logger.warn(`Seed de grupos tributários falhou para ${tenant.name}: ${seedErr.message}`);
+        }
+
         results.push({
           tenantId: tenant.id,
           name: tenant.name,
           databaseName: tenant.databaseName,
           status: 'success',
-          output: stdout || 'Schema atualizado com sucesso.'
+          output: stdout || 'Schema atualizado com sucesso.',
+          gruposSeed: seedResult,
         });
       } catch (err: any) {
         this.logger.error(`Erro ao rodar migracao em ${tenant.name}: ${err.message}`);
@@ -324,6 +339,19 @@ export class TenantsService {
         // Seed falhou mas não desfaz — o sistema funciona sem produtos, admins podem cadastrar manualmente
         this.logger.warn(`Aviso: seed de produtos para ${tenantName} falhou: ${err.message}`);
       }
+    }
+
+    // 10. Popular grupos tributários padrão no novo banco
+    try {
+      const tenantClient = new PrismaClient({
+        datasources: { db: { url: tenantDbUrl } },
+      });
+      await tenantClient.$connect();
+      const gruposResult = await seedDefaultGruposStatic(tenantClient);
+      await tenantClient.$disconnect();
+      this.logger.log(`Grupos tributários padrão criados para ${tenantName}: ${gruposResult.criados} criados.`);
+    } catch (err: any) {
+      this.logger.warn(`Aviso: seed de grupos tributários para ${tenantName} falhou: ${err.message}`);
     }
 
     return {

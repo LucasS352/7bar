@@ -35,6 +35,23 @@ export class SalesController {
     );
   }
 
+  /** Resumo e estatísticas fiscais de NFC-e */
+  @Get('fiscal/summary')
+  getFiscalSummary(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.salesService.getFiscalSummary(startDate, endDate);
+  }
+
+  /** Histórico e listagem de vendas fiscais com filtros */
+  @Get('fiscal/list')
+  getFiscalSales(
+    @Query() query: any,
+  ) {
+    return this.salesService.getFiscalSales(query);
+  }
+
   /** Polling de status NFC-e — chamado pelo frontend a cada 2s */
   @Get(':id/nfce-status')
   getNfceStatus(@Param('id') id: string) {
@@ -43,9 +60,9 @@ export class SalesController {
 
   /** Solicitar emissão manual de NFC-e para uma venda já existente */
   @Post(':id/emit-nfce')
-  emitNfce(@Param('id') id: string, @Body() body?: { forceNewNumber?: boolean }) {
+  emitNfce(@Param('id') id: string, @Body() body?: { forceNewNumber?: boolean, manualNumber?: number }) {
     const forceNewNumber = body?.forceNewNumber === true;
-    return this.salesService.emitNfce(id, forceNewNumber);
+    return this.salesService.emitNfce(id, forceNewNumber, body?.manualNumber);
   }
 
   /** Exportar XMLs em lote para contabilidade */

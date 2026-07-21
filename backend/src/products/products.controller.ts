@@ -19,11 +19,13 @@ export class ProductsController {
   @Get()
   findAll(
     @Query('page') page?: number,
-    @Query('limit') limit?: number
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
   ) {
     return this.productsService.findAll(
       Number(page || 1), 
-      Number(limit || 50)
+      Number(limit || 50),
+      search,
     );
   }
 

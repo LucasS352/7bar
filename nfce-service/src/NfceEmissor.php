@@ -51,6 +51,10 @@ class NfceEmissor
 
         $tools = new Tools($config, $certificate);
         $tools->model(65); // NFC-e
+        // SEFAZ SP exige QR Code versão 2 (chave|2|tpAmb|cIdToken|SHA1_CSC)
+        // A biblioteca por padrão gera versão 3 (NT 2025.002, sem CSC no hash)
+        // → versão 3 não inclui CSC no QR Code → SEFAZ não identifica emitente → Rejeição 245
+        $tools->forceQRCodeVersion('200');
 
         // ── Configuração do SoapCurl via API nativa do NFePHP ────────────────
         //
@@ -66,26 +70,34 @@ class NfceEmissor
         $soap->httpVersion('1.1');                // força HTTP/1.1 → sem ALPN h2
         $soap->setSecurityLevel(true);            // DEFAULT@SECLEVEL=1 → aceita ICP-Brasil
         $soap->loadCA('/etc/ssl/certs/ca-certificates.crt'); // CA bundle com ICP-Brasil
+        $soap->timeout(60);                       // 60s + 20 = 80s total — SEFAZ SP pode ser lenta
         $tools->loadSoapClass($soap);
 
 
         // ── Montagem do XML ───────────────────────────────────────────────────
-        $make = new Make();
+        // PL_010_V1 = schema 10 = habilita a tag IBSCBS (Reforma Tributária NT2025.002)
+        $make = new Make('PL_010_V1');
         $this->montarInfNFe($make, $empresa, $nota, $amb);
 
         $xml = $make->getXML();
 
-        // ── Assinar ───────────────────────────────────────────────────────────
-        $xmlAssinado = $tools->signNFe($xml);
+        // ── Assinar (validação XSD desabilitada — SEFAZ valida autoritativamente) ──────
+        $xmlAssinado = $tools->signNFe($xml, 0);
 
         // ── Enviar à SEFAZ (indSinc = 1 para envio síncrono — exigido para lote de 1 nota) ──
         $maxAttempts = 3;
         $attempt = 1;
         $response = null;
+        $ufEnvio = $empresa['endereco']['uf'] ?? 'SP';
+        error_log("NfceEmissor: UF={$ufEnvio} | Amb={$amb} | Iniciando envio...");
 
         while ($attempt <= $maxAttempts) {
             try {
-                $response = $tools->sefazEnviaLote([$xmlAssinado], (string) $nota['numero'], 1);
+                $idLote = str_pad('1', 15, '0', STR_PAD_LEFT);
+                $resp = $tools->sefazEnviaLote([$xmlAssinado], $idLote, 1, false);
+                error_log("SEFAZ RESPONSE: " . $resp);
+                $response = $resp;
+                error_log("NfceEmissor: Resposta SEFAZ recebida na tentativa {$attempt}");
                 break; // Sucesso, sai do loop
             } catch (\Exception $e) {
                 $msg = $e->getMessage();
@@ -133,6 +145,7 @@ class NfceEmissor
         }
 
         // Rejeitada pela SEFAZ
+        file_put_contents('/tmp/debug_rejeitado.xml', $xmlAssinado);
         return [
             'status'         => 'rejeitada',
             'codRejeicao'    => $responseArr['cStat']   ?? '999',
@@ -149,7 +162,9 @@ class NfceEmissor
             "razaosocial" => $empresa['razaoSocial']  ?? '',
             "cnpj"        => preg_replace('/\D/', '', $empresa['cnpj'] ?? ''),
             "siglaUF"     => $empresa['endereco']['uf'] ?? 'SP',
-            "schemes"     => "PL_009_V4",
+            // PL_009: gera QR Code v2 (chave|2|tpAmb|cIdToken|SHA1) — exigido pelo SEFAZ SP
+            // PL_010_V1 gera QR Code v3 (chave|3|tpAmb) sem CSC → SEFAZ retorna erro 245
+            "schemes"     => "PL_009",
             "versao"      => "4.00",
             "tokenIBPT"   => "",
             "CSC"         => $empresa['csc']   ?? '',
@@ -232,28 +247,61 @@ class NfceEmissor
         }
 
         // ITENS
-        $totalProd = 0;
+        $totalProd = 0.0;
+        foreach ($nota['itens'] as $item) {
+            $totalProd += round((float) $item['quantidade'] * (float) $item['valorUnit'], 2);
+        }
+
+        $totalDesc = (float) ($nota['desconto'] ?? 0);
+        $accumulatedDesc = 0.0;
+        $totalItems = count($nota['itens']);
+
         foreach ($nota['itens'] as $idx => $item) {
             $itemNum  = $idx + 1;
             $subtotal = round((float) $item['quantidade'] * (float) $item['valorUnit'], 2);
-            $totalProd += $subtotal;
+
+            // Rateio do desconto global nos itens para validação SEFAZ (rejeição 535)
+            $itemDesc = 0.0;
+            if ($totalDesc > 0 && $totalProd > 0) {
+                if ($itemNum === $totalItems) {
+                    $itemDesc = round($totalDesc - $accumulatedDesc, 2);
+                } else {
+                    $itemDesc = round(($subtotal / $totalProd) * $totalDesc, 2);
+                    $accumulatedDesc += $itemDesc;
+                }
+            }
+
+            if ($itemDesc > $subtotal) {
+                $itemDesc = $subtotal;
+            }
+
+            $vBCItem = round($subtotal - $itemDesc, 2);
+
+            $barcodeVal = (!empty($item['barcode']) && $item['barcode'] !== 'SEM GTIN') ? trim($item['barcode']) : 'SEM GTIN';
+
+            $rawNcm = preg_replace('/\D/', '', (string) ($item['ncm'] ?? ''));
+            $ncmVal = (strlen($rawNcm) === 8) ? $rawNcm : '22030000';
+
+            $rawCfop = preg_replace('/\D/', '', (string) ($item['cfop'] ?? ''));
+            $cfopVal = (strlen($rawCfop) === 4) ? $rawCfop : '5102';
 
             $make->tagprod((object) [
                 'item'     => $itemNum,
                 'cProd'    => $item['produtoId'] ?? "PROD{$itemNum}",
-                'cEAN'     => 'SEM GTIN',
+                'cEAN'     => $barcodeVal,
                 'xProd'    => mb_substr($item['xProd'], 0, 120),
-                'NCM'      => preg_replace('/\D/', '', $item['ncm'] ?? '22030000'),
-                'CEST'     => $item['cest'] ?? null,
-                'CFOP'     => $item['cfop'] ?? '5102',
+                'NCM'      => $ncmVal,
+                'CEST'     => !empty($item['cest']) ? preg_replace('/\D/', '', (string) $item['cest']) : null,
+                'CFOP'     => $cfopVal,
                 'uCom'     => $item['unit'] ?? 'UN',
                 'qCom'     => number_format((float) $item['quantidade'], 4, '.', ''),
                 'vUnCom'   => number_format((float) $item['valorUnit'], 4, '.', ''),
                 'vProd'    => number_format($subtotal, 2, '.', ''),
-                'cEANTrib' => 'SEM GTIN',
+                'cEANTrib' => $barcodeVal,
                 'uTrib'    => $item['unit'] ?? 'UN',
                 'qTrib'    => number_format((float) $item['quantidade'], 4, '.', ''),
                 'vUnTrib'  => number_format((float) $item['valorUnit'], 4, '.', ''),
+                'vDesc'    => $itemDesc > 0 ? number_format($itemDesc, 2, '.', '') : null,
                 'indTot'   => '1',
             ]);
 
@@ -272,9 +320,9 @@ class NfceEmissor
                     'orig'  => (string) ($item['origem'] ?? '0'),
                     'CST'   => $item['cstIcms'] ?? '00',
                     'modBC' => '3',
-                    'vBC'   => number_format($subtotal, 2, '.', ''),
+                    'vBC'   => number_format($vBCItem, 2, '.', ''),
                     'pICMS' => number_format((float) ($item['aliqIcms'] ?? 0), 2, '.', ''),
-                    'vICMS' => number_format($subtotal * ($item['aliqIcms'] ?? 0) / 100, 2, '.', ''),
+                    'vICMS' => number_format($vBCItem * ($item['aliqIcms'] ?? 0) / 100, 2, '.', ''),
                 ]);
             }
 
@@ -291,6 +339,33 @@ class NfceEmissor
                 'CST'     => $item['cstCofins'] ?? '99',
                 'vBC'     => '0.00', 'pCOFINS' => '0.00', 'vCOFINS' => '0.00',
             ]);
+
+            $pIBSUF  = '0.1000'; // 0.10% — aceito pelo SEFAZ SP
+            $pIBSMun = '0.0000'; // 0.00% — exigido em 2026
+            $pCBS    = '0.9000'; // 0.90%
+            $vBC     = number_format($vBCItem, 2, '.', '');
+            $vIBSUF  = number_format($vBCItem * 0.001,  2, '.', '');
+            $vIBSMun = '0.00';
+            $vCBS    = number_format($vBCItem * 0.009,  2, '.', '');
+            $vIBS    = $vIBSUF;
+            $make->tagIBSCBS((object) [
+                'item'            => $itemNum,
+                'CST'             => '000',
+                'cClassTrib'      => '000001',
+                'vBC'             => $vBC,
+                'gIBSUF_pIBSUF'   => $pIBSUF,
+                'gIBSMun_pIBSMun' => $pIBSMun,
+                'gCBS_pCBS'       => $pCBS,
+                'gIBSUF_vIBSUF'   => $vIBSUF,
+                'gIBSMun_vIBSMun' => $vIBSMun,
+                'gCBS_vCBS'       => $vCBS,
+                'vIBS'            => $vIBS,
+            ]);
+
+
+
+
+
         }
 
         // TOTAL

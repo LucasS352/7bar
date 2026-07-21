@@ -729,14 +729,27 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                   <div className="space-y-4">
                     <div className="w-20 h-20 rounded-full bg-red-500/10 border-2 border-red-500/30 flex items-center justify-center mx-auto"><XCircle className="text-red-400" size={40} /></div>
                     <h3 className="text-2xl font-bold text-red-400">NFC-e Rejeitada</h3>
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4"><p className="text-red-400 font-mono text-sm">{saleResult.nfceMotivoRejeicao as string}</p></div>
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 w-full overflow-hidden">
+                      <p className="text-red-400 font-mono text-sm break-all" style={{ wordBreak: 'break-all', whiteSpace: 'normal', width: '100%' }}>{saleResult.nfceMotivoRejeicao as string}</p>
+                    </div>
                   </div>
                 )}
                 {status === 'nao_emitida' && (
                   <div className="space-y-4">
-                    <div className="w-20 h-20 rounded-full bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center mx-auto"><Receipt className="text-zinc-400" size={36} /></div>
-                    <h3 className="text-2xl font-bold text-zinc-300">NFC-e não emitida</h3>
-                    <p className="text-zinc-400 text-sm">Configure o certificado em Configurações → Empresa.</p>
+                    <div className="w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center mx-auto">
+                      <CheckCircle2 className="text-emerald-400" size={40} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white">Venda Concluída!</h3>
+                    <p className="text-zinc-400 text-sm">
+                      {saleResult.nfceMotivoRejeicao?.includes('SNF') || saleResult.nfceMotivoRejeicao?.includes('sem nota')
+                        ? 'Venda finalizada com sucesso (Produtos sem nota fiscal).'
+                        : 'Venda finalizada com sucesso.'}
+                    </p>
+                    {change > 0 && (
+                      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                        <p className="text-emerald-400 font-bold text-xl">Troco: R$ {change.toFixed(2)}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </>

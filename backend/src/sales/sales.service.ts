@@ -139,10 +139,15 @@ export class SalesService {
     const sale = await prisma.$transaction(async (tx: any) => {
       let subtotal = new Prisma.Decimal(0);
 
+      // ─── Flag de movimentação de estoque (Ajuste Fiscal pode desabilitar) ───
+      const shouldMoveStock = data.movimentarEstoque !== false;
+      const saleSource = data.source || 'pdv';
+
       // ─── 0. Ler configurações do tenant e validar caixa ────────────────────
       const isConsumption = !!data.consumedByOperatorId;
+      const isAjusteFiscal = saleSource === 'ajuste_fiscal';
 
-      if (!isConsumption && !data.cashRegisterId) {
+      if (!isConsumption && !isAjusteFiscal && !data.cashRegisterId) {
         throw new BadRequestException('Não é possível realizar venda: Caixa não informado.');
       }
 
@@ -222,18 +227,38 @@ export class SalesService {
       const finalTotalStr = total.toDecimalPlaces(2);
 
 
-      // ─── 3. Numeração NFC-e (se solicitada) ─────────────────────────────────
+      // ─── 3. Checar se a venda contém apenas produtos SNF (Sem Nota) ─────────
+      const isSnfProduct = (p: any) => {
+        const grupoNome = (p?.grupoTributacao?.nome || p?.category?.grupoTributacao?.nome || '').toLowerCase();
+        return grupoNome.includes('snf') || grupoNome.includes('sem nota');
+      };
+
+      const allItemsAreSnf = data.items.length > 0 && data.items.every((item: any) => {
+        const p = productMap.get(item.productId);
+        return p && isSnfProduct(p);
+      });
+
       let nfceNumero: number | null = null;
-      const emitirNfce = Boolean(data.emitirNfce);
+      let emitirNfce = Boolean(data.emitirNfce);
+      let initialNfceStatus: string | null = null;
+      let initialNfceMotivo: string | null = null;
 
       if (emitirNfce) {
-        const serie = data.nfceSerie ?? 1;
-        const numeracao = await tx.numeracaoNfce.upsert({
-          where: { serie },
-          update: { ultimo: { increment: 1 } },
-          create: { serie, ultimo: 1 },
-        });
-        nfceNumero = numeracao.ultimo;
+        if (allItemsAreSnf) {
+          // Venda 100% SNF: NÃO consome número de série e NÃO transmite para SEFAZ
+          emitirNfce = false;
+          initialNfceStatus = 'nao_emitida';
+          initialNfceMotivo = 'Venda contém apenas produtos sem nota (SNF).';
+        } else {
+          const serie = data.nfceSerie ?? 1;
+          const numeracao = await tx.numeracaoNfce.upsert({
+            where: { serie },
+            update: { ultimo: { increment: 1 } },
+            create: { serie, ultimo: 1 },
+          });
+          nfceNumero = numeracao.ultimo;
+          initialNfceStatus = 'pendente';
+        }
       }
 
       // ─── 4. Criar a venda ────────────────────────────────────────────────────
@@ -250,13 +275,15 @@ export class SalesService {
           customerId:     data.customerId || null,
           operatorId,
           cashRegisterId: data.cashRegisterId || null,
+          source:         saleSource,
           subtotal,
           discount,
           addition, // <-- Salvando o acréscimo
           total: finalTotalStr,
           status:         'completed',
           emitirNfce,
-          nfceStatus:     emitirNfce ? 'pendente' : null,
+          nfceStatus:     initialNfceStatus,
+          nfceMotivoRejeicao: initialNfceMotivo,
           nfceNumero,
           nfceSerie:      emitirNfce ? (data.nfceSerie ?? 1) : null,
           consumidorCpf:  data.customerCpf  || null,
@@ -306,34 +333,37 @@ export class SalesService {
             const capacity = Number(componentProduct.volumeCapacity) || 1;
             const fractionToDecrement = qty * (optionQty / capacity);
 
-            if (!allowNegativeStock) {
-              const updateResult = await tx.product.updateMany({
-                where: {
-                  id: componentProduct.id,
-                  stock: { gte: new Prisma.Decimal(fractionToDecrement) }
-                },
-                data: {
-                  stock: { decrement: new Prisma.Decimal(fractionToDecrement) }
+            // ─── Movimentação de estoque (desabilitada em Ajuste Fiscal sem estoque) ───
+            if (shouldMoveStock) {
+              if (!allowNegativeStock) {
+                const updateResult = await tx.product.updateMany({
+                  where: {
+                    id: componentProduct.id,
+                    stock: { gte: new Prisma.Decimal(fractionToDecrement) }
+                  },
+                  data: {
+                    stock: { decrement: new Prisma.Decimal(fractionToDecrement) }
+                  }
+                });
+                if (updateResult.count === 0) {
+                  throw new BadRequestException(`Estoque insuficiente para o ingrediente: ${componentProduct.name} (disponível: ${componentProduct.stock}, necessário: ${fractionToDecrement.toFixed(3)})`);
                 }
-              });
-              if (updateResult.count === 0) {
-                throw new BadRequestException(`Estoque insuficiente para o ingrediente: ${componentProduct.name} (disponível: ${componentProduct.stock}, necessário: ${fractionToDecrement.toFixed(3)})`);
+              } else {
+                await tx.product.update({
+                  where: { id: componentProduct.id },
+                  data: {
+                    stock: { decrement: new Prisma.Decimal(fractionToDecrement) }
+                  }
+                });
               }
-            } else {
-              await tx.product.update({
-                where: { id: componentProduct.id },
-                data: {
-                  stock: { decrement: new Prisma.Decimal(fractionToDecrement) }
-                }
+
+              inventoryLogsToCreate.push({
+                productId: componentProduct.id,
+                type: 'OUT',
+                quantity: fractionToDecrement,
+                reason: isAjusteFiscal ? `Ajuste Fiscal (Combo: ${product.name})` : `Venda PDV (Combo: ${product.name})`,
               });
             }
-
-            inventoryLogsToCreate.push({
-              productId: componentProduct.id,
-              type: 'OUT',
-              quantity: fractionToDecrement,
-              reason: `Venda PDV (Combo: ${product.name})`,
-            });
 
             itemModifiersDataToCreate.push({
               componentProductId: componentProduct.id,
@@ -342,8 +372,54 @@ export class SalesService {
               priceAdjustment: new Prisma.Decimal(foundOption.priceAdjustment),
             });
 
-            const ingredientConsumptions = await this.consumeLotsFIFO(tx, componentProduct.id, fractionToDecrement, componentProduct.priceCost);
-            for (const cons of ingredientConsumptions) {
+            if (shouldMoveStock) {
+              const ingredientConsumptions = await this.consumeLotsFIFO(tx, componentProduct.id, fractionToDecrement, componentProduct.priceCost);
+              for (const cons of ingredientConsumptions) {
+                itemLotConsumptions.push({
+                  lotId: cons.lotId,
+                  quantity: cons.quantity,
+                  costPrice: cons.costPrice
+                });
+                totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
+              }
+            }
+          }
+        } else {
+          // ─── Movimentação de estoque (desabilitada em Ajuste Fiscal sem estoque) ───
+          if (shouldMoveStock) {
+            if (!allowNegativeStock) {
+              const updateResult = await tx.product.updateMany({
+                where: {
+                  id: item.productId,
+                  stock: { gte: new Prisma.Decimal(qty) }
+                },
+                data: {
+                  stock: { decrement: new Prisma.Decimal(qty) },
+                  salesCount: { increment: qty }
+                }
+              });
+              if (updateResult.count === 0) {
+                throw new BadRequestException(`Estoque insuficiente para o produto: ${product.name} (disponível: ${product.stock}, tentado: ${qty})`);
+              }
+            } else {
+              await tx.product.update({
+                where: { id: item.productId },
+                data: { 
+                  stock: { decrement: new Prisma.Decimal(qty) },
+                  salesCount: { increment: qty }
+                },
+              });
+            }
+
+            inventoryLogsToCreate.push({
+              productId: product.id,
+              type: 'SALE',
+              quantity: qty,
+              reason: isAjusteFiscal ? 'Ajuste Fiscal' : 'Venda PDV',
+            });
+
+            const productConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost);
+            for (const cons of productConsumptions) {
               itemLotConsumptions.push({
                 lotId: cons.lotId,
                 quantity: cons.quantity,
@@ -351,47 +427,12 @@ export class SalesService {
               });
               totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
             }
-          }
-        } else {
-          if (!allowNegativeStock) {
-            const updateResult = await tx.product.updateMany({
-              where: {
-                id: item.productId,
-                stock: { gte: new Prisma.Decimal(qty) }
-              },
-              data: {
-                stock: { decrement: new Prisma.Decimal(qty) },
-                salesCount: { increment: qty }
-              }
-            });
-            if (updateResult.count === 0) {
-              throw new BadRequestException(`Estoque insuficiente para o produto: ${product.name} (disponível: ${product.stock}, tentado: ${qty})`);
-            }
           } else {
+            // Sem movimentação de estoque — apenas incrementa contador de vendas
             await tx.product.update({
               where: { id: item.productId },
-              data: { 
-                stock: { decrement: new Prisma.Decimal(qty) },
-                salesCount: { increment: qty }
-              },
+              data: { salesCount: { increment: qty } },
             });
-          }
-
-          inventoryLogsToCreate.push({
-            productId: product.id,
-            type: 'SALE',
-            quantity: qty,
-            reason: 'Venda PDV',
-          });
-
-          const productConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost);
-          for (const cons of productConsumptions) {
-            itemLotConsumptions.push({
-              lotId: cons.lotId,
-              quantity: cons.quantity,
-              costPrice: cons.costPrice
-            });
-            totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
           }
         }
 
@@ -468,13 +509,13 @@ export class SalesService {
 
       if (emitirNfce) {
         const { tenantId, databaseUrl } = this.tenantContext.get();
-        setImmediate(() => this.dispararNfce(tenantId, databaseUrl, fullSale));
+        setTimeout(() => this.dispararNfce(tenantId, databaseUrl, fullSale), 500);
       }
 
       // ─── Disparar sincronização de estoque no iFood (se ativada) ───────────
       if (allProductIds.length > 0) {
         const { tenantId } = this.tenantContext.get();
-        setImmediate(() => this.integrationsService.syncProductStock(tenantId, allProductIds));
+        setTimeout(() => this.integrationsService.syncProductStock(tenantId, allProductIds), 500);
       }
 
       return fullSale;
@@ -503,6 +544,45 @@ export class SalesService {
    */
   public async dispararNfce(tenantId: string, databaseUrl: string, sale: any) {
     try {
+      const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+
+      // Buscar dados dos produtos para checar se são do grupo SNF
+      const productIds = sale.items.map((i: any) => i.productId).filter(Boolean);
+      const products = await prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: {
+          id: true,
+          barcode: true,
+          shortCode: true,
+          grupoTributacao: {
+            select: { nome: true }
+          }
+        }
+      });
+      const barcodeMap = new Map<string, string | null>(products.map((p: any) => [p.id, p.barcode]));
+      const shortCodeMap = new Map<string, string | null>(products.map((p: any) => [p.id, p.shortCode]));
+      const snfProductIds = new Set<string>(
+        products
+          .filter((p: any) => {
+            const name = p.grupoTributacao?.nome?.toLowerCase() || '';
+            return name.includes('snf') || name.includes('sem nota');
+          })
+          .map((p: any) => p.id)
+      );
+
+      // Filtrar itens da venda removendo os que são SNF
+      const filteredItems = sale.items.filter((i: any) => !snfProductIds.has(i.productId));
+
+      // Se todos os itens forem SNF, a venda não emite nota fiscal
+      if (filteredItems.length === 0) {
+        this.logger.log(`Venda ${sale.id} contém apenas produtos SNF (Sem Nota). Emissão cancelada de forma limpa.`);
+        await this.atualizarStatusNfce(tenantId, databaseUrl, sale.id, {
+          nfceStatus: 'nao_emitida',
+          nfceMotivoRejeicao: 'Venda contém apenas produtos sem nota (SNF).',
+        });
+        return;
+      }
+
       // Buscar dados do tenant (emitente) e certificado
       const tenant = await this.heartPrisma.tenant.findUnique({
         where: { id: tenantId },
@@ -526,6 +606,15 @@ export class SalesService {
         });
         return;
       }
+
+      // Recalcular os totais tributados da nota
+      const totalNfce = filteredItems.reduce((acc: number, i: any) => acc + Number(i.subtotal), 0);
+      let discountNfce = 0;
+      if (Number(sale.discount) > 0 && Number(sale.total) > 0) {
+        const ratio = totalNfce / Number(sale.total);
+        discountNfce = Number((Number(sale.discount) * ratio).toFixed(2));
+      }
+      const finalTotalNfce = Number((totalNfce - discountNfce).toFixed(2));
 
       const resultado = await this.nfceService.emitir({
         ambiente: tenant.nfceAmbiente ?? 2,
@@ -556,36 +645,53 @@ export class SalesService {
         nota: {
           numero:     sale.nfceNumero,
           serie:      sale.nfceSerie,
-          total:      sale.total,
-          desconto:   sale.discount,
+          total:      finalTotalNfce,
+          desconto:   discountNfce,
           consumidor: {
             cpf:  sale.consumidorCpf,
             nome: sale.consumidorNome,
           },
-          itens: sale.items.map((i: any) => ({
-            produtoId:  i.productId,
-            xProd:      i.productName,
-            ncm:        i.ncm,
-            cest:       i.cest,
-            cfop:       i.cfop,
-            unit:       i.unit,
-            quantidade: Number(i.quantity),
-            valorUnit:  Number(i.priceUnit),
-            subtotal:   Number(i.subtotal),
-            origem:     i.origem,
-            csosn:      i.csosn,
-            cstIcms:    i.cstIcms,
-            aliqIcms:   Number(i.aliqIcms),
-            cstPis:     i.cstPis,
-            aliqPis:    Number(i.aliqPis),
-            cstCofins:  i.cstCofins,
-            aliqCofins: Number(i.aliqCofins),
-          })),
-          pagamentos: sale.payments.map((p: any) => ({
-            tPag: p.tPag,
-            valor: Number(p.value),
-            troco: Number(p.troco),
-          })),
+          itens: filteredItems.map((i: any) => {
+            const shortCode = shortCodeMap.get(i.productId);
+            return {
+              produtoId:  shortCode || i.productId, // Usa o código interno curto (atalho) ou UUID como fallback
+              xProd:      i.productName,
+              barcode:    barcodeMap.get(i.productId) || null,
+              ncm:        i.ncm,
+              cest:       i.cest,
+              cfop:       i.cfop,
+              unit:       i.unit,
+              quantidade: Number(i.quantity),
+              valorUnit:  Number(i.priceUnit),
+              subtotal:   Number(i.subtotal),
+              origem:     i.origem,
+              csosn:      i.csosn,
+              cstIcms:    i.cstIcms,
+              aliqIcms:   Number(i.aliqIcms),
+              cstPis:     i.cstPis,
+              aliqPis:    Number(i.aliqPis),
+              cstCofins:  i.cstCofins,
+              aliqCofins: Number(i.aliqCofins),
+            };
+          }),
+          pagamentos: (() => {
+            const pagamentos: any[] = [];
+            let remainingPayment = finalTotalNfce;
+            for (let idx = 0; idx < sale.payments.length; idx++) {
+              const p = sale.payments[idx];
+              const isLast = idx === sale.payments.length - 1;
+              const val = isLast ? remainingPayment : Math.min(Number(p.value), remainingPayment);
+              remainingPayment = Number((remainingPayment - val).toFixed(2));
+              if (val > 0) {
+                pagamentos.push({
+                  tPag: p.tPag,
+                  valor: Number(val.toFixed(2)),
+                  troco: isLast ? Number(p.troco) : 0,
+                });
+              }
+            }
+            return pagamentos;
+          })(),
         },
       });
 
@@ -629,8 +735,9 @@ export class SalesService {
     const skip = (page - 1) * limit;
 
     const [total, data] = await Promise.all([
-      prisma.sale.count(),
+      prisma.sale.count({ where: { NOT: { source: 'ajuste_fiscal' } } }),
       prisma.sale.findMany({
+        where: { NOT: { source: 'ajuste_fiscal' } },
         include: {
           payments: true,
           items: { include: { product: true } },
@@ -660,9 +767,9 @@ export class SalesService {
     const skip = (page - 1) * limit;
 
     const [total, data] = await Promise.all([
-      prisma.sale.count({ where: { createdAt: { gte: today } } }),
+      prisma.sale.count({ where: { createdAt: { gte: today }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] } }),
       prisma.sale.findMany({
-        where: { createdAt: { gte: today } },
+        where: { createdAt: { gte: today }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
         include: {
           payments: true,
           items: { include: { product: true } },
@@ -705,7 +812,7 @@ export class SalesService {
   }
 
   /** Emissão manual / Reemissão de NFC-e para vendas já salvas */
-  async emitNfce(saleId: string, forceNewNumber = false) {
+  async emitNfce(saleId: string, forceNewNumber = false, manualNumber?: number) {
     const prisma = await this.getPrisma();
     
     const sale = await prisma.sale.findUnique({
@@ -774,7 +881,19 @@ export class SalesService {
     let nfceSerie = sale.nfceSerie;
 
     // Se não tinha número, ou se forçamos um novo número
-    if (!nfceNumero || forceNewNumber) {
+    if (manualNumber) {
+       nfceNumero = manualNumber;
+       nfceSerie = configuredSerie;
+       
+       const currentNum = await prisma.numeracaoNfce.findUnique({ where: { serie: configuredSerie } });
+       if (!currentNum || currentNum.ultimo < manualNumber) {
+         await prisma.numeracaoNfce.upsert({
+           where: { serie: configuredSerie },
+           update: { ultimo: manualNumber },
+           create: { serie: configuredSerie, ultimo: manualNumber },
+         });
+       }
+    } else if (!nfceNumero || forceNewNumber) {
        nfceSerie = configuredSerie;
        const numeracao = await prisma.numeracaoNfce.upsert({
           where: { serie: configuredSerie },
@@ -1011,7 +1130,8 @@ export class SalesService {
         data: {
           status: 'cancelled',
           cancelReason: reason,
-          cancelledAt: new Date()
+          cancelledAt: new Date(),
+          nfceStatus: 'cancelada'
         },
         include: {
           items: true,
@@ -1085,6 +1205,329 @@ export class SalesService {
         include: { payments: true, items: true }
       });
     });
+  }
+
+  // ── Helper para filtrar itens SNF e recalcular totais fiscais reais ──────────
+  private async computeFiscalDetailsForSales(prisma: any, sales: any[]) {
+    const productIds = new Set<string>();
+    for (const sale of sales) {
+      if (sale.items) {
+        for (const item of sale.items) {
+          if (item.productId) productIds.add(item.productId);
+        }
+      }
+    }
+
+    let snfProductIds = new Set<string>();
+    if (productIds.size > 0) {
+      const products = await prisma.product.findMany({
+        where: { id: { in: Array.from(productIds) } },
+        select: {
+          id: true,
+          grupoTributacao: { select: { nome: true } },
+        },
+      });
+      snfProductIds = new Set(
+        products
+          .filter((p: any) => {
+            const name = p.grupoTributacao?.nome?.toLowerCase() || '';
+            return name.includes('snf') || name.includes('sem nota');
+          })
+          .map((p: any) => p.id)
+      );
+    }
+
+    return sales.map(s => {
+      if (!s.items || s.items.length === 0) {
+        return {
+          ...s,
+          fiscalTotal: Number(s.total),
+          fiscalItems: [],
+        };
+      }
+
+      const eligibleItems = s.items.filter((i: any) => !snfProductIds.has(i.productId));
+
+      if (eligibleItems.length === s.items.length) {
+        return {
+          ...s,
+          fiscalTotal: Number(s.total),
+          fiscalItems: s.items,
+        };
+      }
+
+      if (eligibleItems.length === 0) {
+        return {
+          ...s,
+          fiscalTotal: 0,
+          fiscalItems: [],
+        };
+      }
+
+      const eligibleSubtotal = eligibleItems.reduce((acc: number, i: any) => acc + Number(i.subtotal), 0);
+      const saleSubtotal = Number(s.subtotal) || Number(s.total);
+      let fiscalDiscount = 0;
+      if (Number(s.discount) > 0 && saleSubtotal > 0) {
+        const ratio = eligibleSubtotal / saleSubtotal;
+        fiscalDiscount = Number((Number(s.discount) * ratio).toFixed(2));
+      }
+      const fiscalTotal = Number((eligibleSubtotal - fiscalDiscount).toFixed(2));
+
+      return {
+        ...s,
+        fiscalTotal,
+        fiscalItems: eligibleItems,
+      };
+    });
+  }
+
+  // ── Resumo e Estatísticas Fiscais (NFC-e) ──────────────────────────────────
+  async getFiscalSummary(startDate?: string, endDate?: string) {
+    const prisma = await this.getPrisma();
+
+    const dateFilter: any = {};
+    if (startDate || endDate) {
+      dateFilter.createdAt = {};
+      if (startDate) dateFilter.createdAt.gte = new Date(`${startDate}T00:00:00.000Z`);
+      if (endDate) dateFilter.createdAt.lte = new Date(`${endDate}T23:59:59.999Z`);
+    }
+
+    const itemSelect = { select: { productId: true, subtotal: true } };
+
+    const [allPdvSalesRaw, autorizadasRaw, canceladasRaw, rejeitadasRaw, naoEmitidasRaw] = await Promise.all([
+      prisma.sale.findMany({
+        where: {
+          ...dateFilter,
+          status: { not: 'cancelled' },
+          NOT: { source: 'ajuste_fiscal' },
+        },
+        select: { id: true, total: true, subtotal: true, discount: true, emitirNfce: true, nfceStatus: true, source: true, items: itemSelect },
+      }),
+      prisma.sale.findMany({
+        where: { ...dateFilter, nfceStatus: 'autorizada' },
+        select: { id: true, total: true, subtotal: true, discount: true, nfceNumero: true, nfceSerie: true, source: true, items: itemSelect, payments: { select: { method: true, value: true } } },
+      }),
+      prisma.sale.findMany({
+        where: { ...dateFilter, nfceStatus: 'cancelada' },
+        select: { id: true, total: true, subtotal: true, discount: true, source: true, items: itemSelect },
+      }),
+      prisma.sale.findMany({
+        where: { ...dateFilter, nfceStatus: 'rejeitada' },
+        select: { id: true, total: true, subtotal: true, discount: true, source: true, items: itemSelect },
+      }),
+      prisma.sale.findMany({
+        where: { ...dateFilter, OR: [{ nfceStatus: null }, { nfceStatus: 'nao_emitida' }, { nfceStatus: 'pendente' }] },
+        select: { id: true, total: true, subtotal: true, discount: true, items: itemSelect },
+      }),
+    ]);
+
+    const [allPdvSales, autorizadas, canceladas, rejeitadas] = await Promise.all([
+      this.computeFiscalDetailsForSales(prisma, allPdvSalesRaw),
+      this.computeFiscalDetailsForSales(prisma, autorizadasRaw),
+      this.computeFiscalDetailsForSales(prisma, canceladasRaw),
+      this.computeFiscalDetailsForSales(prisma, rejeitadasRaw),
+    ]);
+
+    const totalVendasPdv = allPdvSales.reduce((acc, s) => acc + Number(s.total), 0);
+    const totalAutorizadoPdv = autorizadas.filter(s => s.source === 'pdv' || !s.source).reduce((acc, s) => acc + Number(s.fiscalTotal), 0);
+    const totalAjusteFiscal = autorizadas.filter(s => s.source === 'ajuste_fiscal').reduce((acc, s) => acc + Number(s.fiscalTotal), 0);
+    const totalAutorizadoNfce = totalAutorizadoPdv + totalAjusteFiscal;
+    const totalCanceladoNfce = canceladas.reduce((acc, s) => acc + Number(s.fiscalTotal), 0);
+    const totalRejeitadoNfce = rejeitadas.reduce((acc, s) => acc + Number(s.fiscalTotal), 0);
+
+    // NÃO DECLARADO / SNF = Soma das vendas não emitidas e das parcelas de produtos SNF do balcão PDV
+    const totalNaoDeclarado = allPdvSales.reduce((acc, s) => {
+      const saleTotal = Number(s.total) || 0;
+      const fiscalTotal = Number(s.fiscalTotal) || 0;
+      return acc + Math.max(0, saleTotal - fiscalTotal);
+    }, 0);
+
+    const coberturaPercent = totalVendasPdv > 0
+      ? Number(((totalAutorizadoNfce / totalVendasPdv) * 100).toFixed(1))
+      : 100;
+
+    const numeros = autorizadas.map(s => s.nfceNumero).filter((n): n is number => typeof n === 'number');
+    const menorNota = numeros.length > 0 ? Math.min(...numeros) : null;
+    const maiorNota = numeros.length > 0 ? Math.max(...numeros) : null;
+
+    // Agrupamento por Meios de Pagamento das Notas Autorizadas (considerando apenas a parcela tributável da nota)
+    const fiscalRatioMap = new Map<string, number>(
+      autorizadas.map((s: any) => {
+        const total = Number(s.total) || Number(s.subtotal) || 0;
+        const fiscalTotal = Number(s.fiscalTotal) || 0;
+        const ratio = total > 0 ? (fiscalTotal / total) : 1;
+        return [s.id, ratio];
+      })
+    );
+
+    const recebimentos = {
+      dinheiro: 0,
+      pix: 0,
+      debito: 0,
+      credito: 0,
+      outros: 0,
+    };
+
+    for (const sale of autorizadasRaw) {
+      if (sale.payments) {
+        const ratio = fiscalRatioMap.get(sale.id) ?? 1;
+        for (const p of sale.payments) {
+          const val = Number((Number(p.value) * ratio).toFixed(2));
+          const method = (p.method || '').toLowerCase();
+          if (method === 'dinheiro' || method === 'money' || method === 'cash') {
+            recebimentos.dinheiro += val;
+          } else if (method === 'pix') {
+            recebimentos.pix += val;
+          } else if (method === 'debito' || method.includes('debit')) {
+            recebimentos.debito += val;
+          } else if (method === 'credito' || method.includes('credit')) {
+            recebimentos.credito += val;
+          } else {
+            recebimentos.outros += val;
+          }
+        }
+      }
+    }
+
+    return {
+      periodo: { startDate: startDate || null, endDate: endDate || null },
+      totais: {
+        totalVendasPdv: Number(totalVendasPdv.toFixed(2)),
+        totalAutorizadoPdv: Number(totalAutorizadoPdv.toFixed(2)),
+        totalAjusteFiscal: Number(totalAjusteFiscal.toFixed(2)),
+        totalAutorizadoNfce: Number(totalAutorizadoNfce.toFixed(2)),
+        totalNaoDeclarado: Number(totalNaoDeclarado.toFixed(2)),
+        totalCanceladoNfce: Number(totalCanceladoNfce.toFixed(2)),
+        totalRejeitadoNfce: Number(totalRejeitadoNfce.toFixed(2)),
+        coberturaPercent: Math.min(100, coberturaPercent),
+      },
+      contagem: {
+        autorizadas: autorizadas.length,
+        canceladas: canceladas.length,
+        rejeitadas: rejeitadas.length,
+        naoEmitidas: naoEmitidasRaw.length,
+        totalGeral: allPdvSales.length,
+      },
+      faixaNotas: {
+        menorNota,
+        maiorNota,
+      },
+      recebimentos: {
+        dinheiro: Number(recebimentos.dinheiro.toFixed(2)),
+        pix: Number(recebimentos.pix.toFixed(2)),
+        debito: Number(recebimentos.debito.toFixed(2)),
+        credito: Number(recebimentos.credito.toFixed(2)),
+        outros: Number(recebimentos.outros.toFixed(2)),
+      },
+    };
+  }
+
+  // ── Histórico e Listagem Paginada Fiscal ────────────────────────────────────
+  async getFiscalSales(query: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    source?: string;
+    search?: string;
+  }) {
+    const prisma = await this.getPrisma();
+    const page = Number(query.page || 1);
+    const limit = Number(query.limit || 20);
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (query.status && query.status !== 'all') {
+      where.nfceStatus = query.status;
+    } else {
+      where.OR = [
+        { emitirNfce: true },
+        { nfceStatus: { not: null } },
+      ];
+    }
+
+    if (query.source && query.source !== 'all') {
+      where.source = query.source;
+    }
+
+    if (query.startDate || query.endDate) {
+      where.createdAt = {};
+      if (query.startDate) where.createdAt.gte = new Date(`${query.startDate}T00:00:00.000Z`);
+      if (query.endDate) where.createdAt.lte = new Date(`${query.endDate}T23:59:59.999Z`);
+    }
+
+    if (query.search && query.search.trim().length > 0) {
+      const term = query.search.trim();
+      const termAsInt = parseInt(term);
+
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { nfceChave: { contains: term } },
+            { consumidorCpf: { contains: term } },
+            { consumidorNome: { contains: term } },
+            ...(isNaN(termAsInt) ? [] : [{ nfceNumero: termAsInt }]),
+          ]
+        }
+      ];
+    }
+
+    const [total, rawSales] = await Promise.all([
+      prisma.sale.count({ where }),
+      prisma.sale.findMany({
+        where,
+        include: {
+          operator: { select: { name: true } },
+          payments: { select: { method: true, value: true } },
+          items: { select: { productId: true, productName: true, quantity: true, priceUnit: true, subtotal: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const sales = await this.computeFiscalDetailsForSales(prisma, rawSales);
+
+    return {
+      data: sales.map(s => ({
+        id: s.id,
+        nfceNumero: s.nfceNumero,
+        nfceSerie: s.nfceSerie,
+        nfceChave: s.nfceChave,
+        nfceProtocolo: s.nfceProtocolo,
+        nfceStatus: s.nfceStatus || 'nao_emitida',
+        nfceMotivoRejeicao: s.nfceMotivoRejeicao,
+        total: Number(s.fiscalTotal),
+        fullSaleTotal: Number(s.total),
+        discount: Number(s.discount),
+        source: s.source,
+        consumidorCpf: s.consumidorCpf,
+        consumidorNome: s.consumidorNome,
+        createdAt: s.createdAt,
+        operatorName: s.operator?.name || 'Sistema',
+        payments: (s.payments || []).map((p: any) => ({
+          method: p.method,
+          value: Number(p.value),
+        })),
+        itemsCount: s.fiscalItems.length,
+        itemsSummary: s.fiscalItems.slice(0, 3).map((i: any) => `${Number(i.quantity)}x ${i.productName}`).join(', ') + (s.fiscalItems.length > 3 ? '...' : ''),
+        itemsDetail: s.fiscalItems.map((i: any) => ({
+          name: i.productName,
+          quantity: Number(i.quantity),
+          priceUnit: Number(i.priceUnit),
+          subtotal: Number(i.subtotal),
+        })),
+      })),
+      meta: {
+        total,
+        page,
+        lastPage: Math.ceil(total / limit),
+      },
+    };
   }
 }
 

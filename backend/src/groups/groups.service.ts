@@ -103,30 +103,30 @@ export class GroupsService {
       try {
         const [salesTodayAgg, salesPeriodAgg, salesPeriodCount, topProducts, dailySales, paymentsData] = await Promise.all([
           client.sale.aggregate({
-            where: { createdAt: { gte: today }, status: { not: 'cancelled' } },
+            where: { createdAt: { gte: today }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
             _sum: { total: true },
           }),
           client.sale.aggregate({
-            where: { createdAt: { gte: start, lte: end }, status: { not: 'cancelled' } },
+            where: { createdAt: { gte: start, lte: end }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
             _sum: { total: true },
           }),
           client.sale.count({
-            where: { createdAt: { gte: start, lte: end }, status: { not: 'cancelled' } },
+            where: { createdAt: { gte: start, lte: end }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
           }),
           client.saleItem.groupBy({
             by: ['productId'],
-            where: { sale: { createdAt: { gte: start, lte: end }, status: { not: 'cancelled' } } },
+            where: { sale: { createdAt: { gte: start, lte: end }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] } },
             _sum: { quantity: true },
             orderBy: { _sum: { quantity: 'desc' } },
             take: 15,
           }),
           client.sale.findMany({
-            where: { createdAt: { gte: start, lte: end }, status: { not: 'cancelled' } },
+            where: { createdAt: { gte: start, lte: end }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
             select: { createdAt: true, total: true },
           }),
           client.payment.groupBy({
             by: ['method'],
-            where: { sale: { createdAt: { gte: start, lte: end }, status: { not: 'cancelled' } } },
+            where: { sale: { createdAt: { gte: start, lte: end }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] } },
             _sum: { value: true },
           }),
         ]);

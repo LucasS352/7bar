@@ -23,18 +23,19 @@ interface ReemitNfceModalProps {
   isOpen: boolean;
   onClose: () => void;
   sale: Sale | null;
-  onConfirm: (forceNewNumber: boolean) => Promise<void>;
+  onConfirm: (forceNewNumber: boolean, manualNumber?: number) => Promise<void>;
 }
 
 export function ReemitNfceModal({ isOpen, onClose, sale, onConfirm }: ReemitNfceModalProps) {
   const [loading, setLoading] = useState(false);
+  const [manualNumber, setManualNumber] = useState('');
 
   if (!isOpen || !sale) return null;
 
-  const handleAction = async (forceNewNumber: boolean) => {
+  const handleAction = async (forceNewNumber: boolean, customNumber?: number) => {
     setLoading(true);
     try {
-      await onConfirm(forceNewNumber);
+      await onConfirm(forceNewNumber, customNumber);
       onClose();
     } catch (err) {
       console.error(err);
@@ -127,22 +128,36 @@ export function ReemitNfceModal({ isOpen, onClose, sale, onConfirm }: ReemitNfce
               </div>
             </button>
 
-            {/* Option 2: Generate New Number */}
-            <button
-              onClick={() => handleAction(true)}
-              disabled={loading}
-              className="flex items-start text-left p-4 rounded-xl border border-zinc-800 bg-zinc-950/40 hover:bg-zinc-800/30 hover:border-amber-500/50 transition duration-200 group disabled:opacity-50"
-            >
-              <RefreshCw className="text-amber-400 mt-1 shrink-0 group-hover:scale-110 transition duration-200" size={24} />
-              <div className="ml-4">
-                <span className="text-sm font-bold text-white block group-hover:text-amber-400 transition">
-                  Gerar Novo Número (Forçar Sequencial)
-                </span>
-                <span className="text-xs text-zinc-500 mt-1 block leading-normal">
-                  Consome a próxima numeração livre configurada na empresa. Escolha isso se a SEFAZ rejeitou por duplicidade de numeração ou chave de acesso.
-                </span>
+            {/* Option 2: Manual Number */}
+            <div className="flex flex-col p-4 rounded-xl border border-zinc-800 bg-zinc-950/40 transition duration-200">
+              <div className="flex items-start">
+                <RefreshCw className="text-amber-400 mt-1 shrink-0" size={24} />
+                <div className="ml-4 flex-1">
+                  <span className="text-sm font-bold text-white block">
+                    Gerar Novo Número ou Informar Número Manual
+                  </span>
+                  <span className="text-xs text-zinc-500 mt-1 block leading-normal mb-3">
+                    Consome a próxima numeração ou informe uma numeração específica para pular saltos. Útil para corrigir "Duplicidade de Chave de Acesso".
+                  </span>
+                  <div className="flex gap-2 items-center">
+                    <input 
+                      type="number" 
+                      placeholder="Ex: 58"
+                      value={manualNumber}
+                      onChange={e => setManualNumber(e.target.value)}
+                      className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-white text-sm w-24 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                    />
+                    <button
+                      onClick={() => handleAction(true, manualNumber ? Number(manualNumber) : undefined)}
+                      disabled={loading}
+                      className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors"
+                    >
+                      Transmitir
+                    </button>
+                  </div>
+                </div>
               </div>
-            </button>
+            </div>
           </div>
         </div>
 

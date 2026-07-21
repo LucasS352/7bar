@@ -95,6 +95,7 @@ export class PayablesService {
           lte: end,
         },
         status: 'completed',
+        NOT: { source: 'ajuste_fiscal' },
       },
       _sum: {
         total: true,

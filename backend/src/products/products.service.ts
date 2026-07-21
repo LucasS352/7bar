@@ -96,13 +96,17 @@ import { HeartPrismaService } from '../prisma/heart-prisma.service';
 @Injectable()
 export class ProductsService {
   private catalogCache = new Map<string, { data: any; timestamp: number }>();
-  private readonly CACHE_TTL = 10 * 60 * 1000; // 10 minutos
+  private readonly CACHE_TTL = 15 * 1000; // 15 segundos (garante atualização rápida do estoque)
 
-  invalidateCache(tenantId: string) {
-    for (const key of this.catalogCache.keys()) {
-      if (key.startsWith(tenantId)) {
-        this.catalogCache.delete(key);
+  invalidateCache(tenantId?: string) {
+    if (tenantId) {
+      for (const key of this.catalogCache.keys()) {
+        if (key.startsWith(tenantId)) {
+          this.catalogCache.delete(key);
+        }
       }
+    } else {
+      this.catalogCache.clear();
     }
   }
 
@@ -230,21 +234,36 @@ export class ProductsService {
   }
 
 
-  async findAll(page = 1, limit = 50) {
+  async findAll(page = 1, limit = 50, search?: string) {
     const { tenantId } = this.tenantContext.get();
-    const cacheKey = `${tenantId}_p_${page}_l_${limit}`;
-    const cached = this.catalogCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
-      return cached.data;
+
+    // Cache somente para listagens sem busca
+    if (!search) {
+      const cacheKey = `${tenantId}_p_${page}_l_${limit}`;
+      const cached = this.catalogCache.get(cacheKey);
+      if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
+        return cached.data;
+      }
     }
 
     const prisma = await this.getPrisma();
     const skip = (page - 1) * limit;
 
+    // ── Montar filtro de busca ─────────────────────────────────────────────
+    const whereClause: any = { active: true };
+    if (search && search.trim().length > 0) {
+      const term = search.trim();
+      whereClause.OR = [
+        { name: { contains: term } },
+        { shortCode: { contains: term } },
+        { barcode: { contains: term } },
+      ];
+    }
+
     const [total, data] = await Promise.all([
-      prisma.product.count({ where: { active: true } }),
+      prisma.product.count({ where: whereClause }),
       prisma.product.findMany({
-        where: { active: true },
+        where: whereClause,
         include: { 
           category: true, 
           grupoTributacao: true,
@@ -276,7 +295,11 @@ export class ProductsService {
       },
     };
 
-    this.catalogCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    // Salvar no cache apenas listagens sem busca
+    if (!search) {
+      const cacheKey = `${tenantId}_p_${page}_l_${limit}`;
+      this.catalogCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    }
     return result;
   }
 
@@ -722,6 +745,8 @@ export class ProductsService {
         },
       });
 
+      await this.syncProductStockAndCost(tx, productId);
+
       return { product: updated, quantityAdded: quantity };
     });
 
@@ -731,11 +756,17 @@ export class ProductsService {
     return result;
   }
 
-  /**
-   * Registra um lote para unidades que já estão no estoque do produto,
-   * sem alterar o saldo total (Product.stock).
-   */
   async registerExistingLot(
+    productId: string,
+    quantity: number,
+    costPrice?: number,
+    lotNumber?: string,
+    expiresAt?: string,
+  ) {
+    return this.registerStockLot(productId, quantity, costPrice, lotNumber, expiresAt);
+  }
+
+  async registerStockLot(
     productId: string,
     quantity: number,
     costPrice?: number,
@@ -748,35 +779,44 @@ export class ProductsService {
 
     const prisma = await this.getPrisma();
 
-    const product = await prisma.product.findUnique({ where: { id: productId } });
-    if (!product) throw new NotFoundException('Produto não encontrado.');
+    const result = await prisma.$transaction(async (tx) => {
+      const product = await tx.product.findUnique({ where: { id: productId } });
+      if (!product) throw new NotFoundException('Produto não encontrado.');
 
-    // Verificar estoque sem lote
-    const lots = await prisma.stockLot.findMany({ where: { productId } });
-    const lotStock = lots.reduce((acc, lot) => acc + Number(lot.remaining), 0);
-    const unassignedStock = Number(product.stock) - lotStock;
+      const finalCost = costPrice !== undefined && Number(costPrice) > 0
+        ? new Prisma.Decimal(costPrice)
+        : product.priceCost;
+      const finalLotNumber = lotNumber || `L${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}`;
 
-    if (quantity > unassignedStock) {
-      throw new BadRequestException(`Quantidade inválida. O estoque atual sem lote é de apenas ${unassignedStock} un.`);
-    }
+      const lot = await tx.stockLot.create({
+        data: {
+          productId,
+          costPrice: finalCost,
+          quantity: new Prisma.Decimal(quantity),
+          remaining: new Prisma.Decimal(quantity),
+          lotNumber: finalLotNumber,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+        }
+      });
 
-    const finalCost = costPrice !== undefined ? new Prisma.Decimal(costPrice) : product.priceCost;
-    const finalLotNumber = lotNumber || `L${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}`;
+      await tx.inventoryLog.create({
+        data: {
+          productId,
+          type: 'IN',
+          quantity,
+          costPrice: Number(finalCost),
+          reason: `Entrada de Lote ${finalLotNumber}`,
+        }
+      });
 
-    const lot = await prisma.stockLot.create({
-      data: {
-        productId,
-        costPrice: finalCost,
-        quantity: new Prisma.Decimal(quantity),
-        remaining: new Prisma.Decimal(quantity),
-        lotNumber: finalLotNumber,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
-      }
+      await this.syncProductStockAndCost(tx, productId);
+
+      const updatedProduct = await tx.product.findUnique({ where: { id: productId } });
+      return { product: updatedProduct, lot, quantityRegistered: quantity };
     });
 
     this.invalidateCache(this.tenantContext.get().tenantId);
-    
-    return { product, lot, quantityRegistered: quantity };
+    return result;
   }
 
   // ── Importação em Lote (Fast Grid) ────────────────────────────────────────
@@ -862,6 +902,8 @@ export class ProductsService {
               await tx.inventoryLog.create({
                 data: { productId: existing.id, type: 'IN', quantity: stockToAdd, costPrice: Number(finalCost), reason: 'Entrada Lote/Fornecedor' },
               });
+
+              await this.syncProductStockAndCost(tx, existing.id);
             }
             importedCount++;
           } else {
@@ -1083,8 +1125,46 @@ export class ProductsService {
     return { imageUrl };
   }
 
+  /**
+   * Sincroniza o estoque físico (`product.stock`) e o preço de custo (`product.priceCost`)
+   * com o saldo total dos lotes ativos (`StockLot`) e o custo do lote mais recente.
+   */
+  async syncProductStockAndCost(tx: any, productId: string) {
+    const lots = await tx.stockLot.findMany({
+      where: { productId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (lots.length === 0) return;
+
+    // Soma do saldo restante de todos os lotes
+    const totalRemaining = lots.reduce((sum: number, lot: any) => sum + Number(lot.remaining), 0);
+
+    // Lote ativo mais recente (remaining > 0) ou primeiro lote
+    const activeLot = lots.find((lot: any) => Number(lot.remaining) > 0) || lots[0];
+    const latestCost = activeLot ? activeLot.costPrice : null;
+
+    const updateData: any = {};
+    if (totalRemaining >= 0) {
+      updateData.stock = new Prisma.Decimal(totalRemaining);
+    }
+    if (latestCost !== null && Number(latestCost) > 0) {
+      updateData.priceCost = latestCost;
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await tx.product.update({
+        where: { id: productId },
+        data: updateData,
+      });
+    }
+  }
+
   async getProductLots(productId: string) {
     const prisma = await this.getPrisma();
+
+    // Auto-sincroniza estoque e custo do produto com os lotes ativos
+    await this.syncProductStockAndCost(prisma, productId);
     
     const lots = await prisma.stockLot.findMany({
       where: { productId },

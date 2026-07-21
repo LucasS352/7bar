@@ -392,7 +392,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                             </span>
                           ))}
                         </div>
-                        {isAdmin && s.status !== 'cancelled' && data.register.status === 'open' && (
+                        {s.status !== 'cancelled' && data.register.status === 'open' && (
                           <button
                             onClick={() => setEditingSale(s)}
                             className="p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors border border-transparent hover:border-blue-500/20 shrink-0"

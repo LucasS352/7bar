@@ -60,34 +60,34 @@ export class DashboardService {
         orderBy: { openingTime: 'asc' },
       }),
 
-      // 2. Faturamento de Hoje
+      // 2. Faturamento de Hoje (exclui notas de ajuste fiscal)
       prisma.sale.aggregate({
-        where: { createdAt: { gte: todayStart, lte: todayEnd }, NOT: { status: 'cancelled' } },
+        where: { createdAt: { gte: todayStart, lte: todayEnd }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
         _sum: { total: true },
         _count: { id: true },
       }),
 
-      // 3. Faturamento da Semana
+      // 3. Faturamento da Semana (exclui notas de ajuste fiscal)
       prisma.sale.aggregate({
-        where: { createdAt: { gte: weekStart, lte: todayEnd }, NOT: { status: 'cancelled' } },
+        where: { createdAt: { gte: weekStart, lte: todayEnd }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
         _sum: { total: true },
       }),
 
-      // 4. Semana anterior
+      // 4. Semana anterior (exclui notas de ajuste fiscal)
       prisma.sale.aggregate({
-        where: { createdAt: { gte: prevWeekStart, lte: prevWeekEnd }, NOT: { status: 'cancelled' } },
+        where: { createdAt: { gte: prevWeekStart, lte: prevWeekEnd }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
         _sum: { total: true },
       }),
 
-      // 5. Faturamento do Mês
+      // 5. Faturamento do Mês (exclui notas de ajuste fiscal)
       prisma.sale.aggregate({
-        where: { createdAt: { gte: monthStart, lte: todayEnd }, NOT: { status: 'cancelled' } },
+        where: { createdAt: { gte: monthStart, lte: todayEnd }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
         _sum: { total: true },
       }),
 
-      // 6. Dados do período filtrado — limitado a 2000 vendas para evitar OOM em ranges grandes
+      // 6. Dados do período filtrado (exclui notas de ajuste fiscal)
       prisma.sale.findMany({
-        where: { createdAt: { gte: periodStart, lte: periodEnd }, NOT: { status: 'cancelled' } },
+        where: { createdAt: { gte: periodStart, lte: periodEnd }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
         include: {
           payments: { select: { method: true, value: true, label: true } },
           items: {
@@ -116,7 +116,7 @@ export class DashboardService {
     const openRegistersWithRevenue = await Promise.all(
       openRegisters.map(async (reg) => {
         const regSales = await prisma.sale.aggregate({
-          where: { cashRegisterId: reg.id, NOT: { status: 'cancelled' } },
+          where: { cashRegisterId: reg.id, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
           _sum: { total: true },
           _count: { id: true },
         });

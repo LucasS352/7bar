@@ -203,13 +203,15 @@ export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
                 <User size={20} />
                 Comandas / Consumo
               </button>
-              <button
-                onClick={() => { setProfileOpen(false); setIsExportModalOpen(true); }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-zinc-800 border border-zinc-700 text-zinc-300 font-semibold text-left active:scale-[0.98] transition-all"
-              >
-                <Download size={20} />
-                Exportar XML
-              </button>
+              {modules.nfce !== false && (
+                <button
+                  onClick={() => { setProfileOpen(false); setIsExportModalOpen(true); }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-zinc-800 border border-zinc-700 text-zinc-300 font-semibold text-left active:scale-[0.98] transition-all"
+                >
+                  <Download size={20} />
+                  Exportar XML
+                </button>
+              )}
               <button
                 onClick={() => setProfileOpen(false)}
                 className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-zinc-800 text-zinc-300 font-semibold text-left active:scale-[0.98] transition-all"

@@ -184,3 +184,104 @@ model TenantGroupMember {
   @@unique([groupId, tenantId])
   @@map("tenant_group_members")
 }
+
+// ------------------------------------------------------------
+//  NfeSyncState — Controle do CRON de distribuição DF-e por tenant
+// ------------------------------------------------------------
+model NfeSyncState {
+  id               String    @id @default(uuid())
+  tenantId         String    @unique
+  ultimoNSU        String    @default("0")
+  ultimaConsulta   DateTime?
+  status           String    @default("idle") // idle, syncing, error
+  notasBaixadas    Int       @default(0)       // Estatísticas do último run
+  tempoGastoMs     Int       @default(0)
+  lastError        String?   @db.Text
+  correlationId    String?                     // ID de rastreamento ponta-a-ponta
+  lastDiagnostico  Json?                       // Diagnóstico completo da última execução
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@map("nfe_sync_states")
+}
+
+// ============================================================
+//  SISTEMA DE PERFIS FISCAIS
+// ============================================================
+
+model StoreProfile {
+  id          String               @id @default(cuid())
+  slug        String               @unique  // "adega", "mercado"
+  name        String               // "Adega"
+  icon        String?              // "🍺"
+  description String?
+  profiles    StoreProfileFiscal[]
+}
+
+model StoreProfileFiscal {
+  storeProfileId  String
+  fiscalProfileId String
+  storeProfile    StoreProfile  @relation(fields: [storeProfileId], references: [id], onDelete: Cascade)
+  fiscalProfile   FiscalProfile @relation(fields: [fiscalProfileId], references: [id], onDelete: Cascade)
+  @@id([storeProfileId, fiscalProfileId])
+}
+
+model FiscalProfile {
+  id           String   @id @default(cuid())
+  name         String   // "Cerveja Nacional"
+  icon         String?  // "🍺"
+  group        String   // "Bebidas"
+  description  String?
+  scope        String   // "SYSTEM" | "TENANT"
+  tenantId     String?  // null = SYSTEM, uuid = TENANT
+  version      String   // "2026.1"
+  status       String   @default("ACTIVE")  // "ACTIVE" | "DEPRECATED" | "ARCHIVED"
+  emiteNfce    Boolean  @default(true)
+  ncm          String?
+  cest         String?
+  unit         String   @default("UN")
+  observacoes  String?
+  taxRules      FiscalTaxRule[]
+  history       FiscalProfileHistory[]
+  storeProfiles StoreProfileFiscal[]
+  favoritedBy   FiscalFavorite[]
+}
+
+model FiscalTaxRule {
+  id              String        @id @default(cuid())
+  fiscalProfileId String
+  fiscalProfile   FiscalProfile @relation(fields: [fiscalProfileId], references: [id], onDelete: Cascade)
+  regime          String        // "simples" | "normal"
+  csosn           String?       
+  cstIcms         String?       
+  aliqIcms        Float         @default(0)
+  cstPis          String        @default("99")
+  aliqPis         Float         @default(0)
+  cstCofins       String        @default("99")
+  aliqCofins      Float         @default(0)
+  ibsCst          String        @default("99")
+  ibsAliq         Float         @default(0)
+  cbsCst          String        @default("99")
+  cbsAliq         Float         @default(0)
+  validFrom       DateTime      @default(now())
+  validUntil      DateTime?     
+}
+
+model FiscalProfileHistory {
+  id              String        @id @default(cuid())
+  fiscalProfileId String
+  fiscalProfile   FiscalProfile @relation(fields: [fiscalProfileId], references: [id], onDelete: Cascade)
+  changedBy       String        
+  changedAt       DateTime      @default(now())
+  field           String        
+  oldValue        String        
+  newValue        String        
+  reason          String?       
+}
+
+model FiscalFavorite {
+  tenantId        String
+  fiscalProfileId String
+  fiscalProfile   FiscalProfile @relation(fields: [fiscalProfileId], references: [id], onDelete: Cascade)
+  @@id([tenantId, fiscalProfileId])
+}

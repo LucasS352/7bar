@@ -213,11 +213,8 @@ export default function SalesDashboard() {
       const sumRes = await api.get(`/dashboard/summary?startDate=${computedStartDate}&endDate=${computedEndDate}`);
       setSummary(sumRes.data);
 
-      // Fetch transactions history for the table
-      // (Para não carregar todas, ideal seria paginar no backend, mas mantendo a simplicidade atual do plano)
-      const salesRes = await api.get('/sales?limit=100'); 
-      setSales(salesRes.data.data || []);
-
+      const { data } = await api.get('/sales/today');
+      setSales(data.data || []);
     } catch (error) {
       console.error("Erro ao buscar dados do dashboard", error);
       toast.error('Erro ao carregar dados. Tente novamente.');
@@ -232,13 +229,28 @@ export default function SalesDashboard() {
 
     // Auto-refresh a cada 60 segundos
     const intervalId = setInterval(fetchDashboardData, 60000);
-    return () => clearInterval(intervalId);
+    
+    // Polling rápido para NFC-e pendente
+    const pendingInterval = setInterval(() => {
+      setSales(current => {
+        const hasPending = current.some(s => s.nfceStatus === 'pendente' || s.nfceStatus === 'em_processamento');
+        if (hasPending) {
+          fetchDashboardData();
+        }
+        return current;
+      });
+    }, 5000);
+
+    return () => {
+      clearInterval(intervalId);
+      clearInterval(pendingInterval);
+    };
   }, [preset, computedStartDate, computedEndDate]);
 
-  const handleEmitNfce = async (saleId: string, forceNewNumber = false) => {
+  const handleEmitNfce = async (saleId: string, forceNewNumber: boolean, manualNumber?: number) => {
     setEmittingId(saleId);
     try {
-      await api.post(`/sales/${saleId}/emit-nfce`, { forceNewNumber });
+      await api.post(`/sales/${saleId}/emit-nfce`, { forceNewNumber, manualNumber });
       toast.success('Emissão solicitada com sucesso!');
       fetchDashboardData();
     } catch (err: unknown) {
@@ -258,9 +270,34 @@ export default function SalesDashboard() {
     }
   };
 
-  const handleReemitConfirm = async (forceNewNumber: boolean) => {
+  const handleCancelSale = async (sale: Sale) => {
+    const reason = window.prompt("Motivo do cancelamento (Mínimo de 15 caracteres):");
+    if (!reason) return;
+    if (reason.length < 15) {
+      toast.error("O motivo deve ter pelo menos 15 caracteres para a SEFAZ.");
+      return;
+    }
+
+    try {
+      // 1. Se tem NFC-e autorizada, cancela na SEFAZ primeiro
+      if (sale.nfceStatus === 'autorizada') {
+        await api.post(`/v1/fiscal/nfce/${sale.id}/cancelar`, { motivo: reason });
+      }
+
+      // 2. Cancela a venda localmente e estorna estoque
+      await api.post(`/sales/${sale.id}/cancel`, { reason });
+      
+      toast.success("Venda cancelada com sucesso!");
+      fetchDashboardData();
+    } catch (err: unknown) {
+      const msg = (err as any)?.response?.data?.message || 'Erro ao cancelar venda.';
+      toast.error(msg);
+    }
+  };
+
+  const handleReemitConfirm = async (forceNewNumber: boolean, manualNumber?: number) => {
     if (saleToReemit) {
-      await handleEmitNfce(saleToReemit.id, forceNewNumber);
+      await handleEmitNfce(saleToReemit.id, forceNewNumber, manualNumber);
     }
   };
 
@@ -1050,6 +1087,10 @@ export default function SalesDashboard() {
                                 {emittingId === sale.id ? <Loader2 size={12} className="animate-spin" /> : <Receipt size={12} />}
                               </button>
                             </div>
+                          ) : sale.nfceStatus === 'cancelada' || isCancelled ? (
+                            <span className="text-red-400 font-semibold text-[11px] flex items-center justify-center gap-1 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
+                              <XCircle size={12}/> Cancelada
+                            </span>
                           ) : (
                             <span className="text-amber-400 font-semibold text-[11px] flex items-center justify-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
                               <Clock size={12}/> Pendente
@@ -1067,7 +1108,7 @@ export default function SalesDashboard() {
                     <td className="px-6 py-4 text-right whitespace-nowrap">
                       <span className="text-emerald-400 font-black text-base">{formatCurrency(sale.total)}</span>
                     </td>
-                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                    <td className="px-6 py-4 text-center whitespace-nowrap flex items-center justify-center gap-2">
                       <button
                         onClick={() => printReceipt(sale)}
                         className="text-zinc-400 hover:text-blue-400 p-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-850 border border-zinc-700 transition-colors"
@@ -1075,6 +1116,15 @@ export default function SalesDashboard() {
                       >
                         <Printer size={16} />
                       </button>
+                      {!isCancelled && (
+                        <button
+                          onClick={() => handleCancelSale(sale)}
+                          className="text-zinc-400 hover:text-red-400 p-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-850 border border-zinc-700 transition-colors"
+                          title="Cancelar Venda"
+                        >
+                          <XCircle size={16} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -1137,6 +1187,16 @@ export default function SalesDashboard() {
                     >
                       <Printer size={12} className="m-0.5" />
                     </button>
+
+                    {!isCancelled && (
+                      <button
+                        onClick={() => handleCancelSale(sale)}
+                        title="Cancelar Venda"
+                        className="p-1 text-zinc-400 hover:text-red-400 rounded bg-zinc-800 hover:bg-zinc-750 border border-zinc-700 transition-colors"
+                      >
+                        <XCircle size={12} className="m-0.5" />
+                      </button>
+                    )}
 
                     {sale.emitirNfce ? (
                       <div className="flex flex-col items-center justify-center gap-1">
