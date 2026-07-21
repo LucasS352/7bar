@@ -14,9 +14,10 @@ export class FiscalDistributionService {
   ) {}
 
   /**
-   * Cron job que roda a cada 15 minutos para baixar XMLs da SEFAZ.
+   * Cron job que roda a cada 30 minutos para verificar novas notas na SEFAZ.
+   * Respeita a regra de backoff de 60 minutos da SEFAZ NT 2014.002.
    */
-  @Cron('0 */15 * * * *')
+  @Cron('0 */30 * * * *')
   async handleCron() {
     if (this.isCronRunning) {
       this.logger.warn('Cron de distribuição DF-e ignorado, pois a execução anterior ainda está rodando.');

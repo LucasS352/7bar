@@ -59,6 +59,43 @@ export class DownloadStage {
         trace.log(`Estado recuperado — último NSU: ${syncState.ultimoNSU}`);
       }
 
+      // 1.5 Regra Anti-Spam SEFAZ (NT 2014.002): Se a última consulta retornou cStat 137 ou 656 há menos de 60 min, abortar requisição
+      if (syncState && syncState.ultimaConsulta) {
+        const lastDiag = (syncState.lastDiagnostico as any) || {};
+        const lastCStat = lastDiag.resultado?.cStat;
+        const minutesSinceLast = (Date.now() - new Date(syncState.ultimaConsulta).getTime()) / (1000 * 60);
+
+        if (['137', '656'].includes(lastCStat) && minutesSinceLast < 60) {
+          const waitRemaining = Math.ceil(60 - minutesSinceLast);
+          trace.log(`⏭️ [SEFAZ BACKOFF] Consulta ignorada para evitar Consumo Indevido (cStat ${lastCStat}). Próxima consulta liberada em ${waitRemaining} min.`);
+          trace.finish();
+
+          await this.heart.nfeSyncState.update({
+            where: { tenantId },
+            data: { status: 'idle' },
+          });
+
+          return {
+            correlationId,
+            ultNSU: syncState.ultimoNSU,
+            novos: 0,
+            duplicados: 0,
+            processados: 0,
+            tempo: 0,
+            diagnostico: {
+              statusInterno: 'SEFAZ_BACKOFF',
+              resultado: {
+                cStat: '656',
+                xMotivo: `A SEFAZ exige 1 hora de intervalo quando não há novas notas. Próxima busca liberada em ${waitRemaining} minuto(s).`,
+                ultNSU: syncState.ultimoNSU,
+                maxNSU: syncState.ultimoNSU,
+                documentosTotal: 0,
+              },
+            },
+          };
+        }
+      }
+
       // 2. Chamar PHP para buscar novos DF-e
       trace.step('php-distribuicao');
       const payload = {
