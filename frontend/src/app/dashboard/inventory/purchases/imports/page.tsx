@@ -21,7 +21,8 @@ import {
   X,
   Database,
   Trash2,
-  Clock
+  Clock,
+  Link2Off
 } from 'lucide-react';
 
 // ── Interfaces ───────────────────────────────────────────────────────────────
@@ -399,18 +400,22 @@ export default function XmlImportPage() {
     }
   };
 
-  // ── Vincular Produto Manualmente ───────────────────────────────────────────
-  const handleLinkProduct = async (itemId: string, productId: string) => {
+  // ── Vincular / Desvincular Produto Manualmente ──────────────────────────────
+  const handleLinkProduct = async (itemId: string, productId: string | null) => {
     setLinkingLoading(true);
     try {
       await api.patch(`/v1/fiscal/import/items/${itemId}`, { productId });
-      toast.success('Produto vinculado com sucesso!');
+      if (productId) {
+        toast.success('Produto vinculado com sucesso!');
+      } else {
+        toast.success('Vínculo removido. O item agora está sem produto associado.');
+      }
       
       // Atualizar localmente
-      const linkedProduct = productsList.find(p => p.id === productId);
+      const linkedProduct = productId ? productsList.find(p => p.id === productId) : null;
       setNfeItens(prev => prev.map(item => {
         if (item.id === itemId) {
-          return { ...item, productId, product: linkedProduct };
+          return { ...item, productId, product: linkedProduct || null };
         }
         return item;
       }));
@@ -423,7 +428,7 @@ export default function XmlImportPage() {
 
       setLinkingItemId(null);
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Erro ao vincular produto.';
+      const msg = err.response?.data?.message || 'Erro ao atualizar vínculo do produto.';
       toast.error(msg);
     } finally {
       setLinkingLoading(false);
@@ -1091,6 +1096,16 @@ export default function XmlImportPage() {
                               </button>
                             )}
 
+                            {isMatched && selectedNfe.status !== 'IMPORTADA' && selectedNfe.status !== 'CANCELADA' && (
+                              <button
+                                onClick={() => handleLinkProduct(item.id, null)}
+                                className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                                title="Remover vínculo e deixar sem produto"
+                              >
+                                <Link2Off size={14} /> Desvincular
+                              </button>
+                            )}
+
                             <button
                               onClick={() => {
                                 setLinkingItem(item);
@@ -1233,7 +1248,20 @@ export default function XmlImportPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 border-t border-zinc-800 pt-4">
+            <div className="flex justify-between items-center border-t border-zinc-800 pt-4">
+              {linkingItem.productId ? (
+                <button
+                  onClick={() => {
+                    handleLinkProduct(linkingItem.id, null);
+                    setLinkingItem(null);
+                  }}
+                  className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 px-4 py-2.5 rounded-xl font-bold transition text-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <Link2Off size={14} /> Remover Vínculo (Deixar sem Produto)
+                </button>
+              ) : (
+                <div />
+              )}
               <button
                 onClick={() => setLinkingItem(null)}
                 className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-5 py-2.5 rounded-xl font-bold transition text-xs"

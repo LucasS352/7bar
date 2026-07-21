@@ -491,6 +491,11 @@ export class FiscalImportService {
         where: { id: item.nfeEntradaId },
         data: { status: 'PRONTA_IMPORTAR' as any },
       });
+    } else if (!todosCasados && item.nfeEntrada.status === 'PRONTA_IMPORTAR') {
+      await prisma.nfeEntrada.update({
+        where: { id: item.nfeEntradaId },
+        data: { status: 'AGUARDANDO_CONCILIACAO' as any },
+      });
     }
 
     return updatedItem;
