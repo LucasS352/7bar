@@ -1,12 +1,17 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 
 @Injectable()
 export class ComandasService {
-  constructor(private readonly tenantContext: TenantContextService) {}
+  constructor(
+    private readonly tenantManager: TenantConnectionManager,
+    private readonly tenantContext: TenantContextService,
+  ) {}
 
   private async getPrisma() {
-    return this.tenantContext.getPrisma();
+    const { tenantId, databaseUrl } = this.tenantContext.get();
+    return this.tenantManager.getTenantClient(tenantId, databaseUrl);
   }
 
   async findAll(status: string = 'open') {
