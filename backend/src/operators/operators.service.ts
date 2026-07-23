@@ -193,9 +193,97 @@ export class OperatorsService {
     }));
   }
 
-  async settleConsumptions(tenantId: string, operatorId: string, itemIds?: string[]) {
+  async settleConsumptions(tenantId: string, operatorId: string, itemIds?: string[], amount?: number) {
     const prisma = await this.getPrisma(tenantId);
     
+    // CASO 1: Abatimento por valor em R$ (ex: abater R$ 10,00 de uma dívida de R$ 14,00)
+    if (amount !== undefined && amount !== null && amount > 0) {
+      let remainingToAbate = amount;
+
+      const pendingConsumptions = await prisma.operatorConsumption.findMany({
+        where: { operatorId, settled: false },
+        include: {
+          sale: {
+            include: {
+              items: {
+                where: { settled: false },
+                orderBy: { id: 'asc' }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: 'asc' }
+      });
+
+      for (const consumption of pendingConsumptions) {
+        if (remainingToAbate <= 0) break;
+
+        for (const item of consumption.sale.items) {
+          if (remainingToAbate <= 0) break;
+
+          const itemSubtotal = Number(item.subtotal);
+
+          if (remainingToAbate >= itemSubtotal) {
+            // Abatimento cobre o item por inteiro -> dar baixa total no item
+            await prisma.saleItem.update({
+              where: { id: item.id },
+              data: { settled: true, settledAt: new Date() }
+            });
+            remainingToAbate -= itemSubtotal;
+          } else {
+            // Abatimento é MENOR que o valor do item -> baixa parcial no item!
+            const remainingItemSubtotal = Math.round((itemSubtotal - remainingToAbate) * 100) / 100;
+            const settledSubtotal = Math.round(remainingToAbate * 100) / 100;
+
+            // 1. Atualizar o item original para conter apenas o valor RESTANTE PENDENTE (ex: R$ 4,00)
+            await prisma.saleItem.update({
+              where: { id: item.id },
+              data: {
+                subtotal: remainingItemSubtotal,
+                settled: false
+              }
+            });
+
+            // 2. Criar o item parcelado representando a quantia QUITADA (ex: R$ 10,00)
+            await prisma.saleItem.create({
+              data: {
+                saleId: item.saleId,
+                productId: item.productId,
+                productName: `${item.productName} (Abatimento Parcial)`,
+                unit: item.unit,
+                quantity: item.quantity,
+                priceUnit: item.priceUnit,
+                discount: item.discount,
+                subtotal: settledSubtotal,
+                settled: true,
+                settledAt: new Date()
+              }
+            });
+
+            remainingToAbate = 0;
+          }
+        }
+      }
+
+      // Atualizar status dos consumos cujos itens foram 100% quitados
+      const checkConsumptions = await prisma.operatorConsumption.findMany({
+        where: { operatorId, settled: false },
+        include: { sale: { include: { items: true } } }
+      });
+
+      for (const c of checkConsumptions) {
+        if (c.sale.items.every(i => i.settled)) {
+          await prisma.operatorConsumption.update({
+            where: { id: c.id },
+            data: { settled: true, settledAt: new Date() }
+          });
+        }
+      }
+
+      return { success: true };
+    }
+
+    // CASO 2: Baixa por itens selecionados
     if (itemIds && itemIds.length > 0) {
       await prisma.saleItem.updateMany({
         where: {
@@ -239,6 +327,7 @@ export class OperatorsService {
         }
       }
     } else {
+      // CASO 3: Quitar tudo (Baixa total)
       await prisma.saleItem.updateMany({
         where: {
           settled: false,

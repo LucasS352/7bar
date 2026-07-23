@@ -28,8 +28,8 @@ export class OperatorsController {
   }
 
   @Post('consumptions/:operatorId/settle')
-  settleConsumptions(@Request() req: any, @Param('operatorId') operatorId: string, @Body() body?: { itemIds?: string[] }) {
-    return this.operatorsService.settleConsumptions(req.user.tenantId, operatorId, body?.itemIds);
+  settleConsumptions(@Request() req: any, @Param('operatorId') operatorId: string, @Body() body?: { itemIds?: string[]; amount?: number }) {
+    return this.operatorsService.settleConsumptions(req.user.tenantId, operatorId, body?.itemIds, body?.amount);
   }
 
   @Delete('consumptions/:id')
