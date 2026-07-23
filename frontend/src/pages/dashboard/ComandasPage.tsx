@@ -116,6 +116,12 @@ export function ComandasPage() {
   const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
   const [selectedItemsToSettle, setSelectedItemsToSettle] = useState<string[]>([]);
   const [settling, setSettling] = useState(false);
+  const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
+  const [launchProductId, setLaunchProductId] = useState('');
+  const [launchQuantity, setLaunchQuantity] = useState(1);
+  const [launching, setLaunching] = useState(false);
+  const [manualProductSearch, setManualProductSearch] = useState('');
+  const [partialSettleAmount, setPartialSettleAmount] = useState('');
 
   // Fetch Comandas
   const fetchComandas = async () => {
@@ -324,6 +330,72 @@ export function ComandasPage() {
       toast.error('Erro ao carregar extrato de consumo.');
     } finally {
       setHistoryLoading(false);
+    }
+  };
+
+  // Baixa / Quitar Consumo de Colaborador (Total, por itens ou abatimento parcial)
+  const handleSettleOperator = async (operatorId: string, itemIds?: string[]) => {
+    setSettling(true);
+    try {
+      await api.post(`/operators/consumptions/${operatorId}/settle`, { itemIds });
+      toast.success(itemIds && itemIds.length > 0 ? 'Itens selecionados quitados com sucesso!' : 'Baixa total realizada com sucesso!');
+      setSelectedItemsToSettle([]);
+      fetchOperatorHistory(operatorId);
+      fetchOperators();
+      setIsSettleModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao dar baixa no consumo.');
+    } finally {
+      setSettling(false);
+    }
+  };
+
+  // Abatimento de valor parcial (ex: colaborador devendo R$ 300,00 e paga R$ 50,00)
+  const handlePartialSettleByAmount = async () => {
+    if (!selectedOperator) return;
+    const amount = parseFloat(partialSettleAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Informe um valor de abatimento válido.');
+      return;
+    }
+
+    let accumulated = 0;
+    const itemsToSettle: string[] = [];
+
+    for (const record of history) {
+      for (const item of record.items) {
+        if (!item.settled) {
+          itemsToSettle.push(item.id);
+          accumulated += Number(item.subtotal);
+          if (accumulated >= amount) break;
+        }
+      }
+      if (accumulated >= amount) break;
+    }
+
+    if (itemsToSettle.length === 0) {
+      toast.error('Nenhum item pendente encontrado para abater.');
+      return;
+    }
+
+    await handleSettleOperator(selectedOperator.id, itemsToSettle);
+    setPartialSettleAmount('');
+  };
+
+  // Cancelar / Excluir Lançamento de Consumo de Colaborador
+  const handleDeleteOperatorConsumption = async (consumptionId: string) => {
+    if (!confirm('Deseja realmente cancelar este lançamento de consumo? O estoque dos produtos será estornado.')) return;
+    try {
+      await api.delete(`/operators/consumptions/${consumptionId}`);
+      toast.success('Lançamento cancelado e estoque estornado!');
+      if (selectedOperator) {
+        fetchOperatorHistory(selectedOperator.id);
+        fetchOperators();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao cancelar lançamento.');
     }
   };
 
@@ -816,6 +888,304 @@ export function ComandasPage() {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE DETALHES E DAR BAIXA NO CONSUMO DO COLABORADOR */}
+      {selectedOperator && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-3xl shadow-2xl relative text-left my-8">
+            
+            {/* Header Modal */}
+            <div className="flex justify-between items-start border-b border-zinc-800 pb-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-lg">
+                  {selectedOperator.name.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-white">{selectedOperator.name}</h3>
+                  <p className="text-xs text-zinc-400">{selectedOperator.jobTitle || 'Colaborador'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <span className="text-[10px] text-zinc-500 font-bold uppercase block">Saldo Pendente</span>
+                  <span className="text-xl font-black text-amber-400">R$ {Number(selectedOperator.pendingBalance || 0).toFixed(2)}</span>
+                </div>
+                <button 
+                  onClick={() => setSelectedOperator(null)}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white p-2 rounded-xl transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Ações / Barra de Abatimento & Lançamento */}
+            <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 mb-5 space-y-3">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <label className="flex items-center gap-2 text-xs text-zinc-400 font-bold cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showOnlyPending}
+                    onChange={e => setShowOnlyPending(e.target.checked)}
+                    className="rounded border-zinc-800 bg-zinc-900 text-amber-500 focus:ring-0"
+                  />
+                  Mostrar apenas consumos pendentes
+                </label>
+
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={() => setIsLaunchModalOpen(true)}
+                    className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Plus size={14} /> Lançar Consumo
+                  </button>
+
+                  <button
+                    onClick={() => handleSettleOperator(selectedOperator.id)}
+                    disabled={settling || selectedOperator.pendingBalance <= 0}
+                    className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-emerald-600/20"
+                  >
+                    {settling ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle2 size={14} />}
+                    Quitar Tudo (Baixa Total)
+                  </button>
+                </div>
+              </div>
+
+              {/* Input para Abatimento de Valor Parcial */}
+              {selectedOperator.pendingBalance > 0 && (
+                <div className="pt-3 border-t border-zinc-800/60 flex flex-col sm:flex-row items-center gap-2">
+                  <span className="text-xs text-zinc-400 font-bold whitespace-nowrap">Dar baixa em valor parcial:</span>
+                  <div className="relative flex-1 w-full">
+                    <span className="absolute left-3 top-2 text-xs font-bold text-zinc-500">R$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 50.00 (Abater 50 reais)"
+                      value={partialSettleAmount}
+                      onChange={e => setPartialSettleAmount(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                  <button
+                    onClick={handlePartialSettleByAmount}
+                    disabled={settling || !partialSettleAmount}
+                    className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-zinc-950 font-bold px-4 py-1.5 rounded-xl text-xs transition cursor-pointer active:scale-95"
+                  >
+                    Abater Valor
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Extrato de Consumo */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                <span>Histórico de Lançamentos</span>
+                {selectedItemsToSettle.length > 0 && (
+                  <button
+                    onClick={() => handleSettleOperator(selectedOperator.id, selectedItemsToSettle)}
+                    disabled={settling}
+                    className="text-emerald-400 hover:text-emerald-300 font-bold text-xs flex items-center gap-1 cursor-pointer"
+                  >
+                    <CheckCircle2 size={13} /> Quitar Selecionados ({selectedItemsToSettle.length})
+                  </button>
+                )}
+              </div>
+
+              {historyLoading ? (
+                <div className="py-12 text-center text-zinc-500 text-xs flex items-center justify-center gap-2">
+                  <Loader2 className="animate-spin text-amber-400" size={18} /> Carregando extrato...
+                </div>
+              ) : history.length === 0 ? (
+                <div className="py-10 text-center text-zinc-500 text-xs italic bg-zinc-950/40 rounded-2xl border border-zinc-800/40">
+                  Nenhum registro de consumo encontrado para este colaborador.
+                </div>
+              ) : (
+                <div className="max-h-72 overflow-y-auto custom-scrollbar space-y-3 pr-1">
+                  {history
+                    .filter(rec => !showOnlyPending || rec.items.some(i => !i.settled))
+                    .map(record => (
+                      <div key={record.id} className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-3.5 space-y-2">
+                        <div className="flex justify-between items-center border-b border-zinc-800/60 pb-2">
+                          <span className="text-[11px] font-mono text-zinc-400 flex items-center gap-1">
+                            <Clock size={13} /> {new Date(record.createdAt).toLocaleString('pt-BR')}
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-white font-mono">Total: R$ {Number(record.total).toFixed(2)}</span>
+                            <button
+                              onClick={() => handleDeleteOperatorConsumption(record.id)}
+                              className="text-zinc-600 hover:text-red-400 transition p-1"
+                              title="Cancelar lançamento de consumo"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Itens do Lançamento */}
+                        <div className="space-y-1.5 pt-1">
+                          {record.items
+                            .filter(i => !showOnlyPending || !i.settled)
+                            .map(item => (
+                              <div key={item.id} className="flex justify-between items-center text-xs text-zinc-300">
+                                <div className="flex items-center gap-2">
+                                  {!item.settled && (
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedItemsToSettle.includes(item.id)}
+                                      onChange={e => {
+                                        if (e.target.checked) setSelectedItemsToSettle([...selectedItemsToSettle, item.id]);
+                                        else setSelectedItemsToSettle(selectedItemsToSettle.filter(id => id !== item.id));
+                                      }}
+                                      className="rounded border-zinc-800 bg-zinc-900 text-amber-500 focus:ring-0"
+                                    />
+                                  )}
+                                  <span>{Number(item.quantity)}x {item.name}</span>
+                                </div>
+                                <div className="flex items-center gap-3 font-mono">
+                                  <span className="text-zinc-400">R$ {Number(item.subtotal).toFixed(2)}</span>
+                                  {item.settled ? (
+                                    <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                                      QUITADO
+                                    </span>
+                                  ) : (
+                                    <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                                      PENDENTE
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer Modal */}
+            <div className="flex justify-end pt-4 border-t border-zinc-800 mt-4">
+              <button
+                onClick={() => setSelectedOperator(null)}
+                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-5 py-2.5 rounded-xl font-bold transition text-xs"
+              >
+                Fechar Extrato
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE LANÇAMENTO MANUAL DE CONSUMO PARA O COLABORADOR */}
+      {isLaunchModalOpen && selectedOperator && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative text-left">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-black text-white flex items-center gap-2">
+                <Plus className="text-amber-400" size={20} /> Lançar Consumo em {selectedOperator.name}
+              </h3>
+              <button 
+                onClick={() => setIsLaunchModalOpen(false)}
+                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white p-2 rounded-xl transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!launchProductId) { toast.error('Selecione um produto.'); return; }
+              setLaunching(true);
+              try {
+                await api.post('/operators/consumptions/manual', {
+                  operatorId: selectedOperator.id,
+                  productId: launchProductId,
+                  quantity: Number(launchQuantity)
+                });
+                toast.success('Consumo lançado com sucesso!');
+                setLaunchProductId('');
+                setLaunchQuantity(1);
+                setManualProductSearch('');
+                setIsLaunchModalOpen(false);
+                fetchOperatorHistory(selectedOperator.id);
+                fetchOperators();
+              } catch (err: any) {
+                toast.error(err.response?.data?.message || 'Erro ao lançar consumo.');
+              } finally {
+                setLaunching(false);
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1">Buscar Produto *</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Digite o nome do produto..."
+                    value={manualProductSearch}
+                    onChange={e => {
+                      setManualProductSearch(e.target.value);
+                      setLaunchProductId('');
+                    }}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                  />
+                  {manualProductSearch && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-zinc-900 border border-zinc-800 rounded-xl max-h-40 overflow-y-auto z-20 shadow-xl">
+                      {products
+                        .filter(p => p.name.toLowerCase().includes(manualProductSearch.toLowerCase()))
+                        .slice(0, 10)
+                        .map(p => (
+                          <div
+                            key={p.id}
+                            onClick={() => {
+                              setLaunchProductId(p.id);
+                              setManualProductSearch(p.name);
+                            }}
+                            className="p-2.5 hover:bg-zinc-800 cursor-pointer text-xs text-white flex justify-between border-b border-zinc-800/50 last:border-0"
+                          >
+                            <span>{p.name}</span>
+                            <span className="text-emerald-400 font-bold">R$ {Number(p.priceSell).toFixed(2)}</span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1">Quantidade *</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={launchQuantity}
+                  onChange={e => setLaunchQuantity(Number(e.target.value))}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white font-bold focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setIsLaunchModalOpen(false)}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2.5 rounded-xl font-bold transition text-xs"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={launching || !launchProductId}
+                  className="bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-zinc-950 font-bold px-5 py-2.5 rounded-xl transition text-xs flex items-center gap-2 cursor-pointer active:scale-95"
+                >
+                  {launching ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
+                  Confirmar Lançamento
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
