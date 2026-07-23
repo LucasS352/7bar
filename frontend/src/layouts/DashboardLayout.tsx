@@ -52,7 +52,7 @@ export function DashboardLayout() {
     ...(modules?.comandas === true ? [
       { name: 'Comandas & Mesas', to: '/dashboard/comandas',              icon: Users }
     ] : [
-      { name: 'Consumo Colaboradores', to: '/dashboard/comandas',         icon: Users }
+      { name: 'Cons. Colaborador', to: '/dashboard/comandas',         icon: Users }
     ]),
     { name: 'Contas a Pagar',     to: '/dashboard/finance/payables',      icon: Banknote },
   ];
