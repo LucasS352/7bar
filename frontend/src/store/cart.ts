@@ -32,6 +32,9 @@ interface CartState {
   updateQuantity: (cartKey: string, quantity: number) => void;
   clearCart: () => void;
   total: number;
+  activeComandaId: string | null;
+  activeComandaNumber: string | null;
+  setActiveComanda: (id: string | null, number: string | null) => void;
 }
 
 function buildCartKey(productId: string, modifiers?: CartItemModifier[]): string {
@@ -46,6 +49,9 @@ function buildCartKey(productId: string, modifiers?: CartItemModifier[]): string
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   total: 0,
+  activeComandaId: null,
+  activeComandaNumber: null,
+  setActiveComanda: (id, number) => set({ activeComandaId: id, activeComandaNumber: number }),
   addItem: (product, quantity = 1, modifiers) => {
     const { items } = get();
     const priceAdjustment = (modifiers || []).reduce((acc, m) => acc + Number(m.priceAdjustment || 0), 0);
@@ -79,5 +85,5 @@ export const useCartStore = create<CartState>((set, get) => ({
     const newItems = get().items.map(i => i.cartKey === cartKey ? { ...i, quantity, subtotal: quantity * i.effectivePriceSell } : i);
     set({ items: newItems, total: newItems.reduce((acc, i) => acc + i.subtotal, 0) });
   },
-  clearCart: () => set({ items: [], total: 0 })
+  clearCart: () => set({ items: [], total: 0, activeComandaId: null, activeComandaNumber: null })
 }));

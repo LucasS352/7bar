@@ -196,15 +196,13 @@ export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
                 <Store size={20} />
                 Frente de Caixa (PDV)
               </button>
-              {modules.comandas !== false && (
-                <button
-                  onClick={() => { setProfileOpen(false); navigate('/dashboard/comandas'); }}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-semibold text-left active:scale-[0.98] transition-all"
-                >
-                  <User size={20} />
-                  Comandas & Mesas
-                </button>
-              )}
+              <button
+                onClick={() => { setProfileOpen(false); navigate('/dashboard/comandas'); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-semibold text-left active:scale-[0.98] transition-all"
+              >
+                <User size={20} />
+                {modules?.comandas === true ? 'Comandas & Mesas' : 'Consumo Colaboradores'}
+              </button>
               {modules.nfce !== false && (
                 <button
                   onClick={() => { setProfileOpen(false); setIsExportModalOpen(true); }}

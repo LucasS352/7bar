@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cart';
+import { useAuthStore } from '@/store/auth';
 import { 
   User, Search, Plus, Trash2, CheckCircle2, AlertCircle, 
   ChevronRight, Calendar, DollarSign, X, Loader2, ArrowLeft, RefreshCw,
@@ -72,9 +73,17 @@ interface Comanda {
 
 export function ComandasPage() {
   const navigate = useNavigate();
-  const { clearCart, addItem } = useCartStore();
+  const { clearCart, addItem, setActiveComanda } = useCartStore();
+  const { user } = useAuthStore();
 
-  const [activeTab, setActiveTab] = useState<'cliente' | 'funcionario'>('cliente');
+  const isComandasEnabled = user?.modules?.comandas === true;
+  const [activeTab, setActiveTab] = useState<'cliente' | 'funcionario'>(() => isComandasEnabled ? 'cliente' : 'funcionario');
+
+  useEffect(() => {
+    if (!isComandasEnabled) {
+      setActiveTab('funcionario');
+    }
+  }, [isComandasEnabled]);
   const [products, setProducts] = useState<Product[]>([]);
   
   // ── ESTADOS DE COMANDAS DE CLIENTES ───────────────────────────────────────
@@ -238,6 +247,7 @@ export function ComandasPage() {
     }
 
     clearCart();
+    setActiveComanda(comanda.id, comanda.number);
 
     comanda.items.forEach(item => {
       if (item.product) {
@@ -347,30 +357,38 @@ export function ComandasPage() {
         <div>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <UtensilsCrossed size={24} />
+              {isComandasEnabled ? <UtensilsCrossed size={24} /> : <User size={24} />}
             </div>
             <div>
-              <h1 className="text-2xl font-black text-white">Comandas & Mesas</h1>
-              <p className="text-xs text-zinc-400 mt-0.5">Gerencie o consumo em aberto de clientes e colaboradores</p>
+              <h1 className="text-2xl font-black text-white">
+                {isComandasEnabled ? 'Comandas & Mesas' : 'Consumo de Colaboradores'}
+              </h1>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                {isComandasEnabled 
+                  ? 'Gerencie o consumo em aberto de clientes e colaboradores' 
+                  : 'Gerencie os lançamentos e acertos de consumo dos funcionários'}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Tabs Selection */}
-        <div className="flex bg-zinc-950 p-1.5 rounded-2xl border border-zinc-800/80 w-full md:w-auto">
-          <button
-            onClick={() => setActiveTab('cliente')}
-            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer ${activeTab === 'cliente' ? 'bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/10' : 'text-zinc-400 hover:text-white'}`}
-          >
-            <UtensilsCrossed size={16} /> Comandas / Mesas ({comandas.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('funcionario')}
-            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer ${activeTab === 'funcionario' ? 'bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/10' : 'text-zinc-400 hover:text-white'}`}
-          >
-            <User size={16} /> Funcionários ({operators.length})
-          </button>
-        </div>
+        {/* Tabs Selection (Exibido apenas se o módulo de comandas de clientes estiver ativo) */}
+        {isComandasEnabled && (
+          <div className="flex bg-zinc-950 p-1.5 rounded-2xl border border-zinc-800/80 w-full md:w-auto">
+            <button
+              onClick={() => setActiveTab('cliente')}
+              className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer ${activeTab === 'cliente' ? 'bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/10' : 'text-zinc-400 hover:text-white'}`}
+            >
+              <UtensilsCrossed size={16} /> Comandas / Mesas ({comandas.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('funcionario')}
+              className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer ${activeTab === 'funcionario' ? 'bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/10' : 'text-zinc-400 hover:text-white'}`}
+            >
+              <User size={16} /> Funcionários ({operators.length})
+            </button>
+          </div>
+        )}
       </div>
 
       {/* TAB 1: COMANDAS DE CLIENTES & MESAS */}

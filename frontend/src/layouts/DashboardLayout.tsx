@@ -49,9 +49,11 @@ export function DashboardLayout() {
       { name: 'Pedidos de Compra',  to: '/dashboard/purchase-orders',       icon: ShoppingCart }
     ] : []),
     { name: 'Histórico de Caixas',to: '/dashboard/registers',             icon: History },
-    ...(modules.comandas !== false ? [
+    ...(modules?.comandas === true ? [
       { name: 'Comandas & Mesas', to: '/dashboard/comandas',              icon: Users }
-    ] : []),
+    ] : [
+      { name: 'Consumo Colaboradores', to: '/dashboard/comandas',         icon: Users }
+    ]),
     { name: 'Contas a Pagar',     to: '/dashboard/finance/payables',      icon: Banknote },
   ];
   const inventoryToolItems = [

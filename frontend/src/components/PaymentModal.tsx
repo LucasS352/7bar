@@ -37,7 +37,7 @@ interface PaymentModalProps {
 }
 
 export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, tenantConfig }: PaymentModalProps) {
-  const { total, items, clearCart } = useCartStore();
+  const { total, items, clearCart, addItem, activeComandaId, activeComandaNumber, setActiveComanda } = useCartStore();
   const { user } = useAuthStore();
   const { cashRegister, operator } = useShift();
 
@@ -168,6 +168,34 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     } finally {
       setLaunchingComanda(false);
     }
+  };
+
+  const handleChargeComandaFromModal = (comanda: any) => {
+    if (!comanda.items || comanda.items.length === 0) {
+      toast.error('Esta comanda não possui itens para cobrar.');
+      return;
+    }
+    clearCart();
+    setActiveComanda(comanda.id, comanda.number);
+
+    comanda.items.forEach((item: any) => {
+      if (item.product) {
+        addItem(
+          {
+            id: item.product.id,
+            name: item.product.name,
+            priceSell: Number(item.unitPrice),
+            stock: item.product.stock || 0,
+            barcode: item.product.barcode || null,
+            shortCode: item.product.shortCode || null,
+          },
+          Number(item.quantity)
+        );
+      }
+    });
+
+    toast.info(`Comanda #${comanda.number} carregada para cobrança no caixa!`);
+    setComandasModalOpen(false);
   };
 
   const totalPaid = payments.reduce((acc, p) => acc + p.value, 0);
@@ -646,6 +674,16 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         ...(actualMode === 'nfce' ? { customerCpf: customerCpf || undefined, customerName: customerName || undefined } : {}),
       };
       const res = await api.post('/sales/checkout', body);
+
+      if (activeComandaId) {
+        try {
+          await api.post(`/v1/comandas/${activeComandaId}/close`, { saleId: res.data.id });
+          toast.success(`Comanda #${activeComandaNumber || ''} encerrada e removida das abertas!`);
+        } catch (comandaErr) {
+          console.error('Erro ao encerrar comanda:', comandaErr);
+        }
+      }
+
       setSaleResult(res.data); clearCart();
       if (actualMode === 'nfce') { toast.info('NFC-e em processamento...', { duration: 3000 }); setNfcePolling(true); }
       else toast.success('Venda finalizada!');
@@ -908,7 +946,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                 </div>
               )}
 
-              {modules.comandas !== false && (
+              {modules?.comandas === true && (
                 <div className="mt-3">
                   <button
                     type="button"
@@ -1224,18 +1262,52 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                         .map(c => (
                           <div
                             key={c.id}
-                            onClick={() => setSelectedComandaId(c.id)}
-                            className={`p-3.5 rounded-2xl border cursor-pointer transition flex justify-between items-center ${selectedComandaId === c.id ? 'bg-amber-500/20 border-amber-500/60 ring-1 ring-amber-500/50' : 'bg-zinc-950 border-zinc-800 hover:bg-zinc-800/60'}`}
+                            className={`p-3.5 rounded-2xl border transition ${selectedComandaId === c.id ? 'bg-amber-500/20 border-amber-500/60 ring-1 ring-amber-500/50' : 'bg-zinc-950 border-zinc-800 hover:bg-zinc-800/60'}`}
                           >
-                            <div>
-                              <p className="font-bold text-white text-sm">Identificação: #{c.number}</p>
-                              {c.customerName && <p className="text-xs text-zinc-400 mt-0.5">{c.customerName}</p>}
-                              <p className="text-[11px] text-zinc-500 font-mono mt-1">{c.items?.length || 0} item(ns) já lançados</p>
+                            <div 
+                              onClick={() => setSelectedComandaId(c.id)}
+                              className="cursor-pointer flex justify-between items-center"
+                            >
+                              <div>
+                                <p className="font-bold text-white text-sm">Identificação: #{c.number}</p>
+                                {c.customerName && <p className="text-xs text-zinc-400 mt-0.5">{c.customerName}</p>}
+                                <p className="text-[11px] text-zinc-500 font-mono mt-1">{c.items?.length || 0} item(ns) já lançados</p>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xs text-zinc-500 block font-medium">Consumo Atual</span>
+                                <span className="text-sm font-black text-amber-400">R$ {Number(c.total || 0).toFixed(2)}</span>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <span className="text-xs text-zinc-500 block font-medium">Consumo Atual</span>
-                              <span className="text-sm font-black text-amber-400">R$ {Number(c.total || 0).toFixed(2)}</span>
-                            </div>
+
+                            {/* Sanfona / Expansão de Itens e Ação de Cobrar */}
+                            {selectedComandaId === c.id && (
+                              <div className="mt-3 pt-3 border-t border-zinc-800/80 space-y-2 animate-in fade-in duration-150">
+                                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">Itens lançados nesta Comanda:</span>
+                                <div className="max-h-32 overflow-y-auto space-y-1 bg-zinc-900/80 rounded-xl p-2.5 border border-zinc-800/50 custom-scrollbar">
+                                  {c.items && c.items.length > 0 ? (
+                                    c.items.map((item: any) => (
+                                      <div key={item.id} className="flex justify-between text-xs text-zinc-300">
+                                        <span className="truncate max-w-[200px]">{Number(item.quantity)}x {item.product?.name || 'Produto'}</span>
+                                        <span className="font-mono text-amber-400">R$ {Number(item.totalPrice).toFixed(2)}</span>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <p className="text-[11px] text-zinc-500 italic">Sem itens lançados ainda</p>
+                                  )}
+                                </div>
+                                
+                                <div className="pt-2 flex justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleChargeComandaFromModal(c)}
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-emerald-600/20"
+                                  >
+                                    <ShoppingBag size={14} /> Cobrar Comanda no Caixa
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
                           </div>
                         ))}
                     </div>
