@@ -20,6 +20,7 @@ import { PayablesModule } from './payables/payables.module';
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { GroupsModule } from './groups/groups.module';
 import { FiscalModule } from './fiscal/fiscal.module';
+import { ComandasModule } from './comandas/comandas.module';
 
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TenantInterceptor } from './prisma/tenant-context.service';
@@ -52,6 +53,7 @@ import { BackupsModule } from './backups/backups.module';
     BackupsModule,
     GroupsModule,
     FiscalModule,
+    ComandasModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { useCartStore } from '@/store/cart';
 import { 
   User, Search, Plus, Trash2, CheckCircle2, AlertCircle, 
-  ChevronRight, Calendar, DollarSign, X, Loader2, ArrowLeft, RefreshCw
+  ChevronRight, Calendar, DollarSign, X, Loader2, ArrowLeft, RefreshCw,
+  UtensilsCrossed, Printer, ShoppingBag, Receipt, Clock
 } from 'lucide-react';
 
 interface OperatorConsumption {
@@ -37,49 +40,102 @@ interface Product {
   id: string;
   name: string;
   priceSell: number;
+  stock: number;
+  barcode?: string | null;
+  shortCode?: string | null;
   active: boolean;
 }
 
+interface ComandaItem {
+  id: string;
+  comandaId: string;
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  notes?: string | null;
+  createdAt: string;
+  product?: Product;
+}
+
+interface Comanda {
+  id: string;
+  number: string;
+  customerName?: string | null;
+  status: 'open' | 'closed' | 'cancelled';
+  total: number;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items?: ComandaItem[];
+}
+
 export function ComandasPage() {
-  const [operators, setOperators] = useState<OperatorConsumption[]>([]);
+  const navigate = useNavigate();
+  const { clearCart, addItem } = useCartStore();
+
+  const [activeTab, setActiveTab] = useState<'cliente' | 'funcionario'>('cliente');
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   
-  // Selected Operator details
+  // ── ESTADOS DE COMANDAS DE CLIENTES ───────────────────────────────────────
+  const [comandas, setComandas] = useState<Comanda[]>([]);
+  const [loadingComandas, setLoadingComandas] = useState(true);
+  const [comandaSearch, setComandaSearch] = useState('');
+  
+  // Modal de Nova Comanda
+  const [isNewComandaModalOpen, setIsNewComandaModalOpen] = useState(false);
+  const [newNumber, setNewNumber] = useState('');
+  const [newCustomer, setNewCustomer] = useState('');
+  const [newNotes, setNewNotes] = useState('');
+  const [creatingComanda, setCreatingComanda] = useState(false);
+
+  // Modal de Detalhes / Lançamento de Itens
+  const [selectedComanda, setSelectedComanda] = useState<Comanda | null>(null);
+  const [addingProductId, setAddingProductId] = useState('');
+  const [addingQuantity, setAddingQuantity] = useState(1);
+  const [addingItem, setAddingItem] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+
+  // ── ESTADOS DE CONSUMO DE FUNCIONÁRIOS ────────────────────────────────────
+  const [operators, setOperators] = useState<OperatorConsumption[]>([]);
+  const [loadingOperators, setLoadingOperators] = useState(true);
+  const [operatorSearch, setOperatorSearch] = useState('');
   const [selectedOperator, setSelectedOperator] = useState<OperatorConsumption | null>(null);
   const [history, setHistory] = useState<ConsumptionRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showOnlyPending, setShowOnlyPending] = useState(true);
-
-  // Settle Modal state
   const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
   const [selectedItemsToSettle, setSelectedItemsToSettle] = useState<string[]>([]);
   const [settling, setSettling] = useState(false);
 
-  // Manual Launch Modal state
-  const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
-  const [launchOperatorId, setLaunchOperatorId] = useState('');
-  const [launchProductId, setLaunchProductId] = useState('');
-  const [launchQuantity, setLaunchQuantity] = useState(1);
-  const [launching, setLaunching] = useState(false);
-  const [productSearch, setProductSearch] = useState('');
+  // Fetch Comandas
+  const fetchComandas = async () => {
+    setLoadingComandas(true);
+    try {
+      const res = await api.get('/v1/comandas?status=open');
+      setComandas(res.data || []);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao carregar comandas.');
+    } finally {
+      setLoadingComandas(false);
+    }
+  };
 
-  // Fetch summary of all operators
+  // Fetch Operators
   const fetchOperators = async () => {
-    setLoading(true);
+    setLoadingOperators(true);
     try {
       const res = await api.get('/operators/consumptions');
       setOperators(res.data || []);
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao carregar comandas dos funcionários.');
     } finally {
-      setLoading(false);
+      setLoadingOperators(false);
     }
   };
 
-  // Fetch products for manual launch select
+  // Fetch Products
   const fetchProducts = async () => {
     try {
       const res = await api.get('/products?limit=1000');
@@ -90,11 +146,164 @@ export function ComandasPage() {
   };
 
   useEffect(() => {
+    fetchComandas();
     fetchOperators();
     fetchProducts();
   }, []);
 
-  // Fetch detailed history of selected operator
+  // Recarregar detalhes da comanda selecionada
+  const refreshSelectedComanda = async (id: string) => {
+    try {
+      const res = await api.get(`/v1/comandas/${id}`);
+      setSelectedComanda(res.data);
+      // Atualizar na lista geral também
+      fetchComandas();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Criar Comanda
+  const handleCreateComanda = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNumber.trim()) {
+      toast.error('Informe o número ou identificador da comanda.');
+      return;
+    }
+    setCreatingComanda(true);
+    try {
+      const res = await api.post('/v1/comandas', {
+        number: newNumber.trim(),
+        customerName: newCustomer.trim() || undefined,
+        notes: newNotes.trim() || undefined,
+      });
+      toast.success(`Comanda #${res.data.number} aberta com sucesso!`);
+      setNewNumber('');
+      setNewCustomer('');
+      setNewNotes('');
+      setIsNewComandaModalOpen(false);
+      fetchComandas();
+      setSelectedComanda(res.data);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Erro ao criar comanda.';
+      toast.error(msg);
+    } finally {
+      setCreatingComanda(false);
+    }
+  };
+
+  // Adicionar Item a Comanda
+  const handleAddItemToComanda = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedComanda) return;
+    if (!addingProductId) {
+      toast.error('Selecione um produto.');
+      return;
+    }
+    setAddingItem(true);
+    try {
+      await api.post(`/v1/comandas/${selectedComanda.id}/items`, {
+        items: [{ productId: addingProductId, quantity: Number(addingQuantity) }]
+      });
+      toast.success('Item adicionado à comanda!');
+      setAddingProductId('');
+      setAddingQuantity(1);
+      setProductSearch('');
+      refreshSelectedComanda(selectedComanda.id);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Erro ao adicionar item.';
+      toast.error(msg);
+    } finally {
+      setAddingItem(false);
+    }
+  };
+
+  // Remover Item da Comanda
+  const handleRemoveComandaItem = async (itemId: string) => {
+    if (!selectedComanda) return;
+    try {
+      await api.delete(`/v1/comandas/${selectedComanda.id}/items/${itemId}`);
+      toast.success('Item removido da comanda.');
+      refreshSelectedComanda(selectedComanda.id);
+    } catch (err: any) {
+      toast.error('Erro ao remover item.');
+    }
+  };
+
+  // Cobrar / Fechar Comanda -> Carrega no Carrinho do PDV
+  const handleChargeComanda = (comanda: Comanda) => {
+    if (!comanda.items || comanda.items.length === 0) {
+      toast.error('A comanda não possui itens para cobrar.');
+      return;
+    }
+
+    clearCart();
+
+    comanda.items.forEach(item => {
+      if (item.product) {
+        addItem(
+          {
+            id: item.product.id,
+            name: item.product.name,
+            priceSell: Number(item.unitPrice),
+            stock: item.product.stock || 0,
+            barcode: item.product.barcode || null,
+            shortCode: item.product.shortCode || null,
+          },
+          Number(item.quantity)
+        );
+      }
+    });
+
+    toast.info(`Itens da Comanda #${comanda.number} carregados no caixa!`, { duration: 3000 });
+    navigate('/dashboard');
+  };
+
+  // Extrato de Impressão da Comanda
+  const handlePrintExtrato = (comanda: Comanda) => {
+    const win = window.open('', '_blank', 'width=400,height=600');
+    if (!win) return;
+
+    const itemsHtml = (comanda.items || []).map(i => `
+      <tr>
+        <td style="padding: 4px 0;">${i.quantity}x ${i.product?.name || 'Item'}</td>
+        <td style="text-align: right; padding: 4px 0;">R$ ${Number(i.totalPrice).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    win.document.write(`
+      <html>
+        <head>
+          <title>Extrato Comanda #${comanda.number}</title>
+          <style>
+            body { font-family: monospace; font-size: 12px; padding: 15px; width: 280px; margin: 0 auto; }
+            h2 { text-align: center; margin: 0 0 5px 0; font-size: 16px; }
+            p { margin: 2px 0; font-size: 11px; }
+            hr { border: none; border-top: 1px dashed #000; margin: 10px 0; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            .total { font-size: 14px; font-weight: bold; text-align: right; margin-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <h2>EXTRATO DE CONSUMO</h2>
+          <p style="text-align:center;">Comanda / Mesa: <strong>#${comanda.number}</strong></p>
+          ${comanda.customerName ? `<p style="text-align:center;">Cliente: ${comanda.customerName}</p>` : ''}
+          <p style="text-align:center;">Data: ${new Date(comanda.createdAt).toLocaleString('pt-BR')}</p>
+          <hr />
+          <table>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+          <hr />
+          <div class="total">TOTAL: R$ ${Number(comanda.total).toFixed(2)}</div>
+          <p style="text-align:center; margin-top: 20px; font-size: 10px;">Não é documento fiscal</p>
+          <script>window.print(); setTimeout(() => window.close(), 1000);</script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  };
+
+  // ── CONSUMO FUNCIONÁRIOS HELPERS ──────────────────────────────────────────
   const fetchOperatorHistory = async (operatorId: string) => {
     setHistoryLoading(true);
     try {
@@ -114,586 +323,479 @@ export function ComandasPage() {
     }
   }, [selectedOperator]);
 
-  const handleSettle = async (operatorId: string, itemIds?: string[]) => {
-    setSettling(true);
-    try {
-      await api.post(`/operators/consumptions/${operatorId}/settle`, { itemIds });
-      toast.success('Consumo quitado com sucesso!');
-      setIsSettleModalOpen(false);
-      fetchOperators();
-      if (selectedOperator && selectedOperator.id === operatorId) {
-        // Refresh operator balance from server
-        const res = await api.get('/operators/consumptions');
-        const updatedOp = (res.data || []).find((o: any) => o.id === operatorId);
-        if (updatedOp) {
-          setSelectedOperator(updatedOp);
-        } else {
-          setSelectedOperator(prev => prev ? { ...prev, pendingBalance: 0 } : null);
-        }
-        fetchOperatorHistory(operatorId);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Erro ao liquidar consumo.');
-    } finally {
-      setSettling(false);
-    }
-  };
+  const totalComandasAccrued = useMemo(() => {
+    return comandas.reduce((acc, c) => acc + Number(c.total || 0), 0);
+  }, [comandas]);
 
-  // Handle Remove / Delete specific consumption item
-  const handleDeleteItem = async (consumptionId: string) => {
-    if (!window.confirm('Tem certeza que deseja excluir este lançamento? O produto correspondente voltará ao estoque.')) return;
-    try {
-      await api.delete(`/operators/consumptions/${consumptionId}`);
-      toast.success('Lançamento removido com sucesso!');
-      fetchOperators();
-      if (selectedOperator) {
-        fetchOperatorHistory(selectedOperator.id);
-        // Refresh the selected operator summary to update the balance
-        const res = await api.get('/operators/consumptions');
-        const updatedOp = (res.data || []).find((o: any) => o.id === selectedOperator.id);
-        if (updatedOp) {
-          setSelectedOperator(updatedOp);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Erro ao excluir lançamento.');
-    }
-  };
+  const filteredComandas = useMemo(() => {
+    return comandas.filter(c => 
+      c.number.toLowerCase().includes(comandaSearch.toLowerCase()) ||
+      (c.customerName && c.customerName.toLowerCase().includes(comandaSearch.toLowerCase()))
+    );
+  }, [comandas, comandaSearch]);
 
-  // Handle manual consumption launching
-  const handleLaunch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!launchOperatorId || !launchProductId || launchQuantity <= 0) {
-      toast.error('Preencha todos os campos corretamente.');
-      return;
-    }
-    setLaunching(true);
-    try {
-      await api.post('/operators/consumptions/manual', {
-        operatorId: launchOperatorId,
-        productId: launchProductId,
-        quantity: launchQuantity
-      });
-      toast.success('Consumo registrado com sucesso!');
-      setIsLaunchModalOpen(false);
-      setLaunchProductId('');
-      setLaunchQuantity(1);
-      setProductSearch('');
-      fetchOperators();
-      if (selectedOperator && selectedOperator.id === launchOperatorId) {
-        fetchOperatorHistory(launchOperatorId);
-        // Refresh selected operator balance
-        const res = await api.get('/operators/consumptions');
-        const updatedOp = (res.data || []).find((o: any) => o.id === selectedOperator.id);
-        if (updatedOp) setSelectedOperator(updatedOp);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Erro ao registrar consumo.');
-    } finally {
-      setLaunching(false);
-    }
-  };
-
-  // Filtered operators
-  const filteredOperators = useMemo(() => {
-    return operators.filter(op => op.name.toLowerCase().includes(search.toLowerCase().trim()));
-  }, [operators, search]);
-
-  // Filtered products for select dropdown search
   const filteredProducts = useMemo(() => {
-    const s = productSearch.toLowerCase().trim();
-    if (!s) return products.filter(p => p.active !== false);
-    return products.filter(p => p.active !== false && p.name.toLowerCase().includes(s));
+    if (!productSearch) return products.slice(0, 10);
+    return products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).slice(0, 15);
   }, [products, productSearch]);
 
-  // Selected product price display
-  const selectedProductPrice = useMemo(() => {
-    const prod = products.find(p => p.id === launchProductId);
-    return prod ? Number(prod.priceSell) : 0;
-  }, [products, launchProductId]);
-
-  // Global Pending Balance sum
-  const globalPendingBalance = useMemo(() => {
-    return operators.reduce((sum, op) => sum + Number(op.pendingBalance), 0);
-  }, [operators]);
-
-  // Filter history items by status checkbox
-  const filteredHistory = useMemo(() => {
-    if (showOnlyPending) {
-      return history
-        .map(h => ({
-          ...h,
-          items: h.items.filter(item => !item.settled)
-        }))
-        .filter(h => h.items.length > 0);
-    }
-    return history;
-  }, [history, showOnlyPending]);
-
-  // Compute all pending items of the selected operator
-  const pendingItems = useMemo(() => {
-    const items: Array<{ id: string; name: string; quantity: number; priceUnit: number; subtotal: number; date: string }> = [];
-    history.forEach(rec => {
-      rec.items.forEach(item => {
-        if (!item.settled) {
-          items.push({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            priceUnit: item.priceUnit,
-            subtotal: item.subtotal,
-            date: rec.createdAt
-          });
-        }
-      });
-    });
-    return items;
-  }, [history]);
-
-  // Sync selected items to settle when modal opens
-  useEffect(() => {
-    if (isSettleModalOpen) {
-      setSelectedItemsToSettle(pendingItems.map(item => item.id));
-    }
-  }, [isSettleModalOpen, pendingItems]);
-
-  const selectedTotal = useMemo(() => {
-    return pendingItems
-      .filter(item => selectedItemsToSettle.includes(item.id))
-      .reduce((sum, item) => sum + item.subtotal, 0);
-  }, [pendingItems, selectedItemsToSettle]);
-
   return (
-    <div className="space-y-6 animate-[fadeIn_0.3s_ease]">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-200">
       
-      {/* Top Header Card */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 backdrop-blur-md">
+      {/* Top Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-zinc-900/60 border border-zinc-800 p-6 rounded-3xl backdrop-blur-md">
         <div>
-          <h1 className="text-3xl font-black bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
-            Comandas de Funcionários
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">Gerencie consumos internos e descontos em folha dos colaboradores.</p>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <UtensilsCrossed size={24} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-white">Comandas & Mesas</h1>
+              <p className="text-xs text-zinc-400 mt-0.5">Gerencie o consumo em aberto de clientes e colaboradores</p>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button 
-            onClick={() => setIsLaunchModalOpen(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl transition font-bold active:scale-[0.98]"
+
+        {/* Tabs Selection */}
+        <div className="flex bg-zinc-950 p-1.5 rounded-2xl border border-zinc-800/80 w-full md:w-auto">
+          <button
+            onClick={() => setActiveTab('cliente')}
+            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer ${activeTab === 'cliente' ? 'bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/10' : 'text-zinc-400 hover:text-white'}`}
           >
-            <Plus size={18} /> Lançar Consumo
+            <UtensilsCrossed size={16} /> Comandas / Mesas ({comandas.length})
           </button>
-          <button 
-            onClick={fetchOperators}
-            className="p-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-2xl transition"
-            title="Atualizar dados"
+          <button
+            onClick={() => setActiveTab('funcionario')}
+            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer ${activeTab === 'funcionario' ? 'bg-amber-500 text-zinc-950 shadow-lg shadow-amber-500/10' : 'text-zinc-400 hover:text-white'}`}
           >
-            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            <User size={16} /> Funcionários ({operators.length})
           </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
-          <span className="text-zinc-500 text-xs font-bold uppercase tracking-wider block">Saldo Devedor Acumulado</span>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl sm:text-4xl font-black text-amber-500">R$ {globalPendingBalance.toFixed(2)}</span>
-            <span className="text-zinc-500 text-xs font-medium">pendente de acerto</span>
-          </div>
-        </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
-          <span className="text-zinc-500 text-xs font-bold uppercase tracking-wider block">Funcionários Ativos</span>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl sm:text-4xl font-black text-white">{operators.length}</span>
-            <span className="text-zinc-500 text-xs font-medium">com acesso cadastrado</span>
-          </div>
-        </div>
-      </div>
+      {/* TAB 1: COMANDAS DE CLIENTES & MESAS */}
+      {activeTab === 'cliente' && (
+        <div className="space-y-6">
+          
+          {/* KPI Bar & Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 flex justify-between items-center">
+              <div>
+                <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Comandas Abertas</p>
+                <p className="text-2xl font-black text-white mt-1">{comandas.length}</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold">
+                <UtensilsCrossed size={20} />
+              </div>
+            </div>
 
-      {/* Main Content Split: List & Details */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* Left Side: Operators List */}
-        <div className={`${selectedOperator ? 'hidden lg:block lg:col-span-5' : 'col-span-12'} bg-zinc-900/40 border border-zinc-800 rounded-3xl p-4 sm:p-6 backdrop-blur-md`}>
-          <div className="relative mb-4">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+            <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 flex justify-between items-center">
+              <div>
+                <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Consumo Total Acumulado</p>
+                <p className="text-2xl font-black text-emerald-400 mt-1">R$ {totalComandasAccrued.toFixed(2)}</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
+                <DollarSign size={20} />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsNewComandaModalOpen(true)}
+                className="w-full h-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black p-4 rounded-2xl transition flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-amber-500/10 active:scale-95 text-sm"
+              >
+                <Plus size={20} /> Abrir Nova Comanda / Mesa
+              </button>
+            </div>
+          </div>
+
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-4 top-3.5 text-zinc-500" size={18} />
             <input
               type="text"
-              placeholder="Buscar colaborador..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full bg-zinc-950/80 border border-zinc-800 rounded-2xl py-3 pl-11 pr-4 text-white focus:outline-none focus:border-blue-500 text-sm"
+              placeholder="Buscar por número da mesa ou nome do cliente..."
+              value={comandaSearch}
+              onChange={e => setComandaSearch(e.target.value)}
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition"
             />
           </div>
 
-          <div className="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-12 text-zinc-500 space-y-3">
-                <Loader2 size={36} className="animate-spin text-blue-500" />
-                <p className="text-sm">Carregando colaboradores...</p>
-              </div>
-            ) : filteredOperators.length === 0 ? (
-              <div className="text-center py-12 text-zinc-500">
-                <p>Nenhum colaborador encontrado.</p>
-              </div>
-            ) : (
-              filteredOperators.map(op => {
-                const isActive = selectedOperator?.id === op.id;
-                return (
-                  <button
-                    key={op.id}
-                    onClick={() => setSelectedOperator(op)}
-                    className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left relative overflow-hidden group ${
-                      isActive 
-                        ? 'bg-blue-600/10 border-blue-500/30 text-white shadow-md' 
-                        : 'bg-zinc-900 border-zinc-800/80 text-zinc-300 hover:border-zinc-700 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isActive ? 'bg-blue-500/20' : 'bg-zinc-800'}`}>
-                        <User size={18} className={isActive ? 'text-blue-400' : 'text-zinc-400'} />
-                      </div>
+          {/* Grid de Cards de Comandas */}
+          {loadingComandas ? (
+            <div className="py-16 text-center text-zinc-500">
+              <Loader2 className="animate-spin mx-auto mb-2 text-amber-500" size={28} />
+              <p className="text-xs font-bold">Carregando comandas abertas...</p>
+            </div>
+          ) : filteredComandas.length === 0 ? (
+            <div className="bg-zinc-900/30 border border-zinc-800/80 rounded-3xl p-12 text-center">
+              <UtensilsCrossed className="mx-auto text-zinc-600 mb-3" size={40} />
+              <h3 className="text-white font-bold text-base">Nenhuma comanda aberta encontrada</h3>
+              <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+                {comandaSearch ? 'Nenhum resultado corresponde à sua pesquisa.' : 'Nenhuma mesa ou comanda está em consumo no momento. Clique no botão acima para abrir uma nova.'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredComandas.map(c => (
+                <div key={c.id} className="bg-zinc-900/60 border border-zinc-800/80 hover:border-amber-500/40 rounded-3xl p-5 flex flex-col justify-between space-y-4 transition shadow-xl group">
+                  <div>
+                    {/* Header Card */}
+                    <div className="flex justify-between items-start gap-2 mb-3">
                       <div>
-                        <span className="font-bold block leading-tight">{op.name}</span>
-                        {op.jobTitle ? (
-                          <span className="text-[11px] bg-purple-500/15 text-purple-400 border border-purple-500/25 px-2 py-0.5 rounded font-bold">{op.jobTitle}</span>
-                        ) : (
-                          <span className="text-xs text-zinc-500">Clique para ver histórico</span>
+                        <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg inline-block">
+                          MESA / COMANDA #{c.number}
+                        </span>
+                        {c.customerName && (
+                          <h3 className="text-white font-bold text-base mt-2 truncate">{c.customerName}</h3>
                         )}
                       </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-zinc-500 font-bold uppercase block">Acumulado</span>
+                        <span className="text-lg font-black text-emerald-400">R$ {Number(c.total || 0).toFixed(2)}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`font-black text-sm px-3 py-1 rounded-full ${
-                        Number(op.pendingBalance) > 0 
-                          ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400 font-extrabold' 
-                          : 'bg-zinc-950 border border-zinc-800 text-zinc-500'
-                      }`}>
-                        R$ {Number(op.pendingBalance).toFixed(2)}
+
+                    {/* Meta info */}
+                    <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mb-3">
+                      <span className="flex items-center gap-1">
+                        <Clock size={13} /> {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
-                      <ChevronRight size={16} className="text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Right Side: Operator Details / History */}
-        {selectedOperator && (
-          <div className="col-span-12 lg:col-span-7 bg-zinc-900 border border-zinc-800 rounded-3xl p-4 sm:p-6 backdrop-blur-md space-y-6">
-            
-            {/* Detail Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
-              <div className="flex items-center gap-3">
-                {/* Back button visible only on mobile */}
-                <button 
-                  onClick={() => setSelectedOperator(null)}
-                  className="lg:hidden p-2 bg-zinc-800 text-zinc-400 rounded-xl hover:text-white"
-                >
-                  <ArrowLeft size={16} />
-                </button>
-                <div>
-                  <h3 className="text-xl font-bold text-white leading-tight">{selectedOperator.name}</h3>
-                  <p className="text-xs text-zinc-400 mt-0.5">Histórico e faturas do colaborador</p>
-                </div>
-              </div>
-
-              {selectedOperator.pendingBalance > 0 && (
-                <button
-                  onClick={() => setIsSettleModalOpen(true)}
-                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition text-xs font-bold active:scale-[0.98]"
-                >
-                  Quitar Saldo (R$ {selectedOperator.pendingBalance.toFixed(2)})
-                </button>
-              )}
-            </div>
-
-            {/* View filters */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
-              <label className="flex items-center gap-2 text-zinc-400 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showOnlyPending}
-                  onChange={e => setShowOnlyPending(e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-blue-600 accent-blue-500"
-                />
-                Exibir apenas itens pendentes de acerto
-              </label>
-              <div className="text-xs text-zinc-500">
-                Mostrando {filteredHistory.length} registros
-              </div>
-            </div>
-
-            {/* Extrato / List of consumptions */}
-            <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
-              {historyLoading ? (
-                <div className="flex flex-col items-center justify-center py-20 text-zinc-500 space-y-3">
-                  <Loader2 size={36} className="animate-spin text-blue-500" />
-                  <p className="text-sm">Carregando extrato...</p>
-                </div>
-              ) : filteredHistory.length === 0 ? (
-                <div className="text-center py-20 border border-dashed border-zinc-800 rounded-2xl text-zinc-500">
-                  <AlertCircle size={32} className="mx-auto mb-3 opacity-30 text-zinc-400" />
-                  <p className="text-sm">Nenhum consumo registrado neste filtro.</p>
-                </div>
-              ) : (
-                filteredHistory.map(rec => (
-                  <div key={rec.id} className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-3 relative group">
-                    
-                    {/* Header of card */}
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2 text-xs text-zinc-500">
-                        <Calendar size={14} />
-                        <span>{new Date(rec.createdAt).toLocaleString('pt-BR')}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                          rec.settled 
-                            ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' 
-                            : 'bg-red-500/10 border border-red-500/20 text-red-400'
-                        }`}>
-                          {rec.settled ? 'Pago' : 'Pendente'}
-                        </span>
-                        
-                        {/* Remove Button for Admin correction */}
-                        <button
-                          onClick={() => handleDeleteItem(rec.id)}
-                          className="text-zinc-500 hover:text-red-400 transition p-1 bg-zinc-900 border border-zinc-800 hover:border-red-500/20 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100"
-                          title="Excluir este lançamento"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
+                      <span>•</span>
+                      <span>{c.items?.length || 0} item(ns)</span>
                     </div>
 
-                    {/* Products details */}
-                    <div className="divide-y divide-zinc-900">
-                      {rec.items.map(item => (
-                        <div key={item.id} className="flex justify-between items-center py-2 text-sm">
-                          <div>
-                            <span className={`font-semibold ${item.settled ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>{item.name}</span>
-                            <span className="text-xs text-zinc-500 block">
-                              {item.quantity} UN x R$ {item.priceUnit.toFixed(2)}
-                              {item.settled && <span className="ml-2 text-emerald-500 font-bold">(Quitado)</span>}
-                            </span>
+                    {/* Resumo de itens (primeiros 3) */}
+                    <div className="bg-zinc-950/60 rounded-xl p-3 space-y-1 text-xs border border-zinc-800/50">
+                      {c.items && c.items.length > 0 ? (
+                        c.items.slice(0, 3).map(item => (
+                          <div key={item.id} className="flex justify-between items-center text-zinc-300">
+                            <span className="truncate max-w-[170px]">{Number(item.quantity)}x {item.product?.name || 'Item'}</span>
+                            <span className="font-mono text-zinc-400">R$ {Number(item.totalPrice).toFixed(2)}</span>
                           </div>
-                          <span className={`font-bold ${item.settled ? 'text-zinc-500 line-through' : 'text-zinc-100'}`}>R$ {item.subtotal.toFixed(2)}</span>
-                        </div>
-                      ))}
+                        ))
+                      ) : (
+                        <p className="text-zinc-600 text-[11px] italic">Sem itens lançados ainda</p>
+                      )}
+                      {c.items && c.items.length > 3 && (
+                        <p className="text-[10px] text-amber-400/80 font-bold pt-1 text-center">
+                          + {c.items.length - 3} outros item(ns)...
+                        </p>
+                      )}
                     </div>
-
-                    {/* Footer / total */}
-                    <div className="flex justify-between items-center pt-2 border-t border-zinc-900 text-xs">
-                      <span className="text-zinc-500">Valor Total Lançado</span>
-                      <span className="font-bold text-sm text-amber-400">R$ {rec.total.toFixed(2)}</span>
-                    </div>
-
                   </div>
-                ))
-              )}
+
+                  {/* Actions Card */}
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-zinc-800/60">
+                    <button
+                      onClick={() => setSelectedComanda(c)}
+                      className="px-2 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                      title="Ver e adicionar itens"
+                    >
+                      <Plus size={14} /> Lançar
+                    </button>
+                    <button
+                      onClick={() => handlePrintExtrato(c)}
+                      className="px-2 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                      title="Imprimir extrato de consumo"
+                    >
+                      <Printer size={14} /> Extrato
+                    </button>
+                    <button
+                      onClick={() => handleChargeComanda(c)}
+                      className="px-2 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                      title="Carregar itens no caixa do PDV para cobrar"
+                    >
+                      <ShoppingBag size={14} /> Cobrar
+                    </button>
+                  </div>
+
+                </div>
+              ))}
             </div>
+          )}
 
+        </div>
+      )}
+
+      {/* TAB 2: CONSUMO DE FUNCIONÁRIOS (EXISTENTE) */}
+      {activeTab === 'funcionario' && (
+        <div className="space-y-6">
+          <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-4 flex items-center gap-3">
+            <Search className="text-zinc-500" size={18} />
+            <input
+              type="text"
+              placeholder="Buscar colaborador por nome..."
+              value={operatorSearch}
+              onChange={e => setOperatorSearch(e.target.value)}
+              className="w-full bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none"
+            />
           </div>
-        )}
 
-      </div>
+          {loadingOperators ? (
+            <div className="py-12 text-center text-zinc-500">Carregando colaboradores...</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {operators
+                .filter(op => op.name.toLowerCase().includes(operatorSearch.toLowerCase()))
+                .map(op => (
+                  <div
+                    key={op.id}
+                    onClick={() => setSelectedOperator(op)}
+                    className="bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-5 cursor-pointer transition flex justify-between items-center group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-zinc-800 text-zinc-300 flex items-center justify-center font-bold">
+                        {op.name.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold text-sm group-hover:text-amber-400 transition">{op.name}</h4>
+                        <p className="text-xs text-zinc-500">{op.jobTitle || 'Colaborador'}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-zinc-500 uppercase font-bold block">Pendente</span>
+                      <span className="text-sm font-black text-amber-400">R$ {Number(op.pendingBalance || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Manual Launch Modal */}
-      {isLaunchModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
-            
-            <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
-              <h4 className="font-bold text-xl text-white">Lançar Consumo Interno</h4>
+      {/* MODAL DE NOVA COMANDA */}
+      {isNewComandaModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative text-left">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-black text-white flex items-center gap-2">
+                <UtensilsCrossed className="text-amber-400" size={20} /> Abrir Nova Comanda / Mesa
+              </h3>
               <button 
-                onClick={() => { setIsLaunchModalOpen(false); setLaunchProductId(''); setProductSearch(''); }} 
-                className="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-full text-zinc-400 hover:text-white transition"
+                onClick={() => setIsNewComandaModalOpen(false)}
+                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white p-2 rounded-xl transition"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleLaunch} className="p-6 space-y-4">
-              
-              {/* Operator select */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Colaborador</label>
-                <select
-                  value={launchOperatorId}
-                  onChange={e => setLaunchOperatorId(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm"
-                  required
-                >
-                  <option value="">Selecione o colaborador...</option>
-                  {operators.map(op => (
-                    <option key={op.id} value={op.id}>
-                      {op.name}{op.jobTitle ? ` — ${op.jobTitle}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Product select & search */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Produto</label>
+            <form onSubmit={handleCreateComanda} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1">Número / Identificação da Mesa *</label>
                 <input
                   type="text"
-                  placeholder="Pesquisar produto..."
-                  value={productSearch}
-                  onChange={e => setProductSearch(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-t-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 text-xs border-b-0 font-medium"
+                  placeholder="Ex: 01, Mesa 05, Sinuca 1..."
+                  value={newNumber}
+                  onChange={e => setNewNumber(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white font-bold placeholder-zinc-600 focus:outline-none focus:border-amber-500"
+                  autoFocus
                 />
-                <select
-                  value={launchProductId}
-                  onChange={e => setLaunchProductId(e.target.value)}
-                  size={5}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-b-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500 text-sm select-scroll-fix custom-scrollbar"
-                  required
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1">Nome do Cliente (Opcional)</label>
+                <input
+                  type="text"
+                  placeholder="Ex: João da Sinuca, Grupo do Bar..."
+                  value={newCustomer}
+                  onChange={e => setNewCustomer(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1">Observações (Opcional)</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Fica na mesa de sinuca dos fundos..."
+                  value={newNotes}
+                  onChange={e => setNewNotes(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setIsNewComandaModalOpen(false)}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2.5 rounded-xl font-bold transition text-xs"
                 >
-                  <option value="" disabled className="text-zinc-600">Selecione o produto abaixo...</option>
-                  {filteredProducts.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} (R$ {Number(p.priceSell).toFixed(2)})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Quantity */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Quantidade</label>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={launchQuantity}
-                    onChange={e => setLaunchQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm font-bold"
-                    required
-                  />
-                </div>
-                <div className="space-y-1 flex flex-col justify-end">
-                  <span className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider">Total Calculado</span>
-                  <span className="text-lg font-black text-amber-400 mb-2">
-                    R$ {(selectedProductPrice * launchQuantity).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-4">
+                  Cancelar
+                </button>
                 <button
                   type="submit"
-                  disabled={launching || !launchOperatorId || !launchProductId}
-                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition active:scale-95 flex items-center justify-center gap-2"
+                  disabled={creatingComanda}
+                  className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold px-5 py-2.5 rounded-xl transition text-xs flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
                 >
-                  {launching ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                  Confirmar Lançamento
+                  {creatingComanda ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
+                  Abrir Comanda
                 </button>
               </div>
-
             </form>
-
           </div>
         </div>
       )}
 
-      {/* Settle Modal / Quitação Seletiva */}
-      {isSettleModalOpen && selectedOperator && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      {/* MODAL DE DETALHES E LANÇAMENTO DE ITENS DA COMANDA */}
+      {selectedComanda && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-2xl shadow-2xl relative text-left my-8">
             
-            <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
+            {/* Modal Header */}
+            <div className="flex justify-between items-start border-b border-zinc-800 pb-4 mb-4">
               <div>
-                <h4 className="font-bold text-xl text-white">Quitar Consumos de {selectedOperator.name}</h4>
-                <p className="text-xs text-zinc-400 mt-1">Selecione quais itens deseja abater ou quitar.</p>
+                <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono text-xs font-bold px-2.5 py-1 rounded-lg inline-block">
+                  MESA / COMANDA #{selectedComanda.number}
+                </span>
+                <h3 className="text-xl font-black text-white mt-1">
+                  {selectedComanda.customerName || 'Cliente Consumidor'}
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Aberta em: {new Date(selectedComanda.createdAt).toLocaleString('pt-BR')}
+                </p>
               </div>
-              <button 
-                onClick={() => setIsSettleModalOpen(false)} 
-                className="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-full text-zinc-400 hover:text-white transition"
-              >
-                <X size={18} />
-              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <span className="text-[10px] text-zinc-500 font-bold uppercase block">Total Atual</span>
+                  <span className="text-xl font-black text-emerald-400">R$ {Number(selectedComanda.total || 0).toFixed(2)}</span>
+                </div>
+                <button 
+                  onClick={() => setSelectedComanda(null)}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white p-2 rounded-xl transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 space-y-4 custom-scrollbar">
-              {pendingItems.length === 0 ? (
-                <div className="text-center py-8 text-zinc-500">
-                  <p>Nenhum item pendente de acerto.</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-zinc-400 font-bold uppercase tracking-wider pb-2 border-b border-zinc-800 font-medium">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedItemsToSettle.length === pendingItems.length}
-                        onChange={e => {
-                          if (e.target.checked) {
-                            setSelectedItemsToSettle(pendingItems.map(item => item.id));
-                          } else {
-                            setSelectedItemsToSettle([]);
-                          }
-                        }}
-                        className="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-blue-600 accent-blue-500"
-                      />
-                      Selecionar Todos
-                    </label>
-                    <span>Item / Subtotal</span>
-                  </div>
-
-                  <div className="divide-y divide-zinc-800/50 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                    {pendingItems.map(item => {
-                      const isChecked = selectedItemsToSettle.includes(item.id);
-                      return (
-                        <div key={item.id} className="flex items-center justify-between py-3 text-sm group">
-                          <label className="flex items-center gap-3 cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => {
-                                if (isChecked) {
-                                  setSelectedItemsToSettle(prev => prev.filter(id => id !== item.id));
-                                } else {
-                                  setSelectedItemsToSettle(prev => [...prev, item.id]);
-                                }
-                              }}
-                              className="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-blue-600 accent-blue-500"
-                            />
-                            <div>
-                              <span className="font-semibold text-zinc-200 block leading-tight">{item.name}</span>
-                              <span className="text-xs text-zinc-500 mt-1 block">
-                                {item.quantity} UN x R$ {item.priceUnit.toFixed(2)} — {new Date(item.date).toLocaleString('pt-BR')}
-                              </span>
-                            </div>
-                          </label>
-                          <span className="font-bold text-zinc-100">R$ {item.subtotal.toFixed(2)}</span>
+            {/* Form de Adicionar Item Direto na Comanda */}
+            <form onSubmit={handleAddItemToComanda} className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 mb-5 space-y-3">
+              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">Lançar Novo Produto na Comanda:</span>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="md:col-span-2 relative">
+                  <input
+                    type="text"
+                    placeholder="Pesquisar produto pelo nome..."
+                    value={productSearch}
+                    onChange={e => {
+                      setProductSearch(e.target.value);
+                      setAddingProductId('');
+                    }}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                  />
+                  {productSearch && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-zinc-900 border border-zinc-800 rounded-xl max-h-40 overflow-y-auto z-20 shadow-xl">
+                      {filteredProducts.map(p => (
+                        <div
+                          key={p.id}
+                          onClick={() => {
+                            setAddingProductId(p.id);
+                            setProductSearch(p.name);
+                          }}
+                          className="p-2.5 hover:bg-zinc-800 cursor-pointer text-xs text-white flex justify-between border-b border-zinc-800/50 last:border-0"
+                        >
+                          <span>{p.name}</span>
+                          <span className="text-emerald-400 font-bold">R$ {Number(p.priceSell).toFixed(2)}</span>
                         </div>
-                      );
-                    })}
-                  </div>
+                      ))}
+                      {filteredProducts.length === 0 && (
+                        <div className="p-3 text-xs text-zinc-500 text-center">Nenhum produto encontrado</div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
+
+                <div>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={addingQuantity}
+                    onChange={e => setAddingQuantity(Number(e.target.value))}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white text-center font-bold focus:outline-none focus:border-amber-500"
+                    placeholder="Qtd"
+                  />
+                </div>
+
+                <div>
+                  <button
+                    type="submit"
+                    disabled={addingItem || !addingProductId}
+                    className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-zinc-950 font-bold py-2 px-3 rounded-xl transition text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {addingItem ? <Loader2 className="animate-spin" size={14} /> : <Plus size={14} />}
+                    Adicionar
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            {/* Extrato / Lista de Itens Lançados */}
+            <div className="space-y-2 mb-6">
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-2">Itens Lançados nesta Comanda:</span>
+              
+              <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                {selectedComanda.items && selectedComanda.items.length > 0 ? (
+                  selectedComanda.items.map(item => (
+                    <div key={item.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex justify-between items-center text-xs">
+                      <div>
+                        <p className="font-bold text-white text-sm">{item.product?.name || 'Produto'}</p>
+                        <p className="text-zinc-500 font-mono text-[11px] mt-0.5">
+                          {Number(item.quantity)} x R$ {Number(item.unitPrice).toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="font-black text-emerald-400 text-sm">R$ {Number(item.totalPrice).toFixed(2)}</span>
+                        <button
+                          onClick={() => handleRemoveComandaItem(item.id)}
+                          className="text-zinc-600 hover:text-red-400 p-1 transition"
+                          title="Remover item da comanda"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-8 text-center text-zinc-500 text-xs italic bg-zinc-950/40 rounded-xl border border-zinc-800/40">
+                    Nenhum item foi lançado nesta comanda ainda.
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="p-6 border-t border-zinc-800 bg-zinc-900/50 flex flex-col sm:flex-row gap-4 items-center justify-between">
-              <div className="text-center sm:text-left">
-                <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Total Selecionado</span>
-                <div className="text-2xl font-black text-amber-500">R$ {selectedTotal.toFixed(2)}</div>
-              </div>
+            {/* Modal Actions */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-t border-zinc-800 pt-4">
               <button
-                onClick={() => handleSettle(selectedOperator.id, selectedItemsToSettle)}
-                disabled={settling || selectedItemsToSettle.length === 0}
-                className="w-full sm:w-auto px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition active:scale-95 flex items-center justify-center gap-2"
+                onClick={() => handlePrintExtrato(selectedComanda)}
+                className="w-full sm:w-auto bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-4 py-2.5 rounded-xl font-bold transition text-xs flex items-center justify-center gap-2"
               >
-                {settling ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                Confirmar Quitação
+                <Printer size={16} /> Imprimir Extrato
               </button>
+
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => setSelectedComanda(null)}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2.5 rounded-xl font-bold transition text-xs"
+                >
+                  Fechar
+                </button>
+
+                <button
+                  onClick={() => {
+                    const c = selectedComanda;
+                    setSelectedComanda(null);
+                    handleChargeComanda(c);
+                  }}
+                  disabled={!selectedComanda.items || selectedComanda.items.length === 0}
+                  className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold px-5 py-2.5 rounded-xl transition text-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <ShoppingBag size={16} /> Cobrar / Ir para o Caixa
+                </button>
+              </div>
             </div>
 
           </div>

@@ -1237,12 +1237,12 @@ export default function SysInitPage() {
                  {editTab === 'modulos' && (
                    <div className="space-y-4">
                      <p className="text-zinc-400 text-sm mb-4">Habilite ou desabilite os recursos (Feature Flags) para este cliente.</p>
-                     {['nfce', 'estoque', 'dashboardMobile'].map(mod => (
+                     {['nfce', 'estoque', 'dashboardMobile', 'comandas'].map(mod => (
                        <div key={mod} className="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-800 rounded-xl">
-                         <div>
-                           <p className="font-semibold text-zinc-200 capitalize">{mod === 'nfce' ? 'NFC-e / Fiscal' : mod === 'dashboardMobile' ? 'Dashboard Mobile' : mod === 'estoque' ? 'Estoque' : mod}</p>
-                           <p className="text-xs text-zinc-500">Permite o acesso a este módulo no sistema.</p>
-                         </div>
+                          <div>
+                            <p className="font-semibold text-zinc-200 capitalize">{mod === 'nfce' ? 'NFC-e / Fiscal' : mod === 'dashboardMobile' ? 'Dashboard Mobile' : mod === 'estoque' ? 'Estoque' : mod === 'comandas' ? 'Comandas & Mesas' : mod}</p>
+                            <p className="text-xs text-zinc-500">{mod === 'comandas' ? 'Permite o lançamento, abertura e consumo em comandas/mesas.' : 'Permite o acesso a este módulo no sistema.'}</p>
+                          </div>
                          <button onClick={() => setModulos({...modulos, [mod]: !modulos[mod]})} className={`transition-colors ${modulos[mod] ? 'text-violet-500' : 'text-zinc-600'}`}>
                            {modulos[mod] ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
                          </button>

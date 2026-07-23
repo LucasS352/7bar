@@ -8,7 +8,7 @@ import { saveOfflineSale } from '@/lib/db';
 import type { OfflineSaleItemSnapshot, OfflineSalePayment } from '@/lib/db';
 import {
   CreditCard, Banknote, QrCode, X, Loader2, Plus, Trash2, Delete,
-  ShoppingBag, Receipt, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, User, WifiOff, Tag, Lock, Printer, Settings2,
+  ShoppingBag, Receipt, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, User, WifiOff, Tag, Lock, Printer, Settings2, UtensilsCrossed, Search
 } from 'lucide-react';
 
 type PayMode = 'simple' | 'nfce';
@@ -92,6 +92,83 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   const [verifyingPin, setVerifyingPin] = useState(false);
   const [pinVerified, setPinVerified] = useState(false);
   const [pendingDiscountStr, setPendingDiscountStr] = useState('');
+
+  // ── Comandas Lançamento ───────────────────────────────────────────────────
+  const [comandasModalOpen, setComandasModalOpen] = useState(false);
+  const [openComandas, setOpenComandas] = useState<any[]>([]);
+  const [loadingComandas, setLoadingComandas] = useState(false);
+  const [selectedComandaId, setSelectedComandaId] = useState<string>('new');
+  const [newComandaNumber, setNewComandaNumber] = useState('');
+  const [newComandaCustomer, setNewComandaCustomer] = useState('');
+  const [launchingComanda, setLaunchingComanda] = useState(false);
+  const [comandaSearch, setComandaSearch] = useState('');
+
+  const fetchOpenComandas = async () => {
+    setLoadingComandas(true);
+    try {
+      const res = await api.get('/v1/comandas?status=open');
+      setOpenComandas(res.data || []);
+    } catch (err) {
+      console.error('Erro ao carregar comandas:', err);
+    } finally {
+      setLoadingComandas(false);
+    }
+  };
+
+  const handleOpenComandaPicker = () => {
+    if (items.length === 0) {
+      toast.error('O carrinho está vazio.');
+      return;
+    }
+    fetchOpenComandas();
+    setNewComandaNumber('');
+    setNewComandaCustomer('');
+    setComandaSearch('');
+    setSelectedComandaId('new');
+    setComandasModalOpen(true);
+  };
+
+  const handleConfirmLaunchComanda = async () => {
+    if (items.length === 0) return;
+    setLaunchingComanda(true);
+    try {
+      let comandaIdToUse = selectedComandaId;
+
+      // Criar nova comanda se selecionado 'new'
+      if (selectedComandaId === 'new') {
+        if (!newComandaNumber || newComandaNumber.trim() === '') {
+          toast.error('Informe o número ou identificador da comanda/mesa (ex: 01, Mesa Sinuca 1).');
+          setLaunchingComanda(false);
+          return;
+        }
+
+        const createRes = await api.post('/v1/comandas', {
+          number: newComandaNumber.trim(),
+          customerName: newComandaCustomer.trim() || undefined,
+        });
+        comandaIdToUse = createRes.data.id;
+      }
+
+      // Enviar itens para a comanda
+      const itemsPayload = items.map(i => ({
+        productId: i.id,
+        quantity: i.quantity,
+        unitPrice: i.effectivePriceSell ?? i.priceSell,
+      }));
+
+      await api.post(`/v1/comandas/${comandaIdToUse}/items`, { items: itemsPayload });
+
+      toast.success('Itens lançados na comanda com sucesso!');
+      clearCart();
+      setComandasModalOpen(false);
+      onClose();
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Erro ao lançar itens na comanda.';
+      toast.error(msg);
+    } finally {
+      setLaunchingComanda(false);
+    }
+  };
 
   const totalPaid = payments.reduce((acc, p) => acc + p.value, 0);
   const effectiveTotal = Math.max(0, total - discountValue);
@@ -830,6 +907,18 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                   </select>
                 </div>
               )}
+
+              {modules.comandas !== false && (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={handleOpenComandaPicker}
+                    className="w-full flex items-center justify-center gap-2 p-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold rounded-xl text-sm transition active:scale-98 cursor-pointer"
+                  >
+                    <UtensilsCrossed size={18} /> Lançar em Comanda / Mesa
+                  </button>
+                </div>
+              )}
             </div>
 
             {customMethods.find(cm => cm.id === method)?.hasVariablePricing ? null : (
@@ -1037,6 +1126,160 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
           </div>
         </div>
       </div>
+      {/* Modal de Seleção/Abertura de Comanda/Mesa */}
+      {comandasModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-lg shadow-2xl relative text-left">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="text-lg font-black text-white flex items-center gap-2">
+                  <UtensilsCrossed className="text-amber-400" size={20} /> Lançar em Comanda / Mesa
+                </h3>
+                <p className="text-xs text-zinc-400 mt-1">Selecione uma comanda aberta ou abra uma nova para o cliente.</p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setComandasModalOpen(false)}
+                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white p-2 rounded-xl transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Opções: Nova vs Existente */}
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1">
+              
+              {/* Seleção do Destino */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedComandaId('new')}
+                  className={`p-3 rounded-2xl border text-sm font-bold text-center transition cursor-pointer ${selectedComandaId === 'new' ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-800'}`}
+                >
+                  + Nova Comanda
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (openComandas.length > 0) setSelectedComandaId(openComandas[0].id);
+                    else setSelectedComandaId('new');
+                  }}
+                  disabled={openComandas.length === 0}
+                  className={`p-3 rounded-2xl border text-sm font-bold text-center transition cursor-pointer disabled:opacity-40 ${selectedComandaId !== 'new' ? 'bg-amber-500/20 border-amber-500/50 text-amber-400' : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:bg-zinc-800'}`}
+                >
+                  Comanda Aberta ({openComandas.length})
+                </button>
+              </div>
+
+              {/* Form de Nova Comanda */}
+              {selectedComandaId === 'new' && (
+                <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1">Número / Identificação da Mesa *</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 01, Mesa 05, Sinuca 1..."
+                      value={newComandaNumber}
+                      onChange={e => setNewComandaNumber(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white font-bold placeholder-zinc-600 focus:outline-none focus:border-amber-500"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1">Nome do Cliente (Opcional)</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: João da Sinuca, Marcos..."
+                      value={newComandaCustomer}
+                      onChange={e => setNewComandaCustomer(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Lista de Comandas Abertas */}
+              {selectedComandaId !== 'new' && (
+                <div className="space-y-2">
+                  <div className="relative mb-2">
+                    <Search size={16} className="absolute left-3 top-3 text-zinc-500" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por número ou nome..."
+                      value={comandaSearch}
+                      onChange={e => setComandaSearch(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-zinc-500"
+                    />
+                  </div>
+                  
+                  {loadingComandas ? (
+                    <div className="py-8 text-center text-zinc-500 text-xs">Carregando comandas...</div>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                      {openComandas
+                        .filter(c => 
+                          c.number.toLowerCase().includes(comandaSearch.toLowerCase()) || 
+                          (c.customerName && c.customerName.toLowerCase().includes(comandaSearch.toLowerCase()))
+                        )
+                        .map(c => (
+                          <div
+                            key={c.id}
+                            onClick={() => setSelectedComandaId(c.id)}
+                            className={`p-3.5 rounded-2xl border cursor-pointer transition flex justify-between items-center ${selectedComandaId === c.id ? 'bg-amber-500/20 border-amber-500/60 ring-1 ring-amber-500/50' : 'bg-zinc-950 border-zinc-800 hover:bg-zinc-800/60'}`}
+                          >
+                            <div>
+                              <p className="font-bold text-white text-sm">Identificação: #{c.number}</p>
+                              {c.customerName && <p className="text-xs text-zinc-400 mt-0.5">{c.customerName}</p>}
+                              <p className="text-[11px] text-zinc-500 font-mono mt-1">{c.items?.length || 0} item(ns) já lançados</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs text-zinc-500 block font-medium">Consumo Atual</span>
+                              <span className="text-sm font-black text-amber-400">R$ {Number(c.total || 0).toFixed(2)}</span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Resumo dos itens do carrinho a lançar */}
+              <div className="bg-zinc-950/60 border border-zinc-800 rounded-2xl p-3.5">
+                <div className="flex justify-between items-center text-xs text-zinc-400 mb-1">
+                  <span>Itens no Carrinho Atual:</span>
+                  <span className="font-bold text-white">{items.reduce((acc, i) => acc + i.quantity, 0)} itens</span>
+                </div>
+                <div className="flex justify-between items-center text-sm font-bold">
+                  <span className="text-zinc-300">Valor a adicionar:</span>
+                  <span className="text-emerald-400">R$ {total.toFixed(2)}</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Ações */}
+            <div className="flex justify-end gap-3 border-t border-zinc-800 pt-4 mt-4">
+              <button
+                type="button"
+                onClick={() => setComandasModalOpen(false)}
+                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2.5 rounded-xl font-bold transition text-xs"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLaunchComanda}
+                disabled={launchingComanda}
+                className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold px-5 py-2.5 rounded-xl transition text-xs flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+              >
+                {launchingComanda ? <Loader2 className="animate-spin" size={16} /> : <UtensilsCrossed size={16} />}
+                Confirmar Lançamento
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
       {DiscountModal}
     </div>
   );
