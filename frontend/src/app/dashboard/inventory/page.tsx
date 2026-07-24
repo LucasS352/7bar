@@ -215,6 +215,9 @@ export default function InventoryDashboard() {
   const [registerLotNumber, setRegisterLotNumber] = useState('');
   const [isRegisteringLot, setIsRegisteringLot] = useState(false);
 
+  // ── Módulo NFC-e (controla exibição de avisos fiscais) ──
+  const [nfceModuleEnabled, setNfceModuleEnabled] = useState(false);
+
   const fetchExpiryData = useCallback((daysToUse: number) => {
     api.get(`/products/lots/expiring?days=${daysToUse}`)
       .then(lotsRes => {
@@ -342,6 +345,20 @@ export default function InventoryDashboard() {
     fetchProducts();
     fetchSuppliers();
     fetchCategories();
+
+    // Verifica se o módulo NFC-e está ativo para este tenant
+    api.get('/tenants/me')
+      .then(res => {
+        try {
+          const modulos = res.data?.modulos;
+          const parsed = modulos ? (typeof modulos === 'string' ? JSON.parse(modulos) : modulos) : {};
+          setNfceModuleEnabled(parsed.nfce !== false);
+        } catch (e) {
+          setNfceModuleEnabled(false);
+        }
+      })
+      .catch(() => setNfceModuleEnabled(false));
+
     if (isAdmin) {
       api.get<{ allowNegativeStock: boolean; enableExpiryControl: boolean; expiryAlertDays: number }>('/products/settings')
         .then(res => {
@@ -942,12 +959,12 @@ export default function InventoryDashboard() {
                       )}
                       <div className="flex flex-col">
                         <span>{product.name}</span>
-                        {(!product.ncm || !product.grupoTributacaoId) && (
+                        {nfceModuleEnabled && (!product.ncm || !product.grupoTributacaoId) && (
                           <span className="flex items-center gap-1 text-[10px] text-yellow-500/80 uppercase font-bold mt-1" title="Faltam dados fiscais para emitir NFC-e">
                             <AlertOctagon size={12} /> Faltam Dados Fiscais
                           </span>
                         )}
-                        {(product.ncm && product.grupoTributacaoId) && (
+                        {nfceModuleEnabled && (product.ncm && product.grupoTributacaoId) && (
                           <span className="text-[10px] text-indigo-400/80 uppercase font-bold mt-1" title="Pronto para NFC-e">
                             {product.grupoTributacao?.nome || 'Fiscal OK'}
                           </span>
@@ -1045,11 +1062,12 @@ export default function InventoryDashboard() {
                             Atalho: {product.shortCode}
                           </span>
                         )}
-                        {(!product.ncm || !product.grupoTributacaoId) ? (
+                        {nfceModuleEnabled && (!product.ncm || !product.grupoTributacaoId) ? (
                           <span className="bg-yellow-500/10 text-yellow-500/90 border border-yellow-500/20 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold"><AlertOctagon size={10}/> Faltam Dados</span>
-                        ) : (
+                        ) : nfceModuleEnabled && (product.ncm && product.grupoTributacaoId) ? (
                           <span className="bg-indigo-500/10 text-indigo-400/90 border border-indigo-500/20 px-1.5 py-0.5 rounded text-[10px] font-bold truncate">{product.grupoTributacao?.nome || 'Fiscal OK'}</span>
-                        )}
+                        ) : null}
+
                       </div>
                     </div>
                   </div>

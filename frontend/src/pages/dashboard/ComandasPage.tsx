@@ -138,11 +138,20 @@ export function ComandasPage() {
   };
 
   // Fetch Operators
-  const fetchOperators = async () => {
+  const fetchOperators = async (currentOpId?: string) => {
     setLoadingOperators(true);
     try {
       const res = await api.get('/operators/consumptions');
-      setOperators(res.data || []);
+      const ops = res.data || [];
+      setOperators(ops);
+
+      const targetId = currentOpId || selectedOperator?.id;
+      if (targetId) {
+        const updatedOp = ops.find((o: any) => o.id === targetId);
+        if (updatedOp) {
+          setSelectedOperator(updatedOp);
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -332,6 +341,17 @@ export function ComandasPage() {
       setHistoryLoading(false);
     }
   };
+
+  // Real-time calculated pending balance from history for instantaneous UI updates
+  const currentOperatorPendingBalance = useMemo(() => {
+    if (!history || history.length === 0) return selectedOperator?.pendingBalance || 0;
+    return history.reduce((sum, rec) => {
+      const recordPending = rec.items
+        .filter(item => !item.settled)
+        .reduce((itemSum, item) => itemSum + Number(item.subtotal), 0);
+      return sum + recordPending;
+    }, 0);
+  }, [history, selectedOperator?.pendingBalance]);
 
   // Baixa / Quitar Consumo de Colaborador (Total, por itens ou abatimento parcial)
   const handleSettleOperator = async (operatorId: string, itemIds?: string[]) => {
@@ -904,7 +924,7 @@ export function ComandasPage() {
               <div className="flex items-center gap-4">
                 <div className="text-right">
                   <span className="text-[10px] text-zinc-500 font-bold uppercase block">Saldo Pendente</span>
-                  <span className="text-xl font-black text-amber-400">R$ {Number(selectedOperator.pendingBalance || 0).toFixed(2)}</span>
+                  <span className="text-xl font-black text-amber-400">R$ {Number(currentOperatorPendingBalance).toFixed(2)}</span>
                 </div>
                 <button 
                   onClick={() => setSelectedOperator(null)}
@@ -931,7 +951,7 @@ export function ComandasPage() {
                 <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => handleSettleOperator(selectedOperator.id)}
-                    disabled={settling || selectedOperator.pendingBalance <= 0}
+                    disabled={settling || currentOperatorPendingBalance <= 0}
                     className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-emerald-600/20"
                   >
                     {settling ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle2 size={14} />}
@@ -941,7 +961,7 @@ export function ComandasPage() {
               </div>
 
               {/* Input para Abatimento de Valor Parcial */}
-              {selectedOperator.pendingBalance > 0 && (
+              {currentOperatorPendingBalance > 0 && (
                 <div className="pt-3 border-t border-zinc-800/60 flex flex-col sm:flex-row items-center gap-2">
                   <span className="text-xs text-zinc-400 font-bold whitespace-nowrap">Dar baixa em valor parcial:</span>
                   <div className="relative flex-1 w-full">

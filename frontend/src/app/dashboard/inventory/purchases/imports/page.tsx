@@ -145,21 +145,27 @@ export default function XmlImportPage() {
     return { totalPendentes, totalErros, ultConsulta, ultNSU };
   }, [pendentes, syncStats]);
 
+  const [hasCert, setHasCert] = useState<boolean | null>(null);
+
   // ── Carregar Notas, Historico e Produtos ─────────────────────────────────────
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [resPendentes, resHistorico, resProducts, resCategories] = await Promise.all([
+      const [resPendentes, resHistorico, resProducts, resCategories, resCompany] = await Promise.all([
         api.get('/v1/fiscal/import/pendentes'),
         api.get('/v1/fiscal/import/history'),
         api.get('/products?limit=2000'),
-        api.get('/categories')
+        api.get('/categories'),
+        api.get('/v1/company/config').catch(() => null)
       ]);
       setPendentes(resPendentes.data || []);
       setHistorico(resHistorico.data || []);
       const pList = (resProducts.data as any)?.data ?? resProducts.data ?? [];
       setProductsList(pList);
       setCategoriesList(resCategories.data || []);
+
+      const certConfigured = Boolean(resCompany?.data?.certPfxBase64);
+      setHasCert(certConfigured);
     } catch {
       toast.error('Erro ao carregar dados de importação.');
     } finally {
@@ -568,42 +574,63 @@ export default function XmlImportPage() {
 
         <div className="flex flex-wrap gap-3">
           {/* Upload Manual */}
-          <label className={`cursor-pointer bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 transition active:scale-95 text-sm ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-            {uploading ? <Loader2 className="animate-spin text-sky-400" size={18} /> : <Upload size={18} />}
+          <label className={`cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 transition active:scale-95 text-sm shadow-lg shadow-emerald-600/20 ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+            {uploading ? <Loader2 className="animate-spin text-white" size={18} /> : <Upload size={18} />}
             <span>Upload XML</span>
             <input type="file" accept=".xml" onChange={handleFileUpload} className="hidden" disabled={uploading} />
           </label>
 
-          {/* Sync DFE */}
-          <button
-            onClick={handleSyncDfe}
-            disabled={syncing}
-            className="bg-sky-600 hover:bg-sky-500 disabled:bg-sky-800 disabled:cursor-not-allowed text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 transition active:scale-95 text-sm shadow-lg shadow-sky-600/10"
-          >
-            {syncing ? <Loader2 className="animate-spin" size={18} /> : <RefreshCw size={18} />}
-            Buscar na SEFAZ (DF-e)
-          </button>
+          {/* Sync DFE (Exibido apenas quando possui Certificado A1) */}
+          {hasCert !== false && (
+            <button
+              onClick={handleSyncDfe}
+              disabled={syncing}
+              className="bg-sky-600 hover:bg-sky-500 disabled:bg-sky-800 disabled:cursor-not-allowed text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 transition active:scale-95 text-sm shadow-lg shadow-sky-600/10"
+            >
+              {syncing ? <Loader2 className="animate-spin" size={18} /> : <RefreshCw size={18} />}
+              Buscar na SEFAZ (DF-e)
+            </button>
+          )}
         </div>
       </div>
 
+      {hasCert === false && (
+        <div className="bg-sky-950/40 border border-sky-500/30 rounded-2xl p-4 flex items-center gap-3 text-sky-300 text-xs sm:text-sm font-medium animate-in fade-in duration-300">
+          <FileSpreadsheet size={22} className="shrink-0 text-sky-400" />
+          <div>
+            <span className="font-bold block text-white text-sm">Modo de Entrada Manual por XML Ativo:</span>
+            <span>Faça o upload do arquivo <code>.XML</code> da nota fornecido pela distribuidora ou fornecedor. O sistema fará a leitura automática de produtos, fornecedor, códigos EAN/NCM e impostos para você conciliar e dar entrada no estoque sem precisar de certificado digital A1.</span>
+          </div>
+        </div>
+      )}
+
       {/* KPI Panel */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 ${hasCert !== false ? 'md:grid-cols-4' : 'md:grid-cols-2'} gap-4`}>
         <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl">
           <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">Notas Pendentes</p>
           <p className="text-2xl font-black text-white">{kpis.totalPendentes}</p>
         </div>
-        <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl">
-          <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">Falhas no Parser</p>
-          <p className="text-2xl font-black text-red-400">{kpis.totalErros}</p>
-        </div>
-        <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl">
-          <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">Último NSU SEFAZ</p>
-          <p className="text-2xl font-black text-sky-400">{kpis.ultNSU}</p>
-        </div>
-        <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl">
-          <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">Última Busca SEFAZ</p>
-          <p className="text-2xl font-black text-emerald-400">{kpis.ultConsulta}</p>
-        </div>
+        {hasCert !== false ? (
+          <>
+            <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl">
+              <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">Falhas no Parser</p>
+              <p className="text-2xl font-black text-red-400">{kpis.totalErros}</p>
+            </div>
+            <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl">
+              <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">Último NSU SEFAZ</p>
+              <p className="text-2xl font-black text-sky-400">{kpis.ultNSU}</p>
+            </div>
+            <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl">
+              <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">Última Busca SEFAZ</p>
+              <p className="text-2xl font-black text-emerald-400">{kpis.ultConsulta}</p>
+            </div>
+          </>
+        ) : (
+          <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl">
+            <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">Notas Importadas</p>
+            <p className="text-2xl font-black text-emerald-400">{historico.length}</p>
+          </div>
+        )}
       </div>
 
       {/* Sync stats feedback + Diagnóstico */}
@@ -625,35 +652,34 @@ export default function XmlImportPage() {
                 Consulta realizada diretamente nos servidores da SEFAZ.
               </p>
             </div>
-            <div className="flex gap-6 text-sm items-center">
-              <div><span className="text-zinc-500">NSU:</span> <strong className="text-white">{syncStats.ultNSU}</strong></div>
-              <div><span className="text-zinc-500">Novos XMLs:</span> <strong className="text-emerald-400">{syncStats.novos}</strong></div>
-              <div><span className="text-zinc-500">Duplicados:</span> <strong className="text-amber-400">{syncStats.duplicados}</strong></div>
-              <div><span className="text-zinc-500">Tempo:</span> <strong className="text-white">{syncStats.tempo}s</strong></div>
-              {diag && (
-                <button onClick={() => setShowDiag(v => !v)} className="text-xs text-sky-400 hover:text-sky-300 font-bold transition ml-2 border border-sky-500/30 px-3 py-1 rounded-lg">
-                  {showDiag ? 'Ocultar Diagnóstico' : 'Ver Diagnóstico'}
-                </button>
-              )}
+            <div className="flex items-center gap-4 text-xs">
+              <span className="text-emerald-400 font-bold">+{syncStats.novos} novas</span>
+              <span className="text-zinc-400">{syncStats.duplicados} duplicadas</span>
+              <span className="text-zinc-500">{syncStats.tempo}s</span>
+              
+              <button 
+                onClick={() => setShowDiag(!showDiag)}
+                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+              >
+                <Terminal size={13} />
+                {showDiag ? 'Ocultar Diagnóstico' : 'Ver Diagnóstico Técnico'}
+              </button>
             </div>
           </div>
 
-          {/* Painel de Diagnóstico Expandível */}
+          {/* Painel de Diagnóstico Avançado */}
           {showDiag && diag && (
-            <div className="border-t border-zinc-800 bg-zinc-950/50 p-4 space-y-3">
-              <h5 className="text-xs font-black text-zinc-400 uppercase tracking-wider">🔍 Diagnóstico Completo</h5>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="p-4 border-t border-zinc-800/60 bg-zinc-950/70 text-xs space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 {/* Certificado */}
                 <div className="bg-zinc-900/70 border border-zinc-800 rounded-xl p-3">
-                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">📜 Certificado</p>
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">📜 Certificado A1</p>
                   {diag.certificado ? (
                     <div className="space-y-1 text-xs">
-                      <p className={diag.certificado.expirado ? 'text-red-400 font-bold' : 'text-emerald-400 font-bold'}>
-                        {diag.certificado.expirado ? '❌ Expirado' : '✅ Válido'}
+                      <p className={`font-bold ${diag.certificado.valido ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {diag.certificado.valido ? '✅ Válido' : '❌ Inválido / Expirado'}
                       </p>
-                      <p className="text-zinc-300">CN: {diag.certificado.cn}</p>
-                      <p className="text-zinc-400">Até: {diag.certificado.validoAte}</p>
+                      <p className="text-zinc-300 font-mono truncate">{diag.certificado.titular}</p>
                       <p className="text-zinc-400">{diag.certificado.diasRestantes} dias restantes</p>
                       <p className="text-zinc-500 text-[10px]">Emissora: {diag.certificado.emissora}</p>
                     </div>
@@ -705,44 +731,9 @@ export default function XmlImportPage() {
                         cStat: {diag.resultado.cStat}
                       </p>
                       <p className="text-zinc-300">{diag.resultado.xMotivo}</p>
-                      <p className="text-zinc-400">Documentos: {diag.resultado.documentosTotal}</p>
-                      <p className="text-zinc-400">maxNSU: {diag.resultado.maxNSU}</p>
                     </div>
-                  ) : <p className="text-zinc-500 text-xs">Sem resposta</p>}
+                  ) : <p className="text-zinc-500 text-xs">Sem informação</p>}
                 </div>
-              </div>
-
-              {/* Erro detalhado */}
-              {diag.erro && (
-                <div className="bg-red-950/30 border border-red-500/30 rounded-xl p-3">
-                  <p className="text-red-400 font-bold text-xs mb-1">🚨 {diag.erro.tipo}</p>
-                  <p className="text-zinc-300 text-xs">{diag.erro.mensagem}</p>
-                  <p className="text-amber-400 text-xs mt-1">💡 Ação: {diag.erro.acao}</p>
-                </div>
-              )}
-
-              {/* Etapas do processo */}
-              {diag.etapas && diag.etapas.length > 0 && (
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-3">
-                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">📝 Etapas da Execução</p>
-                  <div className="space-y-1">
-                    {diag.etapas.map((e: any, i: number) => (
-                      <div key={i} className="flex items-start gap-2 text-[11px]">
-                        <span className={`shrink-0 ${e.status.includes('ERRO') || e.status.includes('FALHOU') ? 'text-red-400' : 'text-emerald-400'}`}>
-                          {e.status.includes('ERRO') || e.status.includes('FALHOU') ? '❌' : '✅'}
-                        </span>
-                        <span className="text-zinc-500 font-mono shrink-0 w-28">[{e.nome}]</span>
-                        <span className="text-zinc-300">{e.detalhe || e.status}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Tempo total */}
-              <div className="flex justify-between items-center text-xs text-zinc-500">
-                <span>Tempo total do processo: <strong className="text-white">{diag.tempoTotalMs}ms</strong></span>
-                <span className="font-mono text-[10px] text-zinc-600">{diag.correlationId}</span>
               </div>
             </div>
           )}
@@ -750,13 +741,13 @@ export default function XmlImportPage() {
         );
       })()}
 
-      {/* Abas de Controle */}
-      <div className="flex border border-zinc-800 gap-1 bg-zinc-950/20 p-1.5 rounded-2xl">
+      {/* Tabs */}
+      <div className="flex gap-2 bg-zinc-950 p-1.5 rounded-2xl border border-zinc-800/80">
         <button
           onClick={() => setActiveTab('pendentes')}
           className={`flex-1 py-3 px-4 rounded-xl text-xs font-black tracking-wider uppercase transition flex items-center justify-center gap-2 ${activeTab === 'pendentes' ? 'bg-zinc-900 text-white shadow-md border border-zinc-800' : 'text-zinc-500 hover:text-zinc-300'}`}
         >
-          <Loader2 size={14} className={activeTab === 'pendentes' ? 'animate-spin text-sky-400' : ''} />
+          <FileSpreadsheet size={14} className={activeTab === 'pendentes' ? 'text-sky-400' : ''} />
           Fila de Importação ({pendentes.length})
         </button>
         <button
@@ -785,7 +776,9 @@ export default function XmlImportPage() {
             <div className="flex flex-col items-center justify-center py-24 text-zinc-600">
               <FileSpreadsheet size={48} className="mb-4 opacity-25 text-sky-400" />
               <p className="text-lg font-bold">Nenhuma nota fiscal na fila de entrada.</p>
-              <p className="text-sm mt-1 opacity-70">Busque na SEFAZ ou faça o upload manual de um XML.</p>
+              <p className="text-sm mt-1 opacity-70">
+                {hasCert !== false ? 'Busque na SEFAZ ou faça o upload manual de um XML.' : 'Faça o upload manual de um arquivo XML para iniciar a conciliação.'}
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">

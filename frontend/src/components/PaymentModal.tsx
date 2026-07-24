@@ -906,7 +906,19 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
               </p>
             )}
           </div>
-          <button onClick={onClose} className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full transition text-zinc-400 hover:text-white"><X size={20} /></button>
+
+          <div className="flex items-center gap-2.5">
+            {modules?.comandas === true && (
+              <button
+                type="button"
+                onClick={handleOpenComandaPicker}
+                className="flex items-center justify-center gap-2 px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold rounded-xl text-xs sm:text-sm transition active:scale-95 cursor-pointer shadow-sm shadow-amber-500/10"
+              >
+                <UtensilsCrossed size={16} /> Lançar em Comanda / Mesa
+              </button>
+            )}
+            <button onClick={onClose} className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full transition text-zinc-400 hover:text-white"><X size={20} /></button>
+          </div>
         </div>
 
         <div className="p-4 md:p-6 flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-8 flex-1 overflow-y-auto custom-scrollbar">
@@ -943,18 +955,6 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                       <option key={op.id} value={op.id}>{op.name}</option>
                     ))}
                   </select>
-                </div>
-              )}
-
-              {modules?.comandas === true && (
-                <div className="mt-3">
-                  <button
-                    type="button"
-                    onClick={handleOpenComandaPicker}
-                    className="w-full flex items-center justify-center gap-2 p-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold rounded-xl text-sm transition active:scale-98 cursor-pointer"
-                  >
-                    <UtensilsCrossed size={18} /> Lançar em Comanda / Mesa
-                  </button>
                 </div>
               )}
             </div>
@@ -1209,109 +1209,124 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                 </button>
               </div>
 
-              {/* Form de Nova Comanda */}
+              {/* Form de Nova Comanda (Apenas 1 Campo de Identificação) */}
               {selectedComandaId === 'new' && (
                 <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 space-y-3">
                   <div>
-                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1">Número / Identificação da Mesa *</label>
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1">Identificação da Comanda / Mesa *</label>
                     <input
                       type="text"
-                      placeholder="Ex: 01, Mesa 05, Sinuca 1..."
+                      placeholder="Ex: 01, Mesa 05, Sinuca 1, Marcos..."
                       value={newComandaNumber}
                       onChange={e => setNewComandaNumber(e.target.value)}
                       className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white font-bold placeholder-zinc-600 focus:outline-none focus:border-amber-500"
                       autoFocus
                     />
                   </div>
-                  <div>
-                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1">Nome do Cliente (Opcional)</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: João da Sinuca, Marcos..."
-                      value={newComandaCustomer}
-                      onChange={e => setNewComandaCustomer(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
                 </div>
               )}
 
-              {/* Lista de Comandas Abertas */}
+              {/* Lista de Comandas Abertas (Grid de Quadradinhos Verdes) */}
               {selectedComandaId !== 'new' && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="relative mb-2">
                     <Search size={16} className="absolute left-3 top-3 text-zinc-500" />
                     <input
                       type="text"
-                      placeholder="Buscar por número ou nome..."
+                      placeholder="Buscar por número ou identificação..."
                       value={comandaSearch}
                       onChange={e => setComandaSearch(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-zinc-500"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
                     />
                   </div>
                   
                   {loadingComandas ? (
                     <div className="py-8 text-center text-zinc-500 text-xs">Carregando comandas...</div>
+                  ) : openComandas.length === 0 ? (
+                    <div className="py-8 text-center text-zinc-500 text-xs italic bg-zinc-950/40 rounded-xl border border-zinc-800/40">
+                      Nenhuma comanda aberta encontrada.
+                    </div>
                   ) : (
-                    <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto custom-scrollbar p-1">
                       {openComandas
                         .filter(c => 
                           c.number.toLowerCase().includes(comandaSearch.toLowerCase()) || 
                           (c.customerName && c.customerName.toLowerCase().includes(comandaSearch.toLowerCase()))
                         )
-                        .map(c => (
-                          <div
-                            key={c.id}
-                            className={`p-3.5 rounded-2xl border transition ${selectedComandaId === c.id ? 'bg-amber-500/20 border-amber-500/60 ring-1 ring-amber-500/50' : 'bg-zinc-950 border-zinc-800 hover:bg-zinc-800/60'}`}
-                          >
-                            <div 
+                        .map(c => {
+                          const isSelected = selectedComandaId === c.id;
+                          return (
+                            <div
+                              key={c.id}
                               onClick={() => setSelectedComandaId(c.id)}
-                              className="cursor-pointer flex justify-between items-center"
+                              className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden ${
+                                isSelected
+                                  ? 'bg-amber-500/20 border-amber-500 ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10'
+                                  : 'bg-emerald-950/40 border-emerald-500/40 hover:border-emerald-400 hover:bg-emerald-900/30'
+                              }`}
                             >
-                              <div>
-                                <p className="font-bold text-white text-sm">Identificação: #{c.number}</p>
-                                {c.customerName && <p className="text-xs text-zinc-400 mt-0.5">{c.customerName}</p>}
-                                <p className="text-[11px] text-zinc-500 font-mono mt-1">{c.items?.length || 0} item(ns) já lançados</p>
+                              {/* Header Card com Sinalizador Verde */}
+                              <div className="flex justify-between items-center mb-1.5">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${isSelected ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}`} />
+                                  <span className="font-black text-white text-sm truncate">#{c.number}</span>
+                                </div>
+                                <span className="text-[10px] text-zinc-400 font-mono shrink-0">{c.items?.length || 0}i</span>
                               </div>
-                              <div className="text-right">
-                                <span className="text-xs text-zinc-500 block font-medium">Consumo Atual</span>
-                                <span className="text-sm font-black text-amber-400">R$ {Number(c.total || 0).toFixed(2)}</span>
+
+                              {/* Consumo Total */}
+                              <div className="mt-2 text-right">
+                                <span className="text-[9px] text-zinc-400 block font-bold uppercase tracking-wider">Consumo</span>
+                                <span className={`text-xs sm:text-sm font-black font-mono ${isSelected ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                  R$ {Number(c.total || 0).toFixed(2)}
+                                </span>
                               </div>
                             </div>
-
-                            {/* Sanfona / Expansão de Itens e Ação de Cobrar */}
-                            {selectedComandaId === c.id && (
-                              <div className="mt-3 pt-3 border-t border-zinc-800/80 space-y-2 animate-in fade-in duration-150">
-                                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">Itens lançados nesta Comanda:</span>
-                                <div className="max-h-32 overflow-y-auto space-y-1 bg-zinc-900/80 rounded-xl p-2.5 border border-zinc-800/50 custom-scrollbar">
-                                  {c.items && c.items.length > 0 ? (
-                                    c.items.map((item: any) => (
-                                      <div key={item.id} className="flex justify-between text-xs text-zinc-300">
-                                        <span className="truncate max-w-[200px]">{Number(item.quantity)}x {item.product?.name || 'Produto'}</span>
-                                        <span className="font-mono text-amber-400">R$ {Number(item.totalPrice).toFixed(2)}</span>
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <p className="text-[11px] text-zinc-500 italic">Sem itens lançados ainda</p>
-                                  )}
-                                </div>
-                                
-                                <div className="pt-2 flex justify-end">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleChargeComandaFromModal(c)}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-emerald-600/20"
-                                  >
-                                    <ShoppingBag size={14} /> Cobrar Comanda no Caixa
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-                          </div>
-                        ))}
+                          );
+                        })}
                     </div>
                   )}
+
+                  {/* Detalhes rápidos e ação de cobrança para a comanda selecionada no grid */}
+                  {selectedComandaId !== 'new' && openComandas.some(c => c.id === selectedComandaId) && (
+                    <div className="mt-3 p-3 bg-zinc-950/90 border border-amber-500/30 rounded-2xl space-y-2 animate-in fade-in duration-150">
+                      {(() => {
+                        const sel = openComandas.find(c => c.id === selectedComandaId);
+                        if (!sel) return null;
+                        return (
+                          <>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                                Comanda #{sel.number} Selecionada
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleChargeComandaFromModal(sel)}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1 rounded-lg text-xs flex items-center gap-1 transition active:scale-95 cursor-pointer shadow-md shadow-emerald-600/20"
+                              >
+                                <ShoppingBag size={13} /> Cobrar no Caixa
+                              </button>
+                            </div>
+
+                            {/* Resumo rápido dos itens */}
+                            <div className="max-h-24 overflow-y-auto space-y-1 bg-zinc-900/80 rounded-xl p-2 border border-zinc-800/50 custom-scrollbar text-xs">
+                              {sel.items && sel.items.length > 0 ? (
+                                sel.items.map((item: any) => (
+                                  <div key={item.id} className="flex justify-between text-[11px] text-zinc-300">
+                                    <span className="truncate max-w-[220px]">{Number(item.quantity)}x {item.product?.name || 'Produto'}</span>
+                                    <span className="font-mono text-amber-400">R$ {Number(item.totalPrice).toFixed(2)}</span>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-[11px] text-zinc-500 italic">Nenhum item nesta comanda ainda</p>
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+
                 </div>
               )}
 

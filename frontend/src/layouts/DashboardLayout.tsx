@@ -59,8 +59,10 @@ export function DashboardLayout() {
   const inventoryToolItems = [
     { name: 'Contagem de Estoque', to: '/dashboard/inventory/stock-count', icon: FileSpreadsheet },
     { name: 'Imagens em Massa',   to: '/dashboard/bulk-images',            icon: Images },
+    ...((modules.nfce !== false || modules.importacaoXml === true) ? [
+      { name: 'Entrada por XML', to: '/dashboard/inventory/purchases/imports', icon: FileDown },
+    ] : []),
     ...(modules.nfce !== false ? [
-      { name: 'Importar XML (Sefaz)',     to: '/dashboard/inventory/purchases/imports', icon: FileDown },
       { name: 'Gestão & Relatório NFC-e', to: '/dashboard/fiscal/gestao',                 icon: ReceiptText },
       { name: 'Ajuste Fiscal',           to: '/dashboard/configuracoes/ajuste-fiscal',     icon: FileSpreadsheet },
     ] : []),
@@ -76,12 +78,12 @@ export function DashboardLayout() {
 
   const pathname = window.location.pathname;
   const isEstoqueBlocked = modules.estoque === false && pathname.startsWith('/dashboard/inventory');
-  const isNfceBlocked = modules.nfce === false && (
+  const isNfceBlocked = (modules.nfce === false && modules.importacaoXml !== true && pathname.startsWith('/dashboard/inventory/purchases/imports')) ||
+  (modules.nfce === false && (
     pathname.startsWith('/dashboard/configuracoes/tributacao') ||
     pathname.startsWith('/dashboard/configuracoes/ajuste-fiscal') ||
-    pathname.startsWith('/dashboard/fiscal/gestao') ||
-    pathname.startsWith('/dashboard/inventory/purchases/imports')
-  );
+    pathname.startsWith('/dashboard/fiscal/gestao')
+  ));
 
   return (
     <div className="flex h-screen bg-zinc-950 text-white font-sans overflow-hidden">

@@ -1133,16 +1133,16 @@ export default function SysInitPage() {
                  <div><label className="text-xs text-zinc-400 uppercase">Admin Email</label><input type="email" required value={adminEmail} onChange={e => setAdminEmail(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-xl mt-1 text-white" /></div>
                  <div><label className="text-xs text-zinc-400 uppercase">Senha</label><input type="password" required value={adminPassword} onChange={e => setAdminPassword(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-xl mt-1 text-white" /></div>
                  <div><label className="text-xs text-zinc-400 uppercase">Confirmar Senha</label><input type="password" required value={adminPasswordConfirm} onChange={e => setAdminPasswordConfirm(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-xl mt-1 text-white" /></div>
-                 <div className="grid grid-cols-2 gap-4">
-                   <div>
-                     <label className="text-xs text-zinc-400 uppercase">Mensalidade (R$)</label>
-                     <input type="number" step="0.01" value={mensalidadeValor} onChange={e => setMensalidadeValor(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-xl mt-1 text-white" />
-                   </div>
-                   <div>
-                     <label className="text-xs text-zinc-400 uppercase">1º Vencimento</label>
-                     <input type="date" value={mensalidadeVencimento} onChange={e => setMensalidadeVencimento(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-xl mt-1 text-white" />
-                   </div>
-                 </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs text-zinc-400 uppercase font-bold tracking-wider">Mensalidade (R$)</label>
+                      <input type="number" step="0.01" placeholder="0.00" value={mensalidadeValor} onChange={e => setMensalidadeValor(e.target.value)} className="w-full p-3.5 bg-zinc-950 border border-zinc-700 rounded-2xl mt-1 text-white font-bold text-base focus:border-violet-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-400 uppercase font-bold tracking-wider">1º Vencimento</label>
+                      <input type="date" value={mensalidadeVencimento} onChange={e => setMensalidadeVencimento(e.target.value)} className="w-full p-3.5 bg-zinc-950 border border-zinc-700 rounded-2xl mt-1 text-white font-bold text-base focus:border-violet-500 outline-none [color-scheme:dark]" />
+                    </div>
+                  </div>
                  <div className="flex items-center gap-3 mt-4 bg-zinc-950 p-4 rounded-xl border border-zinc-800">
                    <button type="button" onClick={() => setSeedProducts(!seedProducts)} className={`transition-colors ${seedProducts ? 'text-emerald-500' : 'text-zinc-600'}`}>
                      {seedProducts ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
@@ -1235,21 +1235,27 @@ export default function SysInitPage() {
                  )}
 
                  {editTab === 'modulos' && (
-                   <div className="space-y-4">
-                     <p className="text-zinc-400 text-sm mb-4">Habilite ou desabilite os recursos (Feature Flags) para este cliente.</p>
-                     {['nfce', 'estoque', 'dashboardMobile', 'comandas'].map(mod => (
-                       <div key={mod} className="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-800 rounded-xl">
+                    <div className="space-y-4">
+                      <p className="text-zinc-400 text-sm mb-4">Habilite ou desabilite os recursos (Feature Flags) para este cliente.</p>
+                      {[
+                        { id: 'nfce', title: 'NFC-e / Emissão Fiscal', desc: 'Permite a emissão de cupons fiscais eletrônicos (NFC-e).' },
+                        { id: 'importacaoXml', title: 'Entrada por XML (Upload Manual)', desc: 'Permite a importação manual de arquivos XML de NF-e sem necessidade de certificado digital A1 ou consulta SEFAZ.' },
+                        { id: 'estoque', title: 'Estoque', desc: 'Módulo completo de controle de produtos e inventário.' },
+                        { id: 'dashboardMobile', title: 'Dashboard Mobile', desc: 'Acesso ao painel resumido em dispositivos móveis.' },
+                        { id: 'comandas', title: 'Comandas & Mesas', desc: 'Permite o lançamento, abertura e consumo em comandas/mesas.' },
+                      ].map(item => (
+                        <div key={item.id} className="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-800 rounded-xl">
                           <div>
-                            <p className="font-semibold text-zinc-200 capitalize">{mod === 'nfce' ? 'NFC-e / Fiscal' : mod === 'dashboardMobile' ? 'Dashboard Mobile' : mod === 'estoque' ? 'Estoque' : mod === 'comandas' ? 'Comandas & Mesas' : mod}</p>
-                            <p className="text-xs text-zinc-500">{mod === 'comandas' ? 'Permite o lançamento, abertura e consumo em comandas/mesas.' : 'Permite o acesso a este módulo no sistema.'}</p>
+                            <p className="font-semibold text-zinc-200">{item.title}</p>
+                            <p className="text-xs text-zinc-500">{item.desc}</p>
                           </div>
-                         <button onClick={() => setModulos({...modulos, [mod]: !modulos[mod]})} className={`transition-colors ${modulos[mod] ? 'text-violet-500' : 'text-zinc-600'}`}>
-                           {modulos[mod] ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
-                         </button>
-                       </div>
-                     ))}
-                   </div>
-                 )}
+                          <button onClick={() => setModulos({...modulos, [item.id]: !modulos[item.id]})} className={`transition-colors ${modulos[item.id] ? 'text-violet-500' : 'text-zinc-600'}`}>
+                            {modulos[item.id] ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                  {editTab === 'fiscal' && (
                    <div className="space-y-5">
@@ -1261,21 +1267,67 @@ export default function SysInitPage() {
                    </div>
                  )}
 
-                 {editTab === 'mensalidade' && (
-                   <div className="space-y-4">
-                     <p className="text-sm text-zinc-400 mb-2">Configure o valor e a data do próximo vencimento da mensalidade deste cliente.</p>
-                     <div className="grid grid-cols-2 gap-4">
-                       <div>
-                                  <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block">Valor (R$)</label>
-                         <input type="number" step="0.01" value={editingTenant.mensalidadeValor || ''} onChange={e => setEditingTenant({...editingTenant, mensalidadeValor: e.target.value})} className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:border-violet-500 outline-none" />
-                       </div>
-                       <div>
-                         <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block">Próximo Vencimento</label>
-                         <input type="date" value={editingTenant.mensalidadeVencimento ? new Date(editingTenant.mensalidadeVencimento).toISOString().split('T')[0] : ''} onChange={e => setEditingTenant({...editingTenant, mensalidadeVencimento: e.target.value ? new Date(e.target.value).toISOString() : null})} className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:border-violet-500 outline-none" />
-                       </div>
-                     </div>
-                   </div>
-                 )}
+                  {editTab === 'mensalidade' && (
+                    <div className="space-y-5">
+                      <p className="text-sm text-zinc-400 mb-2">Configure o valor e a data do próximo vencimento da mensalidade deste cliente.</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block font-bold">Valor da Mensalidade (R$)</label>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-3.5 text-zinc-500 font-bold text-base">R$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={editingTenant.mensalidadeValor || ''}
+                              onChange={e => setEditingTenant({...editingTenant, mensalidadeValor: e.target.value})}
+                              className="w-full p-3.5 pl-11 bg-zinc-950 border border-zinc-800 rounded-2xl text-white font-bold text-base sm:text-lg focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block font-bold">Próximo Vencimento</label>
+                          <input
+                            type="date"
+                            value={editingTenant.mensalidadeVencimento ? new Date(editingTenant.mensalidadeVencimento).toISOString().split('T')[0] : ''}
+                            onChange={e => setEditingTenant({...editingTenant, mensalidadeVencimento: e.target.value ? new Date(e.target.value).toISOString() : null})}
+                            className="w-full p-3.5 bg-zinc-950 border border-zinc-800 rounded-2xl text-white font-bold text-base focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none [color-scheme:dark]"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Atalhos Rápidos de Vencimento no Mobile */}
+                      <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-4 space-y-2">
+                        <span className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider block">Definir Vencimento Rápido (1 Clique):</span>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {[
+                            { label: '+30 Dias', days: 30 },
+                            { label: 'Dia 05 Prox.', dayOfMonth: 5 },
+                            { label: 'Dia 10 Prox.', dayOfMonth: 10 },
+                            { label: 'Dia 15 Prox.', dayOfMonth: 15 },
+                          ].map((preset, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                const d = new Date();
+                                if (preset.days) {
+                                  d.setDate(d.getDate() + preset.days);
+                                } else if (preset.dayOfMonth) {
+                                  d.setMonth(d.getMonth() + 1);
+                                  d.setDate(preset.dayOfMonth);
+                                }
+                                setEditingTenant({ ...editingTenant, mensalidadeVencimento: d.toISOString() });
+                              }}
+                              className="py-2.5 px-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/60 rounded-xl text-xs font-bold text-violet-300 transition active:scale-95 cursor-pointer text-center"
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                  {editTab === 'integracoes' && (
                    <div className="space-y-4">
