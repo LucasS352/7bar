@@ -237,7 +237,7 @@ export class FiscalImportService {
       where: {
         status: { in: ['RECEBIDA', 'PROCESSANDO', 'AGUARDANDO_CONCILIACAO', 'PRONTA_IMPORTAR', 'IMPORTANDO', 'ERRO'] } as any,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { dataEmissao: 'desc' },
       include: { supplier: true, itens: true },
     });
   }
