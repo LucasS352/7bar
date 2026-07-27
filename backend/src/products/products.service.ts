@@ -1137,8 +1137,11 @@ export class ProductsService {
 
     if (lots.length === 0) return;
 
-    // Soma do saldo restante de todos os lotes
-    const totalRemaining = lots.reduce((sum: number, lot: any) => sum + Number(lot.remaining), 0);
+    // Soma do saldo restante apenas dos lotes positivos (ignora estornos/negativos)
+    const totalRemaining = lots.reduce((sum: number, lot: any) => {
+      const r = Number(lot.remaining);
+      return sum + (r > 0 ? r : 0);
+    }, 0);
 
     // Lote ativo mais recente (remaining > 0) ou primeiro lote
     const activeLot = lots.find((lot: any) => Number(lot.remaining) > 0) || lots[0];
