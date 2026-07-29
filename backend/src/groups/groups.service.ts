@@ -341,8 +341,36 @@ export class GroupsService {
         throw new BadRequestException('Estoque insuficiente para transferência');
       }
 
-      const newFromStock = Number(fromProduct.stock) - body.quantity;
-      await fromClient.product.update({ where: { id: body.productId }, data: { stock: newFromStock } });
+      // ── ORIGEM: consumir lotes FIFO ──────────────────────────────────────
+      const fromLots = await fromClient.stockLot.findMany({
+        where: { productId: body.productId, remaining: { gt: 0 } },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      let remaining = body.quantity;
+      for (const lot of fromLots) {
+        if (remaining <= 0) break;
+        const lotRemaining = Number(lot.remaining);
+        const deduct = Math.min(lotRemaining, remaining);
+        await fromClient.stockLot.update({
+          where: { id: lot.id },
+          data: { remaining: lotRemaining - deduct },
+        });
+        remaining -= deduct;
+      }
+
+      // Recalcular stock do produto de origem pela soma dos lotes
+      const updatedFromLots = await fromClient.stockLot.findMany({
+        where: { productId: body.productId },
+      });
+      const fromTotal = updatedFromLots.reduce(
+        (s: number, l: any) => s + Math.max(0, Number(l.remaining)), 0,
+      );
+      await fromClient.product.update({
+        where: { id: body.productId },
+        data: { stock: fromTotal },
+      });
+
       await fromClient.inventoryLog.create({
         data: {
           productId: body.productId,
@@ -352,11 +380,31 @@ export class GroupsService {
         },
       });
 
-      // Find or create product in destination by name
+      // ── DESTINO: criar lote + sync ───────────────────────────────────────
       const toProduct = await toClient.product.findFirst({ where: { name: fromProduct.name } });
       if (toProduct) {
-        const newToStock = Number(toProduct.stock ?? 0) + body.quantity;
-        await toClient.product.update({ where: { id: toProduct.id }, data: { stock: newToStock } });
+        await toClient.stockLot.create({
+          data: {
+            productId: toProduct.id,
+            costPrice: fromProduct.priceCost,
+            quantity: body.quantity,
+            remaining: body.quantity,
+            lotNumber: `TRANSF-${new Date().toISOString().slice(0, 10)}`,
+          },
+        });
+
+        // Recalcular stock do produto destino pela soma dos lotes
+        const updatedToLots = await toClient.stockLot.findMany({
+          where: { productId: toProduct.id },
+        });
+        const toTotal = updatedToLots.reduce(
+          (s: number, l: any) => s + Math.max(0, Number(l.remaining)), 0,
+        );
+        await toClient.product.update({
+          where: { id: toProduct.id },
+          data: { stock: toTotal },
+        });
+
         await toClient.inventoryLog.create({
           data: {
             productId: toProduct.id,
@@ -367,7 +415,7 @@ export class GroupsService {
         });
       }
 
-      return { success: true, fromNewStock: newFromStock };
+      return { success: true, fromNewStock: fromTotal };
     } finally {
       await fromClient.$disconnect();
       await toClient.$disconnect();

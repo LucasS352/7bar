@@ -230,6 +230,107 @@ export class TenantsService {
     return results;
   }
 
+  /**
+   * Reconcilia lotes de estoque de todos os produtos de cada tenant selecionado.
+   * Alinha os lotes com o product.stock atual sem alterar nenhum estoque.
+   */
+  async reconcileLotsTenants(tenantIds: string[]): Promise<any[]> {
+    const results: any[] = [];
+    const tenants = await this.heartPrisma.tenant.findMany({
+      where: { id: { in: tenantIds } },
+    });
+
+    for (const tenant of tenants) {
+      this.logger.log(`[Reconciliação] Iniciando reconciliação de lotes do tenant: ${tenant.name}`);
+      const tenantClient = new PrismaClient({
+        datasources: { db: { url: tenant.databaseUrl } },
+      });
+
+      try {
+        await tenantClient.$connect();
+
+        const products = await tenantClient.product.findMany({
+          select: { id: true, name: true, stock: true, priceCost: true },
+        });
+
+        let reconciled = 0;
+        let alreadyInSync = 0;
+
+        for (const product of products) {
+          const currentStock = Number(product.stock);
+
+          const activeLots = await tenantClient.stockLot.findMany({
+            where: { productId: product.id, remaining: { gt: 0 } },
+          });
+          const lotSum = activeLots.reduce((sum: number, lot: any) => sum + Number(lot.remaining), 0);
+
+          if (Math.abs(currentStock - lotSum) < 0.001) {
+            alreadyInSync++;
+            continue;
+          }
+
+          // Custo médio ponderado
+          let totalCost = 0;
+          let totalQty = 0;
+          for (const lot of activeLots) {
+            const r = Number(lot.remaining);
+            totalCost += r * Number(lot.costPrice);
+            totalQty += r;
+          }
+          const avgCost = totalQty > 0 ? totalCost / totalQty : 0;
+
+          // Zerar lotes ativos
+          if (activeLots.length > 0) {
+            await tenantClient.stockLot.updateMany({
+              where: { id: { in: activeLots.map((l: any) => l.id) } },
+              data: { remaining: 0 },
+            });
+          }
+
+          // Criar lote base
+          if (currentStock > 0) {
+            const finalCost = avgCost > 0 ? avgCost : Number(product.priceCost);
+            await tenantClient.stockLot.create({
+              data: {
+                productId: product.id,
+                costPrice: finalCost,
+                quantity: currentStock,
+                remaining: currentStock,
+                lotNumber: `BASE-${new Date().toISOString().slice(0, 10)}`,
+              },
+            });
+          }
+
+          reconciled++;
+        }
+
+        results.push({
+          tenantId: tenant.id,
+          name: tenant.name,
+          databaseName: tenant.databaseName,
+          status: 'success',
+          output: `Reconciliado: ${reconciled} produto(s). Já sincronizado: ${alreadyInSync}. Total: ${products.length}.`,
+          reconciled,
+          alreadyInSync,
+          total: products.length,
+        });
+      } catch (err: any) {
+        this.logger.error(`Erro ao reconciliar lotes em ${tenant.name}: ${err.message}`);
+        results.push({
+          tenantId: tenant.id,
+          name: tenant.name,
+          databaseName: tenant.databaseName,
+          status: 'error',
+          output: `Erro: ${err.message}`,
+        });
+      } finally {
+        await tenantClient.$disconnect();
+      }
+    }
+
+    return results;
+  }
+
   async getTenantCategories(tenantId: string) {
     const tenant = await this.heartPrisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant || !tenant.databaseUrl) return [];

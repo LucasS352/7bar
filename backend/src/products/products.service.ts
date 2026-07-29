@@ -438,7 +438,7 @@ export class ProductsService {
       if (updateData.unit !== undefined) productPayload.unit = updateData.unit;
       if (updateData.priceCost !== undefined) productPayload.priceCost = new Prisma.Decimal(updateData.priceCost as number);
       if (updateData.priceSell !== undefined) productPayload.priceSell = new Prisma.Decimal(updateData.priceSell as number);
-      if (updateData.stock !== undefined) productPayload.stock = new Prisma.Decimal(updateData.stock as number);
+      // stock NÃO entra no productPayload — será definido via reconcileLots para manter lotes sincronizados
       if (updateData.categoryId !== undefined) productPayload.categoryId = updateData.categoryId;
       if (updateData.grupoTributacaoId !== undefined) productPayload.grupoTributacaoId = updateData.grupoTributacaoId;
       if (updateData.ncm !== undefined) productPayload.ncm = updateData.ncm;
@@ -496,6 +496,9 @@ export class ProductsService {
             reason: diff > 0 ? 'Ajuste Manual Positivo' : 'Ajuste Manual (Quebra/Perda)',
           },
         });
+
+        // Reconcilia lotes com o novo valor absoluto de estoque
+        await this.reconcileLots(tx, id, Number(sanitized.stock), 'Ajuste Manual');
       }
 
       return product;
@@ -662,10 +665,8 @@ export class ProductsService {
           const after = Number(item.newStock);
           const diff = after - before;
 
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: new Prisma.Decimal(after) },
-          });
+          // Reconcilia lotes: zera ativos e cria lote de inventário
+          await this.reconcileLots(tx, item.productId, after, 'Inventário');
 
           await tx.inventoryLog.create({
             data: {
@@ -1314,5 +1315,145 @@ export class ProductsService {
       
       return newLot;
     });
+  }
+
+  // ── Reconciliação de Lotes ──────────────────────────────────────────────────
+
+  /**
+   * Reconcilia os lotes do produto com um novo valor absoluto de estoque.
+   * Zera todos os lotes ativos e cria um lote de ajuste com o novo valor.
+   * Garante que product.stock == sum(lot.remaining > 0) SEMPRE.
+   */
+  async reconcileLots(
+    tx: any,
+    productId: string,
+    newStock: number,
+    reason: string,
+  ): Promise<void> {
+    // 1. Buscar lotes ativos (remaining > 0)
+    const activeLots = await tx.stockLot.findMany({
+      where: { productId, remaining: { gt: 0 } },
+    });
+
+    // 2. Calcular custo médio ponderado dos lotes ativos
+    let totalCost = 0;
+    let totalQty = 0;
+    for (const lot of activeLots) {
+      const r = Number(lot.remaining);
+      totalCost += r * Number(lot.costPrice);
+      totalQty += r;
+    }
+    const avgCost = totalQty > 0 ? totalCost / totalQty : 0;
+
+    // 3. Zerar o remaining de todos os lotes ativos (viram histórico)
+    if (activeLots.length > 0) {
+      await tx.stockLot.updateMany({
+        where: { id: { in: activeLots.map((l: any) => l.id) } },
+        data: { remaining: 0 },
+      });
+    }
+
+    // 4. Criar lote de ajuste (se newStock > 0)
+    if (newStock > 0) {
+      const product = await tx.product.findUnique({
+        where: { id: productId },
+        select: { priceCost: true },
+      });
+      const finalCost = avgCost > 0 ? avgCost : Number(product?.priceCost ?? 0);
+
+      await tx.stockLot.create({
+        data: {
+          productId,
+          costPrice: new Prisma.Decimal(finalCost),
+          quantity: new Prisma.Decimal(newStock),
+          remaining: new Prisma.Decimal(newStock),
+          lotNumber: `${reason.substring(0, 3).toUpperCase()}-${new Date().toISOString().slice(0, 10)}`,
+        },
+      });
+    }
+
+    // 5. Sincronizar product.stock com a soma dos lotes
+    await this.syncProductStockAndCost(tx, productId);
+  }
+
+  /**
+   * Reconcilia os lotes de TODOS os produtos do tenant.
+   * Usado uma única vez após deploy para alinhar lotes com product.stock atual.
+   * NÃO altera nenhum valor de estoque — apenas ajusta os lotes.
+   */
+  async reconcileAllProductLots() {
+    const prisma = await this.getPrisma();
+
+    const products = await prisma.product.findMany({
+      select: { id: true, name: true, stock: true, priceCost: true },
+    });
+
+    const results: { name: string; stock: number; oldLotSum: number; action: string }[] = [];
+    let reconciled = 0;
+    let alreadyInSync = 0;
+
+    for (const product of products) {
+      const currentStock = Number(product.stock);
+
+      // Soma dos lotes ativos
+      const activeLots = await prisma.stockLot.findMany({
+        where: { productId: product.id, remaining: { gt: 0 } },
+      });
+      const lotSum = activeLots.reduce((sum: number, lot: any) => sum + Number(lot.remaining), 0);
+
+      if (Math.abs(currentStock - lotSum) < 0.001) {
+        // Já está sincronizado
+        alreadyInSync++;
+        results.push({ name: product.name, stock: currentStock, oldLotSum: lotSum, action: 'in_sync' });
+        continue;
+      }
+
+      // Reconciliar: zerar lotes ativos e criar lote base
+      await prisma.$transaction(async (tx: any) => {
+        // Calcular custo médio ponderado
+        let totalCost = 0;
+        let totalQty = 0;
+        for (const lot of activeLots) {
+          const r = Number(lot.remaining);
+          totalCost += r * Number(lot.costPrice);
+          totalQty += r;
+        }
+        const avgCost = totalQty > 0 ? totalCost / totalQty : 0;
+
+        // Zerar lotes ativos
+        if (activeLots.length > 0) {
+          await tx.stockLot.updateMany({
+            where: { id: { in: activeLots.map((l: any) => l.id) } },
+            data: { remaining: 0 },
+          });
+        }
+
+        // Criar lote base com o estoque atual
+        if (currentStock > 0) {
+          const finalCost = avgCost > 0 ? avgCost : Number(product.priceCost);
+          await tx.stockLot.create({
+            data: {
+              productId: product.id,
+              costPrice: new Prisma.Decimal(finalCost),
+              quantity: new Prisma.Decimal(currentStock),
+              remaining: new Prisma.Decimal(currentStock),
+              lotNumber: `BASE-${new Date().toISOString().slice(0, 10)}`,
+            },
+          });
+        }
+      });
+
+      reconciled++;
+      results.push({ name: product.name, stock: currentStock, oldLotSum: lotSum, action: 'reconciled' });
+    }
+
+    this.invalidateCache(this.tenantContext.get().tenantId);
+
+    return {
+      total: products.length,
+      reconciled,
+      alreadyInSync,
+      details: results,
+    };
   }
 }

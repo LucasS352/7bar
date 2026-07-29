@@ -532,6 +532,47 @@ export default function SysInitPage() {
     }
   };
 
+  const handleReconcileLotes = async () => {
+    if (selectedTenantIds.length === 0) {
+      toast.error('Selecione pelo menos um tenant.');
+      return;
+    }
+    setMigrationModalOpen(true);
+    setMigrating(true);
+    setMigrationResults(selectedTenantIds.map(id => {
+      const tenant = tenants.find(t => t.id === id);
+      return {
+        tenantId: id,
+        name: tenant?.name || tenant?.nomeFantasia || 'Tenant',
+        databaseName: tenant?.databaseName || '',
+        status: 'processing',
+        output: 'Reconciliando lotes...'
+      };
+    }));
+
+    try {
+      const pin = pinDigits.join('');
+      const res = await api.post('/tenants/setup/reconcile-lots', {
+        tenantIds: selectedTenantIds
+      }, {
+        headers: { 'x-setup-pin': pin },
+      });
+
+      setMigrationResults(res.data);
+      toast.success('Reconciliação de lotes concluída!');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Erro ao reconciliar lotes.';
+      toast.error(msg);
+      setMigrationResults(prev => prev.map(item =>
+        item.status === 'processing' ? { ...item, status: 'error', output: msg } : item
+      ));
+    } finally {
+      setMigrating(false);
+      setSelectedTenantIds([]);
+      loadTenants();
+    }
+  };
+
   const isCertExpiringSoon = (date: string | null) => {
     if (!date) return false;
     const expDate = new Date(date);
@@ -631,9 +672,14 @@ export default function SysInitPage() {
                 {activeTab === 'tenants' ? (
                   <>
                     {selectedTenantIds.length > 0 && (
-                      <button onClick={handleMigrateBancos} className="bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-violet-500/20">
-                        <Database size={18} /> Atualizar Bancos ({selectedTenantIds.length})
-                      </button>
+                      <>
+                        <button onClick={handleMigrateBancos} className="bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-violet-500/20">
+                          <Database size={18} /> Atualizar Bancos ({selectedTenantIds.length})
+                        </button>
+                        <button onClick={handleReconcileLotes} className="bg-amber-600 hover:bg-amber-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-amber-500/20">
+                          <Database size={18} /> Reconciliar Lotes ({selectedTenantIds.length})
+                        </button>
+                      </>
                     )}
                     <button onClick={() => { setStep("backups"); loadBackups(); }} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-blue-500/20">
                       <Database size={18} /> Gerenciar Backups
