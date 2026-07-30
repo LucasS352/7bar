@@ -730,14 +730,24 @@ export class SalesService {
     await prisma.sale.update({ where: { id: saleId }, data });
   }
 
-  async findAll(page = 1, limit = 50) {
+  async findAll(page = 1, limit = 50, startDate?: string, endDate?: string) {
     const prisma = await this.getPrisma();
     const skip = (page - 1) * limit;
 
+    const where: any = { NOT: { source: 'ajuste_fiscal' } };
+
+    // Filtro de data (usa fuso horário de Brasília -03:00)
+    if (startDate && endDate) {
+      where.createdAt = {
+        gte: new Date(`${startDate}T00:00:00-03:00`),
+        lte: new Date(`${endDate}T23:59:59-03:00`),
+      };
+    }
+
     const [total, data] = await Promise.all([
-      prisma.sale.count({ where: { NOT: { source: 'ajuste_fiscal' } } }),
+      prisma.sale.count({ where }),
       prisma.sale.findMany({
-        where: { NOT: { source: 'ajuste_fiscal' } },
+        where,
         include: {
           payments: true,
           items: { include: { product: true } },

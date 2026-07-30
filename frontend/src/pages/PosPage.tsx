@@ -73,7 +73,7 @@ function PosPageContent() {
     return {};
   }, [tenantConfig]);
 
-  const isComandasEnabled = modules?.comandas !== false;
+  const isComandasEnabled = modules?.comandas === true;
 
   const fetchOpenComandas = useCallback(async () => {
     setLoadingComandas(true);

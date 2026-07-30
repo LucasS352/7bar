@@ -16,11 +16,15 @@ export class SalesController {
   @Get()
   findAll(
     @Query('page') page?: number,
-    @Query('limit') limit?: number
+    @Query('limit') limit?: number,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     return this.salesService.findAll(
       Number(page || 1), 
-      Number(limit || 50)
+      Number(limit || 50),
+      startDate,
+      endDate,
     );
   }
 

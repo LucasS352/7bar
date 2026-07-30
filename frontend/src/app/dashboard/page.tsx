@@ -213,7 +213,7 @@ export default function SalesDashboard() {
       const sumRes = await api.get(`/dashboard/summary?startDate=${computedStartDate}&endDate=${computedEndDate}`);
       setSummary(sumRes.data);
 
-      const { data } = await api.get('/sales/today');
+      const { data } = await api.get(`/sales?startDate=${computedStartDate}&endDate=${computedEndDate}&limit=200`);
       setSales(data.data || []);
     } catch (error) {
       console.error("Erro ao buscar dados do dashboard", error);
@@ -538,7 +538,7 @@ export default function SalesDashboard() {
     }
 
     return result;
-  }, [sales, searchTerm, filterPayment, sortBy]);
+  }, [sales, searchTerm, filterPayment, sortBy, computedStartDate, computedEndDate]);
 
   const handleExportSales = () => {
     try {
