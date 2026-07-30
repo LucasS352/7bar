@@ -47,20 +47,6 @@ export class TenantsController {
     return this.tenantsService.migrateTenants(body.tenantIds);
   }
 
-  /** Reconcilia lotes de estoque dos tenants selecionados (protegido por PIN) */
-  @Post('setup/reconcile-lots')
-  async reconcileLotsTenants(@Request() req: any, @Body() body: { tenantIds: string[] }) {
-    const pin = req.headers['x-setup-pin'] as string;
-    const valid = await this.tenantsService.validatePin(pin);
-    if (!valid) throw new UnauthorizedException('PIN inválido.');
-
-    if (!body.tenantIds || !Array.isArray(body.tenantIds) || body.tenantIds.length === 0) {
-      throw new BadRequestException('Nenhum tenant selecionado.');
-    }
-
-    return this.tenantsService.reconcileLotsTenants(body.tenantIds);
-  }
-
   /**
    * Retorna dados completos do tenant do usuário logado (para tela de configurações)
    */

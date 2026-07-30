@@ -196,10 +196,4 @@ export class ProductsController {
   inventoryHistory() {
     return this.productsService.inventoryHistory();
   }
-
-  /** Reconcilia lotes de todos os produtos com o estoque atual (one-time fix) */
-  @Post('reconcile-lots')
-  reconcileLots() {
-    return this.productsService.reconcileAllProductLots();
-  }
 }
