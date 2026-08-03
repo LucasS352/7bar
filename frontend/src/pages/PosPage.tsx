@@ -14,6 +14,7 @@ import { OpenShiftModal } from '@/components/OpenShiftModal';
 import { CloseRegisterModal } from '@/components/CloseRegisterModal';
 import { CashMovementModal } from '@/components/CashMovementModal';
 import { CompositeModifierModal } from '@/components/CompositeModifierModal';
+import { DemoBanner } from '@/components/DemoBanner';
 import { ShiftProvider, useShift } from '@/contexts/ShiftContext';
 import {
   Search, ShoppingCart, X, LogOut, PackageOpen, Minus, Plus, Trash2,
@@ -367,7 +368,8 @@ function PosPageContent() {
   if (!token) return null;
 
   return (
-    <div className="flex flex-col lg:flex-row h-[100dvh] bg-zinc-950 text-white font-sans overflow-hidden">
+    <div className={`flex flex-col lg:flex-row h-[100dvh] bg-zinc-950 text-white font-sans overflow-hidden ${import.meta.env.VITE_APP_MODE === 'demo' ? 'pt-14' : ''}`}>
+      <DemoBanner />
       {/* Esquerda */}
       <div className="flex-1 flex flex-col p-3 lg:p-6 lg:pr-4 pb-[80px] lg:pb-6 relative h-full min-w-0">
         {/* Header */}
@@ -556,9 +558,13 @@ function PosPageContent() {
                         </span>
                       )}
                       
-                      {product.imageUrl && (
-                        <div className="w-full h-20 lg:h-32 mb-3 bg-white rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
-                          <LazyImage src={product.imageUrl} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
+                      {product.imageUrl ? (
+                        <div className="w-full h-20 lg:h-32 mb-3 bg-[#11151f] border border-zinc-800/80 rounded-xl overflow-hidden flex items-center justify-center p-2.5 shadow-sm group-hover:border-blue-500/40 transition-colors">
+                          <LazyImage src={product.imageUrl} alt={product.name} className="w-full h-full object-contain" />
+                        </div>
+                      ) : (
+                        <div className="w-full h-20 lg:h-32 mb-3 bg-[#11151f] border border-zinc-800/80 rounded-xl flex flex-col items-center justify-center text-zinc-600">
+                          <ShoppingBag size={28} className="opacity-40" />
                         </div>
                       )}
                       

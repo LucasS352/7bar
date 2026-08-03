@@ -58,7 +58,15 @@ export const LazyImage = memo(({ src, alt, className }: LazyImageProps) => {
     setLoaded(true);
   };
 
-  if (error) return null;
+  if (error) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-600 rounded-lg">
+        <svg className="w-8 h-8 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+        </svg>
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className="w-full h-full relative">

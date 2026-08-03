@@ -7,6 +7,7 @@ import { Toaster } from 'sonner';
 import { LoginPage } from './pages/LoginPage';
 import { PosPage } from './pages/PosPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { DemoRegisterPage } from './pages/DemoRegisterPage';
 
 // Layouts
 import { DashboardLayout } from './layouts/DashboardLayout';
@@ -65,9 +66,11 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ── Componentes de Rota Protegida ────────────────────────────────────────────
+const IS_DEMO = import.meta.env.VITE_APP_MODE === 'demo';
+
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
-  if (!token) return <Navigate to="/login" replace />;
+  if (!token) return <Navigate to={IS_DEMO ? '/demo' : '/login'} replace />;
   return <>{children}</>;
 }
 
@@ -83,8 +86,9 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rota pública */}
-        <Route path="/login" element={<LoginPage />} />
+        {/* Rotas públicas */}
+        <Route path="/login" element={IS_DEMO ? <Navigate to="/demo" replace /> : <LoginPage />} />
+        <Route path="/demo" element={<DemoRegisterPage />} />
         <Route path="/sys-init" element={<SysInitPage />} />
         <Route path="/grupo-portal" element={<GroupPortalPage />} />
 

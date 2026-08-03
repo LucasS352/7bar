@@ -66,17 +66,58 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
 
   // ─── Inicialização: carrega operador da sessão e busca o caixa dele ─────────
   useEffect(() => {
+    const IS_DEMO = import.meta.env.VITE_APP_MODE === 'demo';
+
     const init = async () => {
       setIsLoading(true);
       try {
         const savedOp = localStorage.getItem('currentOperator');
-        const currentOp = savedOp ? JSON.parse(savedOp) : null;
+        let currentOp = savedOp ? JSON.parse(savedOp) : null;
+
+        // ── Demo Mode: auto-selecionar operador se não houver ──
+        if (!currentOp && IS_DEMO) {
+          try {
+            const res = await api.get('/operators');
+            const operators = (res.data || []).filter((u: any) => u.active);
+            if (operators.length > 0) {
+              currentOp = {
+                id: operators[0].id,
+                name: operators[0].name,
+                role: operators[0].jobTitle || 'Caixa',
+                isManager: operators[0].isManager || false,
+              };
+              localStorage.setItem('currentOperator', JSON.stringify(currentOp));
+            }
+          } catch (e) {
+            console.warn('[Demo] Erro ao auto-selecionar operador:', e);
+          }
+        }
 
         if (currentOp) {
           setOperator(currentOp);
-          // Passa o ID explicitamente para não depender do estado que acabou de ser setado
-          const res = await api.get(`/cash-registers/current?operatorId=${currentOp.id}`);
-          setCashRegister(res.data || null);
+          // Busca caixa aberto
+          try {
+            const res = await api.get(`/cash-registers/current?operatorId=${currentOp.id}`);
+            let register = res.data || null;
+
+            // ── Demo Mode: auto-abrir caixa se não houver ──
+            if (!register && IS_DEMO) {
+              try {
+                const openRes = await api.post('/cash-registers/open', {
+                  openingValue: 100,
+                  operatorId: currentOp.id,
+                });
+                register = openRes.data || null;
+              } catch (e) {
+                console.warn('[Demo] Erro ao auto-abrir caixa:', e);
+              }
+            }
+
+            setCashRegister(register);
+          } catch (err) {
+            console.error('Erro ao buscar caixa atual:', err);
+            setCashRegister(null);
+          }
         } else {
           setOperator(null);
           setCashRegister(null);

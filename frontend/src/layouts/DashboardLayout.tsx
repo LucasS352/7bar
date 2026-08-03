@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Users, ChevronLeft, ChevronRight, AlertTriangle, Truck, ShoppingCart, Banknote, CreditCard, FileSpreadsheet, Images, FileDown, ReceiptText } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { useDemoMissionsStore } from '@/store/demoMissions';
 import { api } from '@/lib/api';
 import { getFullUrl } from '@/lib/getFullUrl';
 import { BottomNavigation } from '@/components/BottomNavigation';
@@ -11,6 +12,12 @@ export function DashboardLayout() {
   const navigate = useNavigate();
   const [tenantConfig, setTenantConfig] = useState<any>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (import.meta.env.VITE_APP_MODE === 'demo') {
+      useDemoMissionsStore.getState().completeMission('dashboardVisited');
+    }
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {

@@ -28,7 +28,41 @@ export default function SysInitPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("pin");
   
-  const [activeTab, setActiveTab] = useState<"tenants" | "groups">("tenants");
+  const [activeTab, setActiveTab] = useState<"tenants" | "groups" | "leads">("tenants");
+
+  // ── LEADS LIST ────────────────────────────────────────────────────────
+  const [leads, setLeads] = useState<any[]>([]);
+  const [loadingLeads, setLoadingLeads] = useState(false);
+  const [leadStatusFilter, setLeadStatusFilter] = useState("");
+
+  const loadLeads = async () => {
+    setLoadingLeads(true);
+    try {
+      const pin = pinDigits.join('');
+      const url = leadStatusFilter ? `/leads?status=${leadStatusFilter}` : '/leads';
+      const res = await api.get(url, {
+        headers: { 'x-setup-pin': pin },
+      });
+      setLeads(res.data || []);
+    } catch (err) {
+      toast.error('Erro ao carregar leads da demonstração.');
+    } finally {
+      setLoadingLeads(false);
+    }
+  };
+
+  const updateLeadStatus = async (leadId: string, newStatus: string, notes?: string) => {
+    try {
+      const pin = pinDigits.join('');
+      await api.patch(`/leads/${leadId}`, { status: newStatus, notes }, {
+        headers: { 'x-setup-pin': pin },
+      });
+      toast.success('Status do lead atualizado!');
+      loadLeads();
+    } catch (err) {
+      toast.error('Erro ao atualizar lead.');
+    }
+  };
 
   // ── TENANT LIST ───────────────────────────────────────────────────────
   const [tenants, setTenants] = useState<any[]>([]);
@@ -206,9 +240,11 @@ export default function SysInitPage() {
         loadTenants();
       } else if (activeTab === "groups") {
         loadGroups();
+      } else if (activeTab === "leads") {
+        loadLeads();
       }
     }
-  }, [step, activeTab]);
+  }, [step, activeTab, leadStatusFilter]);
 
   // Auto-fill dbName from tenantName
   useEffect(() => {
@@ -620,10 +656,10 @@ export default function SysInitPage() {
             <div className="flex justify-between items-center mb-8 mt-4">
               <div>
                 <h1 className="text-3xl font-black bg-gradient-to-r from-violet-400 to-indigo-500 bg-clip-text text-transparent">
-                  {activeTab === 'tenants' ? 'Gestão de Tenants' : 'Gestão de Grupos'}
+                  {activeTab === 'tenants' ? 'Gestão de Tenants' : activeTab === 'groups' ? 'Gestão de Grupos' : '🎯 Leads de Demonstração (Demo)'}
                 </h1>
                 <p className="text-zinc-400 mt-1">
-                  {activeTab === 'tenants' ? 'Gerencie os clientes SaaS, módulos e identidades visuais.' : 'Gerencie os grupos de lojas e redes corporativas.'}
+                  {activeTab === 'tenants' ? 'Gerencie os clientes SaaS, módulos e identidades visuais.' : activeTab === 'groups' ? 'Gerencie os grupos de lojas e redes corporativas.' : 'Contatos capturados através do ambiente de demonstração gratuita.'}
                 </p>
               </div>
               
@@ -642,9 +678,13 @@ export default function SysInitPage() {
                       <Building2 size={18} /> Novo Tenant
                     </button>
                   </>
-                ) : (
+                ) : activeTab === 'groups' ? (
                   <button onClick={() => setIsCreateGroupOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
                     <Users size={18} /> Novo Grupo
+                  </button>
+                ) : (
+                  <button onClick={loadLeads} className="bg-amber-600 hover:bg-amber-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-amber-500/20">
+                    Atualizar Leads
                   </button>
                 )}
               </div>
@@ -662,6 +702,12 @@ export default function SysInitPage() {
                 className={`py-2 px-4 font-bold border-b-2 transition-colors ${activeTab === 'groups' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}
               >
                 Grupos
+              </button>
+              <button 
+                onClick={() => setActiveTab('leads')} 
+                className={`py-2 px-4 font-bold border-b-2 transition-colors ${activeTab === 'leads' ? 'border-amber-500 text-amber-400' : 'border-transparent text-zinc-500 hover:text-zinc-300'} flex items-center gap-2`}
+              >
+                🎯 Leads Demo {leads.length > 0 && <span className="bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-mono">{leads.length}</span>}
               </button>
             </div>
 
@@ -853,7 +899,7 @@ export default function SysInitPage() {
                   </div>
                 </div>
               </>
-            ) : (
+            ) : activeTab === 'groups' ? (
               <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl flex-1 flex flex-col overflow-hidden">
                 <div className="flex-1 overflow-auto custom-scrollbar">
                   <table className="w-full text-left text-sm whitespace-nowrap">
@@ -884,6 +930,129 @@ export default function SysInitPage() {
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col gap-6 overflow-hidden">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4">
+                    <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl font-bold">🎯</div>
+                    <div>
+                      <p className="text-zinc-400 text-xs font-medium">Total Leads Demo</p>
+                      <p className="text-2xl font-bold text-white">{leads.length}</p>
+                    </div>
+                  </div>
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4">
+                    <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl font-bold">⚡</div>
+                    <div>
+                      <p className="text-zinc-400 text-xs font-medium">Em Demonstração</p>
+                      <p className="text-2xl font-bold text-blue-400">{leads.filter(l => l.status === 'EM_DEMO').length}</p>
+                    </div>
+                  </div>
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4">
+                    <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl font-bold">✅</div>
+                    <div>
+                      <p className="text-zinc-400 text-xs font-medium">Convertidos</p>
+                      <p className="text-2xl font-bold text-emerald-400">{leads.filter(l => l.status === 'CONVERTIDO').length}</p>
+                    </div>
+                  </div>
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4">
+                    <div className="p-3 bg-purple-500/10 text-purple-400 rounded-xl font-bold">💬</div>
+                    <div>
+                      <p className="text-zinc-400 text-xs font-medium">Contatados</p>
+                      <p className="text-2xl font-bold text-purple-400">{leads.filter(l => l.status === 'CONTATADO').length}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Leads Table */}
+                <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl flex-1 flex flex-col overflow-hidden">
+                  <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/30">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-zinc-300">Filtrar Status:</span>
+                      <select 
+                        value={leadStatusFilter} 
+                        onChange={(e) => setLeadStatusFilter(e.target.value)}
+                        className="bg-zinc-900 border border-zinc-700 text-sm text-white rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500"
+                      >
+                        <option value="">Todos ({leads.length})</option>
+                        <option value="NOVO">Novos</option>
+                        <option value="EM_DEMO">Em Demo</option>
+                        <option value="CONTATADO">Contatados</option>
+                        <option value="CONVERTIDO">Convertidos</option>
+                        <option value="DESCARTADO">Descartados</option>
+                      </select>
+                    </div>
+                    <button onClick={loadLeads} className="text-xs text-zinc-400 hover:text-white bg-zinc-800 px-3 py-1.5 rounded-lg border border-zinc-700">
+                      Atualizar Lista
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-auto custom-scrollbar">
+                    <table className="w-full text-left text-sm whitespace-nowrap">
+                      <thead className="bg-zinc-950/50 text-zinc-400 sticky top-0 z-10 border-b border-zinc-800">
+                        <tr>
+                          <th className="px-6 py-4 font-medium">Data / Hora</th>
+                          <th className="px-6 py-4 font-medium">Nome do Lead</th>
+                          <th className="px-6 py-4 font-medium">WhatsApp</th>
+                          <th className="px-6 py-4 font-medium">Status</th>
+                          <th className="px-6 py-4 font-medium text-right">Ação Rápida</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-800/50">
+                        {loadingLeads ? (
+                          <tr><td colSpan={5} className="px-6 py-12 text-center text-zinc-500"><Loader2 className="animate-spin inline-block mr-2" /> Carregando leads...</td></tr>
+                        ) : leads.length === 0 ? (
+                          <tr><td colSpan={5} className="px-6 py-12 text-center text-zinc-500">Nenhum lead de demonstração cadastrado ainda.</td></tr>
+                        ) : (
+                          leads.map((l: any) => {
+                            const dateStr = new Date(l.createdAt).toLocaleString('pt-BR');
+                            const cleanPhone = l.whatsapp?.replace(/\D/g, '') || '';
+                            const statusColors: Record<string, string> = {
+                              NOVO: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                              EM_DEMO: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                              CONTATADO: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+                              CONVERTIDO: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                              DESCARTADO: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
+                            };
+                            return (
+                              <tr key={l.id} className="hover:bg-zinc-800/30 transition">
+                                <td className="px-6 py-4 text-xs text-zinc-400 font-mono">{dateStr}</td>
+                                <td className="px-6 py-4 font-semibold text-zinc-200">{l.name}</td>
+                                <td className="px-6 py-4 font-mono text-zinc-300">{l.whatsapp}</td>
+                                <td className="px-6 py-4">
+                                  <select
+                                    value={l.status}
+                                    onChange={(e) => updateLeadStatus(l.id, e.target.value)}
+                                    className={`text-xs font-bold px-2.5 py-1 rounded-full border bg-zinc-950 focus:outline-none cursor-pointer ${statusColors[l.status] || 'bg-zinc-800 text-zinc-300'}`}
+                                  >
+                                    <option value="NOVO">🔵 Novo</option>
+                                    <option value="EM_DEMO">🟡 Em Demo</option>
+                                    <option value="CONTATADO">🟣 Contatado</option>
+                                    <option value="CONVERTIDO">🟢 Convertido</option>
+                                    <option value="DESCARTADO">⚪ Descartado</option>
+                                  </select>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  {cleanPhone && (
+                                    <a
+                                      href={`https://wa.me/55${cleanPhone}?text=Olá%20${encodeURIComponent(l.name)},%20vi%20que%20você%20experimentou%20o%20PDV!`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+                                    >
+                                      Chamar no WhatsApp 💬
+                                    </a>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}

@@ -7,7 +7,8 @@ RUN npm ci
 
 COPY . .
 
-# Build sem VITE_API_URL pois agora usamos caminho relativo /api
+ARG VITE_APP_MODE
+ENV VITE_APP_MODE=$VITE_APP_MODE
 
 RUN NODE_OPTIONS="--max-old-space-size=2048" npm run build
 

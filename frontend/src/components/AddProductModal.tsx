@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '@/lib/api';
+import { useDemoMissionsStore } from '@/store/demoMissions';
 import { toast } from 'sonner';
 import { PackagePlus, X, Loader2, Save, DollarSign, Barcode, CheckCircle2, HelpCircle, Upload, Image, Trash2 } from 'lucide-react';
 import { ProductSearchSelect } from './ProductSearchSelect';
@@ -354,6 +355,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
         minStock:          formData.minStock ? parseFloat(formData.minStock) : null,
         modifierGroups:    formData.isComposite ? payloadGroups : undefined,
       });
+      useDemoMissionsStore.getState().completeMission('productCreated');
       toast.success('Produto cadastrado com sucesso!');
       onSuccess();
       onClose();

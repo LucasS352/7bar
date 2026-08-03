@@ -35,6 +35,22 @@ export class TenantsService {
     const tenant = await this.heartPrisma.tenant.findUnique({
       where: { id: tenantId },
     });
+
+    if (!tenant && tenantId === 'demo-tenant-001') {
+      return {
+        id: 'demo-tenant-001',
+        name: 'Adega Modelo',
+        nomeFantasia: 'Adega Modelo',
+        razaoSocial: 'Adega Modelo Demonstração LTDA',
+        cnpj: '00.000.000/0001-99',
+        databaseName: 'demo_adega',
+        status: 'active',
+        modulos: { nfce: true, estoque: true, dashboardMobile: true, comandas: true },
+        nfceAtivo: false,
+        proximaNota: 1,
+      };
+    }
+
     if (!tenant) throw new NotFoundException('Empresa não encontrada');
     
     // Remover o certificado (blob) por segurança

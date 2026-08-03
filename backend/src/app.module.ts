@@ -27,6 +27,7 @@ import { TenantInterceptor } from './prisma/tenant-context.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { BackupsModule } from './backups/backups.module';
+import { DemoModule } from './demo/demo.module';
 
 @Module({
   imports: [
@@ -54,6 +55,8 @@ import { BackupsModule } from './backups/backups.module';
     GroupsModule,
     FiscalModule,
     ComandasModule,
+    // Demo — só carrega quando APP_MODE=demo (servidor Smartek)
+    ...(process.env.APP_MODE === 'demo' ? [DemoModule] : []),
   ],
   controllers: [AppController],
   providers: [

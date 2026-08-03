@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import { useDemoMissionsStore } from '@/store/demoMissions';
 import { toast } from 'sonner';
 import { X, Loader2, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
@@ -20,6 +21,7 @@ export function CashMovementModal({ isOpen, onClose, registerId }: { isOpen: boo
     setSubmitting(true);
     try {
       await api.post(`/cash-registers/${registerId}/movement`, { type, value: Number(value), reason });
+      useDemoMissionsStore.getState().completeMission('movementCompleted');
       toast.success(type === 'OUT' ? 'Sangria registrada com sucesso!' : 'Suprimento registrado com sucesso!');
       onClose(true);
     } catch (err: any) {

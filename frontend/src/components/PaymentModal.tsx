@@ -3,6 +3,7 @@ import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useShift } from '@/contexts/ShiftContext';
 import { api } from '@/lib/api';
+import { useDemoMissionsStore } from '@/store/demoMissions';
 import { toast } from 'sonner';
 import { saveOfflineSale } from '@/lib/db';
 import type { OfflineSaleItemSnapshot, OfflineSalePayment } from '@/lib/db';
@@ -354,7 +355,14 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         .catch(console.error);
 
       api.get('/payment-methods')
-        .then(res => setCustomMethods((res.data || []).filter((m: any) => m.active)))
+        .then(res => {
+          const standardKeys = ['dinheiro', 'pix', 'crédito', 'credito', 'débito', 'debito', 'consumo colaborador', 'consumo_funcionario'];
+          setCustomMethods((res.data || []).filter((m: any) => 
+            m.active && 
+            !standardKeys.includes((m.name || '').toLowerCase().trim()) && 
+            !standardKeys.includes((m.id || '').toLowerCase().trim())
+          ));
+        })
         .catch(console.error);
 
       // Remove focus from the background search bar to prevent accidental typing
@@ -685,6 +693,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
       }
 
       setSaleResult(res.data); clearCart();
+      useDemoMissionsStore.getState().completeMission('saleCompleted');
       if (actualMode === 'nfce') { toast.info('NFC-e em processamento...', { duration: 3000 }); setNfcePolling(true); }
       else toast.success('Venda finalizada!');
       // Impressão automática do cupom

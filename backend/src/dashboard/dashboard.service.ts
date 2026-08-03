@@ -144,8 +144,15 @@ export class DashboardService {
     };
     periodSales.forEach(sale => {
       sale.payments.forEach(p => {
-        const method = (p.label || p.method) as string;
-        byPaymentMethod[method] = (byPaymentMethod[method] ?? 0) + Number(p.value);
+        const rawKey = ((p.method && isNaN(Number(p.method))) ? p.method : (p.label && isNaN(Number(p.label))) ? p.label : 'credito').toLowerCase();
+        let normKey = 'credito';
+        if (rawKey.includes('dinh')) normKey = 'dinheiro';
+        else if (rawKey.includes('pix')) normKey = 'pix';
+        else if (rawKey.includes('cred')) normKey = 'credito';
+        else if (rawKey.includes('deb')) normKey = 'debito';
+        else if (rawKey.includes('consumo')) normKey = 'consumo_funcionario';
+
+        byPaymentMethod[normKey] = (byPaymentMethod[normKey] ?? 0) + Number(p.value);
       });
     });
 

@@ -38,6 +38,10 @@ export class TenantInterceptor implements NestInterceptor {
   ) {}
 
   private async getDatabaseUrl(tenantId: string): Promise<string> {
+    if (tenantId === 'demo-tenant-001') {
+      return process.env.DATABASE_URL_TENANT || 'mysql://root:7bar%402025@mysql:3306/demo_adega';
+    }
+
     const cached = this.urlCache.get(tenantId);
     if (cached && cached.expiresAt > Date.now()) {
       return cached.url;
