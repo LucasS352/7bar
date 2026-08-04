@@ -6,6 +6,7 @@ import { useDemoMissionsStore } from '@/store/demoMissions';
 import { api } from '@/lib/api';
 import { getFullUrl } from '@/lib/getFullUrl';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { CapitaoGelada } from '@/components/CapitaoGelada';
 
 export function DashboardLayout() {
   const { user, token, logout } = useAuthStore();
@@ -185,6 +186,7 @@ export function DashboardLayout() {
 
       {/* Bottom Navigation — mobile only (md:hidden inside component) */}
       <BottomNavigation tenantConfig={tenantConfig} />
+      <CapitaoGelada />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useDemoMissionsStore } from '@/store/demoMissions';
+import { useDemoGuideStore } from '@/store/demoGuide';
 
 export function DemoRegisterPage() {
   const [name, setName] = useState('');
@@ -42,6 +43,7 @@ export function DemoRegisterPage() {
         }
 
         useDemoMissionsStore.getState().resetMissions();
+        useDemoGuideStore.getState().reset();
         toast.success(`Bem-vindo à demonstração, ${parsedUser.name}!`);
         navigate('/', { replace: true });
       } catch (e) {
