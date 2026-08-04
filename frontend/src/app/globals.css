@@ -119,3 +119,41 @@
 .numpad-btn-danger:active {
   background: #991b1b;
 }
+
+/* ─── Capitão Gelada — Idle Breathing Animation ────────────────────────────── */
+@keyframes breathe {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  33%       { transform: translateY(-8px) scale(1.015); }
+  66%       { transform: translateY(-4px) scale(1.008); }
+}
+
+@keyframes breathe-shadow {
+  0%, 100% { transform: scaleX(1); opacity: 0.6; }
+  50%       { transform: scaleX(0.85); opacity: 0.3; }
+}
+
+/* Slide-in-from-bottom helper (CapitaoCart dialogue) */
+@keyframes slide-in-from-bottom-4 {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.slide-in-from-bottom-4 {
+  animation-name: slide-in-from-bottom-4;
+}
+@keyframes slide-in-from-bottom-3 {
+  from { transform: translateY(10px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.slide-in-from-bottom-3 {
+  animation-name: slide-in-from-bottom-3;
+}
+
+/* Fade-in (used by CapitaoCart) */
+@keyframes fade-in-anim {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.fade-in {
+  animation-name: fade-in-anim;
+}
+

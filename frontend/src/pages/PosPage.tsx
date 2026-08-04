@@ -16,8 +16,8 @@ import { CashMovementModal } from '@/components/CashMovementModal';
 import { CompositeModifierModal } from '@/components/CompositeModifierModal';
 import { DemoBanner } from '@/components/DemoBanner';
 import { CapitaoGelada } from '@/components/CapitaoGelada';
-import { CapitaoGeladaCartGuide } from '@/components/CapitaoGeladaCartGuide';
 import { useDemoGuideStore } from '@/store/demoGuide';
+import { CapitaoCart } from '@/components/CapitaoCart';
 import { ShiftProvider, useShift } from '@/contexts/ShiftContext';
 import {
   Search, ShoppingCart, X, LogOut, PackageOpen, Minus, Plus, Trash2,
@@ -389,6 +389,7 @@ function PosPageContent() {
     <div className={`flex flex-col lg:flex-row h-[100dvh] bg-zinc-950 text-white font-sans overflow-hidden ${import.meta.env.VITE_APP_MODE === 'demo' ? 'pt-14' : ''}`}>
       <DemoBanner />
       <CapitaoGelada />
+      {import.meta.env.VITE_APP_MODE === 'demo' && <CapitaoCart />}
       {/* Esquerda */}
       <div className="flex-1 flex flex-col p-3 lg:p-6 lg:pr-4 pb-[80px] lg:pb-6 relative h-full min-w-0">
         {/* Header */}
@@ -646,22 +647,6 @@ function PosPageContent() {
             </button>
           </div>
         </div>
-
-        {/* ── Guia Interativo Capitão Gelada com Efeito Névoa e Geladeira (Modo Demo) ── */}
-        {import.meta.env.VITE_APP_MODE === 'demo' && (
-          <div className="p-3 border-b border-zinc-800/80 bg-[#060913]/90 relative overflow-hidden">
-            <CapitaoGeladaCartGuide
-              isVisible={true}
-              emoji={items.length > 0 ? '⚡' : '🍺'}
-              dialogueText={
-                items.length > 0
-                  ? 'Excelente escolha! Já temos itens na conta. Agora pressione F12 ou clique em "Cobrar" no rodapé pra finalizar!'
-                  : 'Ahoy! Clica em qualquer produto da grade pra jogar no carrinho. Essa área é como a porta da geladeira se abrindo!'
-              }
-              titleTag="GELADEIRA DEMO — CAPITÃO GELADA"
-            />
-          </div>
-        )}
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
           {totalItemsCount === 0 ? (
