@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { X, ChevronRight, MessageCircle } from 'lucide-react';
+import { X, ChevronRight, MessageCircle, Sparkles } from 'lucide-react';
 import { useDemoGuideStore, GUIDE_DIALOGUES, type GuideContext } from '@/store/demoGuide';
 import { useDemoMissionsStore } from '@/store/demoMissions';
 import { useCartStore } from '@/store/cart';
@@ -8,13 +8,19 @@ import { useCartStore } from '@/store/cart';
 const CAPITAO_IMG = '/demo/capitao-gelada.jpg';
 
 /**
- * Determina o contexto atual baseado na rota e estado da aplicação.
+ * Determina o contexto atual baseado na rota, modais e estado da aplicação.
  */
 function useCurrentContext(): GuideContext {
   const location = useLocation();
   const cartItemsCount = useCartStore((s) => s.items.length);
+  const activeModal = useDemoGuideStore((s) => s.activeModal);
   
-  // Select primitive booleans to avoid object-reference re-render loops
+  // Modal active triggers highest priority context
+  if (activeModal === 'payment') return 'payment_modal';
+  if (activeModal === 'movement') return 'movement_modal';
+  if (activeModal === 'close_register') return 'close_register_modal';
+
+  // Select primitive booleans for missions
   const saleCompleted = useDemoMissionsStore((s) => s.saleCompleted);
   const movementCompleted = useDemoMissionsStore((s) => s.movementCompleted);
   const productCreated = useDemoMissionsStore((s) => s.productCreated);
@@ -43,7 +49,8 @@ function useCurrentContext(): GuideContext {
 export function CapitaoGelada() {
   const context = useCurrentContext();
   
-  // Select primitives directly from store
+  // Store primitives
+  const activeModal = useDemoGuideStore((s) => s.activeModal);
   const isDismissed = useDemoGuideStore((s) => s.isDismissed);
   const currentTipId = useDemoGuideStore((s) => s.currentTipId);
   const advanceTip = useDemoGuideStore((s) => s.advanceTip);
@@ -52,25 +59,31 @@ export function CapitaoGelada() {
 
   const [isAnimatingIn, setIsAnimatingIn] = useState(false);
   const [isBubbleVisible, setIsBubbleVisible] = useState(false);
+  const [bounceEffect, setBounceEffect] = useState(false);
   const prevContextRef = useRef<GuideContext | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentTip = currentTipId ? GUIDE_DIALOGUES.find((t) => t.id === currentTipId) : null;
 
-  // Track context changes → show relevant tip
+  // Track context changes → trigger tip + jump animation
   useEffect(() => {
     if (import.meta.env.VITE_APP_MODE !== 'demo') return;
     if (isDismissed) return;
 
-    // Only trigger on context change
     if (prevContextRef.current !== context) {
       prevContextRef.current = context;
+
+      // Trigger spring bounce animation on context jump
+      setBounceEffect(true);
+      const bTimer = setTimeout(() => setBounceEffect(false), 1200);
 
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         useDemoGuideStore.getState().showTipForContext(context);
         setIsBubbleVisible(true);
-      }, 800);
+      }, 500);
+
+      return () => clearTimeout(bTimer);
     }
 
     return () => {
@@ -82,7 +95,7 @@ export function CapitaoGelada() {
   useEffect(() => {
     if (import.meta.env.VITE_APP_MODE !== 'demo') return;
 
-    const t = setTimeout(() => setIsAnimatingIn(true), 1500);
+    const t = setTimeout(() => setIsAnimatingIn(true), 1200);
     return () => clearTimeout(t);
   }, []);
 
@@ -103,6 +116,15 @@ export function CapitaoGelada() {
     return idx < ctxTips.length - 1;
   })();
 
+  const isModalActive = activeModal !== null;
+
+  // Dynamic Positioning & Styling classes
+  // When a modal is open: jumps to middle-right of screen next to the modal
+  // When no modal: stays at bottom-right
+  const positionClasses = isModalActive
+    ? 'fixed top-1/2 -translate-y-1/2 right-4 sm:right-8 md:right-12 z-[10000]'
+    : 'fixed bottom-6 right-6 z-[9999]';
+
   // ── Minimized floating button (when dismissed) ──
   if (isDismissed) {
     return (
@@ -111,7 +133,7 @@ export function CapitaoGelada() {
           showGuide();
           useDemoGuideStore.getState().showTipForContext(context);
         }}
-        className="fixed bottom-6 right-6 z-[9999] group cursor-pointer"
+        className={`${positionClasses} group cursor-pointer transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]`}
         title="Chamar o Capitão Gelada"
       >
         <div className="relative">
@@ -122,7 +144,6 @@ export function CapitaoGelada() {
               className="w-full h-full object-cover object-top"
             />
           </div>
-          {/* Notification dot */}
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-[#0b0f1a] animate-pulse" />
         </div>
       </button>
@@ -131,15 +152,33 @@ export function CapitaoGelada() {
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3 transition-all duration-700 ${
-        isAnimatingIn ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'
-      }`}
+      className={`${positionClasses} flex flex-col items-end gap-3 transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
+        isAnimatingIn ? 'translate-x-0 opacity-100' : 'translate-x-20 opacity-0'
+      } ${bounceEffect ? 'scale-110 -translate-y-2' : ''}`}
     >
       {/* ── Speech Bubble ── */}
       {isBubbleVisible && currentTip && (
-        <div className="relative max-w-[320px] sm:max-w-[360px] animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div
+          className={`relative max-w-[300px] sm:max-w-[340px] animate-in fade-in slide-in-from-bottom-4 duration-300 ${
+            isModalActive ? 'sm:max-w-[360px]' : ''
+          }`}
+        >
           {/* Bubble card */}
-          <div className="bg-[#111827]/95 backdrop-blur-xl border border-zinc-700/60 rounded-2xl rounded-br-md shadow-[0_8px_40px_rgba(0,0,0,0.6)] p-4">
+          <div
+            className={`bg-[#0d121f]/95 backdrop-blur-2xl border rounded-2xl rounded-br-md shadow-[0_10px_40px_rgba(0,0,0,0.8)] p-4 transition-all ${
+              isModalActive
+                ? 'border-blue-500/50 shadow-[0_0_30px_rgba(59,130,246,0.25)]'
+                : 'border-zinc-700/60'
+            }`}
+          >
+            {/* Header tag if modal active */}
+            {isModalActive && (
+              <div className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20 mb-2">
+                <Sparkles size={10} />
+                Dica de Atalho & Checkout
+              </div>
+            )}
+
             {/* Close bubble button */}
             <button
               onClick={() => setIsBubbleVisible(false)}
@@ -150,9 +189,9 @@ export function CapitaoGelada() {
             </button>
 
             {/* Tip content */}
-            <div className="pr-6">
-              <p className="text-sm text-zinc-100 leading-relaxed font-medium">
-                {currentTip.emoji && <span className="mr-1.5">{currentTip.emoji}</span>}
+            <div className="pr-5">
+              <p className="text-xs sm:text-sm text-zinc-100 leading-relaxed font-medium">
+                {currentTip.emoji && <span className="mr-1.5 text-base">{currentTip.emoji}</span>}
                 {currentTip.message}
               </p>
             </div>
@@ -163,13 +202,13 @@ export function CapitaoGelada() {
                 onClick={dismissGuide}
                 className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
               >
-                Não mostrar mais
+                Ocultar guia
               </button>
 
               {hasNextTip ? (
                 <button
                   onClick={advanceTip}
-                  className="flex items-center gap-1 text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors bg-amber-400/10 hover:bg-amber-400/20 px-3 py-1.5 rounded-xl cursor-pointer"
+                  className="flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors bg-amber-400/10 hover:bg-amber-400/20 px-3 py-1.5 rounded-xl cursor-pointer border border-amber-400/20"
                 >
                   Próxima dica
                   <ChevronRight size={14} />
@@ -180,7 +219,7 @@ export function CapitaoGelada() {
                     advanceTip();
                     setIsBubbleVisible(false);
                   }}
-                  className="flex items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1.5 rounded-xl cursor-pointer"
+                  className="flex items-center gap-1 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1.5 rounded-xl cursor-pointer border border-emerald-400/20"
                 >
                   Entendi!
                 </button>
@@ -189,7 +228,7 @@ export function CapitaoGelada() {
           </div>
 
           {/* Triangle pointer to avatar */}
-          <div className="absolute -bottom-2 right-8 w-4 h-4 bg-[#111827]/95 border-r border-b border-zinc-700/60 rotate-45" />
+          <div className="absolute -bottom-2 right-8 w-4 h-4 bg-[#0d121f]/95 border-r border-b border-zinc-700/60 rotate-45" />
         </div>
       )}
 
@@ -204,13 +243,25 @@ export function CapitaoGelada() {
           }
         }}
         className="group relative cursor-pointer"
-        title="Capitão Gelada — Seu guia no PDV"
+        title="Capitão Gelada — Clique para falar com o guia"
       >
-        {/* Glow ring */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400/30 to-orange-500/30 blur-lg group-hover:blur-xl transition-all scale-110 animate-pulse" />
+        {/* Glow ring - turns blue glowing when modal is active */}
+        <div
+          className={`absolute inset-0 rounded-full blur-lg group-hover:blur-xl transition-all scale-110 ${
+            isModalActive
+              ? 'bg-gradient-to-br from-blue-400/40 to-indigo-500/40 animate-pulse'
+              : 'bg-gradient-to-br from-amber-400/30 to-orange-500/30 animate-pulse'
+          }`}
+        />
 
         {/* Avatar container */}
-        <div className="relative w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] border-amber-400/70 shadow-[0_4px_25px_rgba(251,191,36,0.35)] group-hover:shadow-[0_4px_35px_rgba(251,191,36,0.55)] transition-all group-hover:scale-105 group-hover:border-amber-400">
+        <div
+          className={`relative w-[72px] h-[72px] rounded-full overflow-hidden border-[3px] shadow-2xl transition-all group-hover:scale-110 ${
+            isModalActive
+              ? 'border-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.5)]'
+              : 'border-amber-400/80 shadow-[0_4px_25px_rgba(251,191,36,0.35)]'
+          }`}
+        >
           <img
             src={CAPITAO_IMG}
             alt="Capitão Gelada"
@@ -220,8 +271,14 @@ export function CapitaoGelada() {
         </div>
 
         {/* Name badge */}
-        <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-[8px] font-black text-white px-2 py-0.5 rounded-full whitespace-nowrap shadow-lg tracking-wider uppercase">
-          Cap. Gelada
+        <div
+          className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[8px] font-black text-white px-2 py-0.5 rounded-full whitespace-nowrap shadow-lg tracking-wider uppercase transition-colors ${
+            isModalActive
+              ? 'bg-gradient-to-r from-blue-600 to-indigo-600'
+              : 'bg-gradient-to-r from-amber-500 to-orange-500'
+          }`}
+        >
+          {isModalActive ? '💡 DICA F12' : 'Cap. Gelada'}
         </div>
 
         {/* Pulse ping when bubble is hidden */}

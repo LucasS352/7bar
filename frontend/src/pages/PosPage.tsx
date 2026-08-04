@@ -16,6 +16,7 @@ import { CashMovementModal } from '@/components/CashMovementModal';
 import { CompositeModifierModal } from '@/components/CompositeModifierModal';
 import { DemoBanner } from '@/components/DemoBanner';
 import { CapitaoGelada } from '@/components/CapitaoGelada';
+import { useDemoGuideStore } from '@/store/demoGuide';
 import { ShiftProvider, useShift } from '@/contexts/ShiftContext';
 import {
   Search, ShoppingCart, X, LogOut, PackageOpen, Minus, Plus, Trash2,
@@ -56,6 +57,21 @@ function PosPageContent() {
   const [tempQuantity,        setTempQuantity]        = useState<number>(1);
   const productRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const { operator, cashRegister, isLoading: isShiftLoading, logoutOperator, refreshShift } = useShift();
+
+  // Sincroniza abertura de modais com o Capitão Gelada no modo Demo
+  useEffect(() => {
+    if (import.meta.env.VITE_APP_MODE !== 'demo') return;
+
+    if (isPaymentOpen) {
+      useDemoGuideStore.getState().setActiveModal('payment');
+    } else if (isMovementOpen) {
+      useDemoGuideStore.getState().setActiveModal('movement');
+    } else if (isCloseRegisterOpen) {
+      useDemoGuideStore.getState().setActiveModal('close_register');
+    } else {
+      useDemoGuideStore.getState().setActiveModal(null);
+    }
+  }, [isPaymentOpen, isMovementOpen, isCloseRegisterOpen]);
 
   // Estados para Módulo de Comandas no Frente de Caixa (PDV)
   const [isComandasModalOpen, setIsComandasModalOpen] = useState(false);
