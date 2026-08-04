@@ -41,6 +41,7 @@ export function DemoRegisterPage() {
           } catch (e) { /* ignora */ }
         }
 
+        useDemoMissionsStore.getState().resetMissions();
         toast.success(`Bem-vindo à demonstração, ${parsedUser.name}!`);
         navigate('/', { replace: true });
       } catch (e) {
