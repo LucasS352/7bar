@@ -12,8 +12,14 @@ const CAPITAO_IMG = '/demo/capitao-gelada.jpg';
  */
 function useCurrentContext(): GuideContext {
   const location = useLocation();
-  const cartItems = useCartStore(s => s.items);
-  const { isAllCompleted } = useDemoMissionsStore(s => s.getProgress());
+  const cartItemsCount = useCartStore((s) => s.items.length);
+  
+  // Select primitive booleans to avoid object-reference re-render loops
+  const saleCompleted = useDemoMissionsStore((s) => s.saleCompleted);
+  const movementCompleted = useDemoMissionsStore((s) => s.movementCompleted);
+  const productCreated = useDemoMissionsStore((s) => s.productCreated);
+  const dashboardVisited = useDemoMissionsStore((s) => s.dashboardVisited);
+  const isAllCompleted = saleCompleted && movementCompleted && productCreated && dashboardVisited;
 
   if (isAllCompleted) return 'missions_complete';
 
@@ -27,7 +33,7 @@ function useCurrentContext(): GuideContext {
   }
   // POS page (root)
   if (path === '/' || path === '') {
-    if (cartItems.length > 0) return 'pos_has_items';
+    if (cartItemsCount > 0) return 'pos_has_items';
     return 'pos_empty_cart';
   }
 
@@ -36,36 +42,33 @@ function useCurrentContext(): GuideContext {
 
 export function CapitaoGelada() {
   const context = useCurrentContext();
-  const {
-    isVisible,
-    isDismissed,
-    currentTipId,
-    showTipForContext,
-    advanceTip,
-    dismissGuide,
-    showGuide,
-  } = useDemoGuideStore();
+  
+  // Select primitives directly from store
+  const isDismissed = useDemoGuideStore((s) => s.isDismissed);
+  const currentTipId = useDemoGuideStore((s) => s.currentTipId);
+  const advanceTip = useDemoGuideStore((s) => s.advanceTip);
+  const dismissGuide = useDemoGuideStore((s) => s.dismissGuide);
+  const showGuide = useDemoGuideStore((s) => s.showGuide);
 
   const [isAnimatingIn, setIsAnimatingIn] = useState(false);
   const [isBubbleVisible, setIsBubbleVisible] = useState(false);
   const prevContextRef = useRef<GuideContext | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const currentTip = currentTipId ? GUIDE_DIALOGUES.find(t => t.id === currentTipId) : null;
+  const currentTip = currentTipId ? GUIDE_DIALOGUES.find((t) => t.id === currentTipId) : null;
 
   // Track context changes → show relevant tip
   useEffect(() => {
     if (import.meta.env.VITE_APP_MODE !== 'demo') return;
     if (isDismissed) return;
 
-    // Only trigger on context change or first load
+    // Only trigger on context change
     if (prevContextRef.current !== context) {
       prevContextRef.current = context;
 
-      // Small delay for smooth context switch
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
-        showTipForContext(context);
+        useDemoGuideStore.getState().showTipForContext(context);
         setIsBubbleVisible(true);
       }, 800);
     }
@@ -73,7 +76,7 @@ export function CapitaoGelada() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [context, isDismissed, showTipForContext]);
+  }, [context, isDismissed]);
 
   // Entry animation
   useEffect(() => {
@@ -95,8 +98,8 @@ export function CapitaoGelada() {
   // Check if there's a next tip in current context
   const hasNextTip = (() => {
     if (!currentTip) return false;
-    const ctxTips = GUIDE_DIALOGUES.filter(t => t.context === currentTip.context);
-    const idx = ctxTips.findIndex(t => t.id === currentTipId);
+    const ctxTips = GUIDE_DIALOGUES.filter((t) => t.context === currentTip.context);
+    const idx = ctxTips.findIndex((t) => t.id === currentTipId);
     return idx < ctxTips.length - 1;
   })();
 
@@ -106,7 +109,7 @@ export function CapitaoGelada() {
       <button
         onClick={() => {
           showGuide();
-          showTipForContext(context);
+          useDemoGuideStore.getState().showTipForContext(context);
         }}
         className="fixed bottom-6 right-6 z-[9999] group cursor-pointer"
         title="Chamar o Capitão Gelada"
@@ -134,9 +137,7 @@ export function CapitaoGelada() {
     >
       {/* ── Speech Bubble ── */}
       {isBubbleVisible && currentTip && (
-        <div
-          className="relative max-w-[320px] sm:max-w-[360px] animate-in fade-in slide-in-from-bottom-4 duration-300"
-        >
+        <div className="relative max-w-[320px] sm:max-w-[360px] animate-in fade-in slide-in-from-bottom-4 duration-300">
           {/* Bubble card */}
           <div className="bg-[#111827]/95 backdrop-blur-xl border border-zinc-700/60 rounded-2xl rounded-br-md shadow-[0_8px_40px_rgba(0,0,0,0.6)] p-4">
             {/* Close bubble button */}
@@ -198,7 +199,7 @@ export function CapitaoGelada() {
           if (isBubbleVisible) {
             setIsBubbleVisible(false);
           } else {
-            showTipForContext(context);
+            useDemoGuideStore.getState().showTipForContext(context);
             setIsBubbleVisible(true);
           }
         }}
