@@ -16,6 +16,7 @@ import { CashMovementModal } from '@/components/CashMovementModal';
 import { CompositeModifierModal } from '@/components/CompositeModifierModal';
 import { DemoBanner } from '@/components/DemoBanner';
 import { CapitaoGelada } from '@/components/CapitaoGelada';
+import { CapitaoGeladaCartGuide } from '@/components/CapitaoGeladaCartGuide';
 import { useDemoGuideStore } from '@/store/demoGuide';
 import { ShiftProvider, useShift } from '@/contexts/ShiftContext';
 import {
@@ -645,6 +646,22 @@ function PosPageContent() {
             </button>
           </div>
         </div>
+
+        {/* ── Guia Interativo Capitão Gelada com Efeito Névoa e Geladeira (Modo Demo) ── */}
+        {import.meta.env.VITE_APP_MODE === 'demo' && (
+          <div className="p-3 border-b border-zinc-800/80 bg-[#060913]/90 relative overflow-hidden">
+            <CapitaoGeladaCartGuide
+              isVisible={true}
+              emoji={items.length > 0 ? '⚡' : '🍺'}
+              dialogueText={
+                items.length > 0
+                  ? 'Excelente escolha! Já temos itens na conta. Agora pressione F12 ou clique em "Cobrar" no rodapé pra finalizar!'
+                  : 'Ahoy! Clica em qualquer produto da grade pra jogar no carrinho. Essa área é como a porta da geladeira se abrindo!'
+              }
+              titleTag="GELADEIRA DEMO — CAPITÃO GELADA"
+            />
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
           {totalItemsCount === 0 ? (
