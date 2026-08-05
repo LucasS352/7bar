@@ -17,7 +17,6 @@ import { CompositeModifierModal } from '@/components/CompositeModifierModal';
 import { DemoBanner } from '@/components/DemoBanner';
 import { CapitaoGelada } from '@/components/CapitaoGelada';
 import { useDemoGuideStore } from '@/store/demoGuide';
-import { CapitaoCart } from '@/components/CapitaoCart';
 import { ShiftProvider, useShift } from '@/contexts/ShiftContext';
 import {
   Search, ShoppingCart, X, LogOut, PackageOpen, Minus, Plus, Trash2,
@@ -389,7 +388,6 @@ function PosPageContent() {
     <div className={`flex flex-col lg:flex-row h-[100dvh] bg-zinc-950 text-white font-sans overflow-hidden ${import.meta.env.VITE_APP_MODE === 'demo' ? 'pt-14' : ''}`}>
       <DemoBanner />
       <CapitaoGelada />
-      {import.meta.env.VITE_APP_MODE === 'demo' && <CapitaoCart />}
       {/* Esquerda */}
       <div className="flex-1 flex flex-col p-3 lg:p-6 lg:pr-4 pb-[80px] lg:pb-6 relative h-full min-w-0">
         {/* Header */}

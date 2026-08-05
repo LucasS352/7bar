@@ -120,40 +120,27 @@
   background: #991b1b;
 }
 
-/* ─── Capitão Gelada — Idle Breathing Animation ────────────────────────────── */
+/* ─── Capitão Gelada — Pop-up Animations ────────────────────────────────────── */
+
+/* Character bouncing into screen */
+@keyframes capitao-bounce-in {
+  0%   { transform: scale(0.3) translateY(20px); opacity: 0; }
+  60%  { transform: scale(1.15) translateY(-6px); opacity: 1; }
+  80%  { transform: scale(0.95) translateY(2px); }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* Speech bubble pop-in */
+@keyframes pop-in {
+  0%   { transform: scale(0.5) translateY(10px); opacity: 0; }
+  70%  { transform: scale(1.05) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* Idle float */
 @keyframes breathe {
-  0%, 100% { transform: translateY(0px) scale(1); }
-  33%       { transform: translateY(-8px) scale(1.015); }
-  66%       { transform: translateY(-4px) scale(1.008); }
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-5px); }
 }
 
-@keyframes breathe-shadow {
-  0%, 100% { transform: scaleX(1); opacity: 0.6; }
-  50%       { transform: scaleX(0.85); opacity: 0.3; }
-}
-
-/* Slide-in-from-bottom helper (CapitaoCart dialogue) */
-@keyframes slide-in-from-bottom-4 {
-  from { transform: translateY(12px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-.slide-in-from-bottom-4 {
-  animation-name: slide-in-from-bottom-4;
-}
-@keyframes slide-in-from-bottom-3 {
-  from { transform: translateY(10px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-.slide-in-from-bottom-3 {
-  animation-name: slide-in-from-bottom-3;
-}
-
-/* Fade-in (used by CapitaoCart) */
-@keyframes fade-in-anim {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-.fade-in {
-  animation-name: fade-in-anim;
-}
 
