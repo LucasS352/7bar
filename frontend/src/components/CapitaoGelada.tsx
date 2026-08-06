@@ -6,7 +6,7 @@ import { useDemoMissionsStore } from '@/store/demoMissions';
 import { useCartStore } from '@/store/cart';
 
 // Full body character with transparent background
-const CAPITAO_FULL = '/demo/capitao-gelada-full.jpg';
+const CAPITAO_FULL = '/demo/capitao-gelada-full.png';
 
 // ─── Humores ─────────────────────────────────────────────────────────────────
 type Mood = 'happy' | 'excited' | 'winking' | 'celebrating' | 'thinking';
@@ -344,9 +344,7 @@ export function CapitaoGelada() {
             draggable={false}
             className="relative w-[160px] sm:w-[190px] h-auto object-contain select-none"
             style={{
-              // Fundo preto some com screen — deixa só o personagem visível
-              mixBlendMode: 'screen',
-              filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.8)) drop-shadow(0 0 12px rgba(251,191,36,0.15))',
+              filter: 'drop-shadow(0 8px 32px rgba(0,0,0,0.9)) drop-shadow(0 0 20px rgba(251,191,36,0.2))',
             }}
           />
         </button>
