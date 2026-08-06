@@ -101,17 +101,19 @@ interface PopupPos {
   bubbleAlign: 'left' | 'right' | 'center';
 }
 
+// Todas as posições ficam na METADE INFERIOR da tela (bottom sempre >= 0)
+// para garantir que o balão acima nunca seja cortado pelo topo da janela.
 const POSITIONS: PopupPos[] = [
-  // Canto inferior esquerdo
+  // Canto inferior esquerdo (favorito)
   { style: { bottom: 0, left: '24px' }, bubbleAlign: 'left' },
-  // Meio esquerdo
-  { style: { bottom: '160px', left: '24px' }, bubbleAlign: 'left' },
-  // Centro inferior (evita carrinho)
-  { style: { bottom: 0, left: '38%' }, bubbleAlign: 'center' },
-  // Topo esquerdo
-  { style: { top: '80px', left: '24px' }, bubbleAlign: 'left' },
-  // Meio do produto grid, lado direito (mas não no carrinho)
-  { style: { bottom: '80px', right: '480px' }, bubbleAlign: 'right' },
+  // Esquerda um pouco acima
+  { style: { bottom: '80px', left: '24px' }, bubbleAlign: 'left' },
+  // Centro inferior
+  { style: { bottom: 0, left: '36%' }, bubbleAlign: 'center' },
+  // Meio do grid, lado direito (sem sobrepor carrinho)
+  { style: { bottom: '40px', right: '490px' }, bubbleAlign: 'right' },
+  // Esquerda meio
+  { style: { bottom: '120px', left: '24px' }, bubbleAlign: 'left' },
 ];
 
 // ─── Hook contexto ────────────────────────────────────────────────────────────
@@ -168,14 +170,31 @@ export function CapitaoGelada() {
       }, 30);
     });
 
-    // Auto-hide after 14s
+    // Auto-hide do BALÃO após 20s. O personagem fica mais 5s e then sai
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
+      // 1. Esconde só o balão
       setBubbleShow(false);
-      setTimeout(() => { setCharIn(false); setTimeout(() => setVisible(false), 500); }, 300);
-    }, 14000);
+      // 2. Depois de mais 5s esconde o personagem
+      setTimeout(() => {
+        setCharIn(false);
+        setTimeout(() => setVisible(false), 600);
+      }, 5000);
+    }, 20000);
   }, []);
 
+  // Esconde APENAS o balão (personagem continua na tela)
+  const hideBubble = useCallback(() => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    setBubbleShow(false);
+    // Personagem some sozinho depois de 8s
+    hideTimer.current = setTimeout(() => {
+      setCharIn(false);
+      setTimeout(() => setVisible(false), 600);
+    }, 8000);
+  }, []);
+
+  // Esconde tudo (usado só pelo "Ocultar guia")
   const hide = useCallback(() => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     setBubbleShow(false);
@@ -281,7 +300,7 @@ export function CapitaoGelada() {
                   <button onClick={nextMsg} className="p-1 text-zinc-500 hover:text-zinc-200 transition cursor-pointer rounded" title="Próxima">
                     <ChevronRight size={13} />
                   </button>
-                  <button onClick={hide} className="p-1 text-zinc-500 hover:text-white transition cursor-pointer rounded" title="Fechar">
+                  <button onClick={hideBubble} className="p-1 text-zinc-500 hover:text-white transition cursor-pointer rounded" title="Fechar balão">
                     <X size={13} />
                   </button>
                 </div>
@@ -322,7 +341,7 @@ export function CapitaoGelada() {
         {/* ── Personagem inteiro ── */}
         <button
           key={bounceKey}
-          onClick={() => bubbleShow ? setBubbleShow(false) : setBubbleShow(true)}
+          onClick={() => setBubbleShow(b => !b)}
           className="cursor-pointer relative"
           title="Capitão Gelada"
           style={{
