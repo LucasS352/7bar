@@ -2,7 +2,9 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
+
+const uuidv4 = () => randomUUID();
 
 const DEMO_TENANT_ID = 'demo-tenant-001';
 const DEMO_OPERATOR_ID = 'demo-op-1';
