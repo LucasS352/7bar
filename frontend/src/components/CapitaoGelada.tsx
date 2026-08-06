@@ -344,9 +344,9 @@ export function CapitaoGelada() {
             draggable={false}
             className="relative w-[160px] sm:w-[190px] h-auto object-contain select-none"
             style={{
-              // Remove fundo branco/checkerboard da imagem
-              mixBlendMode: 'multiply',
-              filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.6))',
+              // Fundo preto some com screen — deixa só o personagem visível
+              mixBlendMode: 'screen',
+              filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.8)) drop-shadow(0 0 12px rgba(251,191,36,0.15))',
             }}
           />
         </button>
