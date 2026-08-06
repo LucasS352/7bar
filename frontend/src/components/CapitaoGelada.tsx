@@ -101,19 +101,16 @@ interface PopupPos {
   bubbleAlign: 'left' | 'right' | 'center';
 }
 
-// Todas as posições ficam na METADE INFERIOR da tela (bottom sempre >= 0)
-// para garantir que o balão acima nunca seja cortado pelo topo da janela.
+// Posições no canto inferior direito/esquerdo calibradas para não tampar os cards de produtos
 const POSITIONS: PopupPos[] = [
-  // Canto inferior esquerdo (favorito)
-  { style: { bottom: 0, left: '24px' }, bubbleAlign: 'left' },
-  // Esquerda um pouco acima
-  { style: { bottom: '80px', left: '24px' }, bubbleAlign: 'left' },
-  // Centro inferior
-  { style: { bottom: 0, left: '36%' }, bubbleAlign: 'center' },
-  // Meio do grid, lado direito (sem sobrepor carrinho)
-  { style: { bottom: '40px', right: '490px' }, bubbleAlign: 'right' },
-  // Esquerda meio
-  { style: { bottom: '120px', left: '24px' }, bubbleAlign: 'left' },
+  // Canto inferior esquerdo (afastado da borda para não tampar produtos)
+  { style: { bottom: '12px', left: '16px' }, bubbleAlign: 'left' },
+  // Canto inferior centro-esquerda
+  { style: { bottom: '12px', left: '28%' }, bubbleAlign: 'center' },
+  // Meio do grid, lado direito (respeitando o espaço do carrinho à direita)
+  { style: { bottom: '24px', right: '480px' }, bubbleAlign: 'right' },
+  // Canto inferior centro-direita
+  { style: { bottom: '12px', left: '45%' }, bubbleAlign: 'center' },
 ];
 
 // ─── Hook contexto ────────────────────────────────────────────────────────────
@@ -218,16 +215,22 @@ export function CapitaoGelada() {
     if (import.meta.env.VITE_APP_MODE !== 'demo') return;
     if (isDismissed) return;
     if (prevCtx.current === ctx) return;
+    const isFirstRun = !prevCtx.current;
     prevCtx.current = ctx;
-    const t = setTimeout(() => show(ctx), 1500);
+    
+    // Na primeira carga aguarda 6s para a tela estabilizar, nas trocas subsequentes aguarda 3s
+    const delay = isFirstRun ? 6000 : 3000;
+    const t = setTimeout(() => show(ctx), delay);
     return () => clearTimeout(t);
   }, [ctx, isDismissed, show]);
 
-  // Primeiro aparecimento
+  // Primeiro aparecimento (backup safeguard 6.5s)
   useEffect(() => {
     if (import.meta.env.VITE_APP_MODE !== 'demo') return;
     if (isDismissed) return;
-    const t = setTimeout(() => show(ctx), 2000);
+    const t = setTimeout(() => {
+      if (!prevCtx.current) show(ctx);
+    }, 6500);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
