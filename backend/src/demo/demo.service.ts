@@ -107,8 +107,10 @@ export class DemoService implements OnModuleInit {
   /** Roda na inicialização do módulo */
   async onModuleInit() {
     if (process.env.APP_MODE !== 'demo') return;
-    // Pequeno delay para o banco estar pronto
-    setTimeout(() => this.seedDemoSalesIfNeeded(), 8000);
+    this.logger.log('[DemoSeed] Inicializando Seeder Demo...');
+    this.seedDemoSalesIfNeeded().catch(e => {
+      this.logger.error(`[DemoSeed] Erro na execução inicial do seeder: ${e.message}`);
+    });
   }
 
   // ────────────────────────────────────────────────────────────────────────────
