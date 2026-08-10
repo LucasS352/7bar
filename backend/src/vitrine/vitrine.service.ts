@@ -73,38 +73,73 @@ export class VitrineService {
     return this.tenantManager.getTenantClient(tenantId, databaseUrl);
   }
 
+  /** Garante que a tabela vitrine_config existe no banco do tenant (auto-healing) */
+  private async ensureTableExists(prisma: any) {
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS \`vitrine_config\` (
+          \`id\` VARCHAR(191) NOT NULL,
+          \`active\` TINYINT(1) NOT NULL DEFAULT 0,
+          \`version\` INT NOT NULL DEFAULT 0,
+          \`publishedAt\` DATETIME(3) NULL,
+          \`publishedByUserId\` VARCHAR(191) NULL,
+          \`publishedByName\` VARCHAR(191) NULL,
+          \`draftUpdatedAt\` DATETIME(3) NULL,
+          \`theme\` VARCHAR(191) NOT NULL DEFAULT 'dark_premium',
+          \`customBgUrl\` TEXT NULL,
+          \`showLogo\` TINYINT(1) NOT NULL DEFAULT 1,
+          \`logoPosition\` VARCHAR(191) NOT NULL DEFAULT 'top-left',
+          \`slideDuration\` INT NOT NULL DEFAULT 8,
+          \`draftSlides\` JSON NOT NULL,
+          \`publishedSlides\` JSON NOT NULL,
+          \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+          \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+          PRIMARY KEY (\`id\`)
+        ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+      `);
+    } catch (err: any) {
+      this.logger.warn(`ensureTableExists (vitrine_config): ${err.message}`);
+    }
+  }
+
   /** Retorna configuração completa (rascunho + info de publicação) */
   async getConfig() {
-    const prisma = await this.getTenantPrisma();
-    const config = await prisma.vitrineConfig.findFirst();
+    try {
+      const prisma = await this.getTenantPrisma();
+      await this.ensureTableExists(prisma);
 
-    if (!config) {
-      // Retorna defaults se ainda não existe configuração
+      const config = await prisma.vitrineConfig.findFirst().catch(() => null);
+
+      if (!config) {
+        return {
+          active: false,
+          version: 0,
+          publishedAt: null,
+          publishedByUserId: null,
+          publishedByName: null,
+          draftUpdatedAt: null,
+          theme: 'dark_premium',
+          customBgUrl: null,
+          showLogo: true,
+          logoPosition: 'top-left',
+          instagramHandle: null,
+          slideDuration: 8,
+          draftSlides: [],
+          publishedSlides: [],
+        };
+      }
+
+      const { position, instagram } = this.parseLogoPosition(config.logoPosition);
+
       return {
-        active: false,
-        version: 0,
-        publishedAt: null,
-        publishedByUserId: null,
-        publishedByName: null,
-        draftUpdatedAt: null,
-        theme: 'dark_premium',
-        customBgUrl: null,
-        showLogo: true,
-        logoPosition: 'top-left',
-        instagramHandle: null,
-        slideDuration: 8,
-        draftSlides: [],
-        publishedSlides: [],
+        ...config,
+        logoPosition: position,
+        instagramHandle: instagram,
       };
+    } catch (err: any) {
+      this.logger.error(`Erro ao carregar config da vitrine: ${err.message}`, err.stack);
+      throw err;
     }
-
-    const { position, instagram } = this.parseLogoPosition(config.logoPosition);
-
-    return {
-      ...config,
-      logoPosition: position,
-      instagramHandle: instagram,
-    };
   }
 
   /** Auxiliar para decodificar logoPosition + instagramHandle */
@@ -128,34 +163,55 @@ export class VitrineService {
 
   /** Salva rascunho sem publicar */
   async saveDraft(data: DraftDto) {
-    const prisma = await this.getTenantPrisma();
-    const existing = await prisma.vitrineConfig.findFirst();
+    try {
+      const prisma = await this.getTenantPrisma();
+      await this.ensureTableExists(prisma);
 
-    const payload: any = {
-      draftUpdatedAt: new Date(),
-    };
-    if (data.theme !== undefined) payload.theme = data.theme;
-    if (data.customBgUrl !== undefined) payload.customBgUrl = data.customBgUrl;
-    if (data.showLogo !== undefined) payload.showLogo = data.showLogo;
-    
-    if (data.logoPosition !== undefined || data.instagramHandle !== undefined) {
-      const current = this.parseLogoPosition(existing?.logoPosition || null);
-      const newPos = data.logoPosition !== undefined ? data.logoPosition : current.position;
-      const newInsta = data.instagramHandle !== undefined ? data.instagramHandle : current.instagram;
-      payload.logoPosition = JSON.stringify({ position: newPos, instagram: newInsta });
-    }
+      const existing = await prisma.vitrineConfig.findFirst().catch(() => null);
 
-    if (data.slideDuration !== undefined) payload.slideDuration = data.slideDuration;
-    if (data.draftSlides !== undefined) payload.draftSlides = data.draftSlides as any;
+      const payload: any = {
+        draftUpdatedAt: new Date(),
+      };
+      if (data.theme !== undefined) payload.theme = String(data.theme);
+      if (data.customBgUrl !== undefined) payload.customBgUrl = data.customBgUrl;
+      if (data.showLogo !== undefined) payload.showLogo = Boolean(data.showLogo);
+      
+      if (data.logoPosition !== undefined || data.instagramHandle !== undefined) {
+        const current = this.parseLogoPosition(existing?.logoPosition || null);
+        const newPos = data.logoPosition !== undefined ? data.logoPosition : current.position;
+        const newInsta = data.instagramHandle !== undefined ? data.instagramHandle : current.instagram;
+        payload.logoPosition = JSON.stringify({ position: newPos, instagram: newInsta });
+      }
 
-    if (existing) {
-      return prisma.vitrineConfig.update({
-        where: { id: existing.id },
-        data: payload,
+      if (data.slideDuration !== undefined) payload.slideDuration = Number(data.slideDuration) || 8;
+      if (data.draftSlides !== undefined) {
+        // Sanitiza JSON removendo undefined
+        payload.draftSlides = JSON.parse(JSON.stringify(data.draftSlides));
+      }
+
+      if (existing) {
+        return await prisma.vitrineConfig.update({
+          where: { id: existing.id },
+          data: payload,
+        });
+      }
+
+      return await prisma.vitrineConfig.create({
+        data: {
+          theme: payload.theme || 'dark_premium',
+          customBgUrl: payload.customBgUrl || null,
+          showLogo: payload.showLogo !== undefined ? payload.showLogo : true,
+          logoPosition: payload.logoPosition || JSON.stringify({ position: 'top-left', instagram: null }),
+          slideDuration: payload.slideDuration || 8,
+          draftSlides: payload.draftSlides || [],
+          publishedSlides: [],
+          ...payload,
+        },
       });
+    } catch (err: any) {
+      this.logger.error(`Erro ao salvar rascunho da vitrine: ${err.message}`, err.stack);
+      throw err;
     }
-
-    return prisma.vitrineConfig.create({ data: payload });
   }
 
   /**
@@ -165,40 +221,74 @@ export class VitrineService {
    * - Registra publishedBy + publishedAt
    */
   async publish(dto: PublishDto) {
-    const prisma = await this.getTenantPrisma();
-    const existing = await prisma.vitrineConfig.findFirst();
+    try {
+      const prisma = await this.getTenantPrisma();
+      await this.ensureTableExists(prisma);
 
-    if (!existing) {
-      throw new NotFoundException('Configure a vitrine antes de publicar.');
+      let existing = await prisma.vitrineConfig.findFirst().catch(() => null);
+
+      if (!existing) {
+        existing = await prisma.vitrineConfig.create({
+          data: {
+            active: true,
+            theme: 'dark_premium',
+            showLogo: true,
+            logoPosition: JSON.stringify({ position: 'top-left', instagram: null }),
+            slideDuration: 8,
+            draftSlides: [],
+            publishedSlides: [],
+          },
+        });
+      }
+
+      const newVersion = (existing.version || 0) + 1;
+
+      return await prisma.vitrineConfig.update({
+        where: { id: existing.id },
+        data: {
+          version: newVersion,
+          publishedAt: new Date(),
+          publishedByUserId: dto.userId || 'system',
+          publishedByName: dto.userName || 'Admin',
+          publishedSlides: existing.draftSlides ? JSON.parse(JSON.stringify(existing.draftSlides)) : [],
+        },
+      });
+    } catch (err: any) {
+      this.logger.error(`Erro ao publicar vitrine: ${err.message}`, err.stack);
+      throw err;
     }
-
-    const newVersion = existing.version + 1;
-
-    return prisma.vitrineConfig.update({
-      where: { id: existing.id },
-      data: {
-        version: newVersion,
-        publishedAt: new Date(),
-        publishedByUserId: dto.userId,
-        publishedByName: dto.userName,
-        publishedSlides: existing.draftSlides as any,
-      },
-    });
   }
 
   /** Liga ou desliga a vitrine sem republicar */
   async setActive(active: boolean) {
-    const prisma = await this.getTenantPrisma();
-    const existing = await prisma.vitrineConfig.findFirst();
+    try {
+      const prisma = await this.getTenantPrisma();
+      await this.ensureTableExists(prisma);
 
-    if (existing) {
-      return prisma.vitrineConfig.update({
-        where: { id: existing.id },
-        data: { active },
+      const existing = await prisma.vitrineConfig.findFirst().catch(() => null);
+
+      if (existing) {
+        return await prisma.vitrineConfig.update({
+          where: { id: existing.id },
+          data: { active: Boolean(active) },
+        });
+      }
+
+      return await prisma.vitrineConfig.create({
+        data: {
+          active: Boolean(active),
+          theme: 'dark_premium',
+          showLogo: true,
+          logoPosition: JSON.stringify({ position: 'top-left', instagram: null }),
+          slideDuration: 8,
+          draftSlides: [],
+          publishedSlides: [],
+        },
       });
+    } catch (err: any) {
+      this.logger.error(`Erro ao alternar status da vitrine: ${err.message}`, err.stack);
+      throw err;
     }
-
-    return prisma.vitrineConfig.create({ data: { active } });
   }
 
   /**
@@ -208,43 +298,50 @@ export class VitrineService {
    * Sem JWT — sem autenticação.
    */
   async getPublicPlaylist(tvPublicId: string) {
-    // 1. Resolver o tenant pelo tvPublicId no Heart DB
-    const tenant = await this.heartPrisma.tenant.findUnique({
-      where: { tvPublicId },
-    });
+    try {
+      // 1. Resolver o tenant pelo tvPublicId no Heart DB
+      const tenant = await this.heartPrisma.tenant.findUnique({
+        where: { tvPublicId },
+      }).catch(() => null);
 
-    if (!tenant) {
-      throw new NotFoundException('Vitrine não encontrada.');
-    }
+      if (!tenant) {
+        throw new NotFoundException('Vitrine não encontrada.');
+      }
 
-    // 2. Conectar ao banco do tenant
-    const tenantPrisma = await this.tenantManager.getTenantClient(
-      tenant.id,
-      tenant.databaseUrl,
-    );
+      // 2. Conectar ao banco do tenant
+      const tenantPrisma = await this.tenantManager.getTenantClient(
+        tenant.id,
+        tenant.databaseUrl,
+      );
+      await this.ensureTableExists(tenantPrisma);
 
-    // 3. Buscar configuração da vitrine
-    const config = await tenantPrisma.vitrineConfig.findFirst();
+      // 3. Buscar configuração da vitrine
+      const config = await tenantPrisma.vitrineConfig.findFirst().catch(() => null);
 
-    // Se não configurada ou desativada, retorna inactive
-    if (!config || !config.active) {
+      // Se não configurada ou desativada, retorna inactive
+      if (!config || !config.active) {
+        return { active: false };
+      }
+
+      const { position, instagram } = this.parseLogoPosition(config.logoPosition);
+
+      return {
+        active: true,
+        version: config.version,
+        theme: config.theme,
+        customBgUrl: config.customBgUrl,
+        showLogo: config.showLogo,
+        logoPosition: position,
+        instagramHandle: instagram,
+        logoUrl: tenant.logoUrl ?? null,
+        slideDuration: config.slideDuration,
+        slides: config.publishedSlides || [],
+      };
+    } catch (err: any) {
+      if (err instanceof NotFoundException) throw err;
+      this.logger.error(`Erro ao carregar playlist pública da TV (${tvPublicId}): ${err.message}`, err.stack);
       return { active: false };
     }
-
-    const { position, instagram } = this.parseLogoPosition(config.logoPosition);
-
-    return {
-      active: true,
-      version: config.version,
-      theme: config.theme,
-      customBgUrl: config.customBgUrl,
-      showLogo: config.showLogo,
-      logoPosition: position,
-      instagramHandle: instagram,
-      logoUrl: tenant.logoUrl ?? null,
-      slideDuration: config.slideDuration,
-      slides: config.publishedSlides,
-    };
   }
 
   /** Lista os 10 temas pré-definidos disponíveis */
