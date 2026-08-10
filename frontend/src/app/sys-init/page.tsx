@@ -28,6 +28,9 @@ export default function SysInitPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("pin");
   
+  const isDemoMode = process.env.NEXT_PUBLIC_APP_MODE === 'demo' || 
+    (typeof window !== 'undefined' && window.location.hostname.includes('demo'));
+
   const [activeTab, setActiveTab] = useState<"tenants" | "groups" | "leads">("tenants");
 
   // ── LEADS LIST ────────────────────────────────────────────────────────
@@ -36,6 +39,7 @@ export default function SysInitPage() {
   const [leadStatusFilter, setLeadStatusFilter] = useState("");
 
   const loadLeads = async () => {
+    if (!isDemoMode) return;
     setLoadingLeads(true);
     try {
       const pin = pinDigits.join('');
@@ -45,13 +49,14 @@ export default function SysInitPage() {
       });
       setLeads(res.data || []);
     } catch (err) {
-      toast.error('Erro ao carregar leads da demonstração.');
+      console.warn('Leads não disponíveis no ambiente atual.');
     } finally {
       setLoadingLeads(false);
     }
   };
 
   const updateLeadStatus = async (leadId: string, newStatus: string, notes?: string) => {
+    if (!isDemoMode) return;
     try {
       const pin = pinDigits.join('');
       await api.patch(`/leads/${leadId}`, { status: newStatus, notes }, {
@@ -240,11 +245,11 @@ export default function SysInitPage() {
         loadTenants();
       } else if (activeTab === "groups") {
         loadGroups();
-      } else if (activeTab === "leads") {
+      } else if (activeTab === "leads" && isDemoMode) {
         loadLeads();
       }
     }
-  }, [step, activeTab, leadStatusFilter]);
+  }, [step, activeTab, leadStatusFilter, isDemoMode]);
 
   // Auto-fill dbName from tenantName
   useEffect(() => {
@@ -703,12 +708,14 @@ export default function SysInitPage() {
               >
                 Grupos
               </button>
-              <button 
-                onClick={() => setActiveTab('leads')} 
-                className={`py-2 px-4 font-bold border-b-2 transition-colors ${activeTab === 'leads' ? 'border-amber-500 text-amber-400' : 'border-transparent text-zinc-500 hover:text-zinc-300'} flex items-center gap-2`}
-              >
-                🎯 Leads Demo {leads.length > 0 && <span className="bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-mono">{leads.length}</span>}
-              </button>
+              {isDemoMode && (
+                <button 
+                  onClick={() => setActiveTab('leads')} 
+                  className={`py-2 px-4 font-bold border-b-2 transition-colors ${activeTab === 'leads' ? 'border-amber-500 text-amber-400' : 'border-transparent text-zinc-500 hover:text-zinc-300'} flex items-center gap-2`}
+                >
+                  🎯 Leads Demo {leads.length > 0 && <span className="bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-mono">{leads.length}</span>}
+                </button>
+              )}
             </div>
 
             {activeTab === 'tenants' ? (
