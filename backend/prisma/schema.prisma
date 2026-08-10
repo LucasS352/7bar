@@ -870,3 +870,42 @@ model ComandaItem {
   @@map("comanda_items")
 }
 
+// ------------------------------------------------------------
+//  VitrineConfig — Módulo Vitrine Digital TV
+//  Configuração da vitrine de promoções exibida em TV/tela secundária.
+//  Um único registro por tenant (upsert). A TV acessa via tvPublicId
+//  do Heart DB, sem JWT, pelo endpoint público.
+// ------------------------------------------------------------
+model VitrineConfig {
+  id              String    @id @default(uuid())
+
+  // Estado da vitrine
+  active          Boolean   @default(false)
+  version         Int       @default(0)     // Incrementa a cada "Publicar na TV"
+
+  // Rastreabilidade da última publicação
+  publishedAt       DateTime?
+  publishedByUserId String?   // ID do usuário que publicou (imutável)
+  publishedByName   String?   // Nome do usuário no momento da publicação (snapshot)
+  draftUpdatedAt    DateTime? // Última edição do rascunho
+
+  // Visual
+  theme           String    @default("dark_premium") // slug do tema escolhido
+  customBgUrl     String?   @db.Text  // URL do fundo personalizado (upload)
+  showLogo        Boolean   @default(true)
+  logoPosition    String    @default("top-left") // top-left, top-right, bottom
+  slideDuration   Int       @default(8)           // segundos por slide
+
+  // Slides em formato JSON (MVP)
+  // Estrutura de cada item: { productId, productName, imageUrl, priceSell,
+  //                           promoPrice?, badge?, order }
+  // ⚠️ Nota: armazenamento JSON é adequado para o MVP.
+  // Migrar para tabela relacional se escopo crescer (vídeos, agendamento).
+  draftSlides     Json      @default("[]")     // Rascunho em edição (não exibido na TV)
+  publishedSlides Json      @default("[]")     // Snapshot publicado (TV lê este campo)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("vitrine_config")
+}

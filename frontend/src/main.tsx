@@ -34,6 +34,8 @@ import PaymentMethodsPage from './app/dashboard/configuracoes/payment-methods/pa
 import AjusteFiscalPage from './app/dashboard/configuracoes/ajuste-fiscal/page';
 import FiscalManagementPage from './app/dashboard/fiscal/gestao/page';
 import BulkImagesPage from './pages/dashboard/BulkImagesPage';
+import VitrinePage from './pages/dashboard/VitrinePage';
+import VitrineTvPage from './pages/VitrineTvPage';
 
 // Stores
 import { useAuthStore } from './store/auth';
@@ -91,6 +93,8 @@ function App() {
         <Route path="/demo" element={<DemoRegisterPage />} />
         <Route path="/sys-init" element={<SysInitPage />} />
         <Route path="/grupo-portal" element={<GroupPortalPage />} />
+        {/* Vitrine Digital — rota pública para TV (sem autenticação) */}
+        <Route path="/vitrine/:tvPublicId" element={<VitrineTvPage />} />
 
         {/* PDV — rota raiz protegida */}
         <Route
@@ -131,6 +135,7 @@ function App() {
           <Route path="configuracoes/ajuste-fiscal" element={<AjusteFiscalPage />} />
           <Route path="fiscal/gestao" element={<FiscalManagementPage />} />
           <Route path="bulk-images" element={<BulkImagesPage />} />
+          <Route path="vitrine" element={<VitrinePage />} />
         </Route>
 
         {/* Fallback */}

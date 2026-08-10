@@ -188,11 +188,13 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
                   id="isManager"
                   checked={isManager}
                   onChange={(e) => setIsManager(e.target.checked)}
-                  className="w-5 h-5 rounded border-zinc-700 bg-zinc-950 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-900"
+                  className="w-5 h-5 rounded border-zinc-700 bg-zinc-950 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-900 cursor-pointer"
                 />
-                <label htmlFor="isManager" className="text-sm text-zinc-300">
+                <label htmlFor="isManager" className="text-sm text-zinc-300 cursor-pointer select-none">
                   <strong className="block text-white">É Gerente de Caixa?</strong>
-                  <span className="text-xs text-zinc-500">Pode visualizar faturamentos totais e realizar a auditoria da gaveta.</span>
+                  <span className="text-xs text-zinc-500">
+                    Se marcado, pode visualizar faturamentos totais e auditar a gaveta. Se desmarcado, os valores monetários ficam ocultos no fechamento (Auditoria Cega).
+                  </span>
                 </label>
               </div>
 

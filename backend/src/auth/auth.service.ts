@@ -42,7 +42,13 @@ export class AuthService {
     }
 
     if (await bcrypt.compare(pin, operator.pin)) {
-      return { id: operator.id, name: operator.name, role: 'operator' };
+      return {
+        id: operator.id,
+        name: operator.name,
+        role: 'operator',
+        isManager: Boolean(operator.isManager),
+        jobTitle: operator.jobTitle ?? null,
+      };
     }
     throw new UnauthorizedException('PIN incorreto.');
   }

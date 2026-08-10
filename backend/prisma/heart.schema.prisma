@@ -26,6 +26,10 @@ model Tenant {
   logoUrl       String?
   modulos       Json?   @default("{\"nfce\": true, \"estoque\": true, \"dashboardMobile\": true}")
 
+  // Vitrine Digital — identificador público imutável (ex: "4J9XQ2KM")
+  // Gerado automaticamente na criação do tenant. Nunca muda mesmo que databaseName mude.
+  tvPublicId    String?  @unique @map("tv_public_id")
+
   // Identificação
   razaoSocial   String?
   nomeFantasia  String?

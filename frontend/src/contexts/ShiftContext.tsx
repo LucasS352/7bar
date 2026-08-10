@@ -94,6 +94,20 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
         }
 
         if (currentOp) {
+          // Sincroniza dados atualizados do operador (especialmente isManager) do banco
+          try {
+            const opRes = await api.get(`/operators/${currentOp.id}`);
+            if (opRes.data) {
+              currentOp = {
+                ...currentOp,
+                name: opRes.data.name,
+                isManager: Boolean(opRes.data.isManager),
+                jobTitle: opRes.data.jobTitle,
+              };
+              localStorage.setItem('currentOperator', JSON.stringify(currentOp));
+            }
+          } catch { /* se falhar rede, mantém o cache local */ }
+
           setOperator(currentOp);
           // Busca caixa aberto
           try {

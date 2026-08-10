@@ -21,6 +21,7 @@ import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { GroupsModule } from './groups/groups.module';
 import { FiscalModule } from './fiscal/fiscal.module';
 import { ComandasModule } from './comandas/comandas.module';
+import { VitrineModule } from './vitrine/vitrine.module';
 
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TenantInterceptor } from './prisma/tenant-context.service';
@@ -55,6 +56,7 @@ import { DemoModule } from './demo/demo.module';
     GroupsModule,
     FiscalModule,
     ComandasModule,
+    VitrineModule,
     // Demo — só carrega quando APP_MODE=demo (servidor Smartek)
     ...(process.env.APP_MODE === 'demo' ? [DemoModule] : []),
   ],

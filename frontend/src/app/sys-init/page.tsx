@@ -1412,6 +1412,7 @@ export default function SysInitPage() {
                         { id: 'estoque', title: 'Estoque', desc: 'Módulo completo de controle de produtos e inventário.' },
                         { id: 'dashboardMobile', title: 'Dashboard Mobile', desc: 'Acesso ao painel resumido em dispositivos móveis.' },
                         { id: 'comandas', title: 'Comandas & Mesas', desc: 'Permite o lançamento, abertura e consumo em comandas/mesas.' },
+                        { id: 'vitrineDigital', title: '📺 Vitrine Digital TV', desc: 'Exibe promoções e produtos em uma TV/tela secundária via URL pública. URL: tvpdv.teltech.com.br/v/[código].' },
                       ].map(item => (
                         <div key={item.id} className="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-800 rounded-xl">
                           <div>

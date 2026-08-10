@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Users, ChevronLeft, ChevronRight, AlertTriangle, Truck, ShoppingCart, Banknote, CreditCard, FileSpreadsheet, Images, FileDown, ReceiptText } from 'lucide-react';
+import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Users, ChevronLeft, ChevronRight, AlertTriangle, Truck, ShoppingCart, Banknote, CreditCard, FileSpreadsheet, Images, FileDown, ReceiptText, Tv2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useDemoMissionsStore } from '@/store/demoMissions';
 import { api } from '@/lib/api';
@@ -63,6 +63,9 @@ export function DashboardLayout() {
       { name: 'Cons. Colaborador', to: '/dashboard/comandas',         icon: Users }
     ]),
     { name: 'Contas a Pagar',     to: '/dashboard/finance/payables',      icon: Banknote },
+    ...(modules?.vitrineDigital === true ? [
+      { name: 'Vitrine Digital',  to: '/dashboard/vitrine',               icon: Tv2 }
+    ] : []),
   ];
   const inventoryToolItems = [
     { name: 'Contagem de Estoque', to: '/dashboard/inventory/stock-count', icon: FileSpreadsheet },
@@ -92,6 +95,7 @@ export function DashboardLayout() {
     pathname.startsWith('/dashboard/configuracoes/ajuste-fiscal') ||
     pathname.startsWith('/dashboard/fiscal/gestao')
   ));
+  const isVitrineBlocked = modules?.vitrineDigital !== true && pathname.startsWith('/dashboard/vitrine');
 
   return (
     <div className="flex h-screen bg-zinc-950 text-white font-sans overflow-hidden">
@@ -168,7 +172,7 @@ export function DashboardLayout() {
 
       {/* Main — pb-20 on mobile to clear BottomNav, p-3 on mobile */}
       <main className="flex-1 overflow-y-auto bg-zinc-950 p-3 md:p-8 pb-20 md:pb-8 custom-scrollbar">
-        {(isEstoqueBlocked || isNfceBlocked) ? (
+        {(isEstoqueBlocked || isNfceBlocked || isVitrineBlocked) ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 bg-zinc-900/50 border border-zinc-800 rounded-3xl backdrop-blur-md animate-[fadeIn_0.3s_ease]">
             <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-6 text-amber-500 shadow-lg shadow-amber-500/10">
               <AlertTriangle size={32} />

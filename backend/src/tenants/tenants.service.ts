@@ -10,6 +10,16 @@ import * as path from 'path';
 
 const execAsync = promisify(exec);
 
+/** Gera um ID público único de 8 caracteres para a Vitrine Digital (ex: "4J9XQ2KM") */
+function generateTvPublicId(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem ambiguidades (0/O, 1/I)
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 import { ProvisionTenantDto } from './provision-tenant.dto';
 import { seedDefaultGruposStatic } from '../tributacao/tributacao.service';
 
@@ -52,7 +62,17 @@ export class TenantsService {
     }
 
     if (!tenant) throw new NotFoundException('Empresa não encontrada');
-    
+
+    // Se por algum motivo um tenant antigo não tiver tvPublicId, gera um automaticamente
+    if (!tenant.tvPublicId && tenantId !== 'demo-tenant-001') {
+      const newTvId = generateTvPublicId();
+      await this.heartPrisma.tenant.update({
+        where: { id: tenantId },
+        data: { tvPublicId: newTvId },
+      }).catch(err => this.logger.warn(`Não foi possível gerar tvPublicId para ${tenantId}: ${err.message}`));
+      (tenant as any).tvPublicId = newTvId;
+    }
+
     // Remover o certificado (blob) por segurança
     const { certPfx, ...safeTenant } = tenant as any;
 
@@ -77,7 +97,8 @@ export class TenantsService {
       'logradouro', 'numero', 'complemento', 'bairro',
       'municipio', 'codMunicipio', 'uf', 'cep', 'telefone',
       'nfceAtivo', 'nfceSerie', 'nfceAmbiente', 'nfceCsc', 'nfceIdCsc',
-      'modulos', 'status', 'emailContador', 'mensalidadeValor', 'mensalidadeVencimento'
+      'modulos', 'status', 'emailContador', 'mensalidadeValor', 'mensalidadeVencimento',
+      'tvPublicId',
     ];
     // Tipamos explicitamente como Record<string, any> para evitar erro TS no acesso de chaves dinâmicas
     const safeData: Record<string, any> = Object.fromEntries(
@@ -333,6 +354,7 @@ export class TenantsService {
         databaseName: sanitizedDbName,
         databaseUrl: tenantDbUrl,
         status: 'active',
+        tvPublicId: generateTvPublicId(),
         mensalidadeValor: mensalidadeValor != null ? Number(mensalidadeValor) : 0,
         mensalidadeVencimento: mensalidadeVencimento ? new Date(mensalidadeVencimento) : null,
         users: {
