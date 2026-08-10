@@ -49,183 +49,7 @@ interface VitrineData {
   slides: AnySlide[];
 }
 
-// ─── Hook: Remove fundo branco via Canvas ─────────────────────────────────────
-// Flood Fill a partir das bordas com detecção automática de fundo (branco ou preto).
-// Preserva pixels do mesmo tipo que estão isolados dentro do produto.
-function useTransparentImage(src: string | null): { result: string | null; ready: boolean } {
-  const [result, setResult] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    setResult(null);
-    setReady(false);
-    if (!src) return;
-
-    const resolvedSrc = resolveImageUrl(src);
-    const img = new Image();
-
-    img.onload = () => {
-      try {
-        const MAX = 900;
-        const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
-        const W = Math.round(img.naturalWidth * scale);
-        const H = Math.round(img.naturalHeight * scale);
-
-        const canvas = document.createElement('canvas');
-        canvas.width = W;
-        canvas.height = H;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0, W, H);
-
-        let imageData: ImageData;
-        try { imageData = ctx.getImageData(0, 0, W, H); }
-        catch { setResult(resolvedSrc); setReady(true); return; }
-
-        const data = imageData.data;
-
-        // ── Detectar cor real do fundo pelos cantos da imagem ──────────────
-        // Usa a média dos 4 cantos como cor alvo — funciona para branco,
-        // creme, bege, cinza claro, preto. Imagens com fundo colorido não
-        // são processadas (mostram original sem corte).
-        //
-        // Usa vários cantos + amostras de borda para maior precisão.
-        const edgeSamples: number[] = [
-          0, W - 1, (H - 1) * W, (H - 1) * W + W - 1,  // 4 cantos
-          Math.floor(W / 2),                             // centro topo
-          (H - 1) * W + Math.floor(W / 2),              // centro base
-          Math.floor(H / 2) * W,                        // centro esquerda
-          Math.floor(H / 2) * W + W - 1,               // centro direita
-        ];
-        let sR = 0, sG = 0, sB = 0;
-        edgeSamples.forEach(i => { sR += data[i*4]; sG += data[i*4+1]; sB += data[i*4+2]; });
-        const bgR = sR / edgeSamples.length;
-        const bgG = sG / edgeSamples.length;
-        const bgB = sB / edgeSamples.length;
-        const bgLum = bgR * 0.299 + bgG * 0.587 + bgB * 0.114;
-
-        // Só processa se fundo for claro (> 145) ou escuro (< 70)
-        // Fundo colorido saturado → não processa, exibe imagem original
-        const bgSaturation = Math.max(bgR, bgG, bgB) - Math.min(bgR, bgG, bgB);
-        const isNeutralBg = bgSaturation < 50; // neutro = pouco saturado
-        const isLightBg = bgLum > 145;
-        const isDarkBg  = bgLum < 70;
-
-        if (!isNeutralBg || (!isLightBg && !isDarkBg)) {
-          setResult(resolvedSrc);
-          setReady(true);
-          return;
-        }
-
-        // ── Função de proximidade à cor de fundo real ─────────────────────
-        // Threshold generoso (55) em relação À COR DOS CANTOS — não ao branco puro.
-        // Creme (237,228,205): agora fica dentro do range ✅
-        const THR_SQ = 55 * 55;
-        const isNearBg = (pi: number): boolean => {
-          const dr = data[pi] - bgR;
-          const dg = data[pi + 1] - bgG;
-          const db = data[pi + 2] - bgB;
-          return dr * dr + dg * dg + db * db < THR_SQ;
-        };
-
-        // ── Flood Fill das bordas ─────────────────────────────────────
-        const isBg = new Uint8Array(W * H);
-        const queue: number[] = [];
-
-        const tryEnqueue = (x: number, y: number) => {
-          const idx = y * W + x;
-          if (isBg[idx]) return;
-          if (isNearBg(idx * 4)) { isBg[idx] = 1; queue.push(idx); }
-        };
-
-        for (let x = 0; x < W; x++) { tryEnqueue(x, 0); tryEnqueue(x, H - 1); }
-        for (let y = 1; y < H - 1; y++) { tryEnqueue(0, y); tryEnqueue(W - 1, y); }
-
-        let qi = 0;
-        while (qi < queue.length) {
-          const idx = queue[qi++];
-          const x = idx % W, y = (idx / W) | 0;
-          if (x > 0)     tryEnqueue(x - 1, y);
-          if (x < W - 1) tryEnqueue(x + 1, y);
-          if (y > 0)     tryEnqueue(x, y - 1);
-          if (y < H - 1) tryEnqueue(x, y + 1);
-        }
-
-        // ── Dilatação de 1px: vizinhos do fundo com tom próximo também viram fundo ──
-        // Elimina pixels residuais de compressão JPEG nas bordas do produto.
-        const isBg2 = new Uint8Array(isBg);
-        for (let y = 1; y < H - 1; y++) {
-          for (let x = 1; x < W - 1; x++) {
-            if (isBg[y * W + x]) continue;
-            const pi = (y * W + x) * 4;
-            const hasNbBg =
-              isBg[(y-1)*W+x] || isBg[(y+1)*W+x] ||
-              isBg[y*W+(x-1)] || isBg[y*W+(x+1)];
-            if (hasNbBg && isNearBg(pi)) isBg2[y * W + x] = 1;
-          }
-        }
-
-        // ── Apagar pixels de fundo — hard cut (sem transição) ─────────────
-        // Transição suave causava outline colorido ao compor sobre fundos vivos.
-        // Hard cut elimina o artefato. O glow via drop-shadow suaviza as bordas.
-        for (let i = 0; i < W * H; i++) {
-          if (isBg2[i]) data[i * 4 + 3] = 0;
-        }
-
-        // ── Vinheta de 10% nas 4 bordas ───────────────────────────────────
-        // Faz fade suave em TODOS os pixels (produto e resíduos de borda).
-        // Garante que qualquer retângulo residual desapareça com elegância.
-        // Para Bis Branco: pixels da borda da embalagem branca → transparentes.
-        // Para Brahma: apenas suaviza as bordas da silhueta recortada.
-        const VZ = 0.10; // 10% de fade em cada borda
-        for (let y = 0; y < H; y++) {
-          for (let x = 0; x < W; x++) {
-            const pi = (y * W + x) * 4;
-            if (data[pi + 3] === 0) continue; // já transparente, pular
-            // Menor distância normalizada até qualquer borda (0=borda, 1=interior)
-            const fx = Math.min(x, W - 1 - x) / (W * VZ);
-            const fy = Math.min(y, H - 1 - y) / (H * VZ);
-            const f  = Math.min(1.0, Math.min(fx, fy));
-            if (f < 1.0) {
-              // Curva suavizada (quadrática) para fade mais natural
-              data[pi + 3] = Math.round(data[pi + 3] * f * f);
-            }
-          }
-        }
-
-        ctx.putImageData(imageData, 0, 0);
-
-        // ── Autocrop: cortar bordas completamente transparentes ────────────
-        let minX = W, maxX = 0, minY = H, maxY = 0;
-        for (let y = 0; y < H; y++) {
-          for (let x = 0; x < W; x++) {
-            if (data[(y * W + x) * 4 + 3] > 15) {
-              if (x < minX) minX = x; if (x > maxX) maxX = x;
-              if (y < minY) minY = y; if (y > maxY) maxY = y;
-            }
-          }
-        }
-
-        if (maxX > minX + 20 && maxY > minY + 20) {
-          const cW = maxX - minX + 1, cH = maxY - minY + 1;
-          const crop = document.createElement('canvas');
-          crop.width = cW; crop.height = cH;
-          crop.getContext('2d')!.drawImage(canvas, minX, minY, cW, cH, 0, 0, cW, cH);
-          setResult(crop.toDataURL('image/png'));
-        } else {
-          setResult(canvas.toDataURL('image/png'));
-        }
-      } catch {
-        setResult(resolvedSrc);
-      }
-      setReady(true);
-    };
-
-    img.onerror = () => { setResult(resolvedSrc); setReady(true); };
-    img.src = resolvedSrc;
-  }, [src]);
-
-  return { result, ready };
-}
 
 function resolveImageUrl(url: string): string {
   if (!url) return '';
@@ -587,26 +411,22 @@ function GridSlide({ slide, theme }: { slide: VitrineGridSlide; theme: any }) {
 }
 
 
-// ─── Componente: Imagem com fundo removido ────────────────────────────────────
-// ─── Logo sem fundo ───────────────────────────────────────────────────────────
+// ─── Componente: Logo ─────────────────────────────────────────────────────────
 function LogoImage({ src }: { src: string }) {
-  const { result, ready } = useTransparentImage(src);
+  const displaySrc = resolveImageUrl(src);
+  if (!displaySrc) return null;
   return (
     <div style={{ position: 'absolute', top: 24, left: 24, zIndex: 20, height: 72 }}>
-      {result && (
-        <img
-          src={result}
-          alt="Logo"
-          style={{
-            height: 72,
-            maxWidth: 200,
-            objectFit: 'contain',
-            opacity: ready ? 1 : 0,
-            transition: 'opacity 0.3s ease',
-            filter: 'drop-shadow(0 2px 16px rgba(0,0,0,0.7))',
-          }}
-        />
-      )}
+      <img
+        src={displaySrc}
+        alt="Logo"
+        style={{
+          height: 72,
+          maxWidth: 200,
+          objectFit: 'contain',
+          filter: 'drop-shadow(0 2px 16px rgba(0,0,0,0.7))',
+        }}
+      />
     </div>
   );
 }
@@ -1351,34 +1171,32 @@ export default function VitrineTvPage() {
 // ─── Miniatura "A seguir" ─────────────────────────────────────────────────────
 function NextSlideThumb({ slide, theme, idx }: { slide: AnySlide; theme: any; idx: number }) {
   const isGrid = slide.slideType === 'grid';
-  const singleSrc = isGrid ? null : (slide as VitrineSlide).imageUrl;
-  const { result } = useTransparentImage(singleSrc);
-
-  const thumbKey = isGrid ? (slide as VitrineGridSlide).gridId : (slide as VitrineSlide).productId;
 
   if (isGrid) {
     const g = slide as VitrineGridSlide;
     return (
       <div style={{
         display:'flex', alignItems:'center', gap:10,
-        background:'rgba(255,255,255,.06)',
-        border:'1px solid rgba(255,255,255,.12)',
-        borderRadius:12, padding:'6px 14px 6px 10px',
-        backdropFilter:'blur(10px)',
+        background:'rgba(255,255,255,.07)',
+        border:'1px solid rgba(255,255,255,.14)',
+        borderRadius:12, padding:'6px 14px 6px 8px',
+        backdropFilter:'blur(12px)',
+        WebkitBackdropFilter:'blur(12px)',
+        boxShadow:'0 4px 16px rgba(0,0,0,0.3)',
         animation:`fadeUp .35s ease both`,
         animationDelay:`${idx * 0.08}s`,
         flexShrink:0,
       }}>
         {/* Ícone Vetorial de Grade em vez de emoji */}
         <div style={{
-          width:38, height:38, borderRadius:8,
+          width:42, height:42, borderRadius:8,
           background:`${theme.accent}1A`,
-          border:`1px solid ${theme.accent}44`,
+          border:`1.5px solid ${theme.accent}55`,
           display:'flex', alignItems:'center', justifyContent:'center',
           color: theme.accent,
           flexShrink:0,
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <rect width="7" height="7" x="3" y="3" rx="1.5" />
             <rect width="7" height="7" x="14" y="3" rx="1.5" />
             <rect width="7" height="7" x="14" y="14" rx="1.5" />
@@ -1386,10 +1204,10 @@ function NextSlideThumb({ slide, theme, idx }: { slide: AnySlide; theme: any; id
           </svg>
         </div>
         <div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, letterSpacing:'0.04em', color:'rgba(255,255,255,.92)', maxWidth:140, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', lineHeight: 1.1 }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, letterSpacing:'0.04em', color:'rgba(255,255,255,.95)', maxWidth:140, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', lineHeight: 1.1 }}>
             {g.gridTitle}
           </div>
-          <div style={{ fontFamily:'Inter,sans-serif', fontSize:9, fontWeight:700, letterSpacing:'0.05em', color:theme.accent, textTransform:'uppercase', marginTop:1 }}>
+          <div style={{ fontFamily:'Inter,sans-serif', fontSize:9, fontWeight:700, letterSpacing:'0.05em', color:theme.accent, textTransform:'uppercase', marginTop:2 }}>
             {g.gridProducts.length} itens em oferta
           </div>
         </div>
@@ -1398,36 +1216,65 @@ function NextSlideThumb({ slide, theme, idx }: { slide: AnySlide; theme: any; id
   }
 
   const s = slide as VitrineSlide;
+  const imageSrc = resolveImageUrl(s.imageUrl || '');
+
   return (
     <div style={{
-      display:'flex', alignItems:'center', gap:8,
-      background:'rgba(255,255,255,.06)',
-      border:'1px solid rgba(255,255,255,.1)',
-      borderRadius:12, padding:'5px 12px 5px 5px',
-      backdropFilter:'blur(10px)',
+      display:'flex', alignItems:'center', gap:10,
+      background:'rgba(255,255,255,.07)',
+      border:'1px solid rgba(255,255,255,.14)',
+      borderRadius:12, padding:'5px 12px 5px 6px',
+      backdropFilter:'blur(12px)',
+      WebkitBackdropFilter:'blur(12px)',
+      boxShadow:'0 4px 16px rgba(0,0,0,0.3)',
       animation:`fadeUp .35s ease both`,
       animationDelay:`${idx * 0.08}s`,
       flexShrink:0,
     }}>
+      {/* Pod Branco de Mini-Estúdio para Thumbnail (Zero artefatos de canvas) */}
       <div style={{
-        width:40, height:40, borderRadius:8,
+        width:42, height:42, borderRadius:8,
         display:'flex', alignItems:'center', justifyContent:'center',
         overflow:'hidden', flexShrink:0,
-        background: 'rgba(255,255,255,0.04)',
+        background: '#ffffff',
+        padding: 3,
+        boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.25)',
       }}>
-        {result ? (
-          <img src={result} alt={s.productName} style={{ width:'100%', height:'100%', objectFit:'contain' }} />
+        {imageSrc ? (
+          <img
+            src={imageSrc}
+            alt={s.productName}
+            style={{ width:'100%', height:'100%', objectFit:'contain' }}
+            loading="lazy"
+          />
         ) : (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
           </svg>
         )}
       </div>
       <div>
-        <div style={{ fontFamily:'Inter,sans-serif', fontSize:11, fontWeight:700, color:'rgba(255,255,255,.85)', maxWidth:150, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-          {s.productName}
+        <div style={{
+          fontFamily:'Inter,sans-serif',
+          fontSize:11.5,
+          fontWeight:700,
+          color:'rgba(255,255,255,.92)',
+          maxWidth:150,
+          overflow:'hidden',
+          textOverflow:'ellipsis',
+          whiteSpace:'nowrap',
+          lineHeight: 1.2,
+        }}>
+          {formatProductName(s.productName)}
         </div>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:15, color:theme.accent, letterSpacing:'.03em' }}>
+        <div style={{
+          fontFamily:"'Bebas Neue',sans-serif",
+          fontSize:16,
+          color:theme.accent,
+          letterSpacing:'.04em',
+          lineHeight: 1.1,
+          marginTop: 2,
+        }}>
           R$ {formatPrice(s.promoPrice ?? s.priceSell)}
         </div>
       </div>
