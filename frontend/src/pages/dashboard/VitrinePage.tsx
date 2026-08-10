@@ -204,7 +204,7 @@ export default function VitrinePage() {
       order: draftSlides.length + 1,
     };
     updateDraft([...draftSlides, newSlide]);
-    setSearch('');
+    toast.success(`"${p.name}" adicionado à vitrine!`);
   }
 
   // ── Abrir modal para Criar Grade ─────────────────────────────────────────────
@@ -477,8 +477,18 @@ export default function VitrinePage() {
                 placeholder="Buscar produto para adicionar como slide individual..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-9 pr-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-violet-500 transition-colors"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-9 pr-8 py-2.5 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-violet-500 transition-colors"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 p-1 cursor-pointer"
+                  title="Limpar busca"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
             {search && (
               <div className="max-h-52 overflow-y-auto space-y-1 mt-2 custom-scrollbar">
@@ -1123,9 +1133,20 @@ export default function VitrinePage() {
               {/* Busca para adicionar produto à grade */}
               {gridSelectedProducts.length < 6 && (
                 <div className="border-t border-zinc-800 pt-3">
-                  <label className="text-xs font-semibold text-zinc-400 mb-1.5 block">
-                    Buscar e Adicionar Produto à Grade
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-zinc-400">
+                      Buscar e Adicionar Produto à Grade
+                    </label>
+                    {gridSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setGridSearch('')}
+                        className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                      >
+                        Limpar busca
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
                     <input
@@ -1133,38 +1154,58 @@ export default function VitrinePage() {
                       placeholder="Digitar nome do produto..."
                       value={gridSearch}
                       onChange={e => setGridSearch(e.target.value)}
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-8 pr-3 py-2 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-xl pl-8 pr-8 py-2 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
                     />
+                    {gridSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setGridSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 p-0.5 cursor-pointer"
+                        title="Limpar busca"
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
                   </div>
 
                   {gridSearch && (
-                    <div className="max-h-36 overflow-y-auto space-y-1 mt-2 custom-scrollbar">
+                    <div className="max-h-40 overflow-y-auto space-y-1 mt-2 custom-scrollbar bg-zinc-900/90 border border-zinc-800 rounded-xl p-1.5">
                       {products
                         .filter(p =>
                           !gridSelectedProducts.some(gp => gp.productId === p.id) &&
                           p.name.toLowerCase().includes(gridSearch.toLowerCase())
                         )
-                        .slice(0, 8)
+                        .slice(0, 10)
                         .map(p => (
                           <button
                             key={p.id}
                             type="button"
-                            onClick={() => { addProductToGrid(p); setGridSearch(''); }}
-                            className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-zinc-800 text-left transition-colors cursor-pointer"
+                            onClick={() => addProductToGrid(p)}
+                            className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-zinc-800 text-left transition-colors cursor-pointer group"
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               {p.imageUrl ? (
-                                <img src={getFullUrl(p.imageUrl)} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
+                                <img src={getFullUrl(p.imageUrl)} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0 bg-black/20" />
                               ) : (
                                 <span className="text-xs">📦</span>
                               )}
-                              <span className="text-xs text-zinc-200 truncate">{p.name}</span>
+                              <span className="text-xs text-zinc-200 truncate group-hover:text-white transition-colors">{p.name}</span>
                             </div>
-                            <span className="text-xs text-indigo-400 font-bold flex-shrink-0 ml-2">
+                            <span className="text-xs text-indigo-400 font-bold flex-shrink-0 ml-2 group-hover:text-indigo-300 transition-colors">
                               + R$ {formatPrice(p.priceSell)}
                             </span>
                           </button>
                         ))}
+                      {products.filter(p =>
+                        !gridSelectedProducts.some(gp => gp.productId === p.id) &&
+                        p.name.toLowerCase().includes(gridSearch.toLowerCase())
+                      ).length === 0 && (
+                        <div className="text-center text-zinc-500 text-xs py-3">
+                          {products.some(p => p.name.toLowerCase().includes(gridSearch.toLowerCase()))
+                            ? '✓ Todos os produtos encontrados já foram adicionados à grade'
+                            : 'Nenhum produto encontrado'}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
