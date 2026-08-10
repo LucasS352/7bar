@@ -93,8 +93,9 @@ function App() {
         <Route path="/demo" element={<DemoRegisterPage />} />
         <Route path="/sys-init" element={<SysInitPage />} />
         <Route path="/grupo-portal" element={<GroupPortalPage />} />
-        {/* Vitrine Digital — rota pública para TV (sem autenticação) */}
+        {/* Vitrine Digital — rotas públicas para TV (sem autenticação) */}
         <Route path="/vitrine/:tvPublicId" element={<VitrineTvPage />} />
+        <Route path="/v/:tvPublicId" element={<VitrineTvPage />} />
 
         {/* PDV — rota raiz protegida */}
         <Route

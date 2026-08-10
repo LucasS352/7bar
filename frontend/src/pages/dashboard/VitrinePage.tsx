@@ -138,9 +138,8 @@ export default function VitrinePage() {
   }, []);
 
   const tvPublicId = tenantInfo?.tvPublicId;
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const tvUrl = tvPublicId
-    ? (isLocal ? `${window.location.origin}/vitrine/${tvPublicId}` : `https://tvpdv.teltech.com.br/v/${tvPublicId}`)
+    ? `${window.location.origin}/vitrine/${tvPublicId}`
     : null;
 
   const draftSlides: AnyVitrineSlide[] = config?.draftSlides || [];
