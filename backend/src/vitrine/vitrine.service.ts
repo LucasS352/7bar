@@ -88,7 +88,7 @@ export class VitrineService {
           \`theme\` VARCHAR(191) NOT NULL DEFAULT 'dark_premium',
           \`customBgUrl\` TEXT NULL,
           \`showLogo\` TINYINT(1) NOT NULL DEFAULT 1,
-          \`logoPosition\` VARCHAR(191) NOT NULL DEFAULT 'top-left',
+          \`logoPosition\` TEXT NULL,
           \`slideDuration\` INT NOT NULL DEFAULT 8,
           \`draftSlides\` JSON NOT NULL,
           \`publishedSlides\` JSON NOT NULL,
@@ -97,6 +97,10 @@ export class VitrineService {
           PRIMARY KEY (\`id\`)
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
       `);
+      // Garante migração da coluna existente para TEXT sem perda de dados
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE \`vitrine_config\` MODIFY COLUMN \`logoPosition\` TEXT NULL;
+      `).catch(() => {});
     } catch (err: any) {
       this.logger.warn(`ensureTableExists (vitrine_config): ${err.message}`);
     }
