@@ -102,6 +102,17 @@ export class VitrineService {
     }
   }
 
+  /** Formata a entidade VitrineConfig desempacotando logoPosition + instagramHandle */
+  private formatConfigResponse(config: any) {
+    if (!config) return null;
+    const { position, instagram } = this.parseLogoPosition(config.logoPosition);
+    return {
+      ...config,
+      logoPosition: position,
+      instagramHandle: instagram,
+    };
+  }
+
   /** Retorna configuração completa (rascunho + info de publicação) */
   async getConfig() {
     try {
@@ -129,36 +140,55 @@ export class VitrineService {
         };
       }
 
-      const { position, instagram } = this.parseLogoPosition(config.logoPosition);
-
-      return {
-        ...config,
-        logoPosition: position,
-        instagramHandle: instagram,
-      };
+      return this.formatConfigResponse(config);
     } catch (err: any) {
       this.logger.error(`Erro ao carregar config da vitrine: ${err.message}`, err.stack);
       throw err;
     }
   }
 
-  /** Auxiliar para decodificar logoPosition + instagramHandle */
-  private parseLogoPosition(raw: string | null) {
+  /** Auxiliar para decodificar logoPosition + instagramHandle com proteção contra aninhamento recursivo */
+  private parseLogoPosition(raw: any): { position: string; instagram: string | null } {
     if (!raw) return { position: 'top-left', instagram: null };
+    let pos = 'top-left';
+    let insta: string | null = null;
+
     try {
-      if (raw.startsWith('{')) {
-        const parsed = JSON.parse(raw);
-        return {
-          position: parsed.position || 'top-left',
-          instagram: parsed.instagram || null,
-        };
+      let curr = raw;
+      // Desempacota recursivamente se for string JSON aninhada
+      while (typeof curr === 'string' && curr.trim().startsWith('{')) {
+        const parsed = JSON.parse(curr);
+        if (parsed && typeof parsed === 'object') {
+          if (parsed.instagram !== undefined && parsed.instagram !== null) {
+            insta = String(parsed.instagram);
+          }
+          if (parsed.position !== undefined) {
+            curr = parsed.position;
+          } else {
+            break;
+          }
+        } else {
+          break;
+        }
       }
-      if (raw.includes('|')) {
-        const [pos, insta] = raw.split('|');
-        return { position: pos || 'top-left', instagram: insta || null };
+
+      if (typeof curr === 'string') {
+        if (curr.includes('|')) {
+          const [p, i] = curr.split('|');
+          pos = p || 'top-left';
+          if (i) insta = i;
+        } else if (!curr.startsWith('{')) {
+          pos = curr;
+        }
       }
     } catch {}
-    return { position: raw || 'top-left', instagram: null };
+
+    const validPositions = ['top-left', 'top-right', 'bottom', 'bottom-left', 'bottom-right', 'center'];
+    if (!validPositions.includes(pos)) {
+      pos = 'top-left';
+    }
+
+    return { position: pos, instagram: insta };
   }
 
   /** Salva rascunho sem publicar */
@@ -178,36 +208,43 @@ export class VitrineService {
       
       if (data.logoPosition !== undefined || data.instagramHandle !== undefined) {
         const current = this.parseLogoPosition(existing?.logoPosition || null);
-        const newPos = data.logoPosition !== undefined ? data.logoPosition : current.position;
-        const newInsta = data.instagramHandle !== undefined ? data.instagramHandle : current.instagram;
-        payload.logoPosition = JSON.stringify({ position: newPos, instagram: newInsta });
+        const parsedInput = this.parseLogoPosition(data.logoPosition);
+        
+        const finalPos = data.logoPosition !== undefined ? parsedInput.position : current.position;
+        const finalInsta = data.instagramHandle !== undefined 
+          ? (data.instagramHandle ? String(data.instagramHandle).trim() : null) 
+          : (parsedInput.instagram || current.instagram);
+
+        payload.logoPosition = JSON.stringify({ position: finalPos, instagram: finalInsta });
       }
 
       if (data.slideDuration !== undefined) payload.slideDuration = Number(data.slideDuration) || 8;
       if (data.draftSlides !== undefined) {
-        // Sanitiza JSON removendo undefined
         payload.draftSlides = JSON.parse(JSON.stringify(data.draftSlides));
       }
 
+      let updated;
       if (existing) {
-        return await prisma.vitrineConfig.update({
+        updated = await prisma.vitrineConfig.update({
           where: { id: existing.id },
           data: payload,
         });
+      } else {
+        updated = await prisma.vitrineConfig.create({
+          data: {
+            theme: payload.theme || 'dark_premium',
+            customBgUrl: payload.customBgUrl || null,
+            showLogo: payload.showLogo !== undefined ? payload.showLogo : true,
+            logoPosition: payload.logoPosition || JSON.stringify({ position: 'top-left', instagram: null }),
+            slideDuration: payload.slideDuration || 8,
+            draftSlides: payload.draftSlides || [],
+            publishedSlides: [],
+            ...payload,
+          },
+        });
       }
 
-      return await prisma.vitrineConfig.create({
-        data: {
-          theme: payload.theme || 'dark_premium',
-          customBgUrl: payload.customBgUrl || null,
-          showLogo: payload.showLogo !== undefined ? payload.showLogo : true,
-          logoPosition: payload.logoPosition || JSON.stringify({ position: 'top-left', instagram: null }),
-          slideDuration: payload.slideDuration || 8,
-          draftSlides: payload.draftSlides || [],
-          publishedSlides: [],
-          ...payload,
-        },
-      });
+      return this.formatConfigResponse(updated);
     } catch (err: any) {
       this.logger.error(`Erro ao salvar rascunho da vitrine: ${err.message}`, err.stack);
       throw err;
@@ -243,7 +280,7 @@ export class VitrineService {
 
       const newVersion = (existing.version || 0) + 1;
 
-      return await prisma.vitrineConfig.update({
+      const updated = await prisma.vitrineConfig.update({
         where: { id: existing.id },
         data: {
           version: newVersion,
@@ -253,6 +290,8 @@ export class VitrineService {
           publishedSlides: existing.draftSlides ? JSON.parse(JSON.stringify(existing.draftSlides)) : [],
         },
       });
+
+      return this.formatConfigResponse(updated);
     } catch (err: any) {
       this.logger.error(`Erro ao publicar vitrine: ${err.message}`, err.stack);
       throw err;
@@ -267,24 +306,27 @@ export class VitrineService {
 
       const existing = await prisma.vitrineConfig.findFirst().catch(() => null);
 
+      let updated;
       if (existing) {
-        return await prisma.vitrineConfig.update({
+        updated = await prisma.vitrineConfig.update({
           where: { id: existing.id },
           data: { active: Boolean(active) },
         });
+      } else {
+        updated = await prisma.vitrineConfig.create({
+          data: {
+            active: Boolean(active),
+            theme: 'dark_premium',
+            showLogo: true,
+            logoPosition: JSON.stringify({ position: 'top-left', instagram: null }),
+            slideDuration: 8,
+            draftSlides: [],
+            publishedSlides: [],
+          },
+        });
       }
 
-      return await prisma.vitrineConfig.create({
-        data: {
-          active: Boolean(active),
-          theme: 'dark_premium',
-          showLogo: true,
-          logoPosition: JSON.stringify({ position: 'top-left', instagram: null }),
-          slideDuration: 8,
-          draftSlides: [],
-          publishedSlides: [],
-        },
-      });
+      return this.formatConfigResponse(updated);
     } catch (err: any) {
       this.logger.error(`Erro ao alternar status da vitrine: ${err.message}`, err.stack);
       throw err;
