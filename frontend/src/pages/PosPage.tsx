@@ -577,11 +577,11 @@ function PosPageContent() {
                       )}
                       
                       {product.imageUrl ? (
-                        <div className="w-full h-20 lg:h-32 mb-3 bg-[#11151f] border border-zinc-800/80 rounded-xl overflow-hidden flex items-center justify-center p-2.5 shadow-sm group-hover:border-blue-500/40 transition-colors">
+                        <div className="w-full h-20 lg:h-32 mb-3 bg-white border border-zinc-200/20 rounded-xl overflow-hidden flex items-center justify-center p-2.5 shadow-sm group-hover:border-blue-500/40 transition-colors">
                           <LazyImage src={product.imageUrl} alt={product.name} className="w-full h-full object-contain" />
                         </div>
                       ) : (
-                        <div className="w-full h-20 lg:h-32 mb-3 bg-[#11151f] border border-zinc-800/80 rounded-xl flex flex-col items-center justify-center text-zinc-600">
+                        <div className="w-full h-20 lg:h-32 mb-3 bg-zinc-800/40 border border-zinc-800/80 rounded-xl flex flex-col items-center justify-center text-zinc-600">
                           <ShoppingBag size={28} className="opacity-40" />
                         </div>
                       )}
