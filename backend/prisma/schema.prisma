@@ -893,7 +893,7 @@ model VitrineConfig {
   theme           String    @default("dark_premium") // slug do tema escolhido
   customBgUrl     String?   @db.Text  // URL do fundo personalizado (upload)
   showLogo        Boolean   @default(true)
-  logoPosition    String?   @default("top-left") @db.Text // top-left, top-right, bottom ou JSON de metadados
+  logoPosition    String?   @db.Text // top-left, top-right, bottom ou JSON de metadados
   slideDuration   Int       @default(8)           // segundos por slide
 
   // Slides em formato JSON (MVP)
