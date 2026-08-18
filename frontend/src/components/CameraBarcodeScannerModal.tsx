@@ -21,6 +21,9 @@ export function CameraBarcodeScannerModal({ isOpen, onClose, onScan }: CameraBar
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
 
+  const lastScannedTimeRef = useRef<{ [code: string]: number }>({});
+  const isProcessingRef = useRef<boolean>(false);
+
   // Som de beep suave ao escanear
   const playBeep = () => {
     try {
@@ -29,34 +32,43 @@ export function CameraBarcodeScannerModal({ isOpen, onClose, onScan }: CameraBar
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(880, ctx.currentTime); // Nota Lá (A5)
-      gain.gain.setValueAtTime(0.1, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.15);
+      osc.stop(ctx.currentTime + 0.12);
     } catch {
-      // Ignora erro de áudio se bloqueado
+      // Ignora erro de áudio se bloqueado pelo navegador
     }
   };
 
   const handleBarcodeDetected = (code: string) => {
     const cleanCode = code.trim();
-    if (!cleanCode || cleanCode === lastScannedCode) return;
+    if (!cleanCode || isProcessingRef.current) return;
 
+    // Cooldown de 3.5 segundos para o mesmo código de barras
+    const now = Date.now();
+    const lastTime = lastScannedTimeRef.current[cleanCode] || 0;
+    if (now - lastTime < 3500) {
+      return;
+    }
+
+    lastScannedTimeRef.current[cleanCode] = now;
+    isProcessingRef.current = true;
     setLastScannedCode(cleanCode);
+
     playBeep();
     if (navigator.vibrate) {
-      navigator.vibrate(80);
+      navigator.vibrate(60);
     }
 
     onScan(cleanCode);
-    toast.success(`Código lido: ${cleanCode}`);
 
-    // Delay de 1.5s antes de permitir ler o mesmo código novamente
+    // Libera o lock de processamento após 1 segundo
     setTimeout(() => {
-      setLastScannedCode(null);
-    }, 1500);
+      isProcessingRef.current = false;
+    }, 1000);
   };
 
   // Iniciar câmera

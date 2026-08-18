@@ -231,10 +231,11 @@ function PosPageContent() {
     );
     if (match) {
       handleClickProduct(match);
-      toast.success(`Produto adicionado: ${match.name}`);
+      toast.success(`Produto adicionado: ${match.name}`, { id: 'camera-scan' });
       setIsCameraScannerOpen(false);
     } else {
-      toast.error(`Produto com código "${scannedCode}" não encontrado no catálogo.`);
+      setSearch(scannedCode.trim());
+      toast.error(`Produto "${scannedCode}" não encontrado no catálogo.`, { id: 'camera-scan' });
     }
   };
 
