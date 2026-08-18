@@ -129,6 +129,7 @@ exports.Prisma.TenantScalarFieldEnum = {
   status: 'status',
   logoUrl: 'logoUrl',
   modulos: 'modulos',
+  tvPublicId: 'tvPublicId',
   razaoSocial: 'razaoSocial',
   nomeFantasia: 'nomeFantasia',
   cnpj: 'cnpj',
@@ -157,6 +158,9 @@ exports.Prisma.TenantScalarFieldEnum = {
   cosmosApiKey: 'cosmosApiKey',
   mensalidadeValor: 'mensalidadeValor',
   mensalidadeVencimento: 'mensalidadeVencimento',
+  telefoneContato: 'telefoneContato',
+  emailContato: 'emailContato',
+  observacoes: 'observacoes',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   termsAcceptedAt: 'termsAcceptedAt'
@@ -171,6 +175,7 @@ exports.Prisma.UserScalarFieldEnum = {
   role: 'role',
   pin: 'pin',
   active: 'active',
+  groupId: 'groupId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -203,6 +208,122 @@ exports.Prisma.TenantIntegrationScalarFieldEnum = {
   status: 'status',
   credentials: 'credentials',
   settings: 'settings',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.TenantGroupScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.TenantGroupMemberScalarFieldEnum = {
+  id: 'id',
+  groupId: 'groupId',
+  tenantId: 'tenantId',
+  alias: 'alias'
+};
+
+exports.Prisma.NfeSyncStateScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  ultimoNSU: 'ultimoNSU',
+  ultimaConsulta: 'ultimaConsulta',
+  status: 'status',
+  notasBaixadas: 'notasBaixadas',
+  tempoGastoMs: 'tempoGastoMs',
+  lastError: 'lastError',
+  correlationId: 'correlationId',
+  lastDiagnostico: 'lastDiagnostico',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.StoreProfileScalarFieldEnum = {
+  id: 'id',
+  slug: 'slug',
+  name: 'name',
+  icon: 'icon',
+  description: 'description'
+};
+
+exports.Prisma.StoreProfileFiscalScalarFieldEnum = {
+  storeProfileId: 'storeProfileId',
+  fiscalProfileId: 'fiscalProfileId'
+};
+
+exports.Prisma.FiscalProfileScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  icon: 'icon',
+  group: 'group',
+  description: 'description',
+  scope: 'scope',
+  tenantId: 'tenantId',
+  version: 'version',
+  status: 'status',
+  emiteNfce: 'emiteNfce',
+  ncm: 'ncm',
+  cest: 'cest',
+  unit: 'unit',
+  observacoes: 'observacoes'
+};
+
+exports.Prisma.FiscalTaxRuleScalarFieldEnum = {
+  id: 'id',
+  fiscalProfileId: 'fiscalProfileId',
+  regime: 'regime',
+  csosn: 'csosn',
+  cstIcms: 'cstIcms',
+  aliqIcms: 'aliqIcms',
+  cstPis: 'cstPis',
+  aliqPis: 'aliqPis',
+  cstCofins: 'cstCofins',
+  aliqCofins: 'aliqCofins',
+  ibsCst: 'ibsCst',
+  ibsAliq: 'ibsAliq',
+  cbsCst: 'cbsCst',
+  cbsAliq: 'cbsAliq',
+  validFrom: 'validFrom',
+  validUntil: 'validUntil'
+};
+
+exports.Prisma.FiscalProfileHistoryScalarFieldEnum = {
+  id: 'id',
+  fiscalProfileId: 'fiscalProfileId',
+  changedBy: 'changedBy',
+  changedAt: 'changedAt',
+  field: 'field',
+  oldValue: 'oldValue',
+  newValue: 'newValue',
+  reason: 'reason'
+};
+
+exports.Prisma.FiscalFavoriteScalarFieldEnum = {
+  tenantId: 'tenantId',
+  fiscalProfileId: 'fiscalProfileId'
+};
+
+exports.Prisma.PaymentLogScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  valor: 'valor',
+  vencimentoAntes: 'vencimentoAntes',
+  vencimentoApos: 'vencimentoApos',
+  observacao: 'observacao',
+  registradoPor: 'registradoPor',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.LeadScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  whatsapp: 'whatsapp',
+  status: 'status',
+  source: 'source',
+  notes: 'notes',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -244,6 +365,7 @@ exports.Prisma.TenantOrderByRelevanceFieldEnum = {
   name: 'name',
   status: 'status',
   logoUrl: 'logoUrl',
+  tvPublicId: 'tvPublicId',
   razaoSocial: 'razaoSocial',
   nomeFantasia: 'nomeFantasia',
   cnpj: 'cnpj',
@@ -262,7 +384,10 @@ exports.Prisma.TenantOrderByRelevanceFieldEnum = {
   nfceCsc: 'nfceCsc',
   nfceIdCsc: 'nfceIdCsc',
   certSenha: 'certSenha',
-  cosmosApiKey: 'cosmosApiKey'
+  cosmosApiKey: 'cosmosApiKey',
+  telefoneContato: 'telefoneContato',
+  emailContato: 'emailContato',
+  observacoes: 'observacoes'
 };
 
 exports.Prisma.UserOrderByRelevanceFieldEnum = {
@@ -272,7 +397,8 @@ exports.Prisma.UserOrderByRelevanceFieldEnum = {
   email: 'email',
   password: 'password',
   role: 'role',
-  pin: 'pin'
+  pin: 'pin',
+  groupId: 'groupId'
 };
 
 exports.Prisma.MasterProductOrderByRelevanceFieldEnum = {
@@ -300,13 +426,117 @@ exports.Prisma.TenantIntegrationOrderByRelevanceFieldEnum = {
   status: 'status'
 };
 
+exports.Prisma.TenantGroupOrderByRelevanceFieldEnum = {
+  id: 'id',
+  name: 'name'
+};
+
+exports.Prisma.TenantGroupMemberOrderByRelevanceFieldEnum = {
+  id: 'id',
+  groupId: 'groupId',
+  tenantId: 'tenantId',
+  alias: 'alias'
+};
+
+exports.Prisma.NfeSyncStateOrderByRelevanceFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  ultimoNSU: 'ultimoNSU',
+  status: 'status',
+  lastError: 'lastError',
+  correlationId: 'correlationId'
+};
+
+exports.Prisma.StoreProfileOrderByRelevanceFieldEnum = {
+  id: 'id',
+  slug: 'slug',
+  name: 'name',
+  icon: 'icon',
+  description: 'description'
+};
+
+exports.Prisma.StoreProfileFiscalOrderByRelevanceFieldEnum = {
+  storeProfileId: 'storeProfileId',
+  fiscalProfileId: 'fiscalProfileId'
+};
+
+exports.Prisma.FiscalProfileOrderByRelevanceFieldEnum = {
+  id: 'id',
+  name: 'name',
+  icon: 'icon',
+  group: 'group',
+  description: 'description',
+  scope: 'scope',
+  tenantId: 'tenantId',
+  version: 'version',
+  status: 'status',
+  ncm: 'ncm',
+  cest: 'cest',
+  unit: 'unit',
+  observacoes: 'observacoes'
+};
+
+exports.Prisma.FiscalTaxRuleOrderByRelevanceFieldEnum = {
+  id: 'id',
+  fiscalProfileId: 'fiscalProfileId',
+  regime: 'regime',
+  csosn: 'csosn',
+  cstIcms: 'cstIcms',
+  cstPis: 'cstPis',
+  cstCofins: 'cstCofins',
+  ibsCst: 'ibsCst',
+  cbsCst: 'cbsCst'
+};
+
+exports.Prisma.FiscalProfileHistoryOrderByRelevanceFieldEnum = {
+  id: 'id',
+  fiscalProfileId: 'fiscalProfileId',
+  changedBy: 'changedBy',
+  field: 'field',
+  oldValue: 'oldValue',
+  newValue: 'newValue',
+  reason: 'reason'
+};
+
+exports.Prisma.FiscalFavoriteOrderByRelevanceFieldEnum = {
+  tenantId: 'tenantId',
+  fiscalProfileId: 'fiscalProfileId'
+};
+
+exports.Prisma.PaymentLogOrderByRelevanceFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  observacao: 'observacao',
+  registradoPor: 'registradoPor'
+};
+
+exports.Prisma.LeadOrderByRelevanceFieldEnum = {
+  id: 'id',
+  name: 'name',
+  whatsapp: 'whatsapp',
+  status: 'status',
+  source: 'source',
+  notes: 'notes'
+};
+
 
 exports.Prisma.ModelName = {
   Tenant: 'Tenant',
   User: 'User',
   MasterProduct: 'MasterProduct',
   Image: 'Image',
-  TenantIntegration: 'TenantIntegration'
+  TenantIntegration: 'TenantIntegration',
+  TenantGroup: 'TenantGroup',
+  TenantGroupMember: 'TenantGroupMember',
+  NfeSyncState: 'NfeSyncState',
+  StoreProfile: 'StoreProfile',
+  StoreProfileFiscal: 'StoreProfileFiscal',
+  FiscalProfile: 'FiscalProfile',
+  FiscalTaxRule: 'FiscalTaxRule',
+  FiscalProfileHistory: 'FiscalProfileHistory',
+  FiscalFavorite: 'FiscalFavorite',
+  PaymentLog: 'PaymentLog',
+  Lead: 'Lead'
 };
 
 /**

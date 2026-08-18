@@ -29,6 +29,13 @@ export default function UsersPage() {
   const [showPin, setShowPin] = useState(false);
   const [savingPin, setSavingPin] = useState(false);
 
+  // Cashier PIN modal state (PIN do Caixa)
+  const [cashierPinModalOpen, setCashierPinModalOpen] = useState(false);
+  const [cashierPin, setCashierPin] = useState('');
+  const [confirmCashierPin, setConfirmCashierPin] = useState('');
+  const [showCashierPin, setShowCashierPin] = useState(false);
+  const [savingCashierPin, setSavingCashierPin] = useState(false);
+
   useEffect(() => { fetchUsers(); }, []);
 
   const fetchUsers = async () => {
@@ -87,24 +94,47 @@ export default function UsersPage() {
     }
   };
 
+  const handleSaveCashierPin = async () => {
+    if (cashierPin.length < 4) { toast.error("O PIN deve ter no mínimo 4 dígitos."); return; }
+    if (cashierPin !== confirmCashierPin) { toast.error("Os PINs não coincidem."); return; }
+    setSavingCashierPin(true);
+    try {
+      await api.post('/tenants/me/cashier-pin', { pin: cashierPin });
+      toast.success("PIN do Caixa configurado com sucesso!");
+      setCashierPinModalOpen(false);
+      setCashierPin(''); setConfirmCashierPin('');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Erro ao salvar o PIN do Caixa.");
+    } finally {
+      setSavingCashierPin(false);
+    }
+  };
+
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Gestão de Equipe</h1>
           <p className="text-zinc-400 text-sm mt-1">Gerencie os acessos do seu estabelecimento</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setCashierPinModalOpen(true)}
+            className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-blue-400 px-4 py-2 rounded-xl flex items-center gap-2 transition-all active:scale-95 cursor-pointer text-sm font-semibold shadow-sm"
+            title="Configurar PIN do Caixa para desbloqueio e visualização no PDV"
+          >
+            <KeyRound size={16} /> PIN do Caixa
+          </button>
           <button
             onClick={() => setPinModalOpen(true)}
-            className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-amber-400 px-4 py-2 rounded-xl flex items-center gap-2 transition-all active:scale-95"
+            className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-amber-400 px-4 py-2 rounded-xl flex items-center gap-2 transition-all active:scale-95 cursor-pointer text-sm font-semibold shadow-sm"
             title="Configurar PIN de desconto para o PDV"
           >
             <KeyRound size={16} /> PIN de Desconto
           </button>
           <button
             onClick={handleOpenModal}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20 active:scale-95 text-sm font-bold cursor-pointer"
           >
             <Plus size={18} /> Novo Colaborador
           </button>
@@ -177,19 +207,92 @@ export default function UsersPage() {
               )}
             </tbody>
           </table>
-          <div className="p-4 bg-zinc-950/30 border-t border-zinc-800/80 text-xs text-zinc-500 flex justify-between items-center">
+          <div className="p-4 bg-zinc-950/30 border-t border-zinc-800/80 text-xs text-zinc-500 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <span>Limites: {users.length} de 2 usuários (Máx. 1 Admin, 1 Operador)</span>
-            <span className="flex items-center gap-1.5 text-amber-500/70">
-              <Lock size={12} /> PIN de Desconto protege alterações de preço no PDV
-            </span>
+            <div className="flex flex-wrap items-center gap-4">
+              <span className="flex items-center gap-1.5 text-blue-400/80">
+                <Lock size={12} /> PIN do Caixa desbloqueia visualização/auditoria no PDV
+              </span>
+              <span className="flex items-center gap-1.5 text-amber-500/80">
+                <Lock size={12} /> PIN de Desconto protege alterações de preço no PDV
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de PIN do Caixa */}
+      {cashierPinModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-zinc-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <KeyRound size={20} className="text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">PIN do Caixa</h3>
+                  <p className="text-xs text-zinc-500">Desbloqueia auditoria e valores restritos no PDV</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-zinc-400 block mb-2">Novo PIN do Caixa (mín. 4 dígitos)</label>
+                <div className="relative">
+                  <input
+                    type={showCashierPin ? 'text' : 'password'}
+                    value={cashierPin}
+                    onChange={e => setCashierPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                    placeholder="••••"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white text-center text-2xl font-mono tracking-[0.5em] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    maxLength={8}
+                    autoFocus
+                  />
+                  <button onClick={() => setShowCashierPin(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 cursor-pointer">
+                    {showCashierPin ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-400 block mb-2">Confirmar PIN do Caixa</label>
+                <input
+                  type={showCashierPin ? 'text' : 'password'}
+                  value={confirmCashierPin}
+                  onChange={e => setConfirmCashierPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  placeholder="••••"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white text-center text-2xl font-mono tracking-[0.5em] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  maxLength={8}
+                  onKeyDown={e => e.key === 'Enter' && handleSaveCashierPin()}
+                />
+              </div>
+              {cashierPin && confirmCashierPin && cashierPin !== confirmCashierPin && (
+                <p className="text-red-400 text-xs text-center">Os PINs não coincidem</p>
+              )}
+            </div>
+            <div className="p-6 pt-0 flex gap-3">
+              <button
+                onClick={() => { setCashierPinModalOpen(false); setCashierPin(''); setConfirmCashierPin(''); }}
+                className="flex-1 py-3 rounded-xl border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition font-medium cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveCashierPin}
+                disabled={savingCashierPin || cashierPin.length < 4 || cashierPin !== confirmCashierPin}
+                className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold transition active:scale-95 cursor-pointer shadow-lg shadow-blue-600/20"
+              >
+                {savingCashierPin ? 'Salvando...' : 'Salvar PIN'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Modal de PIN de Desconto */}
       {pinModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-zinc-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
@@ -212,8 +315,9 @@ export default function UsersPage() {
                     placeholder="••••"
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white text-center text-2xl font-mono tracking-[0.5em] focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                     maxLength={8}
+                    autoFocus
                   />
-                  <button onClick={() => setShowPin(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+                  <button onClick={() => setShowPin(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 cursor-pointer">
                     {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
@@ -237,14 +341,14 @@ export default function UsersPage() {
             <div className="p-6 pt-0 flex gap-3">
               <button
                 onClick={() => { setPinModalOpen(false); setDiscountPin(''); setConfirmPin(''); }}
-                className="flex-1 py-3 rounded-xl border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition font-medium"
+                className="flex-1 py-3 rounded-xl border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition font-medium cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSaveDiscountPin}
                 disabled={savingPin || discountPin.length < 4 || discountPin !== confirmPin}
-                className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold transition active:scale-95"
+                className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold transition active:scale-95 cursor-pointer"
               >
                 {savingPin ? 'Salvando...' : 'Salvar PIN'}
               </button>

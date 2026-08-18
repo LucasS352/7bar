@@ -632,6 +632,70 @@ export class TenantsService {
     return bcrypt.compare(pin, settings.discountPin);
   }
 
+  /** Define/atualiza o PIN do Caixa para liberação de auditoria e visualização de valores */
+  async setCashierPin(tenantId: string, pin: string) {
+    const { databaseUrl } = this.tenantContext.get();
+    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    const hashed = await bcrypt.hash(pin, 10);
+    try {
+      await prisma.tenantSettings.upsert({
+        where: { id: 'singleton' },
+        update: { cashierPin: hashed },
+        create: { id: 'singleton', cashierPin: hashed },
+      });
+    } catch (err: any) {
+      if (err?.code === 'P2022' || err?.message?.includes('cashierPin') || err?.message?.includes('Unknown column')) {
+        // Se a coluna ainda não existir no banco do tenant, adiciona automaticamente
+        try {
+          await prisma.$executeRawUnsafe('ALTER TABLE `tenant_settings` ADD COLUMN `cashierPin` VARCHAR(191) NULL');
+          await prisma.tenantSettings.upsert({
+            where: { id: 'singleton' },
+            update: { cashierPin: hashed },
+            create: { id: 'singleton', cashierPin: hashed },
+          });
+        } catch (alterErr) {
+          this.logger.error(`Erro ao criar coluna cashierPin dinamicamente: ${alterErr.message}`);
+          throw err;
+        }
+      } else {
+        throw err;
+      }
+    }
+    return { message: 'PIN do Caixa configurado com sucesso.' };
+  }
+
+  /** Verifica se o PIN informado é o PIN do Caixa ou PIN de um gerente */
+  async verifyCashierPin(tenantId: string, pin: string): Promise<boolean> {
+    const { databaseUrl } = this.tenantContext.get();
+    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    
+    // 1. Tenta verificar contra o cashierPin do TenantSettings
+    try {
+      const settings = await prisma.tenantSettings.findUnique({ where: { id: 'singleton' } });
+      if (settings?.cashierPin && (await bcrypt.compare(pin, settings.cashierPin))) {
+        return true;
+      }
+    } catch {
+      // Caso a coluna ainda não exista antes da atualização do banco
+    }
+
+    // 2. Tenta verificar se o PIN bate com algum Operador com permissão de Gerente (isManager=true)
+    try {
+      const managers = await prisma.operator.findMany({
+        where: { isManager: true, active: true },
+      });
+      for (const mgr of managers) {
+        if (mgr.pin && (await bcrypt.compare(pin, mgr.pin))) {
+          return true;
+        }
+      }
+    } catch {
+      // Ignora erro
+    }
+
+    return false;
+  }
+
   async deleteTenant(tenantId: string) {
     const tenant = await this.heartPrisma.tenant.findUnique({
       where: { id: tenantId }

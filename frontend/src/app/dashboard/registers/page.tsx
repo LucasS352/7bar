@@ -164,7 +164,8 @@ export default function CashRegistersHistoryPage() {
       <CloseRegisterModal 
         isOpen={!!selectedId} 
         registerId={selectedId || ''} 
-        onClose={handleModalClose} 
+        onClose={handleModalClose}
+        isAdminView={true}
       />
     </div>
   );

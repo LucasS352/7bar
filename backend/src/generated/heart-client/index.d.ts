@@ -38,6 +38,61 @@ export type Image = $Result.DefaultSelection<Prisma.$ImagePayload>
  * 
  */
 export type TenantIntegration = $Result.DefaultSelection<Prisma.$TenantIntegrationPayload>
+/**
+ * Model TenantGroup
+ * 
+ */
+export type TenantGroup = $Result.DefaultSelection<Prisma.$TenantGroupPayload>
+/**
+ * Model TenantGroupMember
+ * 
+ */
+export type TenantGroupMember = $Result.DefaultSelection<Prisma.$TenantGroupMemberPayload>
+/**
+ * Model NfeSyncState
+ * 
+ */
+export type NfeSyncState = $Result.DefaultSelection<Prisma.$NfeSyncStatePayload>
+/**
+ * Model StoreProfile
+ * 
+ */
+export type StoreProfile = $Result.DefaultSelection<Prisma.$StoreProfilePayload>
+/**
+ * Model StoreProfileFiscal
+ * 
+ */
+export type StoreProfileFiscal = $Result.DefaultSelection<Prisma.$StoreProfileFiscalPayload>
+/**
+ * Model FiscalProfile
+ * 
+ */
+export type FiscalProfile = $Result.DefaultSelection<Prisma.$FiscalProfilePayload>
+/**
+ * Model FiscalTaxRule
+ * 
+ */
+export type FiscalTaxRule = $Result.DefaultSelection<Prisma.$FiscalTaxRulePayload>
+/**
+ * Model FiscalProfileHistory
+ * 
+ */
+export type FiscalProfileHistory = $Result.DefaultSelection<Prisma.$FiscalProfileHistoryPayload>
+/**
+ * Model FiscalFavorite
+ * 
+ */
+export type FiscalFavorite = $Result.DefaultSelection<Prisma.$FiscalFavoritePayload>
+/**
+ * Model PaymentLog
+ * 
+ */
+export type PaymentLog = $Result.DefaultSelection<Prisma.$PaymentLogPayload>
+/**
+ * Model Lead
+ * 
+ */
+export type Lead = $Result.DefaultSelection<Prisma.$LeadPayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -206,6 +261,116 @@ export class PrismaClient<
     * ```
     */
   get tenantIntegration(): Prisma.TenantIntegrationDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.tenantGroup`: Exposes CRUD operations for the **TenantGroup** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more TenantGroups
+    * const tenantGroups = await prisma.tenantGroup.findMany()
+    * ```
+    */
+  get tenantGroup(): Prisma.TenantGroupDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.tenantGroupMember`: Exposes CRUD operations for the **TenantGroupMember** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more TenantGroupMembers
+    * const tenantGroupMembers = await prisma.tenantGroupMember.findMany()
+    * ```
+    */
+  get tenantGroupMember(): Prisma.TenantGroupMemberDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.nfeSyncState`: Exposes CRUD operations for the **NfeSyncState** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more NfeSyncStates
+    * const nfeSyncStates = await prisma.nfeSyncState.findMany()
+    * ```
+    */
+  get nfeSyncState(): Prisma.NfeSyncStateDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.storeProfile`: Exposes CRUD operations for the **StoreProfile** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more StoreProfiles
+    * const storeProfiles = await prisma.storeProfile.findMany()
+    * ```
+    */
+  get storeProfile(): Prisma.StoreProfileDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.storeProfileFiscal`: Exposes CRUD operations for the **StoreProfileFiscal** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more StoreProfileFiscals
+    * const storeProfileFiscals = await prisma.storeProfileFiscal.findMany()
+    * ```
+    */
+  get storeProfileFiscal(): Prisma.StoreProfileFiscalDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.fiscalProfile`: Exposes CRUD operations for the **FiscalProfile** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more FiscalProfiles
+    * const fiscalProfiles = await prisma.fiscalProfile.findMany()
+    * ```
+    */
+  get fiscalProfile(): Prisma.FiscalProfileDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.fiscalTaxRule`: Exposes CRUD operations for the **FiscalTaxRule** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more FiscalTaxRules
+    * const fiscalTaxRules = await prisma.fiscalTaxRule.findMany()
+    * ```
+    */
+  get fiscalTaxRule(): Prisma.FiscalTaxRuleDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.fiscalProfileHistory`: Exposes CRUD operations for the **FiscalProfileHistory** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more FiscalProfileHistories
+    * const fiscalProfileHistories = await prisma.fiscalProfileHistory.findMany()
+    * ```
+    */
+  get fiscalProfileHistory(): Prisma.FiscalProfileHistoryDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.fiscalFavorite`: Exposes CRUD operations for the **FiscalFavorite** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more FiscalFavorites
+    * const fiscalFavorites = await prisma.fiscalFavorite.findMany()
+    * ```
+    */
+  get fiscalFavorite(): Prisma.FiscalFavoriteDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.paymentLog`: Exposes CRUD operations for the **PaymentLog** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more PaymentLogs
+    * const paymentLogs = await prisma.paymentLog.findMany()
+    * ```
+    */
+  get paymentLog(): Prisma.PaymentLogDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.lead`: Exposes CRUD operations for the **Lead** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Leads
+    * const leads = await prisma.lead.findMany()
+    * ```
+    */
+  get lead(): Prisma.LeadDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -651,7 +816,18 @@ export namespace Prisma {
     User: 'User',
     MasterProduct: 'MasterProduct',
     Image: 'Image',
-    TenantIntegration: 'TenantIntegration'
+    TenantIntegration: 'TenantIntegration',
+    TenantGroup: 'TenantGroup',
+    TenantGroupMember: 'TenantGroupMember',
+    NfeSyncState: 'NfeSyncState',
+    StoreProfile: 'StoreProfile',
+    StoreProfileFiscal: 'StoreProfileFiscal',
+    FiscalProfile: 'FiscalProfile',
+    FiscalTaxRule: 'FiscalTaxRule',
+    FiscalProfileHistory: 'FiscalProfileHistory',
+    FiscalFavorite: 'FiscalFavorite',
+    PaymentLog: 'PaymentLog',
+    Lead: 'Lead'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -670,7 +846,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "tenant" | "user" | "masterProduct" | "image" | "tenantIntegration"
+      modelProps: "tenant" | "user" | "masterProduct" | "image" | "tenantIntegration" | "tenantGroup" | "tenantGroupMember" | "nfeSyncState" | "storeProfile" | "storeProfileFiscal" | "fiscalProfile" | "fiscalTaxRule" | "fiscalProfileHistory" | "fiscalFavorite" | "paymentLog" | "lead"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1004,6 +1180,732 @@ export namespace Prisma {
           }
         }
       }
+      TenantGroup: {
+        payload: Prisma.$TenantGroupPayload<ExtArgs>
+        fields: Prisma.TenantGroupFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.TenantGroupFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.TenantGroupFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupPayload>
+          }
+          findFirst: {
+            args: Prisma.TenantGroupFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.TenantGroupFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupPayload>
+          }
+          findMany: {
+            args: Prisma.TenantGroupFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupPayload>[]
+          }
+          create: {
+            args: Prisma.TenantGroupCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupPayload>
+          }
+          createMany: {
+            args: Prisma.TenantGroupCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.TenantGroupDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupPayload>
+          }
+          update: {
+            args: Prisma.TenantGroupUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupPayload>
+          }
+          deleteMany: {
+            args: Prisma.TenantGroupDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.TenantGroupUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.TenantGroupUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupPayload>
+          }
+          aggregate: {
+            args: Prisma.TenantGroupAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateTenantGroup>
+          }
+          groupBy: {
+            args: Prisma.TenantGroupGroupByArgs<ExtArgs>
+            result: $Utils.Optional<TenantGroupGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.TenantGroupCountArgs<ExtArgs>
+            result: $Utils.Optional<TenantGroupCountAggregateOutputType> | number
+          }
+        }
+      }
+      TenantGroupMember: {
+        payload: Prisma.$TenantGroupMemberPayload<ExtArgs>
+        fields: Prisma.TenantGroupMemberFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.TenantGroupMemberFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupMemberPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.TenantGroupMemberFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupMemberPayload>
+          }
+          findFirst: {
+            args: Prisma.TenantGroupMemberFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupMemberPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.TenantGroupMemberFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupMemberPayload>
+          }
+          findMany: {
+            args: Prisma.TenantGroupMemberFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupMemberPayload>[]
+          }
+          create: {
+            args: Prisma.TenantGroupMemberCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupMemberPayload>
+          }
+          createMany: {
+            args: Prisma.TenantGroupMemberCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.TenantGroupMemberDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupMemberPayload>
+          }
+          update: {
+            args: Prisma.TenantGroupMemberUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupMemberPayload>
+          }
+          deleteMany: {
+            args: Prisma.TenantGroupMemberDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.TenantGroupMemberUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.TenantGroupMemberUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TenantGroupMemberPayload>
+          }
+          aggregate: {
+            args: Prisma.TenantGroupMemberAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateTenantGroupMember>
+          }
+          groupBy: {
+            args: Prisma.TenantGroupMemberGroupByArgs<ExtArgs>
+            result: $Utils.Optional<TenantGroupMemberGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.TenantGroupMemberCountArgs<ExtArgs>
+            result: $Utils.Optional<TenantGroupMemberCountAggregateOutputType> | number
+          }
+        }
+      }
+      NfeSyncState: {
+        payload: Prisma.$NfeSyncStatePayload<ExtArgs>
+        fields: Prisma.NfeSyncStateFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.NfeSyncStateFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NfeSyncStatePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.NfeSyncStateFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NfeSyncStatePayload>
+          }
+          findFirst: {
+            args: Prisma.NfeSyncStateFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NfeSyncStatePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.NfeSyncStateFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NfeSyncStatePayload>
+          }
+          findMany: {
+            args: Prisma.NfeSyncStateFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NfeSyncStatePayload>[]
+          }
+          create: {
+            args: Prisma.NfeSyncStateCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NfeSyncStatePayload>
+          }
+          createMany: {
+            args: Prisma.NfeSyncStateCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.NfeSyncStateDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NfeSyncStatePayload>
+          }
+          update: {
+            args: Prisma.NfeSyncStateUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NfeSyncStatePayload>
+          }
+          deleteMany: {
+            args: Prisma.NfeSyncStateDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.NfeSyncStateUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.NfeSyncStateUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$NfeSyncStatePayload>
+          }
+          aggregate: {
+            args: Prisma.NfeSyncStateAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateNfeSyncState>
+          }
+          groupBy: {
+            args: Prisma.NfeSyncStateGroupByArgs<ExtArgs>
+            result: $Utils.Optional<NfeSyncStateGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.NfeSyncStateCountArgs<ExtArgs>
+            result: $Utils.Optional<NfeSyncStateCountAggregateOutputType> | number
+          }
+        }
+      }
+      StoreProfile: {
+        payload: Prisma.$StoreProfilePayload<ExtArgs>
+        fields: Prisma.StoreProfileFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.StoreProfileFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfilePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.StoreProfileFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfilePayload>
+          }
+          findFirst: {
+            args: Prisma.StoreProfileFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfilePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.StoreProfileFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfilePayload>
+          }
+          findMany: {
+            args: Prisma.StoreProfileFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfilePayload>[]
+          }
+          create: {
+            args: Prisma.StoreProfileCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfilePayload>
+          }
+          createMany: {
+            args: Prisma.StoreProfileCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.StoreProfileDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfilePayload>
+          }
+          update: {
+            args: Prisma.StoreProfileUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfilePayload>
+          }
+          deleteMany: {
+            args: Prisma.StoreProfileDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.StoreProfileUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.StoreProfileUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfilePayload>
+          }
+          aggregate: {
+            args: Prisma.StoreProfileAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateStoreProfile>
+          }
+          groupBy: {
+            args: Prisma.StoreProfileGroupByArgs<ExtArgs>
+            result: $Utils.Optional<StoreProfileGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.StoreProfileCountArgs<ExtArgs>
+            result: $Utils.Optional<StoreProfileCountAggregateOutputType> | number
+          }
+        }
+      }
+      StoreProfileFiscal: {
+        payload: Prisma.$StoreProfileFiscalPayload<ExtArgs>
+        fields: Prisma.StoreProfileFiscalFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.StoreProfileFiscalFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfileFiscalPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.StoreProfileFiscalFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfileFiscalPayload>
+          }
+          findFirst: {
+            args: Prisma.StoreProfileFiscalFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfileFiscalPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.StoreProfileFiscalFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfileFiscalPayload>
+          }
+          findMany: {
+            args: Prisma.StoreProfileFiscalFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfileFiscalPayload>[]
+          }
+          create: {
+            args: Prisma.StoreProfileFiscalCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfileFiscalPayload>
+          }
+          createMany: {
+            args: Prisma.StoreProfileFiscalCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.StoreProfileFiscalDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfileFiscalPayload>
+          }
+          update: {
+            args: Prisma.StoreProfileFiscalUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfileFiscalPayload>
+          }
+          deleteMany: {
+            args: Prisma.StoreProfileFiscalDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.StoreProfileFiscalUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.StoreProfileFiscalUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$StoreProfileFiscalPayload>
+          }
+          aggregate: {
+            args: Prisma.StoreProfileFiscalAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateStoreProfileFiscal>
+          }
+          groupBy: {
+            args: Prisma.StoreProfileFiscalGroupByArgs<ExtArgs>
+            result: $Utils.Optional<StoreProfileFiscalGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.StoreProfileFiscalCountArgs<ExtArgs>
+            result: $Utils.Optional<StoreProfileFiscalCountAggregateOutputType> | number
+          }
+        }
+      }
+      FiscalProfile: {
+        payload: Prisma.$FiscalProfilePayload<ExtArgs>
+        fields: Prisma.FiscalProfileFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.FiscalProfileFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfilePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.FiscalProfileFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfilePayload>
+          }
+          findFirst: {
+            args: Prisma.FiscalProfileFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfilePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.FiscalProfileFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfilePayload>
+          }
+          findMany: {
+            args: Prisma.FiscalProfileFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfilePayload>[]
+          }
+          create: {
+            args: Prisma.FiscalProfileCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfilePayload>
+          }
+          createMany: {
+            args: Prisma.FiscalProfileCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.FiscalProfileDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfilePayload>
+          }
+          update: {
+            args: Prisma.FiscalProfileUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfilePayload>
+          }
+          deleteMany: {
+            args: Prisma.FiscalProfileDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.FiscalProfileUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.FiscalProfileUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfilePayload>
+          }
+          aggregate: {
+            args: Prisma.FiscalProfileAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateFiscalProfile>
+          }
+          groupBy: {
+            args: Prisma.FiscalProfileGroupByArgs<ExtArgs>
+            result: $Utils.Optional<FiscalProfileGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.FiscalProfileCountArgs<ExtArgs>
+            result: $Utils.Optional<FiscalProfileCountAggregateOutputType> | number
+          }
+        }
+      }
+      FiscalTaxRule: {
+        payload: Prisma.$FiscalTaxRulePayload<ExtArgs>
+        fields: Prisma.FiscalTaxRuleFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.FiscalTaxRuleFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalTaxRulePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.FiscalTaxRuleFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalTaxRulePayload>
+          }
+          findFirst: {
+            args: Prisma.FiscalTaxRuleFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalTaxRulePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.FiscalTaxRuleFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalTaxRulePayload>
+          }
+          findMany: {
+            args: Prisma.FiscalTaxRuleFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalTaxRulePayload>[]
+          }
+          create: {
+            args: Prisma.FiscalTaxRuleCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalTaxRulePayload>
+          }
+          createMany: {
+            args: Prisma.FiscalTaxRuleCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.FiscalTaxRuleDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalTaxRulePayload>
+          }
+          update: {
+            args: Prisma.FiscalTaxRuleUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalTaxRulePayload>
+          }
+          deleteMany: {
+            args: Prisma.FiscalTaxRuleDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.FiscalTaxRuleUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.FiscalTaxRuleUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalTaxRulePayload>
+          }
+          aggregate: {
+            args: Prisma.FiscalTaxRuleAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateFiscalTaxRule>
+          }
+          groupBy: {
+            args: Prisma.FiscalTaxRuleGroupByArgs<ExtArgs>
+            result: $Utils.Optional<FiscalTaxRuleGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.FiscalTaxRuleCountArgs<ExtArgs>
+            result: $Utils.Optional<FiscalTaxRuleCountAggregateOutputType> | number
+          }
+        }
+      }
+      FiscalProfileHistory: {
+        payload: Prisma.$FiscalProfileHistoryPayload<ExtArgs>
+        fields: Prisma.FiscalProfileHistoryFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.FiscalProfileHistoryFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfileHistoryPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.FiscalProfileHistoryFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfileHistoryPayload>
+          }
+          findFirst: {
+            args: Prisma.FiscalProfileHistoryFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfileHistoryPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.FiscalProfileHistoryFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfileHistoryPayload>
+          }
+          findMany: {
+            args: Prisma.FiscalProfileHistoryFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfileHistoryPayload>[]
+          }
+          create: {
+            args: Prisma.FiscalProfileHistoryCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfileHistoryPayload>
+          }
+          createMany: {
+            args: Prisma.FiscalProfileHistoryCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.FiscalProfileHistoryDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfileHistoryPayload>
+          }
+          update: {
+            args: Prisma.FiscalProfileHistoryUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfileHistoryPayload>
+          }
+          deleteMany: {
+            args: Prisma.FiscalProfileHistoryDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.FiscalProfileHistoryUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.FiscalProfileHistoryUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalProfileHistoryPayload>
+          }
+          aggregate: {
+            args: Prisma.FiscalProfileHistoryAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateFiscalProfileHistory>
+          }
+          groupBy: {
+            args: Prisma.FiscalProfileHistoryGroupByArgs<ExtArgs>
+            result: $Utils.Optional<FiscalProfileHistoryGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.FiscalProfileHistoryCountArgs<ExtArgs>
+            result: $Utils.Optional<FiscalProfileHistoryCountAggregateOutputType> | number
+          }
+        }
+      }
+      FiscalFavorite: {
+        payload: Prisma.$FiscalFavoritePayload<ExtArgs>
+        fields: Prisma.FiscalFavoriteFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.FiscalFavoriteFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalFavoritePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.FiscalFavoriteFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalFavoritePayload>
+          }
+          findFirst: {
+            args: Prisma.FiscalFavoriteFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalFavoritePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.FiscalFavoriteFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalFavoritePayload>
+          }
+          findMany: {
+            args: Prisma.FiscalFavoriteFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalFavoritePayload>[]
+          }
+          create: {
+            args: Prisma.FiscalFavoriteCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalFavoritePayload>
+          }
+          createMany: {
+            args: Prisma.FiscalFavoriteCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.FiscalFavoriteDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalFavoritePayload>
+          }
+          update: {
+            args: Prisma.FiscalFavoriteUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalFavoritePayload>
+          }
+          deleteMany: {
+            args: Prisma.FiscalFavoriteDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.FiscalFavoriteUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.FiscalFavoriteUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$FiscalFavoritePayload>
+          }
+          aggregate: {
+            args: Prisma.FiscalFavoriteAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateFiscalFavorite>
+          }
+          groupBy: {
+            args: Prisma.FiscalFavoriteGroupByArgs<ExtArgs>
+            result: $Utils.Optional<FiscalFavoriteGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.FiscalFavoriteCountArgs<ExtArgs>
+            result: $Utils.Optional<FiscalFavoriteCountAggregateOutputType> | number
+          }
+        }
+      }
+      PaymentLog: {
+        payload: Prisma.$PaymentLogPayload<ExtArgs>
+        fields: Prisma.PaymentLogFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.PaymentLogFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PaymentLogPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.PaymentLogFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PaymentLogPayload>
+          }
+          findFirst: {
+            args: Prisma.PaymentLogFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PaymentLogPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.PaymentLogFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PaymentLogPayload>
+          }
+          findMany: {
+            args: Prisma.PaymentLogFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PaymentLogPayload>[]
+          }
+          create: {
+            args: Prisma.PaymentLogCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PaymentLogPayload>
+          }
+          createMany: {
+            args: Prisma.PaymentLogCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.PaymentLogDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PaymentLogPayload>
+          }
+          update: {
+            args: Prisma.PaymentLogUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PaymentLogPayload>
+          }
+          deleteMany: {
+            args: Prisma.PaymentLogDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.PaymentLogUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.PaymentLogUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$PaymentLogPayload>
+          }
+          aggregate: {
+            args: Prisma.PaymentLogAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregatePaymentLog>
+          }
+          groupBy: {
+            args: Prisma.PaymentLogGroupByArgs<ExtArgs>
+            result: $Utils.Optional<PaymentLogGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.PaymentLogCountArgs<ExtArgs>
+            result: $Utils.Optional<PaymentLogCountAggregateOutputType> | number
+          }
+        }
+      }
+      Lead: {
+        payload: Prisma.$LeadPayload<ExtArgs>
+        fields: Prisma.LeadFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.LeadFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LeadPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.LeadFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LeadPayload>
+          }
+          findFirst: {
+            args: Prisma.LeadFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LeadPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.LeadFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LeadPayload>
+          }
+          findMany: {
+            args: Prisma.LeadFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LeadPayload>[]
+          }
+          create: {
+            args: Prisma.LeadCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LeadPayload>
+          }
+          createMany: {
+            args: Prisma.LeadCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.LeadDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LeadPayload>
+          }
+          update: {
+            args: Prisma.LeadUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LeadPayload>
+          }
+          deleteMany: {
+            args: Prisma.LeadDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.LeadUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.LeadUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$LeadPayload>
+          }
+          aggregate: {
+            args: Prisma.LeadAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateLead>
+          }
+          groupBy: {
+            args: Prisma.LeadGroupByArgs<ExtArgs>
+            result: $Utils.Optional<LeadGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.LeadCountArgs<ExtArgs>
+            result: $Utils.Optional<LeadCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -1105,6 +2007,17 @@ export namespace Prisma {
     masterProduct?: MasterProductOmit
     image?: ImageOmit
     tenantIntegration?: TenantIntegrationOmit
+    tenantGroup?: TenantGroupOmit
+    tenantGroupMember?: TenantGroupMemberOmit
+    nfeSyncState?: NfeSyncStateOmit
+    storeProfile?: StoreProfileOmit
+    storeProfileFiscal?: StoreProfileFiscalOmit
+    fiscalProfile?: FiscalProfileOmit
+    fiscalTaxRule?: FiscalTaxRuleOmit
+    fiscalProfileHistory?: FiscalProfileHistoryOmit
+    fiscalFavorite?: FiscalFavoriteOmit
+    paymentLog?: PaymentLogOmit
+    lead?: LeadOmit
   }
 
   /* Types for Logging */
@@ -1187,11 +2100,15 @@ export namespace Prisma {
   export type TenantCountOutputType = {
     users: number
     tenantIntegrations: number
+    groupMembers: number
+    paymentLogs: number
   }
 
   export type TenantCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     users?: boolean | TenantCountOutputTypeCountUsersArgs
     tenantIntegrations?: boolean | TenantCountOutputTypeCountTenantIntegrationsArgs
+    groupMembers?: boolean | TenantCountOutputTypeCountGroupMembersArgs
+    paymentLogs?: boolean | TenantCountOutputTypeCountPaymentLogsArgs
   }
 
   // Custom InputTypes
@@ -1217,6 +2134,149 @@ export namespace Prisma {
    */
   export type TenantCountOutputTypeCountTenantIntegrationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: TenantIntegrationWhereInput
+  }
+
+  /**
+   * TenantCountOutputType without action
+   */
+  export type TenantCountOutputTypeCountGroupMembersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TenantGroupMemberWhereInput
+  }
+
+  /**
+   * TenantCountOutputType without action
+   */
+  export type TenantCountOutputTypeCountPaymentLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: PaymentLogWhereInput
+  }
+
+
+  /**
+   * Count Type TenantGroupCountOutputType
+   */
+
+  export type TenantGroupCountOutputType = {
+    members: number
+    users: number
+  }
+
+  export type TenantGroupCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    members?: boolean | TenantGroupCountOutputTypeCountMembersArgs
+    users?: boolean | TenantGroupCountOutputTypeCountUsersArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * TenantGroupCountOutputType without action
+   */
+  export type TenantGroupCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroupCountOutputType
+     */
+    select?: TenantGroupCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * TenantGroupCountOutputType without action
+   */
+  export type TenantGroupCountOutputTypeCountMembersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TenantGroupMemberWhereInput
+  }
+
+  /**
+   * TenantGroupCountOutputType without action
+   */
+  export type TenantGroupCountOutputTypeCountUsersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: UserWhereInput
+  }
+
+
+  /**
+   * Count Type StoreProfileCountOutputType
+   */
+
+  export type StoreProfileCountOutputType = {
+    profiles: number
+  }
+
+  export type StoreProfileCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    profiles?: boolean | StoreProfileCountOutputTypeCountProfilesArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * StoreProfileCountOutputType without action
+   */
+  export type StoreProfileCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfileCountOutputType
+     */
+    select?: StoreProfileCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * StoreProfileCountOutputType without action
+   */
+  export type StoreProfileCountOutputTypeCountProfilesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: StoreProfileFiscalWhereInput
+  }
+
+
+  /**
+   * Count Type FiscalProfileCountOutputType
+   */
+
+  export type FiscalProfileCountOutputType = {
+    taxRules: number
+    history: number
+    storeProfiles: number
+    favoritedBy: number
+  }
+
+  export type FiscalProfileCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    taxRules?: boolean | FiscalProfileCountOutputTypeCountTaxRulesArgs
+    history?: boolean | FiscalProfileCountOutputTypeCountHistoryArgs
+    storeProfiles?: boolean | FiscalProfileCountOutputTypeCountStoreProfilesArgs
+    favoritedBy?: boolean | FiscalProfileCountOutputTypeCountFavoritedByArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * FiscalProfileCountOutputType without action
+   */
+  export type FiscalProfileCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfileCountOutputType
+     */
+    select?: FiscalProfileCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * FiscalProfileCountOutputType without action
+   */
+  export type FiscalProfileCountOutputTypeCountTaxRulesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FiscalTaxRuleWhereInput
+  }
+
+  /**
+   * FiscalProfileCountOutputType without action
+   */
+  export type FiscalProfileCountOutputTypeCountHistoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FiscalProfileHistoryWhereInput
+  }
+
+  /**
+   * FiscalProfileCountOutputType without action
+   */
+  export type FiscalProfileCountOutputTypeCountStoreProfilesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: StoreProfileFiscalWhereInput
+  }
+
+  /**
+   * FiscalProfileCountOutputType without action
+   */
+  export type FiscalProfileCountOutputTypeCountFavoritedByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FiscalFavoriteWhereInput
   }
 
 
@@ -1257,6 +2317,7 @@ export namespace Prisma {
     name: string | null
     status: string | null
     logoUrl: string | null
+    tvPublicId: string | null
     razaoSocial: string | null
     nomeFantasia: string | null
     cnpj: string | null
@@ -1285,6 +2346,9 @@ export namespace Prisma {
     cosmosApiKey: string | null
     mensalidadeValor: Decimal | null
     mensalidadeVencimento: Date | null
+    telefoneContato: string | null
+    emailContato: string | null
+    observacoes: string | null
     createdAt: Date | null
     updatedAt: Date | null
     termsAcceptedAt: Date | null
@@ -1297,6 +2361,7 @@ export namespace Prisma {
     name: string | null
     status: string | null
     logoUrl: string | null
+    tvPublicId: string | null
     razaoSocial: string | null
     nomeFantasia: string | null
     cnpj: string | null
@@ -1325,6 +2390,9 @@ export namespace Prisma {
     cosmosApiKey: string | null
     mensalidadeValor: Decimal | null
     mensalidadeVencimento: Date | null
+    telefoneContato: string | null
+    emailContato: string | null
+    observacoes: string | null
     createdAt: Date | null
     updatedAt: Date | null
     termsAcceptedAt: Date | null
@@ -1338,6 +2406,7 @@ export namespace Prisma {
     status: number
     logoUrl: number
     modulos: number
+    tvPublicId: number
     razaoSocial: number
     nomeFantasia: number
     cnpj: number
@@ -1366,6 +2435,9 @@ export namespace Prisma {
     cosmosApiKey: number
     mensalidadeValor: number
     mensalidadeVencimento: number
+    telefoneContato: number
+    emailContato: number
+    observacoes: number
     createdAt: number
     updatedAt: number
     termsAcceptedAt: number
@@ -1394,6 +2466,7 @@ export namespace Prisma {
     name?: true
     status?: true
     logoUrl?: true
+    tvPublicId?: true
     razaoSocial?: true
     nomeFantasia?: true
     cnpj?: true
@@ -1422,6 +2495,9 @@ export namespace Prisma {
     cosmosApiKey?: true
     mensalidadeValor?: true
     mensalidadeVencimento?: true
+    telefoneContato?: true
+    emailContato?: true
+    observacoes?: true
     createdAt?: true
     updatedAt?: true
     termsAcceptedAt?: true
@@ -1434,6 +2510,7 @@ export namespace Prisma {
     name?: true
     status?: true
     logoUrl?: true
+    tvPublicId?: true
     razaoSocial?: true
     nomeFantasia?: true
     cnpj?: true
@@ -1462,6 +2539,9 @@ export namespace Prisma {
     cosmosApiKey?: true
     mensalidadeValor?: true
     mensalidadeVencimento?: true
+    telefoneContato?: true
+    emailContato?: true
+    observacoes?: true
     createdAt?: true
     updatedAt?: true
     termsAcceptedAt?: true
@@ -1475,6 +2555,7 @@ export namespace Prisma {
     status?: true
     logoUrl?: true
     modulos?: true
+    tvPublicId?: true
     razaoSocial?: true
     nomeFantasia?: true
     cnpj?: true
@@ -1503,6 +2584,9 @@ export namespace Prisma {
     cosmosApiKey?: true
     mensalidadeValor?: true
     mensalidadeVencimento?: true
+    telefoneContato?: true
+    emailContato?: true
+    observacoes?: true
     createdAt?: true
     updatedAt?: true
     termsAcceptedAt?: true
@@ -1603,6 +2687,7 @@ export namespace Prisma {
     status: string
     logoUrl: string | null
     modulos: JsonValue | null
+    tvPublicId: string | null
     razaoSocial: string | null
     nomeFantasia: string | null
     cnpj: string | null
@@ -1631,6 +2716,9 @@ export namespace Prisma {
     cosmosApiKey: string | null
     mensalidadeValor: Decimal | null
     mensalidadeVencimento: Date | null
+    telefoneContato: string | null
+    emailContato: string | null
+    observacoes: string | null
     createdAt: Date
     updatedAt: Date
     termsAcceptedAt: Date | null
@@ -1663,6 +2751,7 @@ export namespace Prisma {
     status?: boolean
     logoUrl?: boolean
     modulos?: boolean
+    tvPublicId?: boolean
     razaoSocial?: boolean
     nomeFantasia?: boolean
     cnpj?: boolean
@@ -1691,11 +2780,16 @@ export namespace Prisma {
     cosmosApiKey?: boolean
     mensalidadeValor?: boolean
     mensalidadeVencimento?: boolean
+    telefoneContato?: boolean
+    emailContato?: boolean
+    observacoes?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     termsAcceptedAt?: boolean
     users?: boolean | Tenant$usersArgs<ExtArgs>
     tenantIntegrations?: boolean | Tenant$tenantIntegrationsArgs<ExtArgs>
+    groupMembers?: boolean | Tenant$groupMembersArgs<ExtArgs>
+    paymentLogs?: boolean | Tenant$paymentLogsArgs<ExtArgs>
     _count?: boolean | TenantCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["tenant"]>
 
@@ -1709,6 +2803,7 @@ export namespace Prisma {
     status?: boolean
     logoUrl?: boolean
     modulos?: boolean
+    tvPublicId?: boolean
     razaoSocial?: boolean
     nomeFantasia?: boolean
     cnpj?: boolean
@@ -1737,15 +2832,20 @@ export namespace Prisma {
     cosmosApiKey?: boolean
     mensalidadeValor?: boolean
     mensalidadeVencimento?: boolean
+    telefoneContato?: boolean
+    emailContato?: boolean
+    observacoes?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     termsAcceptedAt?: boolean
   }
 
-  export type TenantOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "databaseName" | "databaseUrl" | "name" | "status" | "logoUrl" | "modulos" | "razaoSocial" | "nomeFantasia" | "cnpj" | "ie" | "im" | "crt" | "logradouro" | "numero" | "complemento" | "bairro" | "municipio" | "codMunicipio" | "uf" | "cep" | "telefone" | "emailContador" | "nfceAtivo" | "nfceAutoSync" | "nfceSerie" | "nfceAmbiente" | "nfceCsc" | "nfceIdCsc" | "certPfx" | "certSenha" | "certValidade" | "cosmosApiKey" | "mensalidadeValor" | "mensalidadeVencimento" | "createdAt" | "updatedAt" | "termsAcceptedAt", ExtArgs["result"]["tenant"]>
+  export type TenantOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "databaseName" | "databaseUrl" | "name" | "status" | "logoUrl" | "modulos" | "tvPublicId" | "razaoSocial" | "nomeFantasia" | "cnpj" | "ie" | "im" | "crt" | "logradouro" | "numero" | "complemento" | "bairro" | "municipio" | "codMunicipio" | "uf" | "cep" | "telefone" | "emailContador" | "nfceAtivo" | "nfceAutoSync" | "nfceSerie" | "nfceAmbiente" | "nfceCsc" | "nfceIdCsc" | "certPfx" | "certSenha" | "certValidade" | "cosmosApiKey" | "mensalidadeValor" | "mensalidadeVencimento" | "telefoneContato" | "emailContato" | "observacoes" | "createdAt" | "updatedAt" | "termsAcceptedAt", ExtArgs["result"]["tenant"]>
   export type TenantInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     users?: boolean | Tenant$usersArgs<ExtArgs>
     tenantIntegrations?: boolean | Tenant$tenantIntegrationsArgs<ExtArgs>
+    groupMembers?: boolean | Tenant$groupMembersArgs<ExtArgs>
+    paymentLogs?: boolean | Tenant$paymentLogsArgs<ExtArgs>
     _count?: boolean | TenantCountOutputTypeDefaultArgs<ExtArgs>
   }
 
@@ -1754,6 +2854,8 @@ export namespace Prisma {
     objects: {
       users: Prisma.$UserPayload<ExtArgs>[]
       tenantIntegrations: Prisma.$TenantIntegrationPayload<ExtArgs>[]
+      groupMembers: Prisma.$TenantGroupMemberPayload<ExtArgs>[]
+      paymentLogs: Prisma.$PaymentLogPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -1763,6 +2865,7 @@ export namespace Prisma {
       status: string
       logoUrl: string | null
       modulos: Prisma.JsonValue | null
+      tvPublicId: string | null
       razaoSocial: string | null
       nomeFantasia: string | null
       cnpj: string | null
@@ -1791,6 +2894,9 @@ export namespace Prisma {
       cosmosApiKey: string | null
       mensalidadeValor: Prisma.Decimal | null
       mensalidadeVencimento: Date | null
+      telefoneContato: string | null
+      emailContato: string | null
+      observacoes: string | null
       createdAt: Date
       updatedAt: Date
       termsAcceptedAt: Date | null
@@ -2136,6 +3242,8 @@ export namespace Prisma {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     users<T extends Tenant$usersArgs<ExtArgs> = {}>(args?: Subset<T, Tenant$usersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     tenantIntegrations<T extends Tenant$tenantIntegrationsArgs<ExtArgs> = {}>(args?: Subset<T, Tenant$tenantIntegrationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TenantIntegrationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    groupMembers<T extends Tenant$groupMembersArgs<ExtArgs> = {}>(args?: Subset<T, Tenant$groupMembersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TenantGroupMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    paymentLogs<T extends Tenant$paymentLogsArgs<ExtArgs> = {}>(args?: Subset<T, Tenant$paymentLogsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PaymentLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2172,6 +3280,7 @@ export namespace Prisma {
     readonly status: FieldRef<"Tenant", 'String'>
     readonly logoUrl: FieldRef<"Tenant", 'String'>
     readonly modulos: FieldRef<"Tenant", 'Json'>
+    readonly tvPublicId: FieldRef<"Tenant", 'String'>
     readonly razaoSocial: FieldRef<"Tenant", 'String'>
     readonly nomeFantasia: FieldRef<"Tenant", 'String'>
     readonly cnpj: FieldRef<"Tenant", 'String'>
@@ -2200,6 +3309,9 @@ export namespace Prisma {
     readonly cosmosApiKey: FieldRef<"Tenant", 'String'>
     readonly mensalidadeValor: FieldRef<"Tenant", 'Decimal'>
     readonly mensalidadeVencimento: FieldRef<"Tenant", 'DateTime'>
+    readonly telefoneContato: FieldRef<"Tenant", 'String'>
+    readonly emailContato: FieldRef<"Tenant", 'String'>
+    readonly observacoes: FieldRef<"Tenant", 'String'>
     readonly createdAt: FieldRef<"Tenant", 'DateTime'>
     readonly updatedAt: FieldRef<"Tenant", 'DateTime'>
     readonly termsAcceptedAt: FieldRef<"Tenant", 'DateTime'>
@@ -2594,6 +3706,54 @@ export namespace Prisma {
   }
 
   /**
+   * Tenant.groupMembers
+   */
+  export type Tenant$groupMembersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroupMember
+     */
+    select?: TenantGroupMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroupMember
+     */
+    omit?: TenantGroupMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupMemberInclude<ExtArgs> | null
+    where?: TenantGroupMemberWhereInput
+    orderBy?: TenantGroupMemberOrderByWithRelationInput | TenantGroupMemberOrderByWithRelationInput[]
+    cursor?: TenantGroupMemberWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: TenantGroupMemberScalarFieldEnum | TenantGroupMemberScalarFieldEnum[]
+  }
+
+  /**
+   * Tenant.paymentLogs
+   */
+  export type Tenant$paymentLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the PaymentLog
+     */
+    select?: PaymentLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the PaymentLog
+     */
+    omit?: PaymentLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PaymentLogInclude<ExtArgs> | null
+    where?: PaymentLogWhereInput
+    orderBy?: PaymentLogOrderByWithRelationInput | PaymentLogOrderByWithRelationInput[]
+    cursor?: PaymentLogWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: PaymentLogScalarFieldEnum | PaymentLogScalarFieldEnum[]
+  }
+
+  /**
    * Tenant without action
    */
   export type TenantDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -2631,6 +3791,7 @@ export namespace Prisma {
     role: string | null
     pin: string | null
     active: boolean | null
+    groupId: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -2644,6 +3805,7 @@ export namespace Prisma {
     role: string | null
     pin: string | null
     active: boolean | null
+    groupId: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -2657,6 +3819,7 @@ export namespace Prisma {
     role: number
     pin: number
     active: number
+    groupId: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -2672,6 +3835,7 @@ export namespace Prisma {
     role?: true
     pin?: true
     active?: true
+    groupId?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -2685,6 +3849,7 @@ export namespace Prisma {
     role?: true
     pin?: true
     active?: true
+    groupId?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -2698,6 +3863,7 @@ export namespace Prisma {
     role?: true
     pin?: true
     active?: true
+    groupId?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -2784,6 +3950,7 @@ export namespace Prisma {
     role: string
     pin: string | null
     active: boolean
+    groupId: string | null
     createdAt: Date
     updatedAt: Date
     _count: UserCountAggregateOutputType | null
@@ -2814,9 +3981,11 @@ export namespace Prisma {
     role?: boolean
     pin?: boolean
     active?: boolean
+    groupId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     tenant?: boolean | TenantDefaultArgs<ExtArgs>
+    group?: boolean | User$groupArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
 
@@ -2830,19 +3999,22 @@ export namespace Prisma {
     role?: boolean
     pin?: boolean
     active?: boolean
+    groupId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "tenantId" | "name" | "email" | "password" | "role" | "pin" | "active" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "tenantId" | "name" | "email" | "password" | "role" | "pin" | "active" | "groupId" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     tenant?: boolean | TenantDefaultArgs<ExtArgs>
+    group?: boolean | User$groupArgs<ExtArgs>
   }
 
   export type $UserPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "User"
     objects: {
       tenant: Prisma.$TenantPayload<ExtArgs>
+      group: Prisma.$TenantGroupPayload<ExtArgs> | null
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -2853,6 +4025,7 @@ export namespace Prisma {
       role: string
       pin: string | null
       active: boolean
+      groupId: string | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["user"]>
@@ -3196,6 +4369,7 @@ export namespace Prisma {
   export interface Prisma__UserClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     tenant<T extends TenantDefaultArgs<ExtArgs> = {}>(args?: Subset<T, TenantDefaultArgs<ExtArgs>>): Prisma__TenantClient<$Result.GetResult<Prisma.$TenantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    group<T extends User$groupArgs<ExtArgs> = {}>(args?: Subset<T, User$groupArgs<ExtArgs>>): Prisma__TenantGroupClient<$Result.GetResult<Prisma.$TenantGroupPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3233,6 +4407,7 @@ export namespace Prisma {
     readonly role: FieldRef<"User", 'String'>
     readonly pin: FieldRef<"User", 'String'>
     readonly active: FieldRef<"User", 'Boolean'>
+    readonly groupId: FieldRef<"User", 'String'>
     readonly createdAt: FieldRef<"User", 'DateTime'>
     readonly updatedAt: FieldRef<"User", 'DateTime'>
   }
@@ -3578,6 +4753,25 @@ export namespace Prisma {
   }
 
   /**
+   * User.group
+   */
+  export type User$groupArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroup
+     */
+    select?: TenantGroupSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroup
+     */
+    omit?: TenantGroupOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupInclude<ExtArgs> | null
+    where?: TenantGroupWhereInput
+  }
+
+  /**
    * User without action
    */
   export type UserDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -3767,7 +4961,7 @@ export namespace Prisma {
 
   export type MasterProductGroupByOutputType = {
     id: string
-    ean: string
+    ean: string | null
     name: string
     brand: string | null
     ncm: string | null
@@ -3833,7 +5027,7 @@ export namespace Prisma {
     objects: {}
     scalars: $Extensions.GetPayloadResult<{
       id: string
-      ean: string
+      ean: string | null
       name: string
       brand: string | null
       ncm: string | null
@@ -6370,6 +7564,10755 @@ export namespace Prisma {
 
 
   /**
+   * Model TenantGroup
+   */
+
+  export type AggregateTenantGroup = {
+    _count: TenantGroupCountAggregateOutputType | null
+    _min: TenantGroupMinAggregateOutputType | null
+    _max: TenantGroupMaxAggregateOutputType | null
+  }
+
+  export type TenantGroupMinAggregateOutputType = {
+    id: string | null
+    name: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type TenantGroupMaxAggregateOutputType = {
+    id: string | null
+    name: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type TenantGroupCountAggregateOutputType = {
+    id: number
+    name: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type TenantGroupMinAggregateInputType = {
+    id?: true
+    name?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type TenantGroupMaxAggregateInputType = {
+    id?: true
+    name?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type TenantGroupCountAggregateInputType = {
+    id?: true
+    name?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type TenantGroupAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which TenantGroup to aggregate.
+     */
+    where?: TenantGroupWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TenantGroups to fetch.
+     */
+    orderBy?: TenantGroupOrderByWithRelationInput | TenantGroupOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: TenantGroupWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TenantGroups from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TenantGroups.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned TenantGroups
+    **/
+    _count?: true | TenantGroupCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: TenantGroupMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: TenantGroupMaxAggregateInputType
+  }
+
+  export type GetTenantGroupAggregateType<T extends TenantGroupAggregateArgs> = {
+        [P in keyof T & keyof AggregateTenantGroup]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateTenantGroup[P]>
+      : GetScalarType<T[P], AggregateTenantGroup[P]>
+  }
+
+
+
+
+  export type TenantGroupGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TenantGroupWhereInput
+    orderBy?: TenantGroupOrderByWithAggregationInput | TenantGroupOrderByWithAggregationInput[]
+    by: TenantGroupScalarFieldEnum[] | TenantGroupScalarFieldEnum
+    having?: TenantGroupScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: TenantGroupCountAggregateInputType | true
+    _min?: TenantGroupMinAggregateInputType
+    _max?: TenantGroupMaxAggregateInputType
+  }
+
+  export type TenantGroupGroupByOutputType = {
+    id: string
+    name: string
+    createdAt: Date
+    updatedAt: Date
+    _count: TenantGroupCountAggregateOutputType | null
+    _min: TenantGroupMinAggregateOutputType | null
+    _max: TenantGroupMaxAggregateOutputType | null
+  }
+
+  type GetTenantGroupGroupByPayload<T extends TenantGroupGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<TenantGroupGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof TenantGroupGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], TenantGroupGroupByOutputType[P]>
+            : GetScalarType<T[P], TenantGroupGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type TenantGroupSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    members?: boolean | TenantGroup$membersArgs<ExtArgs>
+    users?: boolean | TenantGroup$usersArgs<ExtArgs>
+    _count?: boolean | TenantGroupCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["tenantGroup"]>
+
+
+
+  export type TenantGroupSelectScalar = {
+    id?: boolean
+    name?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type TenantGroupOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "createdAt" | "updatedAt", ExtArgs["result"]["tenantGroup"]>
+  export type TenantGroupInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    members?: boolean | TenantGroup$membersArgs<ExtArgs>
+    users?: boolean | TenantGroup$usersArgs<ExtArgs>
+    _count?: boolean | TenantGroupCountOutputTypeDefaultArgs<ExtArgs>
+  }
+
+  export type $TenantGroupPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "TenantGroup"
+    objects: {
+      members: Prisma.$TenantGroupMemberPayload<ExtArgs>[]
+      users: Prisma.$UserPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      name: string
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["tenantGroup"]>
+    composites: {}
+  }
+
+  type TenantGroupGetPayload<S extends boolean | null | undefined | TenantGroupDefaultArgs> = $Result.GetResult<Prisma.$TenantGroupPayload, S>
+
+  type TenantGroupCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<TenantGroupFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: TenantGroupCountAggregateInputType | true
+    }
+
+  export interface TenantGroupDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['TenantGroup'], meta: { name: 'TenantGroup' } }
+    /**
+     * Find zero or one TenantGroup that matches the filter.
+     * @param {TenantGroupFindUniqueArgs} args - Arguments to find a TenantGroup
+     * @example
+     * // Get one TenantGroup
+     * const tenantGroup = await prisma.tenantGroup.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends TenantGroupFindUniqueArgs>(args: SelectSubset<T, TenantGroupFindUniqueArgs<ExtArgs>>): Prisma__TenantGroupClient<$Result.GetResult<Prisma.$TenantGroupPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one TenantGroup that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {TenantGroupFindUniqueOrThrowArgs} args - Arguments to find a TenantGroup
+     * @example
+     * // Get one TenantGroup
+     * const tenantGroup = await prisma.tenantGroup.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends TenantGroupFindUniqueOrThrowArgs>(args: SelectSubset<T, TenantGroupFindUniqueOrThrowArgs<ExtArgs>>): Prisma__TenantGroupClient<$Result.GetResult<Prisma.$TenantGroupPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first TenantGroup that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupFindFirstArgs} args - Arguments to find a TenantGroup
+     * @example
+     * // Get one TenantGroup
+     * const tenantGroup = await prisma.tenantGroup.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends TenantGroupFindFirstArgs>(args?: SelectSubset<T, TenantGroupFindFirstArgs<ExtArgs>>): Prisma__TenantGroupClient<$Result.GetResult<Prisma.$TenantGroupPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first TenantGroup that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupFindFirstOrThrowArgs} args - Arguments to find a TenantGroup
+     * @example
+     * // Get one TenantGroup
+     * const tenantGroup = await prisma.tenantGroup.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends TenantGroupFindFirstOrThrowArgs>(args?: SelectSubset<T, TenantGroupFindFirstOrThrowArgs<ExtArgs>>): Prisma__TenantGroupClient<$Result.GetResult<Prisma.$TenantGroupPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more TenantGroups that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all TenantGroups
+     * const tenantGroups = await prisma.tenantGroup.findMany()
+     * 
+     * // Get first 10 TenantGroups
+     * const tenantGroups = await prisma.tenantGroup.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const tenantGroupWithIdOnly = await prisma.tenantGroup.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends TenantGroupFindManyArgs>(args?: SelectSubset<T, TenantGroupFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TenantGroupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a TenantGroup.
+     * @param {TenantGroupCreateArgs} args - Arguments to create a TenantGroup.
+     * @example
+     * // Create one TenantGroup
+     * const TenantGroup = await prisma.tenantGroup.create({
+     *   data: {
+     *     // ... data to create a TenantGroup
+     *   }
+     * })
+     * 
+     */
+    create<T extends TenantGroupCreateArgs>(args: SelectSubset<T, TenantGroupCreateArgs<ExtArgs>>): Prisma__TenantGroupClient<$Result.GetResult<Prisma.$TenantGroupPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many TenantGroups.
+     * @param {TenantGroupCreateManyArgs} args - Arguments to create many TenantGroups.
+     * @example
+     * // Create many TenantGroups
+     * const tenantGroup = await prisma.tenantGroup.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends TenantGroupCreateManyArgs>(args?: SelectSubset<T, TenantGroupCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a TenantGroup.
+     * @param {TenantGroupDeleteArgs} args - Arguments to delete one TenantGroup.
+     * @example
+     * // Delete one TenantGroup
+     * const TenantGroup = await prisma.tenantGroup.delete({
+     *   where: {
+     *     // ... filter to delete one TenantGroup
+     *   }
+     * })
+     * 
+     */
+    delete<T extends TenantGroupDeleteArgs>(args: SelectSubset<T, TenantGroupDeleteArgs<ExtArgs>>): Prisma__TenantGroupClient<$Result.GetResult<Prisma.$TenantGroupPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one TenantGroup.
+     * @param {TenantGroupUpdateArgs} args - Arguments to update one TenantGroup.
+     * @example
+     * // Update one TenantGroup
+     * const tenantGroup = await prisma.tenantGroup.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends TenantGroupUpdateArgs>(args: SelectSubset<T, TenantGroupUpdateArgs<ExtArgs>>): Prisma__TenantGroupClient<$Result.GetResult<Prisma.$TenantGroupPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more TenantGroups.
+     * @param {TenantGroupDeleteManyArgs} args - Arguments to filter TenantGroups to delete.
+     * @example
+     * // Delete a few TenantGroups
+     * const { count } = await prisma.tenantGroup.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends TenantGroupDeleteManyArgs>(args?: SelectSubset<T, TenantGroupDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more TenantGroups.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many TenantGroups
+     * const tenantGroup = await prisma.tenantGroup.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends TenantGroupUpdateManyArgs>(args: SelectSubset<T, TenantGroupUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one TenantGroup.
+     * @param {TenantGroupUpsertArgs} args - Arguments to update or create a TenantGroup.
+     * @example
+     * // Update or create a TenantGroup
+     * const tenantGroup = await prisma.tenantGroup.upsert({
+     *   create: {
+     *     // ... data to create a TenantGroup
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the TenantGroup we want to update
+     *   }
+     * })
+     */
+    upsert<T extends TenantGroupUpsertArgs>(args: SelectSubset<T, TenantGroupUpsertArgs<ExtArgs>>): Prisma__TenantGroupClient<$Result.GetResult<Prisma.$TenantGroupPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of TenantGroups.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupCountArgs} args - Arguments to filter TenantGroups to count.
+     * @example
+     * // Count the number of TenantGroups
+     * const count = await prisma.tenantGroup.count({
+     *   where: {
+     *     // ... the filter for the TenantGroups we want to count
+     *   }
+     * })
+    **/
+    count<T extends TenantGroupCountArgs>(
+      args?: Subset<T, TenantGroupCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], TenantGroupCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a TenantGroup.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends TenantGroupAggregateArgs>(args: Subset<T, TenantGroupAggregateArgs>): Prisma.PrismaPromise<GetTenantGroupAggregateType<T>>
+
+    /**
+     * Group by TenantGroup.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends TenantGroupGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: TenantGroupGroupByArgs['orderBy'] }
+        : { orderBy?: TenantGroupGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, TenantGroupGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetTenantGroupGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the TenantGroup model
+   */
+  readonly fields: TenantGroupFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for TenantGroup.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__TenantGroupClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    members<T extends TenantGroup$membersArgs<ExtArgs> = {}>(args?: Subset<T, TenantGroup$membersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TenantGroupMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    users<T extends TenantGroup$usersArgs<ExtArgs> = {}>(args?: Subset<T, TenantGroup$usersArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the TenantGroup model
+   */
+  interface TenantGroupFieldRefs {
+    readonly id: FieldRef<"TenantGroup", 'String'>
+    readonly name: FieldRef<"TenantGroup", 'String'>
+    readonly createdAt: FieldRef<"TenantGroup", 'DateTime'>
+    readonly updatedAt: FieldRef<"TenantGroup", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * TenantGroup findUnique
+   */
+  export type TenantGroupFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroup
+     */
+    select?: TenantGroupSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroup
+     */
+    omit?: TenantGroupOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantGroup to fetch.
+     */
+    where: TenantGroupWhereUniqueInput
+  }
+
+  /**
+   * TenantGroup findUniqueOrThrow
+   */
+  export type TenantGroupFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroup
+     */
+    select?: TenantGroupSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroup
+     */
+    omit?: TenantGroupOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantGroup to fetch.
+     */
+    where: TenantGroupWhereUniqueInput
+  }
+
+  /**
+   * TenantGroup findFirst
+   */
+  export type TenantGroupFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroup
+     */
+    select?: TenantGroupSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroup
+     */
+    omit?: TenantGroupOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantGroup to fetch.
+     */
+    where?: TenantGroupWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TenantGroups to fetch.
+     */
+    orderBy?: TenantGroupOrderByWithRelationInput | TenantGroupOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for TenantGroups.
+     */
+    cursor?: TenantGroupWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TenantGroups from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TenantGroups.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of TenantGroups.
+     */
+    distinct?: TenantGroupScalarFieldEnum | TenantGroupScalarFieldEnum[]
+  }
+
+  /**
+   * TenantGroup findFirstOrThrow
+   */
+  export type TenantGroupFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroup
+     */
+    select?: TenantGroupSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroup
+     */
+    omit?: TenantGroupOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantGroup to fetch.
+     */
+    where?: TenantGroupWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TenantGroups to fetch.
+     */
+    orderBy?: TenantGroupOrderByWithRelationInput | TenantGroupOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for TenantGroups.
+     */
+    cursor?: TenantGroupWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TenantGroups from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TenantGroups.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of TenantGroups.
+     */
+    distinct?: TenantGroupScalarFieldEnum | TenantGroupScalarFieldEnum[]
+  }
+
+  /**
+   * TenantGroup findMany
+   */
+  export type TenantGroupFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroup
+     */
+    select?: TenantGroupSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroup
+     */
+    omit?: TenantGroupOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantGroups to fetch.
+     */
+    where?: TenantGroupWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TenantGroups to fetch.
+     */
+    orderBy?: TenantGroupOrderByWithRelationInput | TenantGroupOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing TenantGroups.
+     */
+    cursor?: TenantGroupWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TenantGroups from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TenantGroups.
+     */
+    skip?: number
+    distinct?: TenantGroupScalarFieldEnum | TenantGroupScalarFieldEnum[]
+  }
+
+  /**
+   * TenantGroup create
+   */
+  export type TenantGroupCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroup
+     */
+    select?: TenantGroupSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroup
+     */
+    omit?: TenantGroupOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupInclude<ExtArgs> | null
+    /**
+     * The data needed to create a TenantGroup.
+     */
+    data: XOR<TenantGroupCreateInput, TenantGroupUncheckedCreateInput>
+  }
+
+  /**
+   * TenantGroup createMany
+   */
+  export type TenantGroupCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many TenantGroups.
+     */
+    data: TenantGroupCreateManyInput | TenantGroupCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * TenantGroup update
+   */
+  export type TenantGroupUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroup
+     */
+    select?: TenantGroupSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroup
+     */
+    omit?: TenantGroupOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupInclude<ExtArgs> | null
+    /**
+     * The data needed to update a TenantGroup.
+     */
+    data: XOR<TenantGroupUpdateInput, TenantGroupUncheckedUpdateInput>
+    /**
+     * Choose, which TenantGroup to update.
+     */
+    where: TenantGroupWhereUniqueInput
+  }
+
+  /**
+   * TenantGroup updateMany
+   */
+  export type TenantGroupUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update TenantGroups.
+     */
+    data: XOR<TenantGroupUpdateManyMutationInput, TenantGroupUncheckedUpdateManyInput>
+    /**
+     * Filter which TenantGroups to update
+     */
+    where?: TenantGroupWhereInput
+    /**
+     * Limit how many TenantGroups to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * TenantGroup upsert
+   */
+  export type TenantGroupUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroup
+     */
+    select?: TenantGroupSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroup
+     */
+    omit?: TenantGroupOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupInclude<ExtArgs> | null
+    /**
+     * The filter to search for the TenantGroup to update in case it exists.
+     */
+    where: TenantGroupWhereUniqueInput
+    /**
+     * In case the TenantGroup found by the `where` argument doesn't exist, create a new TenantGroup with this data.
+     */
+    create: XOR<TenantGroupCreateInput, TenantGroupUncheckedCreateInput>
+    /**
+     * In case the TenantGroup was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<TenantGroupUpdateInput, TenantGroupUncheckedUpdateInput>
+  }
+
+  /**
+   * TenantGroup delete
+   */
+  export type TenantGroupDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroup
+     */
+    select?: TenantGroupSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroup
+     */
+    omit?: TenantGroupOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupInclude<ExtArgs> | null
+    /**
+     * Filter which TenantGroup to delete.
+     */
+    where: TenantGroupWhereUniqueInput
+  }
+
+  /**
+   * TenantGroup deleteMany
+   */
+  export type TenantGroupDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which TenantGroups to delete
+     */
+    where?: TenantGroupWhereInput
+    /**
+     * Limit how many TenantGroups to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * TenantGroup.members
+   */
+  export type TenantGroup$membersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroupMember
+     */
+    select?: TenantGroupMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroupMember
+     */
+    omit?: TenantGroupMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupMemberInclude<ExtArgs> | null
+    where?: TenantGroupMemberWhereInput
+    orderBy?: TenantGroupMemberOrderByWithRelationInput | TenantGroupMemberOrderByWithRelationInput[]
+    cursor?: TenantGroupMemberWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: TenantGroupMemberScalarFieldEnum | TenantGroupMemberScalarFieldEnum[]
+  }
+
+  /**
+   * TenantGroup.users
+   */
+  export type TenantGroup$usersArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the User
+     */
+    select?: UserSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the User
+     */
+    omit?: UserOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserInclude<ExtArgs> | null
+    where?: UserWhereInput
+    orderBy?: UserOrderByWithRelationInput | UserOrderByWithRelationInput[]
+    cursor?: UserWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: UserScalarFieldEnum | UserScalarFieldEnum[]
+  }
+
+  /**
+   * TenantGroup without action
+   */
+  export type TenantGroupDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroup
+     */
+    select?: TenantGroupSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroup
+     */
+    omit?: TenantGroupOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model TenantGroupMember
+   */
+
+  export type AggregateTenantGroupMember = {
+    _count: TenantGroupMemberCountAggregateOutputType | null
+    _min: TenantGroupMemberMinAggregateOutputType | null
+    _max: TenantGroupMemberMaxAggregateOutputType | null
+  }
+
+  export type TenantGroupMemberMinAggregateOutputType = {
+    id: string | null
+    groupId: string | null
+    tenantId: string | null
+    alias: string | null
+  }
+
+  export type TenantGroupMemberMaxAggregateOutputType = {
+    id: string | null
+    groupId: string | null
+    tenantId: string | null
+    alias: string | null
+  }
+
+  export type TenantGroupMemberCountAggregateOutputType = {
+    id: number
+    groupId: number
+    tenantId: number
+    alias: number
+    _all: number
+  }
+
+
+  export type TenantGroupMemberMinAggregateInputType = {
+    id?: true
+    groupId?: true
+    tenantId?: true
+    alias?: true
+  }
+
+  export type TenantGroupMemberMaxAggregateInputType = {
+    id?: true
+    groupId?: true
+    tenantId?: true
+    alias?: true
+  }
+
+  export type TenantGroupMemberCountAggregateInputType = {
+    id?: true
+    groupId?: true
+    tenantId?: true
+    alias?: true
+    _all?: true
+  }
+
+  export type TenantGroupMemberAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which TenantGroupMember to aggregate.
+     */
+    where?: TenantGroupMemberWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TenantGroupMembers to fetch.
+     */
+    orderBy?: TenantGroupMemberOrderByWithRelationInput | TenantGroupMemberOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: TenantGroupMemberWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TenantGroupMembers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TenantGroupMembers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned TenantGroupMembers
+    **/
+    _count?: true | TenantGroupMemberCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: TenantGroupMemberMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: TenantGroupMemberMaxAggregateInputType
+  }
+
+  export type GetTenantGroupMemberAggregateType<T extends TenantGroupMemberAggregateArgs> = {
+        [P in keyof T & keyof AggregateTenantGroupMember]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateTenantGroupMember[P]>
+      : GetScalarType<T[P], AggregateTenantGroupMember[P]>
+  }
+
+
+
+
+  export type TenantGroupMemberGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TenantGroupMemberWhereInput
+    orderBy?: TenantGroupMemberOrderByWithAggregationInput | TenantGroupMemberOrderByWithAggregationInput[]
+    by: TenantGroupMemberScalarFieldEnum[] | TenantGroupMemberScalarFieldEnum
+    having?: TenantGroupMemberScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: TenantGroupMemberCountAggregateInputType | true
+    _min?: TenantGroupMemberMinAggregateInputType
+    _max?: TenantGroupMemberMaxAggregateInputType
+  }
+
+  export type TenantGroupMemberGroupByOutputType = {
+    id: string
+    groupId: string
+    tenantId: string
+    alias: string | null
+    _count: TenantGroupMemberCountAggregateOutputType | null
+    _min: TenantGroupMemberMinAggregateOutputType | null
+    _max: TenantGroupMemberMaxAggregateOutputType | null
+  }
+
+  type GetTenantGroupMemberGroupByPayload<T extends TenantGroupMemberGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<TenantGroupMemberGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof TenantGroupMemberGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], TenantGroupMemberGroupByOutputType[P]>
+            : GetScalarType<T[P], TenantGroupMemberGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type TenantGroupMemberSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    groupId?: boolean
+    tenantId?: boolean
+    alias?: boolean
+    group?: boolean | TenantGroupDefaultArgs<ExtArgs>
+    tenant?: boolean | TenantDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["tenantGroupMember"]>
+
+
+
+  export type TenantGroupMemberSelectScalar = {
+    id?: boolean
+    groupId?: boolean
+    tenantId?: boolean
+    alias?: boolean
+  }
+
+  export type TenantGroupMemberOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "groupId" | "tenantId" | "alias", ExtArgs["result"]["tenantGroupMember"]>
+  export type TenantGroupMemberInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    group?: boolean | TenantGroupDefaultArgs<ExtArgs>
+    tenant?: boolean | TenantDefaultArgs<ExtArgs>
+  }
+
+  export type $TenantGroupMemberPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "TenantGroupMember"
+    objects: {
+      group: Prisma.$TenantGroupPayload<ExtArgs>
+      tenant: Prisma.$TenantPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      groupId: string
+      tenantId: string
+      alias: string | null
+    }, ExtArgs["result"]["tenantGroupMember"]>
+    composites: {}
+  }
+
+  type TenantGroupMemberGetPayload<S extends boolean | null | undefined | TenantGroupMemberDefaultArgs> = $Result.GetResult<Prisma.$TenantGroupMemberPayload, S>
+
+  type TenantGroupMemberCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<TenantGroupMemberFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: TenantGroupMemberCountAggregateInputType | true
+    }
+
+  export interface TenantGroupMemberDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['TenantGroupMember'], meta: { name: 'TenantGroupMember' } }
+    /**
+     * Find zero or one TenantGroupMember that matches the filter.
+     * @param {TenantGroupMemberFindUniqueArgs} args - Arguments to find a TenantGroupMember
+     * @example
+     * // Get one TenantGroupMember
+     * const tenantGroupMember = await prisma.tenantGroupMember.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends TenantGroupMemberFindUniqueArgs>(args: SelectSubset<T, TenantGroupMemberFindUniqueArgs<ExtArgs>>): Prisma__TenantGroupMemberClient<$Result.GetResult<Prisma.$TenantGroupMemberPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one TenantGroupMember that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {TenantGroupMemberFindUniqueOrThrowArgs} args - Arguments to find a TenantGroupMember
+     * @example
+     * // Get one TenantGroupMember
+     * const tenantGroupMember = await prisma.tenantGroupMember.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends TenantGroupMemberFindUniqueOrThrowArgs>(args: SelectSubset<T, TenantGroupMemberFindUniqueOrThrowArgs<ExtArgs>>): Prisma__TenantGroupMemberClient<$Result.GetResult<Prisma.$TenantGroupMemberPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first TenantGroupMember that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupMemberFindFirstArgs} args - Arguments to find a TenantGroupMember
+     * @example
+     * // Get one TenantGroupMember
+     * const tenantGroupMember = await prisma.tenantGroupMember.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends TenantGroupMemberFindFirstArgs>(args?: SelectSubset<T, TenantGroupMemberFindFirstArgs<ExtArgs>>): Prisma__TenantGroupMemberClient<$Result.GetResult<Prisma.$TenantGroupMemberPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first TenantGroupMember that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupMemberFindFirstOrThrowArgs} args - Arguments to find a TenantGroupMember
+     * @example
+     * // Get one TenantGroupMember
+     * const tenantGroupMember = await prisma.tenantGroupMember.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends TenantGroupMemberFindFirstOrThrowArgs>(args?: SelectSubset<T, TenantGroupMemberFindFirstOrThrowArgs<ExtArgs>>): Prisma__TenantGroupMemberClient<$Result.GetResult<Prisma.$TenantGroupMemberPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more TenantGroupMembers that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupMemberFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all TenantGroupMembers
+     * const tenantGroupMembers = await prisma.tenantGroupMember.findMany()
+     * 
+     * // Get first 10 TenantGroupMembers
+     * const tenantGroupMembers = await prisma.tenantGroupMember.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const tenantGroupMemberWithIdOnly = await prisma.tenantGroupMember.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends TenantGroupMemberFindManyArgs>(args?: SelectSubset<T, TenantGroupMemberFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TenantGroupMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a TenantGroupMember.
+     * @param {TenantGroupMemberCreateArgs} args - Arguments to create a TenantGroupMember.
+     * @example
+     * // Create one TenantGroupMember
+     * const TenantGroupMember = await prisma.tenantGroupMember.create({
+     *   data: {
+     *     // ... data to create a TenantGroupMember
+     *   }
+     * })
+     * 
+     */
+    create<T extends TenantGroupMemberCreateArgs>(args: SelectSubset<T, TenantGroupMemberCreateArgs<ExtArgs>>): Prisma__TenantGroupMemberClient<$Result.GetResult<Prisma.$TenantGroupMemberPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many TenantGroupMembers.
+     * @param {TenantGroupMemberCreateManyArgs} args - Arguments to create many TenantGroupMembers.
+     * @example
+     * // Create many TenantGroupMembers
+     * const tenantGroupMember = await prisma.tenantGroupMember.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends TenantGroupMemberCreateManyArgs>(args?: SelectSubset<T, TenantGroupMemberCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a TenantGroupMember.
+     * @param {TenantGroupMemberDeleteArgs} args - Arguments to delete one TenantGroupMember.
+     * @example
+     * // Delete one TenantGroupMember
+     * const TenantGroupMember = await prisma.tenantGroupMember.delete({
+     *   where: {
+     *     // ... filter to delete one TenantGroupMember
+     *   }
+     * })
+     * 
+     */
+    delete<T extends TenantGroupMemberDeleteArgs>(args: SelectSubset<T, TenantGroupMemberDeleteArgs<ExtArgs>>): Prisma__TenantGroupMemberClient<$Result.GetResult<Prisma.$TenantGroupMemberPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one TenantGroupMember.
+     * @param {TenantGroupMemberUpdateArgs} args - Arguments to update one TenantGroupMember.
+     * @example
+     * // Update one TenantGroupMember
+     * const tenantGroupMember = await prisma.tenantGroupMember.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends TenantGroupMemberUpdateArgs>(args: SelectSubset<T, TenantGroupMemberUpdateArgs<ExtArgs>>): Prisma__TenantGroupMemberClient<$Result.GetResult<Prisma.$TenantGroupMemberPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more TenantGroupMembers.
+     * @param {TenantGroupMemberDeleteManyArgs} args - Arguments to filter TenantGroupMembers to delete.
+     * @example
+     * // Delete a few TenantGroupMembers
+     * const { count } = await prisma.tenantGroupMember.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends TenantGroupMemberDeleteManyArgs>(args?: SelectSubset<T, TenantGroupMemberDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more TenantGroupMembers.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupMemberUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many TenantGroupMembers
+     * const tenantGroupMember = await prisma.tenantGroupMember.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends TenantGroupMemberUpdateManyArgs>(args: SelectSubset<T, TenantGroupMemberUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one TenantGroupMember.
+     * @param {TenantGroupMemberUpsertArgs} args - Arguments to update or create a TenantGroupMember.
+     * @example
+     * // Update or create a TenantGroupMember
+     * const tenantGroupMember = await prisma.tenantGroupMember.upsert({
+     *   create: {
+     *     // ... data to create a TenantGroupMember
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the TenantGroupMember we want to update
+     *   }
+     * })
+     */
+    upsert<T extends TenantGroupMemberUpsertArgs>(args: SelectSubset<T, TenantGroupMemberUpsertArgs<ExtArgs>>): Prisma__TenantGroupMemberClient<$Result.GetResult<Prisma.$TenantGroupMemberPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of TenantGroupMembers.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupMemberCountArgs} args - Arguments to filter TenantGroupMembers to count.
+     * @example
+     * // Count the number of TenantGroupMembers
+     * const count = await prisma.tenantGroupMember.count({
+     *   where: {
+     *     // ... the filter for the TenantGroupMembers we want to count
+     *   }
+     * })
+    **/
+    count<T extends TenantGroupMemberCountArgs>(
+      args?: Subset<T, TenantGroupMemberCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], TenantGroupMemberCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a TenantGroupMember.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupMemberAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends TenantGroupMemberAggregateArgs>(args: Subset<T, TenantGroupMemberAggregateArgs>): Prisma.PrismaPromise<GetTenantGroupMemberAggregateType<T>>
+
+    /**
+     * Group by TenantGroupMember.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TenantGroupMemberGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends TenantGroupMemberGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: TenantGroupMemberGroupByArgs['orderBy'] }
+        : { orderBy?: TenantGroupMemberGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, TenantGroupMemberGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetTenantGroupMemberGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the TenantGroupMember model
+   */
+  readonly fields: TenantGroupMemberFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for TenantGroupMember.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__TenantGroupMemberClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    group<T extends TenantGroupDefaultArgs<ExtArgs> = {}>(args?: Subset<T, TenantGroupDefaultArgs<ExtArgs>>): Prisma__TenantGroupClient<$Result.GetResult<Prisma.$TenantGroupPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    tenant<T extends TenantDefaultArgs<ExtArgs> = {}>(args?: Subset<T, TenantDefaultArgs<ExtArgs>>): Prisma__TenantClient<$Result.GetResult<Prisma.$TenantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the TenantGroupMember model
+   */
+  interface TenantGroupMemberFieldRefs {
+    readonly id: FieldRef<"TenantGroupMember", 'String'>
+    readonly groupId: FieldRef<"TenantGroupMember", 'String'>
+    readonly tenantId: FieldRef<"TenantGroupMember", 'String'>
+    readonly alias: FieldRef<"TenantGroupMember", 'String'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * TenantGroupMember findUnique
+   */
+  export type TenantGroupMemberFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroupMember
+     */
+    select?: TenantGroupMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroupMember
+     */
+    omit?: TenantGroupMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupMemberInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantGroupMember to fetch.
+     */
+    where: TenantGroupMemberWhereUniqueInput
+  }
+
+  /**
+   * TenantGroupMember findUniqueOrThrow
+   */
+  export type TenantGroupMemberFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroupMember
+     */
+    select?: TenantGroupMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroupMember
+     */
+    omit?: TenantGroupMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupMemberInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantGroupMember to fetch.
+     */
+    where: TenantGroupMemberWhereUniqueInput
+  }
+
+  /**
+   * TenantGroupMember findFirst
+   */
+  export type TenantGroupMemberFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroupMember
+     */
+    select?: TenantGroupMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroupMember
+     */
+    omit?: TenantGroupMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupMemberInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantGroupMember to fetch.
+     */
+    where?: TenantGroupMemberWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TenantGroupMembers to fetch.
+     */
+    orderBy?: TenantGroupMemberOrderByWithRelationInput | TenantGroupMemberOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for TenantGroupMembers.
+     */
+    cursor?: TenantGroupMemberWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TenantGroupMembers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TenantGroupMembers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of TenantGroupMembers.
+     */
+    distinct?: TenantGroupMemberScalarFieldEnum | TenantGroupMemberScalarFieldEnum[]
+  }
+
+  /**
+   * TenantGroupMember findFirstOrThrow
+   */
+  export type TenantGroupMemberFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroupMember
+     */
+    select?: TenantGroupMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroupMember
+     */
+    omit?: TenantGroupMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupMemberInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantGroupMember to fetch.
+     */
+    where?: TenantGroupMemberWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TenantGroupMembers to fetch.
+     */
+    orderBy?: TenantGroupMemberOrderByWithRelationInput | TenantGroupMemberOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for TenantGroupMembers.
+     */
+    cursor?: TenantGroupMemberWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TenantGroupMembers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TenantGroupMembers.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of TenantGroupMembers.
+     */
+    distinct?: TenantGroupMemberScalarFieldEnum | TenantGroupMemberScalarFieldEnum[]
+  }
+
+  /**
+   * TenantGroupMember findMany
+   */
+  export type TenantGroupMemberFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroupMember
+     */
+    select?: TenantGroupMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroupMember
+     */
+    omit?: TenantGroupMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupMemberInclude<ExtArgs> | null
+    /**
+     * Filter, which TenantGroupMembers to fetch.
+     */
+    where?: TenantGroupMemberWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TenantGroupMembers to fetch.
+     */
+    orderBy?: TenantGroupMemberOrderByWithRelationInput | TenantGroupMemberOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing TenantGroupMembers.
+     */
+    cursor?: TenantGroupMemberWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TenantGroupMembers from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TenantGroupMembers.
+     */
+    skip?: number
+    distinct?: TenantGroupMemberScalarFieldEnum | TenantGroupMemberScalarFieldEnum[]
+  }
+
+  /**
+   * TenantGroupMember create
+   */
+  export type TenantGroupMemberCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroupMember
+     */
+    select?: TenantGroupMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroupMember
+     */
+    omit?: TenantGroupMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupMemberInclude<ExtArgs> | null
+    /**
+     * The data needed to create a TenantGroupMember.
+     */
+    data: XOR<TenantGroupMemberCreateInput, TenantGroupMemberUncheckedCreateInput>
+  }
+
+  /**
+   * TenantGroupMember createMany
+   */
+  export type TenantGroupMemberCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many TenantGroupMembers.
+     */
+    data: TenantGroupMemberCreateManyInput | TenantGroupMemberCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * TenantGroupMember update
+   */
+  export type TenantGroupMemberUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroupMember
+     */
+    select?: TenantGroupMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroupMember
+     */
+    omit?: TenantGroupMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupMemberInclude<ExtArgs> | null
+    /**
+     * The data needed to update a TenantGroupMember.
+     */
+    data: XOR<TenantGroupMemberUpdateInput, TenantGroupMemberUncheckedUpdateInput>
+    /**
+     * Choose, which TenantGroupMember to update.
+     */
+    where: TenantGroupMemberWhereUniqueInput
+  }
+
+  /**
+   * TenantGroupMember updateMany
+   */
+  export type TenantGroupMemberUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update TenantGroupMembers.
+     */
+    data: XOR<TenantGroupMemberUpdateManyMutationInput, TenantGroupMemberUncheckedUpdateManyInput>
+    /**
+     * Filter which TenantGroupMembers to update
+     */
+    where?: TenantGroupMemberWhereInput
+    /**
+     * Limit how many TenantGroupMembers to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * TenantGroupMember upsert
+   */
+  export type TenantGroupMemberUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroupMember
+     */
+    select?: TenantGroupMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroupMember
+     */
+    omit?: TenantGroupMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupMemberInclude<ExtArgs> | null
+    /**
+     * The filter to search for the TenantGroupMember to update in case it exists.
+     */
+    where: TenantGroupMemberWhereUniqueInput
+    /**
+     * In case the TenantGroupMember found by the `where` argument doesn't exist, create a new TenantGroupMember with this data.
+     */
+    create: XOR<TenantGroupMemberCreateInput, TenantGroupMemberUncheckedCreateInput>
+    /**
+     * In case the TenantGroupMember was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<TenantGroupMemberUpdateInput, TenantGroupMemberUncheckedUpdateInput>
+  }
+
+  /**
+   * TenantGroupMember delete
+   */
+  export type TenantGroupMemberDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroupMember
+     */
+    select?: TenantGroupMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroupMember
+     */
+    omit?: TenantGroupMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupMemberInclude<ExtArgs> | null
+    /**
+     * Filter which TenantGroupMember to delete.
+     */
+    where: TenantGroupMemberWhereUniqueInput
+  }
+
+  /**
+   * TenantGroupMember deleteMany
+   */
+  export type TenantGroupMemberDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which TenantGroupMembers to delete
+     */
+    where?: TenantGroupMemberWhereInput
+    /**
+     * Limit how many TenantGroupMembers to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * TenantGroupMember without action
+   */
+  export type TenantGroupMemberDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TenantGroupMember
+     */
+    select?: TenantGroupMemberSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TenantGroupMember
+     */
+    omit?: TenantGroupMemberOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TenantGroupMemberInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model NfeSyncState
+   */
+
+  export type AggregateNfeSyncState = {
+    _count: NfeSyncStateCountAggregateOutputType | null
+    _avg: NfeSyncStateAvgAggregateOutputType | null
+    _sum: NfeSyncStateSumAggregateOutputType | null
+    _min: NfeSyncStateMinAggregateOutputType | null
+    _max: NfeSyncStateMaxAggregateOutputType | null
+  }
+
+  export type NfeSyncStateAvgAggregateOutputType = {
+    notasBaixadas: number | null
+    tempoGastoMs: number | null
+  }
+
+  export type NfeSyncStateSumAggregateOutputType = {
+    notasBaixadas: number | null
+    tempoGastoMs: number | null
+  }
+
+  export type NfeSyncStateMinAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    ultimoNSU: string | null
+    ultimaConsulta: Date | null
+    status: string | null
+    notasBaixadas: number | null
+    tempoGastoMs: number | null
+    lastError: string | null
+    correlationId: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type NfeSyncStateMaxAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    ultimoNSU: string | null
+    ultimaConsulta: Date | null
+    status: string | null
+    notasBaixadas: number | null
+    tempoGastoMs: number | null
+    lastError: string | null
+    correlationId: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type NfeSyncStateCountAggregateOutputType = {
+    id: number
+    tenantId: number
+    ultimoNSU: number
+    ultimaConsulta: number
+    status: number
+    notasBaixadas: number
+    tempoGastoMs: number
+    lastError: number
+    correlationId: number
+    lastDiagnostico: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type NfeSyncStateAvgAggregateInputType = {
+    notasBaixadas?: true
+    tempoGastoMs?: true
+  }
+
+  export type NfeSyncStateSumAggregateInputType = {
+    notasBaixadas?: true
+    tempoGastoMs?: true
+  }
+
+  export type NfeSyncStateMinAggregateInputType = {
+    id?: true
+    tenantId?: true
+    ultimoNSU?: true
+    ultimaConsulta?: true
+    status?: true
+    notasBaixadas?: true
+    tempoGastoMs?: true
+    lastError?: true
+    correlationId?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type NfeSyncStateMaxAggregateInputType = {
+    id?: true
+    tenantId?: true
+    ultimoNSU?: true
+    ultimaConsulta?: true
+    status?: true
+    notasBaixadas?: true
+    tempoGastoMs?: true
+    lastError?: true
+    correlationId?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type NfeSyncStateCountAggregateInputType = {
+    id?: true
+    tenantId?: true
+    ultimoNSU?: true
+    ultimaConsulta?: true
+    status?: true
+    notasBaixadas?: true
+    tempoGastoMs?: true
+    lastError?: true
+    correlationId?: true
+    lastDiagnostico?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type NfeSyncStateAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which NfeSyncState to aggregate.
+     */
+    where?: NfeSyncStateWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of NfeSyncStates to fetch.
+     */
+    orderBy?: NfeSyncStateOrderByWithRelationInput | NfeSyncStateOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: NfeSyncStateWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` NfeSyncStates from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` NfeSyncStates.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned NfeSyncStates
+    **/
+    _count?: true | NfeSyncStateCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: NfeSyncStateAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: NfeSyncStateSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: NfeSyncStateMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: NfeSyncStateMaxAggregateInputType
+  }
+
+  export type GetNfeSyncStateAggregateType<T extends NfeSyncStateAggregateArgs> = {
+        [P in keyof T & keyof AggregateNfeSyncState]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateNfeSyncState[P]>
+      : GetScalarType<T[P], AggregateNfeSyncState[P]>
+  }
+
+
+
+
+  export type NfeSyncStateGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: NfeSyncStateWhereInput
+    orderBy?: NfeSyncStateOrderByWithAggregationInput | NfeSyncStateOrderByWithAggregationInput[]
+    by: NfeSyncStateScalarFieldEnum[] | NfeSyncStateScalarFieldEnum
+    having?: NfeSyncStateScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: NfeSyncStateCountAggregateInputType | true
+    _avg?: NfeSyncStateAvgAggregateInputType
+    _sum?: NfeSyncStateSumAggregateInputType
+    _min?: NfeSyncStateMinAggregateInputType
+    _max?: NfeSyncStateMaxAggregateInputType
+  }
+
+  export type NfeSyncStateGroupByOutputType = {
+    id: string
+    tenantId: string
+    ultimoNSU: string
+    ultimaConsulta: Date | null
+    status: string
+    notasBaixadas: number
+    tempoGastoMs: number
+    lastError: string | null
+    correlationId: string | null
+    lastDiagnostico: JsonValue | null
+    createdAt: Date
+    updatedAt: Date
+    _count: NfeSyncStateCountAggregateOutputType | null
+    _avg: NfeSyncStateAvgAggregateOutputType | null
+    _sum: NfeSyncStateSumAggregateOutputType | null
+    _min: NfeSyncStateMinAggregateOutputType | null
+    _max: NfeSyncStateMaxAggregateOutputType | null
+  }
+
+  type GetNfeSyncStateGroupByPayload<T extends NfeSyncStateGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<NfeSyncStateGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof NfeSyncStateGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], NfeSyncStateGroupByOutputType[P]>
+            : GetScalarType<T[P], NfeSyncStateGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type NfeSyncStateSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    ultimoNSU?: boolean
+    ultimaConsulta?: boolean
+    status?: boolean
+    notasBaixadas?: boolean
+    tempoGastoMs?: boolean
+    lastError?: boolean
+    correlationId?: boolean
+    lastDiagnostico?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["nfeSyncState"]>
+
+
+
+  export type NfeSyncStateSelectScalar = {
+    id?: boolean
+    tenantId?: boolean
+    ultimoNSU?: boolean
+    ultimaConsulta?: boolean
+    status?: boolean
+    notasBaixadas?: boolean
+    tempoGastoMs?: boolean
+    lastError?: boolean
+    correlationId?: boolean
+    lastDiagnostico?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type NfeSyncStateOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "tenantId" | "ultimoNSU" | "ultimaConsulta" | "status" | "notasBaixadas" | "tempoGastoMs" | "lastError" | "correlationId" | "lastDiagnostico" | "createdAt" | "updatedAt", ExtArgs["result"]["nfeSyncState"]>
+
+  export type $NfeSyncStatePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "NfeSyncState"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      tenantId: string
+      ultimoNSU: string
+      ultimaConsulta: Date | null
+      status: string
+      notasBaixadas: number
+      tempoGastoMs: number
+      lastError: string | null
+      correlationId: string | null
+      lastDiagnostico: Prisma.JsonValue | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["nfeSyncState"]>
+    composites: {}
+  }
+
+  type NfeSyncStateGetPayload<S extends boolean | null | undefined | NfeSyncStateDefaultArgs> = $Result.GetResult<Prisma.$NfeSyncStatePayload, S>
+
+  type NfeSyncStateCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<NfeSyncStateFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: NfeSyncStateCountAggregateInputType | true
+    }
+
+  export interface NfeSyncStateDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['NfeSyncState'], meta: { name: 'NfeSyncState' } }
+    /**
+     * Find zero or one NfeSyncState that matches the filter.
+     * @param {NfeSyncStateFindUniqueArgs} args - Arguments to find a NfeSyncState
+     * @example
+     * // Get one NfeSyncState
+     * const nfeSyncState = await prisma.nfeSyncState.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends NfeSyncStateFindUniqueArgs>(args: SelectSubset<T, NfeSyncStateFindUniqueArgs<ExtArgs>>): Prisma__NfeSyncStateClient<$Result.GetResult<Prisma.$NfeSyncStatePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one NfeSyncState that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {NfeSyncStateFindUniqueOrThrowArgs} args - Arguments to find a NfeSyncState
+     * @example
+     * // Get one NfeSyncState
+     * const nfeSyncState = await prisma.nfeSyncState.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends NfeSyncStateFindUniqueOrThrowArgs>(args: SelectSubset<T, NfeSyncStateFindUniqueOrThrowArgs<ExtArgs>>): Prisma__NfeSyncStateClient<$Result.GetResult<Prisma.$NfeSyncStatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first NfeSyncState that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NfeSyncStateFindFirstArgs} args - Arguments to find a NfeSyncState
+     * @example
+     * // Get one NfeSyncState
+     * const nfeSyncState = await prisma.nfeSyncState.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends NfeSyncStateFindFirstArgs>(args?: SelectSubset<T, NfeSyncStateFindFirstArgs<ExtArgs>>): Prisma__NfeSyncStateClient<$Result.GetResult<Prisma.$NfeSyncStatePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first NfeSyncState that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NfeSyncStateFindFirstOrThrowArgs} args - Arguments to find a NfeSyncState
+     * @example
+     * // Get one NfeSyncState
+     * const nfeSyncState = await prisma.nfeSyncState.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends NfeSyncStateFindFirstOrThrowArgs>(args?: SelectSubset<T, NfeSyncStateFindFirstOrThrowArgs<ExtArgs>>): Prisma__NfeSyncStateClient<$Result.GetResult<Prisma.$NfeSyncStatePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more NfeSyncStates that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NfeSyncStateFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all NfeSyncStates
+     * const nfeSyncStates = await prisma.nfeSyncState.findMany()
+     * 
+     * // Get first 10 NfeSyncStates
+     * const nfeSyncStates = await prisma.nfeSyncState.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const nfeSyncStateWithIdOnly = await prisma.nfeSyncState.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends NfeSyncStateFindManyArgs>(args?: SelectSubset<T, NfeSyncStateFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$NfeSyncStatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a NfeSyncState.
+     * @param {NfeSyncStateCreateArgs} args - Arguments to create a NfeSyncState.
+     * @example
+     * // Create one NfeSyncState
+     * const NfeSyncState = await prisma.nfeSyncState.create({
+     *   data: {
+     *     // ... data to create a NfeSyncState
+     *   }
+     * })
+     * 
+     */
+    create<T extends NfeSyncStateCreateArgs>(args: SelectSubset<T, NfeSyncStateCreateArgs<ExtArgs>>): Prisma__NfeSyncStateClient<$Result.GetResult<Prisma.$NfeSyncStatePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many NfeSyncStates.
+     * @param {NfeSyncStateCreateManyArgs} args - Arguments to create many NfeSyncStates.
+     * @example
+     * // Create many NfeSyncStates
+     * const nfeSyncState = await prisma.nfeSyncState.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends NfeSyncStateCreateManyArgs>(args?: SelectSubset<T, NfeSyncStateCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a NfeSyncState.
+     * @param {NfeSyncStateDeleteArgs} args - Arguments to delete one NfeSyncState.
+     * @example
+     * // Delete one NfeSyncState
+     * const NfeSyncState = await prisma.nfeSyncState.delete({
+     *   where: {
+     *     // ... filter to delete one NfeSyncState
+     *   }
+     * })
+     * 
+     */
+    delete<T extends NfeSyncStateDeleteArgs>(args: SelectSubset<T, NfeSyncStateDeleteArgs<ExtArgs>>): Prisma__NfeSyncStateClient<$Result.GetResult<Prisma.$NfeSyncStatePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one NfeSyncState.
+     * @param {NfeSyncStateUpdateArgs} args - Arguments to update one NfeSyncState.
+     * @example
+     * // Update one NfeSyncState
+     * const nfeSyncState = await prisma.nfeSyncState.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends NfeSyncStateUpdateArgs>(args: SelectSubset<T, NfeSyncStateUpdateArgs<ExtArgs>>): Prisma__NfeSyncStateClient<$Result.GetResult<Prisma.$NfeSyncStatePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more NfeSyncStates.
+     * @param {NfeSyncStateDeleteManyArgs} args - Arguments to filter NfeSyncStates to delete.
+     * @example
+     * // Delete a few NfeSyncStates
+     * const { count } = await prisma.nfeSyncState.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends NfeSyncStateDeleteManyArgs>(args?: SelectSubset<T, NfeSyncStateDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more NfeSyncStates.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NfeSyncStateUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many NfeSyncStates
+     * const nfeSyncState = await prisma.nfeSyncState.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends NfeSyncStateUpdateManyArgs>(args: SelectSubset<T, NfeSyncStateUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one NfeSyncState.
+     * @param {NfeSyncStateUpsertArgs} args - Arguments to update or create a NfeSyncState.
+     * @example
+     * // Update or create a NfeSyncState
+     * const nfeSyncState = await prisma.nfeSyncState.upsert({
+     *   create: {
+     *     // ... data to create a NfeSyncState
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the NfeSyncState we want to update
+     *   }
+     * })
+     */
+    upsert<T extends NfeSyncStateUpsertArgs>(args: SelectSubset<T, NfeSyncStateUpsertArgs<ExtArgs>>): Prisma__NfeSyncStateClient<$Result.GetResult<Prisma.$NfeSyncStatePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of NfeSyncStates.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NfeSyncStateCountArgs} args - Arguments to filter NfeSyncStates to count.
+     * @example
+     * // Count the number of NfeSyncStates
+     * const count = await prisma.nfeSyncState.count({
+     *   where: {
+     *     // ... the filter for the NfeSyncStates we want to count
+     *   }
+     * })
+    **/
+    count<T extends NfeSyncStateCountArgs>(
+      args?: Subset<T, NfeSyncStateCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], NfeSyncStateCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a NfeSyncState.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NfeSyncStateAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends NfeSyncStateAggregateArgs>(args: Subset<T, NfeSyncStateAggregateArgs>): Prisma.PrismaPromise<GetNfeSyncStateAggregateType<T>>
+
+    /**
+     * Group by NfeSyncState.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {NfeSyncStateGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends NfeSyncStateGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: NfeSyncStateGroupByArgs['orderBy'] }
+        : { orderBy?: NfeSyncStateGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, NfeSyncStateGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetNfeSyncStateGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the NfeSyncState model
+   */
+  readonly fields: NfeSyncStateFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for NfeSyncState.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__NfeSyncStateClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the NfeSyncState model
+   */
+  interface NfeSyncStateFieldRefs {
+    readonly id: FieldRef<"NfeSyncState", 'String'>
+    readonly tenantId: FieldRef<"NfeSyncState", 'String'>
+    readonly ultimoNSU: FieldRef<"NfeSyncState", 'String'>
+    readonly ultimaConsulta: FieldRef<"NfeSyncState", 'DateTime'>
+    readonly status: FieldRef<"NfeSyncState", 'String'>
+    readonly notasBaixadas: FieldRef<"NfeSyncState", 'Int'>
+    readonly tempoGastoMs: FieldRef<"NfeSyncState", 'Int'>
+    readonly lastError: FieldRef<"NfeSyncState", 'String'>
+    readonly correlationId: FieldRef<"NfeSyncState", 'String'>
+    readonly lastDiagnostico: FieldRef<"NfeSyncState", 'Json'>
+    readonly createdAt: FieldRef<"NfeSyncState", 'DateTime'>
+    readonly updatedAt: FieldRef<"NfeSyncState", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * NfeSyncState findUnique
+   */
+  export type NfeSyncStateFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NfeSyncState
+     */
+    select?: NfeSyncStateSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NfeSyncState
+     */
+    omit?: NfeSyncStateOmit<ExtArgs> | null
+    /**
+     * Filter, which NfeSyncState to fetch.
+     */
+    where: NfeSyncStateWhereUniqueInput
+  }
+
+  /**
+   * NfeSyncState findUniqueOrThrow
+   */
+  export type NfeSyncStateFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NfeSyncState
+     */
+    select?: NfeSyncStateSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NfeSyncState
+     */
+    omit?: NfeSyncStateOmit<ExtArgs> | null
+    /**
+     * Filter, which NfeSyncState to fetch.
+     */
+    where: NfeSyncStateWhereUniqueInput
+  }
+
+  /**
+   * NfeSyncState findFirst
+   */
+  export type NfeSyncStateFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NfeSyncState
+     */
+    select?: NfeSyncStateSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NfeSyncState
+     */
+    omit?: NfeSyncStateOmit<ExtArgs> | null
+    /**
+     * Filter, which NfeSyncState to fetch.
+     */
+    where?: NfeSyncStateWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of NfeSyncStates to fetch.
+     */
+    orderBy?: NfeSyncStateOrderByWithRelationInput | NfeSyncStateOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for NfeSyncStates.
+     */
+    cursor?: NfeSyncStateWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` NfeSyncStates from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` NfeSyncStates.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of NfeSyncStates.
+     */
+    distinct?: NfeSyncStateScalarFieldEnum | NfeSyncStateScalarFieldEnum[]
+  }
+
+  /**
+   * NfeSyncState findFirstOrThrow
+   */
+  export type NfeSyncStateFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NfeSyncState
+     */
+    select?: NfeSyncStateSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NfeSyncState
+     */
+    omit?: NfeSyncStateOmit<ExtArgs> | null
+    /**
+     * Filter, which NfeSyncState to fetch.
+     */
+    where?: NfeSyncStateWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of NfeSyncStates to fetch.
+     */
+    orderBy?: NfeSyncStateOrderByWithRelationInput | NfeSyncStateOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for NfeSyncStates.
+     */
+    cursor?: NfeSyncStateWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` NfeSyncStates from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` NfeSyncStates.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of NfeSyncStates.
+     */
+    distinct?: NfeSyncStateScalarFieldEnum | NfeSyncStateScalarFieldEnum[]
+  }
+
+  /**
+   * NfeSyncState findMany
+   */
+  export type NfeSyncStateFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NfeSyncState
+     */
+    select?: NfeSyncStateSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NfeSyncState
+     */
+    omit?: NfeSyncStateOmit<ExtArgs> | null
+    /**
+     * Filter, which NfeSyncStates to fetch.
+     */
+    where?: NfeSyncStateWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of NfeSyncStates to fetch.
+     */
+    orderBy?: NfeSyncStateOrderByWithRelationInput | NfeSyncStateOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing NfeSyncStates.
+     */
+    cursor?: NfeSyncStateWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` NfeSyncStates from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` NfeSyncStates.
+     */
+    skip?: number
+    distinct?: NfeSyncStateScalarFieldEnum | NfeSyncStateScalarFieldEnum[]
+  }
+
+  /**
+   * NfeSyncState create
+   */
+  export type NfeSyncStateCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NfeSyncState
+     */
+    select?: NfeSyncStateSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NfeSyncState
+     */
+    omit?: NfeSyncStateOmit<ExtArgs> | null
+    /**
+     * The data needed to create a NfeSyncState.
+     */
+    data: XOR<NfeSyncStateCreateInput, NfeSyncStateUncheckedCreateInput>
+  }
+
+  /**
+   * NfeSyncState createMany
+   */
+  export type NfeSyncStateCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many NfeSyncStates.
+     */
+    data: NfeSyncStateCreateManyInput | NfeSyncStateCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * NfeSyncState update
+   */
+  export type NfeSyncStateUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NfeSyncState
+     */
+    select?: NfeSyncStateSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NfeSyncState
+     */
+    omit?: NfeSyncStateOmit<ExtArgs> | null
+    /**
+     * The data needed to update a NfeSyncState.
+     */
+    data: XOR<NfeSyncStateUpdateInput, NfeSyncStateUncheckedUpdateInput>
+    /**
+     * Choose, which NfeSyncState to update.
+     */
+    where: NfeSyncStateWhereUniqueInput
+  }
+
+  /**
+   * NfeSyncState updateMany
+   */
+  export type NfeSyncStateUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update NfeSyncStates.
+     */
+    data: XOR<NfeSyncStateUpdateManyMutationInput, NfeSyncStateUncheckedUpdateManyInput>
+    /**
+     * Filter which NfeSyncStates to update
+     */
+    where?: NfeSyncStateWhereInput
+    /**
+     * Limit how many NfeSyncStates to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * NfeSyncState upsert
+   */
+  export type NfeSyncStateUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NfeSyncState
+     */
+    select?: NfeSyncStateSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NfeSyncState
+     */
+    omit?: NfeSyncStateOmit<ExtArgs> | null
+    /**
+     * The filter to search for the NfeSyncState to update in case it exists.
+     */
+    where: NfeSyncStateWhereUniqueInput
+    /**
+     * In case the NfeSyncState found by the `where` argument doesn't exist, create a new NfeSyncState with this data.
+     */
+    create: XOR<NfeSyncStateCreateInput, NfeSyncStateUncheckedCreateInput>
+    /**
+     * In case the NfeSyncState was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<NfeSyncStateUpdateInput, NfeSyncStateUncheckedUpdateInput>
+  }
+
+  /**
+   * NfeSyncState delete
+   */
+  export type NfeSyncStateDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NfeSyncState
+     */
+    select?: NfeSyncStateSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NfeSyncState
+     */
+    omit?: NfeSyncStateOmit<ExtArgs> | null
+    /**
+     * Filter which NfeSyncState to delete.
+     */
+    where: NfeSyncStateWhereUniqueInput
+  }
+
+  /**
+   * NfeSyncState deleteMany
+   */
+  export type NfeSyncStateDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which NfeSyncStates to delete
+     */
+    where?: NfeSyncStateWhereInput
+    /**
+     * Limit how many NfeSyncStates to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * NfeSyncState without action
+   */
+  export type NfeSyncStateDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the NfeSyncState
+     */
+    select?: NfeSyncStateSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the NfeSyncState
+     */
+    omit?: NfeSyncStateOmit<ExtArgs> | null
+  }
+
+
+  /**
+   * Model StoreProfile
+   */
+
+  export type AggregateStoreProfile = {
+    _count: StoreProfileCountAggregateOutputType | null
+    _min: StoreProfileMinAggregateOutputType | null
+    _max: StoreProfileMaxAggregateOutputType | null
+  }
+
+  export type StoreProfileMinAggregateOutputType = {
+    id: string | null
+    slug: string | null
+    name: string | null
+    icon: string | null
+    description: string | null
+  }
+
+  export type StoreProfileMaxAggregateOutputType = {
+    id: string | null
+    slug: string | null
+    name: string | null
+    icon: string | null
+    description: string | null
+  }
+
+  export type StoreProfileCountAggregateOutputType = {
+    id: number
+    slug: number
+    name: number
+    icon: number
+    description: number
+    _all: number
+  }
+
+
+  export type StoreProfileMinAggregateInputType = {
+    id?: true
+    slug?: true
+    name?: true
+    icon?: true
+    description?: true
+  }
+
+  export type StoreProfileMaxAggregateInputType = {
+    id?: true
+    slug?: true
+    name?: true
+    icon?: true
+    description?: true
+  }
+
+  export type StoreProfileCountAggregateInputType = {
+    id?: true
+    slug?: true
+    name?: true
+    icon?: true
+    description?: true
+    _all?: true
+  }
+
+  export type StoreProfileAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which StoreProfile to aggregate.
+     */
+    where?: StoreProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of StoreProfiles to fetch.
+     */
+    orderBy?: StoreProfileOrderByWithRelationInput | StoreProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: StoreProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` StoreProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` StoreProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned StoreProfiles
+    **/
+    _count?: true | StoreProfileCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: StoreProfileMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: StoreProfileMaxAggregateInputType
+  }
+
+  export type GetStoreProfileAggregateType<T extends StoreProfileAggregateArgs> = {
+        [P in keyof T & keyof AggregateStoreProfile]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateStoreProfile[P]>
+      : GetScalarType<T[P], AggregateStoreProfile[P]>
+  }
+
+
+
+
+  export type StoreProfileGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: StoreProfileWhereInput
+    orderBy?: StoreProfileOrderByWithAggregationInput | StoreProfileOrderByWithAggregationInput[]
+    by: StoreProfileScalarFieldEnum[] | StoreProfileScalarFieldEnum
+    having?: StoreProfileScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: StoreProfileCountAggregateInputType | true
+    _min?: StoreProfileMinAggregateInputType
+    _max?: StoreProfileMaxAggregateInputType
+  }
+
+  export type StoreProfileGroupByOutputType = {
+    id: string
+    slug: string
+    name: string
+    icon: string | null
+    description: string | null
+    _count: StoreProfileCountAggregateOutputType | null
+    _min: StoreProfileMinAggregateOutputType | null
+    _max: StoreProfileMaxAggregateOutputType | null
+  }
+
+  type GetStoreProfileGroupByPayload<T extends StoreProfileGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<StoreProfileGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof StoreProfileGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], StoreProfileGroupByOutputType[P]>
+            : GetScalarType<T[P], StoreProfileGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type StoreProfileSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    slug?: boolean
+    name?: boolean
+    icon?: boolean
+    description?: boolean
+    profiles?: boolean | StoreProfile$profilesArgs<ExtArgs>
+    _count?: boolean | StoreProfileCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["storeProfile"]>
+
+
+
+  export type StoreProfileSelectScalar = {
+    id?: boolean
+    slug?: boolean
+    name?: boolean
+    icon?: boolean
+    description?: boolean
+  }
+
+  export type StoreProfileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "slug" | "name" | "icon" | "description", ExtArgs["result"]["storeProfile"]>
+  export type StoreProfileInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    profiles?: boolean | StoreProfile$profilesArgs<ExtArgs>
+    _count?: boolean | StoreProfileCountOutputTypeDefaultArgs<ExtArgs>
+  }
+
+  export type $StoreProfilePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "StoreProfile"
+    objects: {
+      profiles: Prisma.$StoreProfileFiscalPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      slug: string
+      name: string
+      icon: string | null
+      description: string | null
+    }, ExtArgs["result"]["storeProfile"]>
+    composites: {}
+  }
+
+  type StoreProfileGetPayload<S extends boolean | null | undefined | StoreProfileDefaultArgs> = $Result.GetResult<Prisma.$StoreProfilePayload, S>
+
+  type StoreProfileCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<StoreProfileFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: StoreProfileCountAggregateInputType | true
+    }
+
+  export interface StoreProfileDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['StoreProfile'], meta: { name: 'StoreProfile' } }
+    /**
+     * Find zero or one StoreProfile that matches the filter.
+     * @param {StoreProfileFindUniqueArgs} args - Arguments to find a StoreProfile
+     * @example
+     * // Get one StoreProfile
+     * const storeProfile = await prisma.storeProfile.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends StoreProfileFindUniqueArgs>(args: SelectSubset<T, StoreProfileFindUniqueArgs<ExtArgs>>): Prisma__StoreProfileClient<$Result.GetResult<Prisma.$StoreProfilePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one StoreProfile that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {StoreProfileFindUniqueOrThrowArgs} args - Arguments to find a StoreProfile
+     * @example
+     * // Get one StoreProfile
+     * const storeProfile = await prisma.storeProfile.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends StoreProfileFindUniqueOrThrowArgs>(args: SelectSubset<T, StoreProfileFindUniqueOrThrowArgs<ExtArgs>>): Prisma__StoreProfileClient<$Result.GetResult<Prisma.$StoreProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first StoreProfile that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileFindFirstArgs} args - Arguments to find a StoreProfile
+     * @example
+     * // Get one StoreProfile
+     * const storeProfile = await prisma.storeProfile.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends StoreProfileFindFirstArgs>(args?: SelectSubset<T, StoreProfileFindFirstArgs<ExtArgs>>): Prisma__StoreProfileClient<$Result.GetResult<Prisma.$StoreProfilePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first StoreProfile that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileFindFirstOrThrowArgs} args - Arguments to find a StoreProfile
+     * @example
+     * // Get one StoreProfile
+     * const storeProfile = await prisma.storeProfile.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends StoreProfileFindFirstOrThrowArgs>(args?: SelectSubset<T, StoreProfileFindFirstOrThrowArgs<ExtArgs>>): Prisma__StoreProfileClient<$Result.GetResult<Prisma.$StoreProfilePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more StoreProfiles that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all StoreProfiles
+     * const storeProfiles = await prisma.storeProfile.findMany()
+     * 
+     * // Get first 10 StoreProfiles
+     * const storeProfiles = await prisma.storeProfile.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const storeProfileWithIdOnly = await prisma.storeProfile.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends StoreProfileFindManyArgs>(args?: SelectSubset<T, StoreProfileFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$StoreProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a StoreProfile.
+     * @param {StoreProfileCreateArgs} args - Arguments to create a StoreProfile.
+     * @example
+     * // Create one StoreProfile
+     * const StoreProfile = await prisma.storeProfile.create({
+     *   data: {
+     *     // ... data to create a StoreProfile
+     *   }
+     * })
+     * 
+     */
+    create<T extends StoreProfileCreateArgs>(args: SelectSubset<T, StoreProfileCreateArgs<ExtArgs>>): Prisma__StoreProfileClient<$Result.GetResult<Prisma.$StoreProfilePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many StoreProfiles.
+     * @param {StoreProfileCreateManyArgs} args - Arguments to create many StoreProfiles.
+     * @example
+     * // Create many StoreProfiles
+     * const storeProfile = await prisma.storeProfile.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends StoreProfileCreateManyArgs>(args?: SelectSubset<T, StoreProfileCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a StoreProfile.
+     * @param {StoreProfileDeleteArgs} args - Arguments to delete one StoreProfile.
+     * @example
+     * // Delete one StoreProfile
+     * const StoreProfile = await prisma.storeProfile.delete({
+     *   where: {
+     *     // ... filter to delete one StoreProfile
+     *   }
+     * })
+     * 
+     */
+    delete<T extends StoreProfileDeleteArgs>(args: SelectSubset<T, StoreProfileDeleteArgs<ExtArgs>>): Prisma__StoreProfileClient<$Result.GetResult<Prisma.$StoreProfilePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one StoreProfile.
+     * @param {StoreProfileUpdateArgs} args - Arguments to update one StoreProfile.
+     * @example
+     * // Update one StoreProfile
+     * const storeProfile = await prisma.storeProfile.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends StoreProfileUpdateArgs>(args: SelectSubset<T, StoreProfileUpdateArgs<ExtArgs>>): Prisma__StoreProfileClient<$Result.GetResult<Prisma.$StoreProfilePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more StoreProfiles.
+     * @param {StoreProfileDeleteManyArgs} args - Arguments to filter StoreProfiles to delete.
+     * @example
+     * // Delete a few StoreProfiles
+     * const { count } = await prisma.storeProfile.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends StoreProfileDeleteManyArgs>(args?: SelectSubset<T, StoreProfileDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more StoreProfiles.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many StoreProfiles
+     * const storeProfile = await prisma.storeProfile.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends StoreProfileUpdateManyArgs>(args: SelectSubset<T, StoreProfileUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one StoreProfile.
+     * @param {StoreProfileUpsertArgs} args - Arguments to update or create a StoreProfile.
+     * @example
+     * // Update or create a StoreProfile
+     * const storeProfile = await prisma.storeProfile.upsert({
+     *   create: {
+     *     // ... data to create a StoreProfile
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the StoreProfile we want to update
+     *   }
+     * })
+     */
+    upsert<T extends StoreProfileUpsertArgs>(args: SelectSubset<T, StoreProfileUpsertArgs<ExtArgs>>): Prisma__StoreProfileClient<$Result.GetResult<Prisma.$StoreProfilePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of StoreProfiles.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileCountArgs} args - Arguments to filter StoreProfiles to count.
+     * @example
+     * // Count the number of StoreProfiles
+     * const count = await prisma.storeProfile.count({
+     *   where: {
+     *     // ... the filter for the StoreProfiles we want to count
+     *   }
+     * })
+    **/
+    count<T extends StoreProfileCountArgs>(
+      args?: Subset<T, StoreProfileCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], StoreProfileCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a StoreProfile.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends StoreProfileAggregateArgs>(args: Subset<T, StoreProfileAggregateArgs>): Prisma.PrismaPromise<GetStoreProfileAggregateType<T>>
+
+    /**
+     * Group by StoreProfile.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends StoreProfileGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: StoreProfileGroupByArgs['orderBy'] }
+        : { orderBy?: StoreProfileGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, StoreProfileGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetStoreProfileGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the StoreProfile model
+   */
+  readonly fields: StoreProfileFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for StoreProfile.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__StoreProfileClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    profiles<T extends StoreProfile$profilesArgs<ExtArgs> = {}>(args?: Subset<T, StoreProfile$profilesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$StoreProfileFiscalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the StoreProfile model
+   */
+  interface StoreProfileFieldRefs {
+    readonly id: FieldRef<"StoreProfile", 'String'>
+    readonly slug: FieldRef<"StoreProfile", 'String'>
+    readonly name: FieldRef<"StoreProfile", 'String'>
+    readonly icon: FieldRef<"StoreProfile", 'String'>
+    readonly description: FieldRef<"StoreProfile", 'String'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * StoreProfile findUnique
+   */
+  export type StoreProfileFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfile
+     */
+    select?: StoreProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfile
+     */
+    omit?: StoreProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which StoreProfile to fetch.
+     */
+    where: StoreProfileWhereUniqueInput
+  }
+
+  /**
+   * StoreProfile findUniqueOrThrow
+   */
+  export type StoreProfileFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfile
+     */
+    select?: StoreProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfile
+     */
+    omit?: StoreProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which StoreProfile to fetch.
+     */
+    where: StoreProfileWhereUniqueInput
+  }
+
+  /**
+   * StoreProfile findFirst
+   */
+  export type StoreProfileFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfile
+     */
+    select?: StoreProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfile
+     */
+    omit?: StoreProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which StoreProfile to fetch.
+     */
+    where?: StoreProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of StoreProfiles to fetch.
+     */
+    orderBy?: StoreProfileOrderByWithRelationInput | StoreProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for StoreProfiles.
+     */
+    cursor?: StoreProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` StoreProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` StoreProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of StoreProfiles.
+     */
+    distinct?: StoreProfileScalarFieldEnum | StoreProfileScalarFieldEnum[]
+  }
+
+  /**
+   * StoreProfile findFirstOrThrow
+   */
+  export type StoreProfileFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfile
+     */
+    select?: StoreProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfile
+     */
+    omit?: StoreProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which StoreProfile to fetch.
+     */
+    where?: StoreProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of StoreProfiles to fetch.
+     */
+    orderBy?: StoreProfileOrderByWithRelationInput | StoreProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for StoreProfiles.
+     */
+    cursor?: StoreProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` StoreProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` StoreProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of StoreProfiles.
+     */
+    distinct?: StoreProfileScalarFieldEnum | StoreProfileScalarFieldEnum[]
+  }
+
+  /**
+   * StoreProfile findMany
+   */
+  export type StoreProfileFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfile
+     */
+    select?: StoreProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfile
+     */
+    omit?: StoreProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which StoreProfiles to fetch.
+     */
+    where?: StoreProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of StoreProfiles to fetch.
+     */
+    orderBy?: StoreProfileOrderByWithRelationInput | StoreProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing StoreProfiles.
+     */
+    cursor?: StoreProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` StoreProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` StoreProfiles.
+     */
+    skip?: number
+    distinct?: StoreProfileScalarFieldEnum | StoreProfileScalarFieldEnum[]
+  }
+
+  /**
+   * StoreProfile create
+   */
+  export type StoreProfileCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfile
+     */
+    select?: StoreProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfile
+     */
+    omit?: StoreProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileInclude<ExtArgs> | null
+    /**
+     * The data needed to create a StoreProfile.
+     */
+    data: XOR<StoreProfileCreateInput, StoreProfileUncheckedCreateInput>
+  }
+
+  /**
+   * StoreProfile createMany
+   */
+  export type StoreProfileCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many StoreProfiles.
+     */
+    data: StoreProfileCreateManyInput | StoreProfileCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * StoreProfile update
+   */
+  export type StoreProfileUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfile
+     */
+    select?: StoreProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfile
+     */
+    omit?: StoreProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileInclude<ExtArgs> | null
+    /**
+     * The data needed to update a StoreProfile.
+     */
+    data: XOR<StoreProfileUpdateInput, StoreProfileUncheckedUpdateInput>
+    /**
+     * Choose, which StoreProfile to update.
+     */
+    where: StoreProfileWhereUniqueInput
+  }
+
+  /**
+   * StoreProfile updateMany
+   */
+  export type StoreProfileUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update StoreProfiles.
+     */
+    data: XOR<StoreProfileUpdateManyMutationInput, StoreProfileUncheckedUpdateManyInput>
+    /**
+     * Filter which StoreProfiles to update
+     */
+    where?: StoreProfileWhereInput
+    /**
+     * Limit how many StoreProfiles to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * StoreProfile upsert
+   */
+  export type StoreProfileUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfile
+     */
+    select?: StoreProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfile
+     */
+    omit?: StoreProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileInclude<ExtArgs> | null
+    /**
+     * The filter to search for the StoreProfile to update in case it exists.
+     */
+    where: StoreProfileWhereUniqueInput
+    /**
+     * In case the StoreProfile found by the `where` argument doesn't exist, create a new StoreProfile with this data.
+     */
+    create: XOR<StoreProfileCreateInput, StoreProfileUncheckedCreateInput>
+    /**
+     * In case the StoreProfile was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<StoreProfileUpdateInput, StoreProfileUncheckedUpdateInput>
+  }
+
+  /**
+   * StoreProfile delete
+   */
+  export type StoreProfileDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfile
+     */
+    select?: StoreProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfile
+     */
+    omit?: StoreProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileInclude<ExtArgs> | null
+    /**
+     * Filter which StoreProfile to delete.
+     */
+    where: StoreProfileWhereUniqueInput
+  }
+
+  /**
+   * StoreProfile deleteMany
+   */
+  export type StoreProfileDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which StoreProfiles to delete
+     */
+    where?: StoreProfileWhereInput
+    /**
+     * Limit how many StoreProfiles to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * StoreProfile.profiles
+   */
+  export type StoreProfile$profilesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfileFiscal
+     */
+    select?: StoreProfileFiscalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfileFiscal
+     */
+    omit?: StoreProfileFiscalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileFiscalInclude<ExtArgs> | null
+    where?: StoreProfileFiscalWhereInput
+    orderBy?: StoreProfileFiscalOrderByWithRelationInput | StoreProfileFiscalOrderByWithRelationInput[]
+    cursor?: StoreProfileFiscalWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: StoreProfileFiscalScalarFieldEnum | StoreProfileFiscalScalarFieldEnum[]
+  }
+
+  /**
+   * StoreProfile without action
+   */
+  export type StoreProfileDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfile
+     */
+    select?: StoreProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfile
+     */
+    omit?: StoreProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model StoreProfileFiscal
+   */
+
+  export type AggregateStoreProfileFiscal = {
+    _count: StoreProfileFiscalCountAggregateOutputType | null
+    _min: StoreProfileFiscalMinAggregateOutputType | null
+    _max: StoreProfileFiscalMaxAggregateOutputType | null
+  }
+
+  export type StoreProfileFiscalMinAggregateOutputType = {
+    storeProfileId: string | null
+    fiscalProfileId: string | null
+  }
+
+  export type StoreProfileFiscalMaxAggregateOutputType = {
+    storeProfileId: string | null
+    fiscalProfileId: string | null
+  }
+
+  export type StoreProfileFiscalCountAggregateOutputType = {
+    storeProfileId: number
+    fiscalProfileId: number
+    _all: number
+  }
+
+
+  export type StoreProfileFiscalMinAggregateInputType = {
+    storeProfileId?: true
+    fiscalProfileId?: true
+  }
+
+  export type StoreProfileFiscalMaxAggregateInputType = {
+    storeProfileId?: true
+    fiscalProfileId?: true
+  }
+
+  export type StoreProfileFiscalCountAggregateInputType = {
+    storeProfileId?: true
+    fiscalProfileId?: true
+    _all?: true
+  }
+
+  export type StoreProfileFiscalAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which StoreProfileFiscal to aggregate.
+     */
+    where?: StoreProfileFiscalWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of StoreProfileFiscals to fetch.
+     */
+    orderBy?: StoreProfileFiscalOrderByWithRelationInput | StoreProfileFiscalOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: StoreProfileFiscalWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` StoreProfileFiscals from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` StoreProfileFiscals.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned StoreProfileFiscals
+    **/
+    _count?: true | StoreProfileFiscalCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: StoreProfileFiscalMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: StoreProfileFiscalMaxAggregateInputType
+  }
+
+  export type GetStoreProfileFiscalAggregateType<T extends StoreProfileFiscalAggregateArgs> = {
+        [P in keyof T & keyof AggregateStoreProfileFiscal]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateStoreProfileFiscal[P]>
+      : GetScalarType<T[P], AggregateStoreProfileFiscal[P]>
+  }
+
+
+
+
+  export type StoreProfileFiscalGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: StoreProfileFiscalWhereInput
+    orderBy?: StoreProfileFiscalOrderByWithAggregationInput | StoreProfileFiscalOrderByWithAggregationInput[]
+    by: StoreProfileFiscalScalarFieldEnum[] | StoreProfileFiscalScalarFieldEnum
+    having?: StoreProfileFiscalScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: StoreProfileFiscalCountAggregateInputType | true
+    _min?: StoreProfileFiscalMinAggregateInputType
+    _max?: StoreProfileFiscalMaxAggregateInputType
+  }
+
+  export type StoreProfileFiscalGroupByOutputType = {
+    storeProfileId: string
+    fiscalProfileId: string
+    _count: StoreProfileFiscalCountAggregateOutputType | null
+    _min: StoreProfileFiscalMinAggregateOutputType | null
+    _max: StoreProfileFiscalMaxAggregateOutputType | null
+  }
+
+  type GetStoreProfileFiscalGroupByPayload<T extends StoreProfileFiscalGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<StoreProfileFiscalGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof StoreProfileFiscalGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], StoreProfileFiscalGroupByOutputType[P]>
+            : GetScalarType<T[P], StoreProfileFiscalGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type StoreProfileFiscalSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    storeProfileId?: boolean
+    fiscalProfileId?: boolean
+    storeProfile?: boolean | StoreProfileDefaultArgs<ExtArgs>
+    fiscalProfile?: boolean | FiscalProfileDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["storeProfileFiscal"]>
+
+
+
+  export type StoreProfileFiscalSelectScalar = {
+    storeProfileId?: boolean
+    fiscalProfileId?: boolean
+  }
+
+  export type StoreProfileFiscalOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"storeProfileId" | "fiscalProfileId", ExtArgs["result"]["storeProfileFiscal"]>
+  export type StoreProfileFiscalInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    storeProfile?: boolean | StoreProfileDefaultArgs<ExtArgs>
+    fiscalProfile?: boolean | FiscalProfileDefaultArgs<ExtArgs>
+  }
+
+  export type $StoreProfileFiscalPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "StoreProfileFiscal"
+    objects: {
+      storeProfile: Prisma.$StoreProfilePayload<ExtArgs>
+      fiscalProfile: Prisma.$FiscalProfilePayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      storeProfileId: string
+      fiscalProfileId: string
+    }, ExtArgs["result"]["storeProfileFiscal"]>
+    composites: {}
+  }
+
+  type StoreProfileFiscalGetPayload<S extends boolean | null | undefined | StoreProfileFiscalDefaultArgs> = $Result.GetResult<Prisma.$StoreProfileFiscalPayload, S>
+
+  type StoreProfileFiscalCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<StoreProfileFiscalFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: StoreProfileFiscalCountAggregateInputType | true
+    }
+
+  export interface StoreProfileFiscalDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['StoreProfileFiscal'], meta: { name: 'StoreProfileFiscal' } }
+    /**
+     * Find zero or one StoreProfileFiscal that matches the filter.
+     * @param {StoreProfileFiscalFindUniqueArgs} args - Arguments to find a StoreProfileFiscal
+     * @example
+     * // Get one StoreProfileFiscal
+     * const storeProfileFiscal = await prisma.storeProfileFiscal.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends StoreProfileFiscalFindUniqueArgs>(args: SelectSubset<T, StoreProfileFiscalFindUniqueArgs<ExtArgs>>): Prisma__StoreProfileFiscalClient<$Result.GetResult<Prisma.$StoreProfileFiscalPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one StoreProfileFiscal that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {StoreProfileFiscalFindUniqueOrThrowArgs} args - Arguments to find a StoreProfileFiscal
+     * @example
+     * // Get one StoreProfileFiscal
+     * const storeProfileFiscal = await prisma.storeProfileFiscal.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends StoreProfileFiscalFindUniqueOrThrowArgs>(args: SelectSubset<T, StoreProfileFiscalFindUniqueOrThrowArgs<ExtArgs>>): Prisma__StoreProfileFiscalClient<$Result.GetResult<Prisma.$StoreProfileFiscalPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first StoreProfileFiscal that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileFiscalFindFirstArgs} args - Arguments to find a StoreProfileFiscal
+     * @example
+     * // Get one StoreProfileFiscal
+     * const storeProfileFiscal = await prisma.storeProfileFiscal.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends StoreProfileFiscalFindFirstArgs>(args?: SelectSubset<T, StoreProfileFiscalFindFirstArgs<ExtArgs>>): Prisma__StoreProfileFiscalClient<$Result.GetResult<Prisma.$StoreProfileFiscalPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first StoreProfileFiscal that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileFiscalFindFirstOrThrowArgs} args - Arguments to find a StoreProfileFiscal
+     * @example
+     * // Get one StoreProfileFiscal
+     * const storeProfileFiscal = await prisma.storeProfileFiscal.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends StoreProfileFiscalFindFirstOrThrowArgs>(args?: SelectSubset<T, StoreProfileFiscalFindFirstOrThrowArgs<ExtArgs>>): Prisma__StoreProfileFiscalClient<$Result.GetResult<Prisma.$StoreProfileFiscalPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more StoreProfileFiscals that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileFiscalFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all StoreProfileFiscals
+     * const storeProfileFiscals = await prisma.storeProfileFiscal.findMany()
+     * 
+     * // Get first 10 StoreProfileFiscals
+     * const storeProfileFiscals = await prisma.storeProfileFiscal.findMany({ take: 10 })
+     * 
+     * // Only select the `storeProfileId`
+     * const storeProfileFiscalWithStoreProfileIdOnly = await prisma.storeProfileFiscal.findMany({ select: { storeProfileId: true } })
+     * 
+     */
+    findMany<T extends StoreProfileFiscalFindManyArgs>(args?: SelectSubset<T, StoreProfileFiscalFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$StoreProfileFiscalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a StoreProfileFiscal.
+     * @param {StoreProfileFiscalCreateArgs} args - Arguments to create a StoreProfileFiscal.
+     * @example
+     * // Create one StoreProfileFiscal
+     * const StoreProfileFiscal = await prisma.storeProfileFiscal.create({
+     *   data: {
+     *     // ... data to create a StoreProfileFiscal
+     *   }
+     * })
+     * 
+     */
+    create<T extends StoreProfileFiscalCreateArgs>(args: SelectSubset<T, StoreProfileFiscalCreateArgs<ExtArgs>>): Prisma__StoreProfileFiscalClient<$Result.GetResult<Prisma.$StoreProfileFiscalPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many StoreProfileFiscals.
+     * @param {StoreProfileFiscalCreateManyArgs} args - Arguments to create many StoreProfileFiscals.
+     * @example
+     * // Create many StoreProfileFiscals
+     * const storeProfileFiscal = await prisma.storeProfileFiscal.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends StoreProfileFiscalCreateManyArgs>(args?: SelectSubset<T, StoreProfileFiscalCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a StoreProfileFiscal.
+     * @param {StoreProfileFiscalDeleteArgs} args - Arguments to delete one StoreProfileFiscal.
+     * @example
+     * // Delete one StoreProfileFiscal
+     * const StoreProfileFiscal = await prisma.storeProfileFiscal.delete({
+     *   where: {
+     *     // ... filter to delete one StoreProfileFiscal
+     *   }
+     * })
+     * 
+     */
+    delete<T extends StoreProfileFiscalDeleteArgs>(args: SelectSubset<T, StoreProfileFiscalDeleteArgs<ExtArgs>>): Prisma__StoreProfileFiscalClient<$Result.GetResult<Prisma.$StoreProfileFiscalPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one StoreProfileFiscal.
+     * @param {StoreProfileFiscalUpdateArgs} args - Arguments to update one StoreProfileFiscal.
+     * @example
+     * // Update one StoreProfileFiscal
+     * const storeProfileFiscal = await prisma.storeProfileFiscal.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends StoreProfileFiscalUpdateArgs>(args: SelectSubset<T, StoreProfileFiscalUpdateArgs<ExtArgs>>): Prisma__StoreProfileFiscalClient<$Result.GetResult<Prisma.$StoreProfileFiscalPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more StoreProfileFiscals.
+     * @param {StoreProfileFiscalDeleteManyArgs} args - Arguments to filter StoreProfileFiscals to delete.
+     * @example
+     * // Delete a few StoreProfileFiscals
+     * const { count } = await prisma.storeProfileFiscal.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends StoreProfileFiscalDeleteManyArgs>(args?: SelectSubset<T, StoreProfileFiscalDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more StoreProfileFiscals.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileFiscalUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many StoreProfileFiscals
+     * const storeProfileFiscal = await prisma.storeProfileFiscal.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends StoreProfileFiscalUpdateManyArgs>(args: SelectSubset<T, StoreProfileFiscalUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one StoreProfileFiscal.
+     * @param {StoreProfileFiscalUpsertArgs} args - Arguments to update or create a StoreProfileFiscal.
+     * @example
+     * // Update or create a StoreProfileFiscal
+     * const storeProfileFiscal = await prisma.storeProfileFiscal.upsert({
+     *   create: {
+     *     // ... data to create a StoreProfileFiscal
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the StoreProfileFiscal we want to update
+     *   }
+     * })
+     */
+    upsert<T extends StoreProfileFiscalUpsertArgs>(args: SelectSubset<T, StoreProfileFiscalUpsertArgs<ExtArgs>>): Prisma__StoreProfileFiscalClient<$Result.GetResult<Prisma.$StoreProfileFiscalPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of StoreProfileFiscals.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileFiscalCountArgs} args - Arguments to filter StoreProfileFiscals to count.
+     * @example
+     * // Count the number of StoreProfileFiscals
+     * const count = await prisma.storeProfileFiscal.count({
+     *   where: {
+     *     // ... the filter for the StoreProfileFiscals we want to count
+     *   }
+     * })
+    **/
+    count<T extends StoreProfileFiscalCountArgs>(
+      args?: Subset<T, StoreProfileFiscalCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], StoreProfileFiscalCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a StoreProfileFiscal.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileFiscalAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends StoreProfileFiscalAggregateArgs>(args: Subset<T, StoreProfileFiscalAggregateArgs>): Prisma.PrismaPromise<GetStoreProfileFiscalAggregateType<T>>
+
+    /**
+     * Group by StoreProfileFiscal.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {StoreProfileFiscalGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends StoreProfileFiscalGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: StoreProfileFiscalGroupByArgs['orderBy'] }
+        : { orderBy?: StoreProfileFiscalGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, StoreProfileFiscalGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetStoreProfileFiscalGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the StoreProfileFiscal model
+   */
+  readonly fields: StoreProfileFiscalFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for StoreProfileFiscal.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__StoreProfileFiscalClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    storeProfile<T extends StoreProfileDefaultArgs<ExtArgs> = {}>(args?: Subset<T, StoreProfileDefaultArgs<ExtArgs>>): Prisma__StoreProfileClient<$Result.GetResult<Prisma.$StoreProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    fiscalProfile<T extends FiscalProfileDefaultArgs<ExtArgs> = {}>(args?: Subset<T, FiscalProfileDefaultArgs<ExtArgs>>): Prisma__FiscalProfileClient<$Result.GetResult<Prisma.$FiscalProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the StoreProfileFiscal model
+   */
+  interface StoreProfileFiscalFieldRefs {
+    readonly storeProfileId: FieldRef<"StoreProfileFiscal", 'String'>
+    readonly fiscalProfileId: FieldRef<"StoreProfileFiscal", 'String'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * StoreProfileFiscal findUnique
+   */
+  export type StoreProfileFiscalFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfileFiscal
+     */
+    select?: StoreProfileFiscalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfileFiscal
+     */
+    omit?: StoreProfileFiscalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileFiscalInclude<ExtArgs> | null
+    /**
+     * Filter, which StoreProfileFiscal to fetch.
+     */
+    where: StoreProfileFiscalWhereUniqueInput
+  }
+
+  /**
+   * StoreProfileFiscal findUniqueOrThrow
+   */
+  export type StoreProfileFiscalFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfileFiscal
+     */
+    select?: StoreProfileFiscalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfileFiscal
+     */
+    omit?: StoreProfileFiscalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileFiscalInclude<ExtArgs> | null
+    /**
+     * Filter, which StoreProfileFiscal to fetch.
+     */
+    where: StoreProfileFiscalWhereUniqueInput
+  }
+
+  /**
+   * StoreProfileFiscal findFirst
+   */
+  export type StoreProfileFiscalFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfileFiscal
+     */
+    select?: StoreProfileFiscalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfileFiscal
+     */
+    omit?: StoreProfileFiscalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileFiscalInclude<ExtArgs> | null
+    /**
+     * Filter, which StoreProfileFiscal to fetch.
+     */
+    where?: StoreProfileFiscalWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of StoreProfileFiscals to fetch.
+     */
+    orderBy?: StoreProfileFiscalOrderByWithRelationInput | StoreProfileFiscalOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for StoreProfileFiscals.
+     */
+    cursor?: StoreProfileFiscalWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` StoreProfileFiscals from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` StoreProfileFiscals.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of StoreProfileFiscals.
+     */
+    distinct?: StoreProfileFiscalScalarFieldEnum | StoreProfileFiscalScalarFieldEnum[]
+  }
+
+  /**
+   * StoreProfileFiscal findFirstOrThrow
+   */
+  export type StoreProfileFiscalFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfileFiscal
+     */
+    select?: StoreProfileFiscalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfileFiscal
+     */
+    omit?: StoreProfileFiscalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileFiscalInclude<ExtArgs> | null
+    /**
+     * Filter, which StoreProfileFiscal to fetch.
+     */
+    where?: StoreProfileFiscalWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of StoreProfileFiscals to fetch.
+     */
+    orderBy?: StoreProfileFiscalOrderByWithRelationInput | StoreProfileFiscalOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for StoreProfileFiscals.
+     */
+    cursor?: StoreProfileFiscalWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` StoreProfileFiscals from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` StoreProfileFiscals.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of StoreProfileFiscals.
+     */
+    distinct?: StoreProfileFiscalScalarFieldEnum | StoreProfileFiscalScalarFieldEnum[]
+  }
+
+  /**
+   * StoreProfileFiscal findMany
+   */
+  export type StoreProfileFiscalFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfileFiscal
+     */
+    select?: StoreProfileFiscalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfileFiscal
+     */
+    omit?: StoreProfileFiscalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileFiscalInclude<ExtArgs> | null
+    /**
+     * Filter, which StoreProfileFiscals to fetch.
+     */
+    where?: StoreProfileFiscalWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of StoreProfileFiscals to fetch.
+     */
+    orderBy?: StoreProfileFiscalOrderByWithRelationInput | StoreProfileFiscalOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing StoreProfileFiscals.
+     */
+    cursor?: StoreProfileFiscalWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` StoreProfileFiscals from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` StoreProfileFiscals.
+     */
+    skip?: number
+    distinct?: StoreProfileFiscalScalarFieldEnum | StoreProfileFiscalScalarFieldEnum[]
+  }
+
+  /**
+   * StoreProfileFiscal create
+   */
+  export type StoreProfileFiscalCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfileFiscal
+     */
+    select?: StoreProfileFiscalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfileFiscal
+     */
+    omit?: StoreProfileFiscalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileFiscalInclude<ExtArgs> | null
+    /**
+     * The data needed to create a StoreProfileFiscal.
+     */
+    data: XOR<StoreProfileFiscalCreateInput, StoreProfileFiscalUncheckedCreateInput>
+  }
+
+  /**
+   * StoreProfileFiscal createMany
+   */
+  export type StoreProfileFiscalCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many StoreProfileFiscals.
+     */
+    data: StoreProfileFiscalCreateManyInput | StoreProfileFiscalCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * StoreProfileFiscal update
+   */
+  export type StoreProfileFiscalUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfileFiscal
+     */
+    select?: StoreProfileFiscalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfileFiscal
+     */
+    omit?: StoreProfileFiscalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileFiscalInclude<ExtArgs> | null
+    /**
+     * The data needed to update a StoreProfileFiscal.
+     */
+    data: XOR<StoreProfileFiscalUpdateInput, StoreProfileFiscalUncheckedUpdateInput>
+    /**
+     * Choose, which StoreProfileFiscal to update.
+     */
+    where: StoreProfileFiscalWhereUniqueInput
+  }
+
+  /**
+   * StoreProfileFiscal updateMany
+   */
+  export type StoreProfileFiscalUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update StoreProfileFiscals.
+     */
+    data: XOR<StoreProfileFiscalUpdateManyMutationInput, StoreProfileFiscalUncheckedUpdateManyInput>
+    /**
+     * Filter which StoreProfileFiscals to update
+     */
+    where?: StoreProfileFiscalWhereInput
+    /**
+     * Limit how many StoreProfileFiscals to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * StoreProfileFiscal upsert
+   */
+  export type StoreProfileFiscalUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfileFiscal
+     */
+    select?: StoreProfileFiscalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfileFiscal
+     */
+    omit?: StoreProfileFiscalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileFiscalInclude<ExtArgs> | null
+    /**
+     * The filter to search for the StoreProfileFiscal to update in case it exists.
+     */
+    where: StoreProfileFiscalWhereUniqueInput
+    /**
+     * In case the StoreProfileFiscal found by the `where` argument doesn't exist, create a new StoreProfileFiscal with this data.
+     */
+    create: XOR<StoreProfileFiscalCreateInput, StoreProfileFiscalUncheckedCreateInput>
+    /**
+     * In case the StoreProfileFiscal was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<StoreProfileFiscalUpdateInput, StoreProfileFiscalUncheckedUpdateInput>
+  }
+
+  /**
+   * StoreProfileFiscal delete
+   */
+  export type StoreProfileFiscalDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfileFiscal
+     */
+    select?: StoreProfileFiscalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfileFiscal
+     */
+    omit?: StoreProfileFiscalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileFiscalInclude<ExtArgs> | null
+    /**
+     * Filter which StoreProfileFiscal to delete.
+     */
+    where: StoreProfileFiscalWhereUniqueInput
+  }
+
+  /**
+   * StoreProfileFiscal deleteMany
+   */
+  export type StoreProfileFiscalDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which StoreProfileFiscals to delete
+     */
+    where?: StoreProfileFiscalWhereInput
+    /**
+     * Limit how many StoreProfileFiscals to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * StoreProfileFiscal without action
+   */
+  export type StoreProfileFiscalDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfileFiscal
+     */
+    select?: StoreProfileFiscalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfileFiscal
+     */
+    omit?: StoreProfileFiscalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileFiscalInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model FiscalProfile
+   */
+
+  export type AggregateFiscalProfile = {
+    _count: FiscalProfileCountAggregateOutputType | null
+    _min: FiscalProfileMinAggregateOutputType | null
+    _max: FiscalProfileMaxAggregateOutputType | null
+  }
+
+  export type FiscalProfileMinAggregateOutputType = {
+    id: string | null
+    name: string | null
+    icon: string | null
+    group: string | null
+    description: string | null
+    scope: string | null
+    tenantId: string | null
+    version: string | null
+    status: string | null
+    emiteNfce: boolean | null
+    ncm: string | null
+    cest: string | null
+    unit: string | null
+    observacoes: string | null
+  }
+
+  export type FiscalProfileMaxAggregateOutputType = {
+    id: string | null
+    name: string | null
+    icon: string | null
+    group: string | null
+    description: string | null
+    scope: string | null
+    tenantId: string | null
+    version: string | null
+    status: string | null
+    emiteNfce: boolean | null
+    ncm: string | null
+    cest: string | null
+    unit: string | null
+    observacoes: string | null
+  }
+
+  export type FiscalProfileCountAggregateOutputType = {
+    id: number
+    name: number
+    icon: number
+    group: number
+    description: number
+    scope: number
+    tenantId: number
+    version: number
+    status: number
+    emiteNfce: number
+    ncm: number
+    cest: number
+    unit: number
+    observacoes: number
+    _all: number
+  }
+
+
+  export type FiscalProfileMinAggregateInputType = {
+    id?: true
+    name?: true
+    icon?: true
+    group?: true
+    description?: true
+    scope?: true
+    tenantId?: true
+    version?: true
+    status?: true
+    emiteNfce?: true
+    ncm?: true
+    cest?: true
+    unit?: true
+    observacoes?: true
+  }
+
+  export type FiscalProfileMaxAggregateInputType = {
+    id?: true
+    name?: true
+    icon?: true
+    group?: true
+    description?: true
+    scope?: true
+    tenantId?: true
+    version?: true
+    status?: true
+    emiteNfce?: true
+    ncm?: true
+    cest?: true
+    unit?: true
+    observacoes?: true
+  }
+
+  export type FiscalProfileCountAggregateInputType = {
+    id?: true
+    name?: true
+    icon?: true
+    group?: true
+    description?: true
+    scope?: true
+    tenantId?: true
+    version?: true
+    status?: true
+    emiteNfce?: true
+    ncm?: true
+    cest?: true
+    unit?: true
+    observacoes?: true
+    _all?: true
+  }
+
+  export type FiscalProfileAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FiscalProfile to aggregate.
+     */
+    where?: FiscalProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalProfiles to fetch.
+     */
+    orderBy?: FiscalProfileOrderByWithRelationInput | FiscalProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: FiscalProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned FiscalProfiles
+    **/
+    _count?: true | FiscalProfileCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: FiscalProfileMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: FiscalProfileMaxAggregateInputType
+  }
+
+  export type GetFiscalProfileAggregateType<T extends FiscalProfileAggregateArgs> = {
+        [P in keyof T & keyof AggregateFiscalProfile]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateFiscalProfile[P]>
+      : GetScalarType<T[P], AggregateFiscalProfile[P]>
+  }
+
+
+
+
+  export type FiscalProfileGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FiscalProfileWhereInput
+    orderBy?: FiscalProfileOrderByWithAggregationInput | FiscalProfileOrderByWithAggregationInput[]
+    by: FiscalProfileScalarFieldEnum[] | FiscalProfileScalarFieldEnum
+    having?: FiscalProfileScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: FiscalProfileCountAggregateInputType | true
+    _min?: FiscalProfileMinAggregateInputType
+    _max?: FiscalProfileMaxAggregateInputType
+  }
+
+  export type FiscalProfileGroupByOutputType = {
+    id: string
+    name: string
+    icon: string | null
+    group: string
+    description: string | null
+    scope: string
+    tenantId: string | null
+    version: string
+    status: string
+    emiteNfce: boolean
+    ncm: string | null
+    cest: string | null
+    unit: string
+    observacoes: string | null
+    _count: FiscalProfileCountAggregateOutputType | null
+    _min: FiscalProfileMinAggregateOutputType | null
+    _max: FiscalProfileMaxAggregateOutputType | null
+  }
+
+  type GetFiscalProfileGroupByPayload<T extends FiscalProfileGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<FiscalProfileGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof FiscalProfileGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], FiscalProfileGroupByOutputType[P]>
+            : GetScalarType<T[P], FiscalProfileGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type FiscalProfileSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    icon?: boolean
+    group?: boolean
+    description?: boolean
+    scope?: boolean
+    tenantId?: boolean
+    version?: boolean
+    status?: boolean
+    emiteNfce?: boolean
+    ncm?: boolean
+    cest?: boolean
+    unit?: boolean
+    observacoes?: boolean
+    taxRules?: boolean | FiscalProfile$taxRulesArgs<ExtArgs>
+    history?: boolean | FiscalProfile$historyArgs<ExtArgs>
+    storeProfiles?: boolean | FiscalProfile$storeProfilesArgs<ExtArgs>
+    favoritedBy?: boolean | FiscalProfile$favoritedByArgs<ExtArgs>
+    _count?: boolean | FiscalProfileCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["fiscalProfile"]>
+
+
+
+  export type FiscalProfileSelectScalar = {
+    id?: boolean
+    name?: boolean
+    icon?: boolean
+    group?: boolean
+    description?: boolean
+    scope?: boolean
+    tenantId?: boolean
+    version?: boolean
+    status?: boolean
+    emiteNfce?: boolean
+    ncm?: boolean
+    cest?: boolean
+    unit?: boolean
+    observacoes?: boolean
+  }
+
+  export type FiscalProfileOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "icon" | "group" | "description" | "scope" | "tenantId" | "version" | "status" | "emiteNfce" | "ncm" | "cest" | "unit" | "observacoes", ExtArgs["result"]["fiscalProfile"]>
+  export type FiscalProfileInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    taxRules?: boolean | FiscalProfile$taxRulesArgs<ExtArgs>
+    history?: boolean | FiscalProfile$historyArgs<ExtArgs>
+    storeProfiles?: boolean | FiscalProfile$storeProfilesArgs<ExtArgs>
+    favoritedBy?: boolean | FiscalProfile$favoritedByArgs<ExtArgs>
+    _count?: boolean | FiscalProfileCountOutputTypeDefaultArgs<ExtArgs>
+  }
+
+  export type $FiscalProfilePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "FiscalProfile"
+    objects: {
+      taxRules: Prisma.$FiscalTaxRulePayload<ExtArgs>[]
+      history: Prisma.$FiscalProfileHistoryPayload<ExtArgs>[]
+      storeProfiles: Prisma.$StoreProfileFiscalPayload<ExtArgs>[]
+      favoritedBy: Prisma.$FiscalFavoritePayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      name: string
+      icon: string | null
+      group: string
+      description: string | null
+      scope: string
+      tenantId: string | null
+      version: string
+      status: string
+      emiteNfce: boolean
+      ncm: string | null
+      cest: string | null
+      unit: string
+      observacoes: string | null
+    }, ExtArgs["result"]["fiscalProfile"]>
+    composites: {}
+  }
+
+  type FiscalProfileGetPayload<S extends boolean | null | undefined | FiscalProfileDefaultArgs> = $Result.GetResult<Prisma.$FiscalProfilePayload, S>
+
+  type FiscalProfileCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<FiscalProfileFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: FiscalProfileCountAggregateInputType | true
+    }
+
+  export interface FiscalProfileDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['FiscalProfile'], meta: { name: 'FiscalProfile' } }
+    /**
+     * Find zero or one FiscalProfile that matches the filter.
+     * @param {FiscalProfileFindUniqueArgs} args - Arguments to find a FiscalProfile
+     * @example
+     * // Get one FiscalProfile
+     * const fiscalProfile = await prisma.fiscalProfile.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends FiscalProfileFindUniqueArgs>(args: SelectSubset<T, FiscalProfileFindUniqueArgs<ExtArgs>>): Prisma__FiscalProfileClient<$Result.GetResult<Prisma.$FiscalProfilePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one FiscalProfile that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {FiscalProfileFindUniqueOrThrowArgs} args - Arguments to find a FiscalProfile
+     * @example
+     * // Get one FiscalProfile
+     * const fiscalProfile = await prisma.fiscalProfile.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends FiscalProfileFindUniqueOrThrowArgs>(args: SelectSubset<T, FiscalProfileFindUniqueOrThrowArgs<ExtArgs>>): Prisma__FiscalProfileClient<$Result.GetResult<Prisma.$FiscalProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FiscalProfile that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileFindFirstArgs} args - Arguments to find a FiscalProfile
+     * @example
+     * // Get one FiscalProfile
+     * const fiscalProfile = await prisma.fiscalProfile.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends FiscalProfileFindFirstArgs>(args?: SelectSubset<T, FiscalProfileFindFirstArgs<ExtArgs>>): Prisma__FiscalProfileClient<$Result.GetResult<Prisma.$FiscalProfilePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FiscalProfile that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileFindFirstOrThrowArgs} args - Arguments to find a FiscalProfile
+     * @example
+     * // Get one FiscalProfile
+     * const fiscalProfile = await prisma.fiscalProfile.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends FiscalProfileFindFirstOrThrowArgs>(args?: SelectSubset<T, FiscalProfileFindFirstOrThrowArgs<ExtArgs>>): Prisma__FiscalProfileClient<$Result.GetResult<Prisma.$FiscalProfilePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more FiscalProfiles that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all FiscalProfiles
+     * const fiscalProfiles = await prisma.fiscalProfile.findMany()
+     * 
+     * // Get first 10 FiscalProfiles
+     * const fiscalProfiles = await prisma.fiscalProfile.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const fiscalProfileWithIdOnly = await prisma.fiscalProfile.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends FiscalProfileFindManyArgs>(args?: SelectSubset<T, FiscalProfileFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FiscalProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a FiscalProfile.
+     * @param {FiscalProfileCreateArgs} args - Arguments to create a FiscalProfile.
+     * @example
+     * // Create one FiscalProfile
+     * const FiscalProfile = await prisma.fiscalProfile.create({
+     *   data: {
+     *     // ... data to create a FiscalProfile
+     *   }
+     * })
+     * 
+     */
+    create<T extends FiscalProfileCreateArgs>(args: SelectSubset<T, FiscalProfileCreateArgs<ExtArgs>>): Prisma__FiscalProfileClient<$Result.GetResult<Prisma.$FiscalProfilePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many FiscalProfiles.
+     * @param {FiscalProfileCreateManyArgs} args - Arguments to create many FiscalProfiles.
+     * @example
+     * // Create many FiscalProfiles
+     * const fiscalProfile = await prisma.fiscalProfile.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends FiscalProfileCreateManyArgs>(args?: SelectSubset<T, FiscalProfileCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a FiscalProfile.
+     * @param {FiscalProfileDeleteArgs} args - Arguments to delete one FiscalProfile.
+     * @example
+     * // Delete one FiscalProfile
+     * const FiscalProfile = await prisma.fiscalProfile.delete({
+     *   where: {
+     *     // ... filter to delete one FiscalProfile
+     *   }
+     * })
+     * 
+     */
+    delete<T extends FiscalProfileDeleteArgs>(args: SelectSubset<T, FiscalProfileDeleteArgs<ExtArgs>>): Prisma__FiscalProfileClient<$Result.GetResult<Prisma.$FiscalProfilePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one FiscalProfile.
+     * @param {FiscalProfileUpdateArgs} args - Arguments to update one FiscalProfile.
+     * @example
+     * // Update one FiscalProfile
+     * const fiscalProfile = await prisma.fiscalProfile.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends FiscalProfileUpdateArgs>(args: SelectSubset<T, FiscalProfileUpdateArgs<ExtArgs>>): Prisma__FiscalProfileClient<$Result.GetResult<Prisma.$FiscalProfilePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more FiscalProfiles.
+     * @param {FiscalProfileDeleteManyArgs} args - Arguments to filter FiscalProfiles to delete.
+     * @example
+     * // Delete a few FiscalProfiles
+     * const { count } = await prisma.fiscalProfile.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends FiscalProfileDeleteManyArgs>(args?: SelectSubset<T, FiscalProfileDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more FiscalProfiles.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many FiscalProfiles
+     * const fiscalProfile = await prisma.fiscalProfile.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends FiscalProfileUpdateManyArgs>(args: SelectSubset<T, FiscalProfileUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one FiscalProfile.
+     * @param {FiscalProfileUpsertArgs} args - Arguments to update or create a FiscalProfile.
+     * @example
+     * // Update or create a FiscalProfile
+     * const fiscalProfile = await prisma.fiscalProfile.upsert({
+     *   create: {
+     *     // ... data to create a FiscalProfile
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the FiscalProfile we want to update
+     *   }
+     * })
+     */
+    upsert<T extends FiscalProfileUpsertArgs>(args: SelectSubset<T, FiscalProfileUpsertArgs<ExtArgs>>): Prisma__FiscalProfileClient<$Result.GetResult<Prisma.$FiscalProfilePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of FiscalProfiles.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileCountArgs} args - Arguments to filter FiscalProfiles to count.
+     * @example
+     * // Count the number of FiscalProfiles
+     * const count = await prisma.fiscalProfile.count({
+     *   where: {
+     *     // ... the filter for the FiscalProfiles we want to count
+     *   }
+     * })
+    **/
+    count<T extends FiscalProfileCountArgs>(
+      args?: Subset<T, FiscalProfileCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], FiscalProfileCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a FiscalProfile.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends FiscalProfileAggregateArgs>(args: Subset<T, FiscalProfileAggregateArgs>): Prisma.PrismaPromise<GetFiscalProfileAggregateType<T>>
+
+    /**
+     * Group by FiscalProfile.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends FiscalProfileGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: FiscalProfileGroupByArgs['orderBy'] }
+        : { orderBy?: FiscalProfileGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, FiscalProfileGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetFiscalProfileGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the FiscalProfile model
+   */
+  readonly fields: FiscalProfileFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for FiscalProfile.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__FiscalProfileClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    taxRules<T extends FiscalProfile$taxRulesArgs<ExtArgs> = {}>(args?: Subset<T, FiscalProfile$taxRulesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FiscalTaxRulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    history<T extends FiscalProfile$historyArgs<ExtArgs> = {}>(args?: Subset<T, FiscalProfile$historyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FiscalProfileHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    storeProfiles<T extends FiscalProfile$storeProfilesArgs<ExtArgs> = {}>(args?: Subset<T, FiscalProfile$storeProfilesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$StoreProfileFiscalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    favoritedBy<T extends FiscalProfile$favoritedByArgs<ExtArgs> = {}>(args?: Subset<T, FiscalProfile$favoritedByArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FiscalFavoritePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the FiscalProfile model
+   */
+  interface FiscalProfileFieldRefs {
+    readonly id: FieldRef<"FiscalProfile", 'String'>
+    readonly name: FieldRef<"FiscalProfile", 'String'>
+    readonly icon: FieldRef<"FiscalProfile", 'String'>
+    readonly group: FieldRef<"FiscalProfile", 'String'>
+    readonly description: FieldRef<"FiscalProfile", 'String'>
+    readonly scope: FieldRef<"FiscalProfile", 'String'>
+    readonly tenantId: FieldRef<"FiscalProfile", 'String'>
+    readonly version: FieldRef<"FiscalProfile", 'String'>
+    readonly status: FieldRef<"FiscalProfile", 'String'>
+    readonly emiteNfce: FieldRef<"FiscalProfile", 'Boolean'>
+    readonly ncm: FieldRef<"FiscalProfile", 'String'>
+    readonly cest: FieldRef<"FiscalProfile", 'String'>
+    readonly unit: FieldRef<"FiscalProfile", 'String'>
+    readonly observacoes: FieldRef<"FiscalProfile", 'String'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * FiscalProfile findUnique
+   */
+  export type FiscalProfileFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfile
+     */
+    select?: FiscalProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfile
+     */
+    omit?: FiscalProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalProfile to fetch.
+     */
+    where: FiscalProfileWhereUniqueInput
+  }
+
+  /**
+   * FiscalProfile findUniqueOrThrow
+   */
+  export type FiscalProfileFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfile
+     */
+    select?: FiscalProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfile
+     */
+    omit?: FiscalProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalProfile to fetch.
+     */
+    where: FiscalProfileWhereUniqueInput
+  }
+
+  /**
+   * FiscalProfile findFirst
+   */
+  export type FiscalProfileFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfile
+     */
+    select?: FiscalProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfile
+     */
+    omit?: FiscalProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalProfile to fetch.
+     */
+    where?: FiscalProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalProfiles to fetch.
+     */
+    orderBy?: FiscalProfileOrderByWithRelationInput | FiscalProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FiscalProfiles.
+     */
+    cursor?: FiscalProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FiscalProfiles.
+     */
+    distinct?: FiscalProfileScalarFieldEnum | FiscalProfileScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalProfile findFirstOrThrow
+   */
+  export type FiscalProfileFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfile
+     */
+    select?: FiscalProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfile
+     */
+    omit?: FiscalProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalProfile to fetch.
+     */
+    where?: FiscalProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalProfiles to fetch.
+     */
+    orderBy?: FiscalProfileOrderByWithRelationInput | FiscalProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FiscalProfiles.
+     */
+    cursor?: FiscalProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalProfiles.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FiscalProfiles.
+     */
+    distinct?: FiscalProfileScalarFieldEnum | FiscalProfileScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalProfile findMany
+   */
+  export type FiscalProfileFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfile
+     */
+    select?: FiscalProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfile
+     */
+    omit?: FiscalProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalProfiles to fetch.
+     */
+    where?: FiscalProfileWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalProfiles to fetch.
+     */
+    orderBy?: FiscalProfileOrderByWithRelationInput | FiscalProfileOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing FiscalProfiles.
+     */
+    cursor?: FiscalProfileWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalProfiles from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalProfiles.
+     */
+    skip?: number
+    distinct?: FiscalProfileScalarFieldEnum | FiscalProfileScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalProfile create
+   */
+  export type FiscalProfileCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfile
+     */
+    select?: FiscalProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfile
+     */
+    omit?: FiscalProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileInclude<ExtArgs> | null
+    /**
+     * The data needed to create a FiscalProfile.
+     */
+    data: XOR<FiscalProfileCreateInput, FiscalProfileUncheckedCreateInput>
+  }
+
+  /**
+   * FiscalProfile createMany
+   */
+  export type FiscalProfileCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many FiscalProfiles.
+     */
+    data: FiscalProfileCreateManyInput | FiscalProfileCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * FiscalProfile update
+   */
+  export type FiscalProfileUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfile
+     */
+    select?: FiscalProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfile
+     */
+    omit?: FiscalProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileInclude<ExtArgs> | null
+    /**
+     * The data needed to update a FiscalProfile.
+     */
+    data: XOR<FiscalProfileUpdateInput, FiscalProfileUncheckedUpdateInput>
+    /**
+     * Choose, which FiscalProfile to update.
+     */
+    where: FiscalProfileWhereUniqueInput
+  }
+
+  /**
+   * FiscalProfile updateMany
+   */
+  export type FiscalProfileUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update FiscalProfiles.
+     */
+    data: XOR<FiscalProfileUpdateManyMutationInput, FiscalProfileUncheckedUpdateManyInput>
+    /**
+     * Filter which FiscalProfiles to update
+     */
+    where?: FiscalProfileWhereInput
+    /**
+     * Limit how many FiscalProfiles to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * FiscalProfile upsert
+   */
+  export type FiscalProfileUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfile
+     */
+    select?: FiscalProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfile
+     */
+    omit?: FiscalProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileInclude<ExtArgs> | null
+    /**
+     * The filter to search for the FiscalProfile to update in case it exists.
+     */
+    where: FiscalProfileWhereUniqueInput
+    /**
+     * In case the FiscalProfile found by the `where` argument doesn't exist, create a new FiscalProfile with this data.
+     */
+    create: XOR<FiscalProfileCreateInput, FiscalProfileUncheckedCreateInput>
+    /**
+     * In case the FiscalProfile was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<FiscalProfileUpdateInput, FiscalProfileUncheckedUpdateInput>
+  }
+
+  /**
+   * FiscalProfile delete
+   */
+  export type FiscalProfileDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfile
+     */
+    select?: FiscalProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfile
+     */
+    omit?: FiscalProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileInclude<ExtArgs> | null
+    /**
+     * Filter which FiscalProfile to delete.
+     */
+    where: FiscalProfileWhereUniqueInput
+  }
+
+  /**
+   * FiscalProfile deleteMany
+   */
+  export type FiscalProfileDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FiscalProfiles to delete
+     */
+    where?: FiscalProfileWhereInput
+    /**
+     * Limit how many FiscalProfiles to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * FiscalProfile.taxRules
+   */
+  export type FiscalProfile$taxRulesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalTaxRule
+     */
+    select?: FiscalTaxRuleSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalTaxRule
+     */
+    omit?: FiscalTaxRuleOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalTaxRuleInclude<ExtArgs> | null
+    where?: FiscalTaxRuleWhereInput
+    orderBy?: FiscalTaxRuleOrderByWithRelationInput | FiscalTaxRuleOrderByWithRelationInput[]
+    cursor?: FiscalTaxRuleWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: FiscalTaxRuleScalarFieldEnum | FiscalTaxRuleScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalProfile.history
+   */
+  export type FiscalProfile$historyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfileHistory
+     */
+    select?: FiscalProfileHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfileHistory
+     */
+    omit?: FiscalProfileHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileHistoryInclude<ExtArgs> | null
+    where?: FiscalProfileHistoryWhereInput
+    orderBy?: FiscalProfileHistoryOrderByWithRelationInput | FiscalProfileHistoryOrderByWithRelationInput[]
+    cursor?: FiscalProfileHistoryWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: FiscalProfileHistoryScalarFieldEnum | FiscalProfileHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalProfile.storeProfiles
+   */
+  export type FiscalProfile$storeProfilesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the StoreProfileFiscal
+     */
+    select?: StoreProfileFiscalSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the StoreProfileFiscal
+     */
+    omit?: StoreProfileFiscalOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: StoreProfileFiscalInclude<ExtArgs> | null
+    where?: StoreProfileFiscalWhereInput
+    orderBy?: StoreProfileFiscalOrderByWithRelationInput | StoreProfileFiscalOrderByWithRelationInput[]
+    cursor?: StoreProfileFiscalWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: StoreProfileFiscalScalarFieldEnum | StoreProfileFiscalScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalProfile.favoritedBy
+   */
+  export type FiscalProfile$favoritedByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalFavorite
+     */
+    select?: FiscalFavoriteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalFavorite
+     */
+    omit?: FiscalFavoriteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalFavoriteInclude<ExtArgs> | null
+    where?: FiscalFavoriteWhereInput
+    orderBy?: FiscalFavoriteOrderByWithRelationInput | FiscalFavoriteOrderByWithRelationInput[]
+    cursor?: FiscalFavoriteWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: FiscalFavoriteScalarFieldEnum | FiscalFavoriteScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalProfile without action
+   */
+  export type FiscalProfileDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfile
+     */
+    select?: FiscalProfileSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfile
+     */
+    omit?: FiscalProfileOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model FiscalTaxRule
+   */
+
+  export type AggregateFiscalTaxRule = {
+    _count: FiscalTaxRuleCountAggregateOutputType | null
+    _avg: FiscalTaxRuleAvgAggregateOutputType | null
+    _sum: FiscalTaxRuleSumAggregateOutputType | null
+    _min: FiscalTaxRuleMinAggregateOutputType | null
+    _max: FiscalTaxRuleMaxAggregateOutputType | null
+  }
+
+  export type FiscalTaxRuleAvgAggregateOutputType = {
+    aliqIcms: number | null
+    aliqPis: number | null
+    aliqCofins: number | null
+    ibsAliq: number | null
+    cbsAliq: number | null
+  }
+
+  export type FiscalTaxRuleSumAggregateOutputType = {
+    aliqIcms: number | null
+    aliqPis: number | null
+    aliqCofins: number | null
+    ibsAliq: number | null
+    cbsAliq: number | null
+  }
+
+  export type FiscalTaxRuleMinAggregateOutputType = {
+    id: string | null
+    fiscalProfileId: string | null
+    regime: string | null
+    csosn: string | null
+    cstIcms: string | null
+    aliqIcms: number | null
+    cstPis: string | null
+    aliqPis: number | null
+    cstCofins: string | null
+    aliqCofins: number | null
+    ibsCst: string | null
+    ibsAliq: number | null
+    cbsCst: string | null
+    cbsAliq: number | null
+    validFrom: Date | null
+    validUntil: Date | null
+  }
+
+  export type FiscalTaxRuleMaxAggregateOutputType = {
+    id: string | null
+    fiscalProfileId: string | null
+    regime: string | null
+    csosn: string | null
+    cstIcms: string | null
+    aliqIcms: number | null
+    cstPis: string | null
+    aliqPis: number | null
+    cstCofins: string | null
+    aliqCofins: number | null
+    ibsCst: string | null
+    ibsAliq: number | null
+    cbsCst: string | null
+    cbsAliq: number | null
+    validFrom: Date | null
+    validUntil: Date | null
+  }
+
+  export type FiscalTaxRuleCountAggregateOutputType = {
+    id: number
+    fiscalProfileId: number
+    regime: number
+    csosn: number
+    cstIcms: number
+    aliqIcms: number
+    cstPis: number
+    aliqPis: number
+    cstCofins: number
+    aliqCofins: number
+    ibsCst: number
+    ibsAliq: number
+    cbsCst: number
+    cbsAliq: number
+    validFrom: number
+    validUntil: number
+    _all: number
+  }
+
+
+  export type FiscalTaxRuleAvgAggregateInputType = {
+    aliqIcms?: true
+    aliqPis?: true
+    aliqCofins?: true
+    ibsAliq?: true
+    cbsAliq?: true
+  }
+
+  export type FiscalTaxRuleSumAggregateInputType = {
+    aliqIcms?: true
+    aliqPis?: true
+    aliqCofins?: true
+    ibsAliq?: true
+    cbsAliq?: true
+  }
+
+  export type FiscalTaxRuleMinAggregateInputType = {
+    id?: true
+    fiscalProfileId?: true
+    regime?: true
+    csosn?: true
+    cstIcms?: true
+    aliqIcms?: true
+    cstPis?: true
+    aliqPis?: true
+    cstCofins?: true
+    aliqCofins?: true
+    ibsCst?: true
+    ibsAliq?: true
+    cbsCst?: true
+    cbsAliq?: true
+    validFrom?: true
+    validUntil?: true
+  }
+
+  export type FiscalTaxRuleMaxAggregateInputType = {
+    id?: true
+    fiscalProfileId?: true
+    regime?: true
+    csosn?: true
+    cstIcms?: true
+    aliqIcms?: true
+    cstPis?: true
+    aliqPis?: true
+    cstCofins?: true
+    aliqCofins?: true
+    ibsCst?: true
+    ibsAliq?: true
+    cbsCst?: true
+    cbsAliq?: true
+    validFrom?: true
+    validUntil?: true
+  }
+
+  export type FiscalTaxRuleCountAggregateInputType = {
+    id?: true
+    fiscalProfileId?: true
+    regime?: true
+    csosn?: true
+    cstIcms?: true
+    aliqIcms?: true
+    cstPis?: true
+    aliqPis?: true
+    cstCofins?: true
+    aliqCofins?: true
+    ibsCst?: true
+    ibsAliq?: true
+    cbsCst?: true
+    cbsAliq?: true
+    validFrom?: true
+    validUntil?: true
+    _all?: true
+  }
+
+  export type FiscalTaxRuleAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FiscalTaxRule to aggregate.
+     */
+    where?: FiscalTaxRuleWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalTaxRules to fetch.
+     */
+    orderBy?: FiscalTaxRuleOrderByWithRelationInput | FiscalTaxRuleOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: FiscalTaxRuleWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalTaxRules from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalTaxRules.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned FiscalTaxRules
+    **/
+    _count?: true | FiscalTaxRuleCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: FiscalTaxRuleAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: FiscalTaxRuleSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: FiscalTaxRuleMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: FiscalTaxRuleMaxAggregateInputType
+  }
+
+  export type GetFiscalTaxRuleAggregateType<T extends FiscalTaxRuleAggregateArgs> = {
+        [P in keyof T & keyof AggregateFiscalTaxRule]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateFiscalTaxRule[P]>
+      : GetScalarType<T[P], AggregateFiscalTaxRule[P]>
+  }
+
+
+
+
+  export type FiscalTaxRuleGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FiscalTaxRuleWhereInput
+    orderBy?: FiscalTaxRuleOrderByWithAggregationInput | FiscalTaxRuleOrderByWithAggregationInput[]
+    by: FiscalTaxRuleScalarFieldEnum[] | FiscalTaxRuleScalarFieldEnum
+    having?: FiscalTaxRuleScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: FiscalTaxRuleCountAggregateInputType | true
+    _avg?: FiscalTaxRuleAvgAggregateInputType
+    _sum?: FiscalTaxRuleSumAggregateInputType
+    _min?: FiscalTaxRuleMinAggregateInputType
+    _max?: FiscalTaxRuleMaxAggregateInputType
+  }
+
+  export type FiscalTaxRuleGroupByOutputType = {
+    id: string
+    fiscalProfileId: string
+    regime: string
+    csosn: string | null
+    cstIcms: string | null
+    aliqIcms: number
+    cstPis: string
+    aliqPis: number
+    cstCofins: string
+    aliqCofins: number
+    ibsCst: string
+    ibsAliq: number
+    cbsCst: string
+    cbsAliq: number
+    validFrom: Date
+    validUntil: Date | null
+    _count: FiscalTaxRuleCountAggregateOutputType | null
+    _avg: FiscalTaxRuleAvgAggregateOutputType | null
+    _sum: FiscalTaxRuleSumAggregateOutputType | null
+    _min: FiscalTaxRuleMinAggregateOutputType | null
+    _max: FiscalTaxRuleMaxAggregateOutputType | null
+  }
+
+  type GetFiscalTaxRuleGroupByPayload<T extends FiscalTaxRuleGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<FiscalTaxRuleGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof FiscalTaxRuleGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], FiscalTaxRuleGroupByOutputType[P]>
+            : GetScalarType<T[P], FiscalTaxRuleGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type FiscalTaxRuleSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    fiscalProfileId?: boolean
+    regime?: boolean
+    csosn?: boolean
+    cstIcms?: boolean
+    aliqIcms?: boolean
+    cstPis?: boolean
+    aliqPis?: boolean
+    cstCofins?: boolean
+    aliqCofins?: boolean
+    ibsCst?: boolean
+    ibsAliq?: boolean
+    cbsCst?: boolean
+    cbsAliq?: boolean
+    validFrom?: boolean
+    validUntil?: boolean
+    fiscalProfile?: boolean | FiscalProfileDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["fiscalTaxRule"]>
+
+
+
+  export type FiscalTaxRuleSelectScalar = {
+    id?: boolean
+    fiscalProfileId?: boolean
+    regime?: boolean
+    csosn?: boolean
+    cstIcms?: boolean
+    aliqIcms?: boolean
+    cstPis?: boolean
+    aliqPis?: boolean
+    cstCofins?: boolean
+    aliqCofins?: boolean
+    ibsCst?: boolean
+    ibsAliq?: boolean
+    cbsCst?: boolean
+    cbsAliq?: boolean
+    validFrom?: boolean
+    validUntil?: boolean
+  }
+
+  export type FiscalTaxRuleOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "fiscalProfileId" | "regime" | "csosn" | "cstIcms" | "aliqIcms" | "cstPis" | "aliqPis" | "cstCofins" | "aliqCofins" | "ibsCst" | "ibsAliq" | "cbsCst" | "cbsAliq" | "validFrom" | "validUntil", ExtArgs["result"]["fiscalTaxRule"]>
+  export type FiscalTaxRuleInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    fiscalProfile?: boolean | FiscalProfileDefaultArgs<ExtArgs>
+  }
+
+  export type $FiscalTaxRulePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "FiscalTaxRule"
+    objects: {
+      fiscalProfile: Prisma.$FiscalProfilePayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      fiscalProfileId: string
+      regime: string
+      csosn: string | null
+      cstIcms: string | null
+      aliqIcms: number
+      cstPis: string
+      aliqPis: number
+      cstCofins: string
+      aliqCofins: number
+      ibsCst: string
+      ibsAliq: number
+      cbsCst: string
+      cbsAliq: number
+      validFrom: Date
+      validUntil: Date | null
+    }, ExtArgs["result"]["fiscalTaxRule"]>
+    composites: {}
+  }
+
+  type FiscalTaxRuleGetPayload<S extends boolean | null | undefined | FiscalTaxRuleDefaultArgs> = $Result.GetResult<Prisma.$FiscalTaxRulePayload, S>
+
+  type FiscalTaxRuleCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<FiscalTaxRuleFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: FiscalTaxRuleCountAggregateInputType | true
+    }
+
+  export interface FiscalTaxRuleDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['FiscalTaxRule'], meta: { name: 'FiscalTaxRule' } }
+    /**
+     * Find zero or one FiscalTaxRule that matches the filter.
+     * @param {FiscalTaxRuleFindUniqueArgs} args - Arguments to find a FiscalTaxRule
+     * @example
+     * // Get one FiscalTaxRule
+     * const fiscalTaxRule = await prisma.fiscalTaxRule.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends FiscalTaxRuleFindUniqueArgs>(args: SelectSubset<T, FiscalTaxRuleFindUniqueArgs<ExtArgs>>): Prisma__FiscalTaxRuleClient<$Result.GetResult<Prisma.$FiscalTaxRulePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one FiscalTaxRule that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {FiscalTaxRuleFindUniqueOrThrowArgs} args - Arguments to find a FiscalTaxRule
+     * @example
+     * // Get one FiscalTaxRule
+     * const fiscalTaxRule = await prisma.fiscalTaxRule.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends FiscalTaxRuleFindUniqueOrThrowArgs>(args: SelectSubset<T, FiscalTaxRuleFindUniqueOrThrowArgs<ExtArgs>>): Prisma__FiscalTaxRuleClient<$Result.GetResult<Prisma.$FiscalTaxRulePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FiscalTaxRule that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalTaxRuleFindFirstArgs} args - Arguments to find a FiscalTaxRule
+     * @example
+     * // Get one FiscalTaxRule
+     * const fiscalTaxRule = await prisma.fiscalTaxRule.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends FiscalTaxRuleFindFirstArgs>(args?: SelectSubset<T, FiscalTaxRuleFindFirstArgs<ExtArgs>>): Prisma__FiscalTaxRuleClient<$Result.GetResult<Prisma.$FiscalTaxRulePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FiscalTaxRule that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalTaxRuleFindFirstOrThrowArgs} args - Arguments to find a FiscalTaxRule
+     * @example
+     * // Get one FiscalTaxRule
+     * const fiscalTaxRule = await prisma.fiscalTaxRule.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends FiscalTaxRuleFindFirstOrThrowArgs>(args?: SelectSubset<T, FiscalTaxRuleFindFirstOrThrowArgs<ExtArgs>>): Prisma__FiscalTaxRuleClient<$Result.GetResult<Prisma.$FiscalTaxRulePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more FiscalTaxRules that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalTaxRuleFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all FiscalTaxRules
+     * const fiscalTaxRules = await prisma.fiscalTaxRule.findMany()
+     * 
+     * // Get first 10 FiscalTaxRules
+     * const fiscalTaxRules = await prisma.fiscalTaxRule.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const fiscalTaxRuleWithIdOnly = await prisma.fiscalTaxRule.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends FiscalTaxRuleFindManyArgs>(args?: SelectSubset<T, FiscalTaxRuleFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FiscalTaxRulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a FiscalTaxRule.
+     * @param {FiscalTaxRuleCreateArgs} args - Arguments to create a FiscalTaxRule.
+     * @example
+     * // Create one FiscalTaxRule
+     * const FiscalTaxRule = await prisma.fiscalTaxRule.create({
+     *   data: {
+     *     // ... data to create a FiscalTaxRule
+     *   }
+     * })
+     * 
+     */
+    create<T extends FiscalTaxRuleCreateArgs>(args: SelectSubset<T, FiscalTaxRuleCreateArgs<ExtArgs>>): Prisma__FiscalTaxRuleClient<$Result.GetResult<Prisma.$FiscalTaxRulePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many FiscalTaxRules.
+     * @param {FiscalTaxRuleCreateManyArgs} args - Arguments to create many FiscalTaxRules.
+     * @example
+     * // Create many FiscalTaxRules
+     * const fiscalTaxRule = await prisma.fiscalTaxRule.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends FiscalTaxRuleCreateManyArgs>(args?: SelectSubset<T, FiscalTaxRuleCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a FiscalTaxRule.
+     * @param {FiscalTaxRuleDeleteArgs} args - Arguments to delete one FiscalTaxRule.
+     * @example
+     * // Delete one FiscalTaxRule
+     * const FiscalTaxRule = await prisma.fiscalTaxRule.delete({
+     *   where: {
+     *     // ... filter to delete one FiscalTaxRule
+     *   }
+     * })
+     * 
+     */
+    delete<T extends FiscalTaxRuleDeleteArgs>(args: SelectSubset<T, FiscalTaxRuleDeleteArgs<ExtArgs>>): Prisma__FiscalTaxRuleClient<$Result.GetResult<Prisma.$FiscalTaxRulePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one FiscalTaxRule.
+     * @param {FiscalTaxRuleUpdateArgs} args - Arguments to update one FiscalTaxRule.
+     * @example
+     * // Update one FiscalTaxRule
+     * const fiscalTaxRule = await prisma.fiscalTaxRule.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends FiscalTaxRuleUpdateArgs>(args: SelectSubset<T, FiscalTaxRuleUpdateArgs<ExtArgs>>): Prisma__FiscalTaxRuleClient<$Result.GetResult<Prisma.$FiscalTaxRulePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more FiscalTaxRules.
+     * @param {FiscalTaxRuleDeleteManyArgs} args - Arguments to filter FiscalTaxRules to delete.
+     * @example
+     * // Delete a few FiscalTaxRules
+     * const { count } = await prisma.fiscalTaxRule.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends FiscalTaxRuleDeleteManyArgs>(args?: SelectSubset<T, FiscalTaxRuleDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more FiscalTaxRules.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalTaxRuleUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many FiscalTaxRules
+     * const fiscalTaxRule = await prisma.fiscalTaxRule.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends FiscalTaxRuleUpdateManyArgs>(args: SelectSubset<T, FiscalTaxRuleUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one FiscalTaxRule.
+     * @param {FiscalTaxRuleUpsertArgs} args - Arguments to update or create a FiscalTaxRule.
+     * @example
+     * // Update or create a FiscalTaxRule
+     * const fiscalTaxRule = await prisma.fiscalTaxRule.upsert({
+     *   create: {
+     *     // ... data to create a FiscalTaxRule
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the FiscalTaxRule we want to update
+     *   }
+     * })
+     */
+    upsert<T extends FiscalTaxRuleUpsertArgs>(args: SelectSubset<T, FiscalTaxRuleUpsertArgs<ExtArgs>>): Prisma__FiscalTaxRuleClient<$Result.GetResult<Prisma.$FiscalTaxRulePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of FiscalTaxRules.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalTaxRuleCountArgs} args - Arguments to filter FiscalTaxRules to count.
+     * @example
+     * // Count the number of FiscalTaxRules
+     * const count = await prisma.fiscalTaxRule.count({
+     *   where: {
+     *     // ... the filter for the FiscalTaxRules we want to count
+     *   }
+     * })
+    **/
+    count<T extends FiscalTaxRuleCountArgs>(
+      args?: Subset<T, FiscalTaxRuleCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], FiscalTaxRuleCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a FiscalTaxRule.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalTaxRuleAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends FiscalTaxRuleAggregateArgs>(args: Subset<T, FiscalTaxRuleAggregateArgs>): Prisma.PrismaPromise<GetFiscalTaxRuleAggregateType<T>>
+
+    /**
+     * Group by FiscalTaxRule.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalTaxRuleGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends FiscalTaxRuleGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: FiscalTaxRuleGroupByArgs['orderBy'] }
+        : { orderBy?: FiscalTaxRuleGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, FiscalTaxRuleGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetFiscalTaxRuleGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the FiscalTaxRule model
+   */
+  readonly fields: FiscalTaxRuleFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for FiscalTaxRule.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__FiscalTaxRuleClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    fiscalProfile<T extends FiscalProfileDefaultArgs<ExtArgs> = {}>(args?: Subset<T, FiscalProfileDefaultArgs<ExtArgs>>): Prisma__FiscalProfileClient<$Result.GetResult<Prisma.$FiscalProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the FiscalTaxRule model
+   */
+  interface FiscalTaxRuleFieldRefs {
+    readonly id: FieldRef<"FiscalTaxRule", 'String'>
+    readonly fiscalProfileId: FieldRef<"FiscalTaxRule", 'String'>
+    readonly regime: FieldRef<"FiscalTaxRule", 'String'>
+    readonly csosn: FieldRef<"FiscalTaxRule", 'String'>
+    readonly cstIcms: FieldRef<"FiscalTaxRule", 'String'>
+    readonly aliqIcms: FieldRef<"FiscalTaxRule", 'Float'>
+    readonly cstPis: FieldRef<"FiscalTaxRule", 'String'>
+    readonly aliqPis: FieldRef<"FiscalTaxRule", 'Float'>
+    readonly cstCofins: FieldRef<"FiscalTaxRule", 'String'>
+    readonly aliqCofins: FieldRef<"FiscalTaxRule", 'Float'>
+    readonly ibsCst: FieldRef<"FiscalTaxRule", 'String'>
+    readonly ibsAliq: FieldRef<"FiscalTaxRule", 'Float'>
+    readonly cbsCst: FieldRef<"FiscalTaxRule", 'String'>
+    readonly cbsAliq: FieldRef<"FiscalTaxRule", 'Float'>
+    readonly validFrom: FieldRef<"FiscalTaxRule", 'DateTime'>
+    readonly validUntil: FieldRef<"FiscalTaxRule", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * FiscalTaxRule findUnique
+   */
+  export type FiscalTaxRuleFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalTaxRule
+     */
+    select?: FiscalTaxRuleSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalTaxRule
+     */
+    omit?: FiscalTaxRuleOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalTaxRuleInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalTaxRule to fetch.
+     */
+    where: FiscalTaxRuleWhereUniqueInput
+  }
+
+  /**
+   * FiscalTaxRule findUniqueOrThrow
+   */
+  export type FiscalTaxRuleFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalTaxRule
+     */
+    select?: FiscalTaxRuleSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalTaxRule
+     */
+    omit?: FiscalTaxRuleOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalTaxRuleInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalTaxRule to fetch.
+     */
+    where: FiscalTaxRuleWhereUniqueInput
+  }
+
+  /**
+   * FiscalTaxRule findFirst
+   */
+  export type FiscalTaxRuleFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalTaxRule
+     */
+    select?: FiscalTaxRuleSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalTaxRule
+     */
+    omit?: FiscalTaxRuleOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalTaxRuleInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalTaxRule to fetch.
+     */
+    where?: FiscalTaxRuleWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalTaxRules to fetch.
+     */
+    orderBy?: FiscalTaxRuleOrderByWithRelationInput | FiscalTaxRuleOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FiscalTaxRules.
+     */
+    cursor?: FiscalTaxRuleWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalTaxRules from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalTaxRules.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FiscalTaxRules.
+     */
+    distinct?: FiscalTaxRuleScalarFieldEnum | FiscalTaxRuleScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalTaxRule findFirstOrThrow
+   */
+  export type FiscalTaxRuleFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalTaxRule
+     */
+    select?: FiscalTaxRuleSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalTaxRule
+     */
+    omit?: FiscalTaxRuleOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalTaxRuleInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalTaxRule to fetch.
+     */
+    where?: FiscalTaxRuleWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalTaxRules to fetch.
+     */
+    orderBy?: FiscalTaxRuleOrderByWithRelationInput | FiscalTaxRuleOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FiscalTaxRules.
+     */
+    cursor?: FiscalTaxRuleWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalTaxRules from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalTaxRules.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FiscalTaxRules.
+     */
+    distinct?: FiscalTaxRuleScalarFieldEnum | FiscalTaxRuleScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalTaxRule findMany
+   */
+  export type FiscalTaxRuleFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalTaxRule
+     */
+    select?: FiscalTaxRuleSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalTaxRule
+     */
+    omit?: FiscalTaxRuleOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalTaxRuleInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalTaxRules to fetch.
+     */
+    where?: FiscalTaxRuleWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalTaxRules to fetch.
+     */
+    orderBy?: FiscalTaxRuleOrderByWithRelationInput | FiscalTaxRuleOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing FiscalTaxRules.
+     */
+    cursor?: FiscalTaxRuleWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalTaxRules from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalTaxRules.
+     */
+    skip?: number
+    distinct?: FiscalTaxRuleScalarFieldEnum | FiscalTaxRuleScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalTaxRule create
+   */
+  export type FiscalTaxRuleCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalTaxRule
+     */
+    select?: FiscalTaxRuleSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalTaxRule
+     */
+    omit?: FiscalTaxRuleOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalTaxRuleInclude<ExtArgs> | null
+    /**
+     * The data needed to create a FiscalTaxRule.
+     */
+    data: XOR<FiscalTaxRuleCreateInput, FiscalTaxRuleUncheckedCreateInput>
+  }
+
+  /**
+   * FiscalTaxRule createMany
+   */
+  export type FiscalTaxRuleCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many FiscalTaxRules.
+     */
+    data: FiscalTaxRuleCreateManyInput | FiscalTaxRuleCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * FiscalTaxRule update
+   */
+  export type FiscalTaxRuleUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalTaxRule
+     */
+    select?: FiscalTaxRuleSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalTaxRule
+     */
+    omit?: FiscalTaxRuleOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalTaxRuleInclude<ExtArgs> | null
+    /**
+     * The data needed to update a FiscalTaxRule.
+     */
+    data: XOR<FiscalTaxRuleUpdateInput, FiscalTaxRuleUncheckedUpdateInput>
+    /**
+     * Choose, which FiscalTaxRule to update.
+     */
+    where: FiscalTaxRuleWhereUniqueInput
+  }
+
+  /**
+   * FiscalTaxRule updateMany
+   */
+  export type FiscalTaxRuleUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update FiscalTaxRules.
+     */
+    data: XOR<FiscalTaxRuleUpdateManyMutationInput, FiscalTaxRuleUncheckedUpdateManyInput>
+    /**
+     * Filter which FiscalTaxRules to update
+     */
+    where?: FiscalTaxRuleWhereInput
+    /**
+     * Limit how many FiscalTaxRules to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * FiscalTaxRule upsert
+   */
+  export type FiscalTaxRuleUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalTaxRule
+     */
+    select?: FiscalTaxRuleSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalTaxRule
+     */
+    omit?: FiscalTaxRuleOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalTaxRuleInclude<ExtArgs> | null
+    /**
+     * The filter to search for the FiscalTaxRule to update in case it exists.
+     */
+    where: FiscalTaxRuleWhereUniqueInput
+    /**
+     * In case the FiscalTaxRule found by the `where` argument doesn't exist, create a new FiscalTaxRule with this data.
+     */
+    create: XOR<FiscalTaxRuleCreateInput, FiscalTaxRuleUncheckedCreateInput>
+    /**
+     * In case the FiscalTaxRule was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<FiscalTaxRuleUpdateInput, FiscalTaxRuleUncheckedUpdateInput>
+  }
+
+  /**
+   * FiscalTaxRule delete
+   */
+  export type FiscalTaxRuleDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalTaxRule
+     */
+    select?: FiscalTaxRuleSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalTaxRule
+     */
+    omit?: FiscalTaxRuleOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalTaxRuleInclude<ExtArgs> | null
+    /**
+     * Filter which FiscalTaxRule to delete.
+     */
+    where: FiscalTaxRuleWhereUniqueInput
+  }
+
+  /**
+   * FiscalTaxRule deleteMany
+   */
+  export type FiscalTaxRuleDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FiscalTaxRules to delete
+     */
+    where?: FiscalTaxRuleWhereInput
+    /**
+     * Limit how many FiscalTaxRules to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * FiscalTaxRule without action
+   */
+  export type FiscalTaxRuleDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalTaxRule
+     */
+    select?: FiscalTaxRuleSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalTaxRule
+     */
+    omit?: FiscalTaxRuleOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalTaxRuleInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model FiscalProfileHistory
+   */
+
+  export type AggregateFiscalProfileHistory = {
+    _count: FiscalProfileHistoryCountAggregateOutputType | null
+    _min: FiscalProfileHistoryMinAggregateOutputType | null
+    _max: FiscalProfileHistoryMaxAggregateOutputType | null
+  }
+
+  export type FiscalProfileHistoryMinAggregateOutputType = {
+    id: string | null
+    fiscalProfileId: string | null
+    changedBy: string | null
+    changedAt: Date | null
+    field: string | null
+    oldValue: string | null
+    newValue: string | null
+    reason: string | null
+  }
+
+  export type FiscalProfileHistoryMaxAggregateOutputType = {
+    id: string | null
+    fiscalProfileId: string | null
+    changedBy: string | null
+    changedAt: Date | null
+    field: string | null
+    oldValue: string | null
+    newValue: string | null
+    reason: string | null
+  }
+
+  export type FiscalProfileHistoryCountAggregateOutputType = {
+    id: number
+    fiscalProfileId: number
+    changedBy: number
+    changedAt: number
+    field: number
+    oldValue: number
+    newValue: number
+    reason: number
+    _all: number
+  }
+
+
+  export type FiscalProfileHistoryMinAggregateInputType = {
+    id?: true
+    fiscalProfileId?: true
+    changedBy?: true
+    changedAt?: true
+    field?: true
+    oldValue?: true
+    newValue?: true
+    reason?: true
+  }
+
+  export type FiscalProfileHistoryMaxAggregateInputType = {
+    id?: true
+    fiscalProfileId?: true
+    changedBy?: true
+    changedAt?: true
+    field?: true
+    oldValue?: true
+    newValue?: true
+    reason?: true
+  }
+
+  export type FiscalProfileHistoryCountAggregateInputType = {
+    id?: true
+    fiscalProfileId?: true
+    changedBy?: true
+    changedAt?: true
+    field?: true
+    oldValue?: true
+    newValue?: true
+    reason?: true
+    _all?: true
+  }
+
+  export type FiscalProfileHistoryAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FiscalProfileHistory to aggregate.
+     */
+    where?: FiscalProfileHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalProfileHistories to fetch.
+     */
+    orderBy?: FiscalProfileHistoryOrderByWithRelationInput | FiscalProfileHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: FiscalProfileHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalProfileHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalProfileHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned FiscalProfileHistories
+    **/
+    _count?: true | FiscalProfileHistoryCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: FiscalProfileHistoryMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: FiscalProfileHistoryMaxAggregateInputType
+  }
+
+  export type GetFiscalProfileHistoryAggregateType<T extends FiscalProfileHistoryAggregateArgs> = {
+        [P in keyof T & keyof AggregateFiscalProfileHistory]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateFiscalProfileHistory[P]>
+      : GetScalarType<T[P], AggregateFiscalProfileHistory[P]>
+  }
+
+
+
+
+  export type FiscalProfileHistoryGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FiscalProfileHistoryWhereInput
+    orderBy?: FiscalProfileHistoryOrderByWithAggregationInput | FiscalProfileHistoryOrderByWithAggregationInput[]
+    by: FiscalProfileHistoryScalarFieldEnum[] | FiscalProfileHistoryScalarFieldEnum
+    having?: FiscalProfileHistoryScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: FiscalProfileHistoryCountAggregateInputType | true
+    _min?: FiscalProfileHistoryMinAggregateInputType
+    _max?: FiscalProfileHistoryMaxAggregateInputType
+  }
+
+  export type FiscalProfileHistoryGroupByOutputType = {
+    id: string
+    fiscalProfileId: string
+    changedBy: string
+    changedAt: Date
+    field: string
+    oldValue: string
+    newValue: string
+    reason: string | null
+    _count: FiscalProfileHistoryCountAggregateOutputType | null
+    _min: FiscalProfileHistoryMinAggregateOutputType | null
+    _max: FiscalProfileHistoryMaxAggregateOutputType | null
+  }
+
+  type GetFiscalProfileHistoryGroupByPayload<T extends FiscalProfileHistoryGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<FiscalProfileHistoryGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof FiscalProfileHistoryGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], FiscalProfileHistoryGroupByOutputType[P]>
+            : GetScalarType<T[P], FiscalProfileHistoryGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type FiscalProfileHistorySelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    fiscalProfileId?: boolean
+    changedBy?: boolean
+    changedAt?: boolean
+    field?: boolean
+    oldValue?: boolean
+    newValue?: boolean
+    reason?: boolean
+    fiscalProfile?: boolean | FiscalProfileDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["fiscalProfileHistory"]>
+
+
+
+  export type FiscalProfileHistorySelectScalar = {
+    id?: boolean
+    fiscalProfileId?: boolean
+    changedBy?: boolean
+    changedAt?: boolean
+    field?: boolean
+    oldValue?: boolean
+    newValue?: boolean
+    reason?: boolean
+  }
+
+  export type FiscalProfileHistoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "fiscalProfileId" | "changedBy" | "changedAt" | "field" | "oldValue" | "newValue" | "reason", ExtArgs["result"]["fiscalProfileHistory"]>
+  export type FiscalProfileHistoryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    fiscalProfile?: boolean | FiscalProfileDefaultArgs<ExtArgs>
+  }
+
+  export type $FiscalProfileHistoryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "FiscalProfileHistory"
+    objects: {
+      fiscalProfile: Prisma.$FiscalProfilePayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      fiscalProfileId: string
+      changedBy: string
+      changedAt: Date
+      field: string
+      oldValue: string
+      newValue: string
+      reason: string | null
+    }, ExtArgs["result"]["fiscalProfileHistory"]>
+    composites: {}
+  }
+
+  type FiscalProfileHistoryGetPayload<S extends boolean | null | undefined | FiscalProfileHistoryDefaultArgs> = $Result.GetResult<Prisma.$FiscalProfileHistoryPayload, S>
+
+  type FiscalProfileHistoryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<FiscalProfileHistoryFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: FiscalProfileHistoryCountAggregateInputType | true
+    }
+
+  export interface FiscalProfileHistoryDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['FiscalProfileHistory'], meta: { name: 'FiscalProfileHistory' } }
+    /**
+     * Find zero or one FiscalProfileHistory that matches the filter.
+     * @param {FiscalProfileHistoryFindUniqueArgs} args - Arguments to find a FiscalProfileHistory
+     * @example
+     * // Get one FiscalProfileHistory
+     * const fiscalProfileHistory = await prisma.fiscalProfileHistory.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends FiscalProfileHistoryFindUniqueArgs>(args: SelectSubset<T, FiscalProfileHistoryFindUniqueArgs<ExtArgs>>): Prisma__FiscalProfileHistoryClient<$Result.GetResult<Prisma.$FiscalProfileHistoryPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one FiscalProfileHistory that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {FiscalProfileHistoryFindUniqueOrThrowArgs} args - Arguments to find a FiscalProfileHistory
+     * @example
+     * // Get one FiscalProfileHistory
+     * const fiscalProfileHistory = await prisma.fiscalProfileHistory.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends FiscalProfileHistoryFindUniqueOrThrowArgs>(args: SelectSubset<T, FiscalProfileHistoryFindUniqueOrThrowArgs<ExtArgs>>): Prisma__FiscalProfileHistoryClient<$Result.GetResult<Prisma.$FiscalProfileHistoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FiscalProfileHistory that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileHistoryFindFirstArgs} args - Arguments to find a FiscalProfileHistory
+     * @example
+     * // Get one FiscalProfileHistory
+     * const fiscalProfileHistory = await prisma.fiscalProfileHistory.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends FiscalProfileHistoryFindFirstArgs>(args?: SelectSubset<T, FiscalProfileHistoryFindFirstArgs<ExtArgs>>): Prisma__FiscalProfileHistoryClient<$Result.GetResult<Prisma.$FiscalProfileHistoryPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FiscalProfileHistory that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileHistoryFindFirstOrThrowArgs} args - Arguments to find a FiscalProfileHistory
+     * @example
+     * // Get one FiscalProfileHistory
+     * const fiscalProfileHistory = await prisma.fiscalProfileHistory.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends FiscalProfileHistoryFindFirstOrThrowArgs>(args?: SelectSubset<T, FiscalProfileHistoryFindFirstOrThrowArgs<ExtArgs>>): Prisma__FiscalProfileHistoryClient<$Result.GetResult<Prisma.$FiscalProfileHistoryPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more FiscalProfileHistories that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileHistoryFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all FiscalProfileHistories
+     * const fiscalProfileHistories = await prisma.fiscalProfileHistory.findMany()
+     * 
+     * // Get first 10 FiscalProfileHistories
+     * const fiscalProfileHistories = await prisma.fiscalProfileHistory.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const fiscalProfileHistoryWithIdOnly = await prisma.fiscalProfileHistory.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends FiscalProfileHistoryFindManyArgs>(args?: SelectSubset<T, FiscalProfileHistoryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FiscalProfileHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a FiscalProfileHistory.
+     * @param {FiscalProfileHistoryCreateArgs} args - Arguments to create a FiscalProfileHistory.
+     * @example
+     * // Create one FiscalProfileHistory
+     * const FiscalProfileHistory = await prisma.fiscalProfileHistory.create({
+     *   data: {
+     *     // ... data to create a FiscalProfileHistory
+     *   }
+     * })
+     * 
+     */
+    create<T extends FiscalProfileHistoryCreateArgs>(args: SelectSubset<T, FiscalProfileHistoryCreateArgs<ExtArgs>>): Prisma__FiscalProfileHistoryClient<$Result.GetResult<Prisma.$FiscalProfileHistoryPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many FiscalProfileHistories.
+     * @param {FiscalProfileHistoryCreateManyArgs} args - Arguments to create many FiscalProfileHistories.
+     * @example
+     * // Create many FiscalProfileHistories
+     * const fiscalProfileHistory = await prisma.fiscalProfileHistory.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends FiscalProfileHistoryCreateManyArgs>(args?: SelectSubset<T, FiscalProfileHistoryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a FiscalProfileHistory.
+     * @param {FiscalProfileHistoryDeleteArgs} args - Arguments to delete one FiscalProfileHistory.
+     * @example
+     * // Delete one FiscalProfileHistory
+     * const FiscalProfileHistory = await prisma.fiscalProfileHistory.delete({
+     *   where: {
+     *     // ... filter to delete one FiscalProfileHistory
+     *   }
+     * })
+     * 
+     */
+    delete<T extends FiscalProfileHistoryDeleteArgs>(args: SelectSubset<T, FiscalProfileHistoryDeleteArgs<ExtArgs>>): Prisma__FiscalProfileHistoryClient<$Result.GetResult<Prisma.$FiscalProfileHistoryPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one FiscalProfileHistory.
+     * @param {FiscalProfileHistoryUpdateArgs} args - Arguments to update one FiscalProfileHistory.
+     * @example
+     * // Update one FiscalProfileHistory
+     * const fiscalProfileHistory = await prisma.fiscalProfileHistory.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends FiscalProfileHistoryUpdateArgs>(args: SelectSubset<T, FiscalProfileHistoryUpdateArgs<ExtArgs>>): Prisma__FiscalProfileHistoryClient<$Result.GetResult<Prisma.$FiscalProfileHistoryPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more FiscalProfileHistories.
+     * @param {FiscalProfileHistoryDeleteManyArgs} args - Arguments to filter FiscalProfileHistories to delete.
+     * @example
+     * // Delete a few FiscalProfileHistories
+     * const { count } = await prisma.fiscalProfileHistory.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends FiscalProfileHistoryDeleteManyArgs>(args?: SelectSubset<T, FiscalProfileHistoryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more FiscalProfileHistories.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileHistoryUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many FiscalProfileHistories
+     * const fiscalProfileHistory = await prisma.fiscalProfileHistory.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends FiscalProfileHistoryUpdateManyArgs>(args: SelectSubset<T, FiscalProfileHistoryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one FiscalProfileHistory.
+     * @param {FiscalProfileHistoryUpsertArgs} args - Arguments to update or create a FiscalProfileHistory.
+     * @example
+     * // Update or create a FiscalProfileHistory
+     * const fiscalProfileHistory = await prisma.fiscalProfileHistory.upsert({
+     *   create: {
+     *     // ... data to create a FiscalProfileHistory
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the FiscalProfileHistory we want to update
+     *   }
+     * })
+     */
+    upsert<T extends FiscalProfileHistoryUpsertArgs>(args: SelectSubset<T, FiscalProfileHistoryUpsertArgs<ExtArgs>>): Prisma__FiscalProfileHistoryClient<$Result.GetResult<Prisma.$FiscalProfileHistoryPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of FiscalProfileHistories.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileHistoryCountArgs} args - Arguments to filter FiscalProfileHistories to count.
+     * @example
+     * // Count the number of FiscalProfileHistories
+     * const count = await prisma.fiscalProfileHistory.count({
+     *   where: {
+     *     // ... the filter for the FiscalProfileHistories we want to count
+     *   }
+     * })
+    **/
+    count<T extends FiscalProfileHistoryCountArgs>(
+      args?: Subset<T, FiscalProfileHistoryCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], FiscalProfileHistoryCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a FiscalProfileHistory.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileHistoryAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends FiscalProfileHistoryAggregateArgs>(args: Subset<T, FiscalProfileHistoryAggregateArgs>): Prisma.PrismaPromise<GetFiscalProfileHistoryAggregateType<T>>
+
+    /**
+     * Group by FiscalProfileHistory.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalProfileHistoryGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends FiscalProfileHistoryGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: FiscalProfileHistoryGroupByArgs['orderBy'] }
+        : { orderBy?: FiscalProfileHistoryGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, FiscalProfileHistoryGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetFiscalProfileHistoryGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the FiscalProfileHistory model
+   */
+  readonly fields: FiscalProfileHistoryFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for FiscalProfileHistory.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__FiscalProfileHistoryClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    fiscalProfile<T extends FiscalProfileDefaultArgs<ExtArgs> = {}>(args?: Subset<T, FiscalProfileDefaultArgs<ExtArgs>>): Prisma__FiscalProfileClient<$Result.GetResult<Prisma.$FiscalProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the FiscalProfileHistory model
+   */
+  interface FiscalProfileHistoryFieldRefs {
+    readonly id: FieldRef<"FiscalProfileHistory", 'String'>
+    readonly fiscalProfileId: FieldRef<"FiscalProfileHistory", 'String'>
+    readonly changedBy: FieldRef<"FiscalProfileHistory", 'String'>
+    readonly changedAt: FieldRef<"FiscalProfileHistory", 'DateTime'>
+    readonly field: FieldRef<"FiscalProfileHistory", 'String'>
+    readonly oldValue: FieldRef<"FiscalProfileHistory", 'String'>
+    readonly newValue: FieldRef<"FiscalProfileHistory", 'String'>
+    readonly reason: FieldRef<"FiscalProfileHistory", 'String'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * FiscalProfileHistory findUnique
+   */
+  export type FiscalProfileHistoryFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfileHistory
+     */
+    select?: FiscalProfileHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfileHistory
+     */
+    omit?: FiscalProfileHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalProfileHistory to fetch.
+     */
+    where: FiscalProfileHistoryWhereUniqueInput
+  }
+
+  /**
+   * FiscalProfileHistory findUniqueOrThrow
+   */
+  export type FiscalProfileHistoryFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfileHistory
+     */
+    select?: FiscalProfileHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfileHistory
+     */
+    omit?: FiscalProfileHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalProfileHistory to fetch.
+     */
+    where: FiscalProfileHistoryWhereUniqueInput
+  }
+
+  /**
+   * FiscalProfileHistory findFirst
+   */
+  export type FiscalProfileHistoryFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfileHistory
+     */
+    select?: FiscalProfileHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfileHistory
+     */
+    omit?: FiscalProfileHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalProfileHistory to fetch.
+     */
+    where?: FiscalProfileHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalProfileHistories to fetch.
+     */
+    orderBy?: FiscalProfileHistoryOrderByWithRelationInput | FiscalProfileHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FiscalProfileHistories.
+     */
+    cursor?: FiscalProfileHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalProfileHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalProfileHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FiscalProfileHistories.
+     */
+    distinct?: FiscalProfileHistoryScalarFieldEnum | FiscalProfileHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalProfileHistory findFirstOrThrow
+   */
+  export type FiscalProfileHistoryFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfileHistory
+     */
+    select?: FiscalProfileHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfileHistory
+     */
+    omit?: FiscalProfileHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalProfileHistory to fetch.
+     */
+    where?: FiscalProfileHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalProfileHistories to fetch.
+     */
+    orderBy?: FiscalProfileHistoryOrderByWithRelationInput | FiscalProfileHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FiscalProfileHistories.
+     */
+    cursor?: FiscalProfileHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalProfileHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalProfileHistories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FiscalProfileHistories.
+     */
+    distinct?: FiscalProfileHistoryScalarFieldEnum | FiscalProfileHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalProfileHistory findMany
+   */
+  export type FiscalProfileHistoryFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfileHistory
+     */
+    select?: FiscalProfileHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfileHistory
+     */
+    omit?: FiscalProfileHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileHistoryInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalProfileHistories to fetch.
+     */
+    where?: FiscalProfileHistoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalProfileHistories to fetch.
+     */
+    orderBy?: FiscalProfileHistoryOrderByWithRelationInput | FiscalProfileHistoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing FiscalProfileHistories.
+     */
+    cursor?: FiscalProfileHistoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalProfileHistories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalProfileHistories.
+     */
+    skip?: number
+    distinct?: FiscalProfileHistoryScalarFieldEnum | FiscalProfileHistoryScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalProfileHistory create
+   */
+  export type FiscalProfileHistoryCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfileHistory
+     */
+    select?: FiscalProfileHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfileHistory
+     */
+    omit?: FiscalProfileHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileHistoryInclude<ExtArgs> | null
+    /**
+     * The data needed to create a FiscalProfileHistory.
+     */
+    data: XOR<FiscalProfileHistoryCreateInput, FiscalProfileHistoryUncheckedCreateInput>
+  }
+
+  /**
+   * FiscalProfileHistory createMany
+   */
+  export type FiscalProfileHistoryCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many FiscalProfileHistories.
+     */
+    data: FiscalProfileHistoryCreateManyInput | FiscalProfileHistoryCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * FiscalProfileHistory update
+   */
+  export type FiscalProfileHistoryUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfileHistory
+     */
+    select?: FiscalProfileHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfileHistory
+     */
+    omit?: FiscalProfileHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileHistoryInclude<ExtArgs> | null
+    /**
+     * The data needed to update a FiscalProfileHistory.
+     */
+    data: XOR<FiscalProfileHistoryUpdateInput, FiscalProfileHistoryUncheckedUpdateInput>
+    /**
+     * Choose, which FiscalProfileHistory to update.
+     */
+    where: FiscalProfileHistoryWhereUniqueInput
+  }
+
+  /**
+   * FiscalProfileHistory updateMany
+   */
+  export type FiscalProfileHistoryUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update FiscalProfileHistories.
+     */
+    data: XOR<FiscalProfileHistoryUpdateManyMutationInput, FiscalProfileHistoryUncheckedUpdateManyInput>
+    /**
+     * Filter which FiscalProfileHistories to update
+     */
+    where?: FiscalProfileHistoryWhereInput
+    /**
+     * Limit how many FiscalProfileHistories to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * FiscalProfileHistory upsert
+   */
+  export type FiscalProfileHistoryUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfileHistory
+     */
+    select?: FiscalProfileHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfileHistory
+     */
+    omit?: FiscalProfileHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileHistoryInclude<ExtArgs> | null
+    /**
+     * The filter to search for the FiscalProfileHistory to update in case it exists.
+     */
+    where: FiscalProfileHistoryWhereUniqueInput
+    /**
+     * In case the FiscalProfileHistory found by the `where` argument doesn't exist, create a new FiscalProfileHistory with this data.
+     */
+    create: XOR<FiscalProfileHistoryCreateInput, FiscalProfileHistoryUncheckedCreateInput>
+    /**
+     * In case the FiscalProfileHistory was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<FiscalProfileHistoryUpdateInput, FiscalProfileHistoryUncheckedUpdateInput>
+  }
+
+  /**
+   * FiscalProfileHistory delete
+   */
+  export type FiscalProfileHistoryDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfileHistory
+     */
+    select?: FiscalProfileHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfileHistory
+     */
+    omit?: FiscalProfileHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileHistoryInclude<ExtArgs> | null
+    /**
+     * Filter which FiscalProfileHistory to delete.
+     */
+    where: FiscalProfileHistoryWhereUniqueInput
+  }
+
+  /**
+   * FiscalProfileHistory deleteMany
+   */
+  export type FiscalProfileHistoryDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FiscalProfileHistories to delete
+     */
+    where?: FiscalProfileHistoryWhereInput
+    /**
+     * Limit how many FiscalProfileHistories to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * FiscalProfileHistory without action
+   */
+  export type FiscalProfileHistoryDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalProfileHistory
+     */
+    select?: FiscalProfileHistorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalProfileHistory
+     */
+    omit?: FiscalProfileHistoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalProfileHistoryInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model FiscalFavorite
+   */
+
+  export type AggregateFiscalFavorite = {
+    _count: FiscalFavoriteCountAggregateOutputType | null
+    _min: FiscalFavoriteMinAggregateOutputType | null
+    _max: FiscalFavoriteMaxAggregateOutputType | null
+  }
+
+  export type FiscalFavoriteMinAggregateOutputType = {
+    tenantId: string | null
+    fiscalProfileId: string | null
+  }
+
+  export type FiscalFavoriteMaxAggregateOutputType = {
+    tenantId: string | null
+    fiscalProfileId: string | null
+  }
+
+  export type FiscalFavoriteCountAggregateOutputType = {
+    tenantId: number
+    fiscalProfileId: number
+    _all: number
+  }
+
+
+  export type FiscalFavoriteMinAggregateInputType = {
+    tenantId?: true
+    fiscalProfileId?: true
+  }
+
+  export type FiscalFavoriteMaxAggregateInputType = {
+    tenantId?: true
+    fiscalProfileId?: true
+  }
+
+  export type FiscalFavoriteCountAggregateInputType = {
+    tenantId?: true
+    fiscalProfileId?: true
+    _all?: true
+  }
+
+  export type FiscalFavoriteAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FiscalFavorite to aggregate.
+     */
+    where?: FiscalFavoriteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalFavorites to fetch.
+     */
+    orderBy?: FiscalFavoriteOrderByWithRelationInput | FiscalFavoriteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: FiscalFavoriteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalFavorites from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalFavorites.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned FiscalFavorites
+    **/
+    _count?: true | FiscalFavoriteCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: FiscalFavoriteMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: FiscalFavoriteMaxAggregateInputType
+  }
+
+  export type GetFiscalFavoriteAggregateType<T extends FiscalFavoriteAggregateArgs> = {
+        [P in keyof T & keyof AggregateFiscalFavorite]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateFiscalFavorite[P]>
+      : GetScalarType<T[P], AggregateFiscalFavorite[P]>
+  }
+
+
+
+
+  export type FiscalFavoriteGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: FiscalFavoriteWhereInput
+    orderBy?: FiscalFavoriteOrderByWithAggregationInput | FiscalFavoriteOrderByWithAggregationInput[]
+    by: FiscalFavoriteScalarFieldEnum[] | FiscalFavoriteScalarFieldEnum
+    having?: FiscalFavoriteScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: FiscalFavoriteCountAggregateInputType | true
+    _min?: FiscalFavoriteMinAggregateInputType
+    _max?: FiscalFavoriteMaxAggregateInputType
+  }
+
+  export type FiscalFavoriteGroupByOutputType = {
+    tenantId: string
+    fiscalProfileId: string
+    _count: FiscalFavoriteCountAggregateOutputType | null
+    _min: FiscalFavoriteMinAggregateOutputType | null
+    _max: FiscalFavoriteMaxAggregateOutputType | null
+  }
+
+  type GetFiscalFavoriteGroupByPayload<T extends FiscalFavoriteGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<FiscalFavoriteGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof FiscalFavoriteGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], FiscalFavoriteGroupByOutputType[P]>
+            : GetScalarType<T[P], FiscalFavoriteGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type FiscalFavoriteSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    tenantId?: boolean
+    fiscalProfileId?: boolean
+    fiscalProfile?: boolean | FiscalProfileDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["fiscalFavorite"]>
+
+
+
+  export type FiscalFavoriteSelectScalar = {
+    tenantId?: boolean
+    fiscalProfileId?: boolean
+  }
+
+  export type FiscalFavoriteOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"tenantId" | "fiscalProfileId", ExtArgs["result"]["fiscalFavorite"]>
+  export type FiscalFavoriteInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    fiscalProfile?: boolean | FiscalProfileDefaultArgs<ExtArgs>
+  }
+
+  export type $FiscalFavoritePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "FiscalFavorite"
+    objects: {
+      fiscalProfile: Prisma.$FiscalProfilePayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      tenantId: string
+      fiscalProfileId: string
+    }, ExtArgs["result"]["fiscalFavorite"]>
+    composites: {}
+  }
+
+  type FiscalFavoriteGetPayload<S extends boolean | null | undefined | FiscalFavoriteDefaultArgs> = $Result.GetResult<Prisma.$FiscalFavoritePayload, S>
+
+  type FiscalFavoriteCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<FiscalFavoriteFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: FiscalFavoriteCountAggregateInputType | true
+    }
+
+  export interface FiscalFavoriteDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['FiscalFavorite'], meta: { name: 'FiscalFavorite' } }
+    /**
+     * Find zero or one FiscalFavorite that matches the filter.
+     * @param {FiscalFavoriteFindUniqueArgs} args - Arguments to find a FiscalFavorite
+     * @example
+     * // Get one FiscalFavorite
+     * const fiscalFavorite = await prisma.fiscalFavorite.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends FiscalFavoriteFindUniqueArgs>(args: SelectSubset<T, FiscalFavoriteFindUniqueArgs<ExtArgs>>): Prisma__FiscalFavoriteClient<$Result.GetResult<Prisma.$FiscalFavoritePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one FiscalFavorite that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {FiscalFavoriteFindUniqueOrThrowArgs} args - Arguments to find a FiscalFavorite
+     * @example
+     * // Get one FiscalFavorite
+     * const fiscalFavorite = await prisma.fiscalFavorite.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends FiscalFavoriteFindUniqueOrThrowArgs>(args: SelectSubset<T, FiscalFavoriteFindUniqueOrThrowArgs<ExtArgs>>): Prisma__FiscalFavoriteClient<$Result.GetResult<Prisma.$FiscalFavoritePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FiscalFavorite that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalFavoriteFindFirstArgs} args - Arguments to find a FiscalFavorite
+     * @example
+     * // Get one FiscalFavorite
+     * const fiscalFavorite = await prisma.fiscalFavorite.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends FiscalFavoriteFindFirstArgs>(args?: SelectSubset<T, FiscalFavoriteFindFirstArgs<ExtArgs>>): Prisma__FiscalFavoriteClient<$Result.GetResult<Prisma.$FiscalFavoritePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first FiscalFavorite that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalFavoriteFindFirstOrThrowArgs} args - Arguments to find a FiscalFavorite
+     * @example
+     * // Get one FiscalFavorite
+     * const fiscalFavorite = await prisma.fiscalFavorite.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends FiscalFavoriteFindFirstOrThrowArgs>(args?: SelectSubset<T, FiscalFavoriteFindFirstOrThrowArgs<ExtArgs>>): Prisma__FiscalFavoriteClient<$Result.GetResult<Prisma.$FiscalFavoritePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more FiscalFavorites that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalFavoriteFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all FiscalFavorites
+     * const fiscalFavorites = await prisma.fiscalFavorite.findMany()
+     * 
+     * // Get first 10 FiscalFavorites
+     * const fiscalFavorites = await prisma.fiscalFavorite.findMany({ take: 10 })
+     * 
+     * // Only select the `tenantId`
+     * const fiscalFavoriteWithTenantIdOnly = await prisma.fiscalFavorite.findMany({ select: { tenantId: true } })
+     * 
+     */
+    findMany<T extends FiscalFavoriteFindManyArgs>(args?: SelectSubset<T, FiscalFavoriteFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FiscalFavoritePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a FiscalFavorite.
+     * @param {FiscalFavoriteCreateArgs} args - Arguments to create a FiscalFavorite.
+     * @example
+     * // Create one FiscalFavorite
+     * const FiscalFavorite = await prisma.fiscalFavorite.create({
+     *   data: {
+     *     // ... data to create a FiscalFavorite
+     *   }
+     * })
+     * 
+     */
+    create<T extends FiscalFavoriteCreateArgs>(args: SelectSubset<T, FiscalFavoriteCreateArgs<ExtArgs>>): Prisma__FiscalFavoriteClient<$Result.GetResult<Prisma.$FiscalFavoritePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many FiscalFavorites.
+     * @param {FiscalFavoriteCreateManyArgs} args - Arguments to create many FiscalFavorites.
+     * @example
+     * // Create many FiscalFavorites
+     * const fiscalFavorite = await prisma.fiscalFavorite.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends FiscalFavoriteCreateManyArgs>(args?: SelectSubset<T, FiscalFavoriteCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a FiscalFavorite.
+     * @param {FiscalFavoriteDeleteArgs} args - Arguments to delete one FiscalFavorite.
+     * @example
+     * // Delete one FiscalFavorite
+     * const FiscalFavorite = await prisma.fiscalFavorite.delete({
+     *   where: {
+     *     // ... filter to delete one FiscalFavorite
+     *   }
+     * })
+     * 
+     */
+    delete<T extends FiscalFavoriteDeleteArgs>(args: SelectSubset<T, FiscalFavoriteDeleteArgs<ExtArgs>>): Prisma__FiscalFavoriteClient<$Result.GetResult<Prisma.$FiscalFavoritePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one FiscalFavorite.
+     * @param {FiscalFavoriteUpdateArgs} args - Arguments to update one FiscalFavorite.
+     * @example
+     * // Update one FiscalFavorite
+     * const fiscalFavorite = await prisma.fiscalFavorite.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends FiscalFavoriteUpdateArgs>(args: SelectSubset<T, FiscalFavoriteUpdateArgs<ExtArgs>>): Prisma__FiscalFavoriteClient<$Result.GetResult<Prisma.$FiscalFavoritePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more FiscalFavorites.
+     * @param {FiscalFavoriteDeleteManyArgs} args - Arguments to filter FiscalFavorites to delete.
+     * @example
+     * // Delete a few FiscalFavorites
+     * const { count } = await prisma.fiscalFavorite.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends FiscalFavoriteDeleteManyArgs>(args?: SelectSubset<T, FiscalFavoriteDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more FiscalFavorites.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalFavoriteUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many FiscalFavorites
+     * const fiscalFavorite = await prisma.fiscalFavorite.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends FiscalFavoriteUpdateManyArgs>(args: SelectSubset<T, FiscalFavoriteUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one FiscalFavorite.
+     * @param {FiscalFavoriteUpsertArgs} args - Arguments to update or create a FiscalFavorite.
+     * @example
+     * // Update or create a FiscalFavorite
+     * const fiscalFavorite = await prisma.fiscalFavorite.upsert({
+     *   create: {
+     *     // ... data to create a FiscalFavorite
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the FiscalFavorite we want to update
+     *   }
+     * })
+     */
+    upsert<T extends FiscalFavoriteUpsertArgs>(args: SelectSubset<T, FiscalFavoriteUpsertArgs<ExtArgs>>): Prisma__FiscalFavoriteClient<$Result.GetResult<Prisma.$FiscalFavoritePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of FiscalFavorites.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalFavoriteCountArgs} args - Arguments to filter FiscalFavorites to count.
+     * @example
+     * // Count the number of FiscalFavorites
+     * const count = await prisma.fiscalFavorite.count({
+     *   where: {
+     *     // ... the filter for the FiscalFavorites we want to count
+     *   }
+     * })
+    **/
+    count<T extends FiscalFavoriteCountArgs>(
+      args?: Subset<T, FiscalFavoriteCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], FiscalFavoriteCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a FiscalFavorite.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalFavoriteAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends FiscalFavoriteAggregateArgs>(args: Subset<T, FiscalFavoriteAggregateArgs>): Prisma.PrismaPromise<GetFiscalFavoriteAggregateType<T>>
+
+    /**
+     * Group by FiscalFavorite.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {FiscalFavoriteGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends FiscalFavoriteGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: FiscalFavoriteGroupByArgs['orderBy'] }
+        : { orderBy?: FiscalFavoriteGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, FiscalFavoriteGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetFiscalFavoriteGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the FiscalFavorite model
+   */
+  readonly fields: FiscalFavoriteFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for FiscalFavorite.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__FiscalFavoriteClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    fiscalProfile<T extends FiscalProfileDefaultArgs<ExtArgs> = {}>(args?: Subset<T, FiscalProfileDefaultArgs<ExtArgs>>): Prisma__FiscalProfileClient<$Result.GetResult<Prisma.$FiscalProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the FiscalFavorite model
+   */
+  interface FiscalFavoriteFieldRefs {
+    readonly tenantId: FieldRef<"FiscalFavorite", 'String'>
+    readonly fiscalProfileId: FieldRef<"FiscalFavorite", 'String'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * FiscalFavorite findUnique
+   */
+  export type FiscalFavoriteFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalFavorite
+     */
+    select?: FiscalFavoriteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalFavorite
+     */
+    omit?: FiscalFavoriteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalFavoriteInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalFavorite to fetch.
+     */
+    where: FiscalFavoriteWhereUniqueInput
+  }
+
+  /**
+   * FiscalFavorite findUniqueOrThrow
+   */
+  export type FiscalFavoriteFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalFavorite
+     */
+    select?: FiscalFavoriteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalFavorite
+     */
+    omit?: FiscalFavoriteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalFavoriteInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalFavorite to fetch.
+     */
+    where: FiscalFavoriteWhereUniqueInput
+  }
+
+  /**
+   * FiscalFavorite findFirst
+   */
+  export type FiscalFavoriteFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalFavorite
+     */
+    select?: FiscalFavoriteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalFavorite
+     */
+    omit?: FiscalFavoriteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalFavoriteInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalFavorite to fetch.
+     */
+    where?: FiscalFavoriteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalFavorites to fetch.
+     */
+    orderBy?: FiscalFavoriteOrderByWithRelationInput | FiscalFavoriteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FiscalFavorites.
+     */
+    cursor?: FiscalFavoriteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalFavorites from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalFavorites.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FiscalFavorites.
+     */
+    distinct?: FiscalFavoriteScalarFieldEnum | FiscalFavoriteScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalFavorite findFirstOrThrow
+   */
+  export type FiscalFavoriteFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalFavorite
+     */
+    select?: FiscalFavoriteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalFavorite
+     */
+    omit?: FiscalFavoriteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalFavoriteInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalFavorite to fetch.
+     */
+    where?: FiscalFavoriteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalFavorites to fetch.
+     */
+    orderBy?: FiscalFavoriteOrderByWithRelationInput | FiscalFavoriteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for FiscalFavorites.
+     */
+    cursor?: FiscalFavoriteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalFavorites from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalFavorites.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of FiscalFavorites.
+     */
+    distinct?: FiscalFavoriteScalarFieldEnum | FiscalFavoriteScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalFavorite findMany
+   */
+  export type FiscalFavoriteFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalFavorite
+     */
+    select?: FiscalFavoriteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalFavorite
+     */
+    omit?: FiscalFavoriteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalFavoriteInclude<ExtArgs> | null
+    /**
+     * Filter, which FiscalFavorites to fetch.
+     */
+    where?: FiscalFavoriteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of FiscalFavorites to fetch.
+     */
+    orderBy?: FiscalFavoriteOrderByWithRelationInput | FiscalFavoriteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing FiscalFavorites.
+     */
+    cursor?: FiscalFavoriteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` FiscalFavorites from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` FiscalFavorites.
+     */
+    skip?: number
+    distinct?: FiscalFavoriteScalarFieldEnum | FiscalFavoriteScalarFieldEnum[]
+  }
+
+  /**
+   * FiscalFavorite create
+   */
+  export type FiscalFavoriteCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalFavorite
+     */
+    select?: FiscalFavoriteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalFavorite
+     */
+    omit?: FiscalFavoriteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalFavoriteInclude<ExtArgs> | null
+    /**
+     * The data needed to create a FiscalFavorite.
+     */
+    data: XOR<FiscalFavoriteCreateInput, FiscalFavoriteUncheckedCreateInput>
+  }
+
+  /**
+   * FiscalFavorite createMany
+   */
+  export type FiscalFavoriteCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many FiscalFavorites.
+     */
+    data: FiscalFavoriteCreateManyInput | FiscalFavoriteCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * FiscalFavorite update
+   */
+  export type FiscalFavoriteUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalFavorite
+     */
+    select?: FiscalFavoriteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalFavorite
+     */
+    omit?: FiscalFavoriteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalFavoriteInclude<ExtArgs> | null
+    /**
+     * The data needed to update a FiscalFavorite.
+     */
+    data: XOR<FiscalFavoriteUpdateInput, FiscalFavoriteUncheckedUpdateInput>
+    /**
+     * Choose, which FiscalFavorite to update.
+     */
+    where: FiscalFavoriteWhereUniqueInput
+  }
+
+  /**
+   * FiscalFavorite updateMany
+   */
+  export type FiscalFavoriteUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update FiscalFavorites.
+     */
+    data: XOR<FiscalFavoriteUpdateManyMutationInput, FiscalFavoriteUncheckedUpdateManyInput>
+    /**
+     * Filter which FiscalFavorites to update
+     */
+    where?: FiscalFavoriteWhereInput
+    /**
+     * Limit how many FiscalFavorites to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * FiscalFavorite upsert
+   */
+  export type FiscalFavoriteUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalFavorite
+     */
+    select?: FiscalFavoriteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalFavorite
+     */
+    omit?: FiscalFavoriteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalFavoriteInclude<ExtArgs> | null
+    /**
+     * The filter to search for the FiscalFavorite to update in case it exists.
+     */
+    where: FiscalFavoriteWhereUniqueInput
+    /**
+     * In case the FiscalFavorite found by the `where` argument doesn't exist, create a new FiscalFavorite with this data.
+     */
+    create: XOR<FiscalFavoriteCreateInput, FiscalFavoriteUncheckedCreateInput>
+    /**
+     * In case the FiscalFavorite was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<FiscalFavoriteUpdateInput, FiscalFavoriteUncheckedUpdateInput>
+  }
+
+  /**
+   * FiscalFavorite delete
+   */
+  export type FiscalFavoriteDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalFavorite
+     */
+    select?: FiscalFavoriteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalFavorite
+     */
+    omit?: FiscalFavoriteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalFavoriteInclude<ExtArgs> | null
+    /**
+     * Filter which FiscalFavorite to delete.
+     */
+    where: FiscalFavoriteWhereUniqueInput
+  }
+
+  /**
+   * FiscalFavorite deleteMany
+   */
+  export type FiscalFavoriteDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which FiscalFavorites to delete
+     */
+    where?: FiscalFavoriteWhereInput
+    /**
+     * Limit how many FiscalFavorites to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * FiscalFavorite without action
+   */
+  export type FiscalFavoriteDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the FiscalFavorite
+     */
+    select?: FiscalFavoriteSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the FiscalFavorite
+     */
+    omit?: FiscalFavoriteOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FiscalFavoriteInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model PaymentLog
+   */
+
+  export type AggregatePaymentLog = {
+    _count: PaymentLogCountAggregateOutputType | null
+    _avg: PaymentLogAvgAggregateOutputType | null
+    _sum: PaymentLogSumAggregateOutputType | null
+    _min: PaymentLogMinAggregateOutputType | null
+    _max: PaymentLogMaxAggregateOutputType | null
+  }
+
+  export type PaymentLogAvgAggregateOutputType = {
+    valor: Decimal | null
+  }
+
+  export type PaymentLogSumAggregateOutputType = {
+    valor: Decimal | null
+  }
+
+  export type PaymentLogMinAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    valor: Decimal | null
+    vencimentoAntes: Date | null
+    vencimentoApos: Date | null
+    observacao: string | null
+    registradoPor: string | null
+    createdAt: Date | null
+  }
+
+  export type PaymentLogMaxAggregateOutputType = {
+    id: string | null
+    tenantId: string | null
+    valor: Decimal | null
+    vencimentoAntes: Date | null
+    vencimentoApos: Date | null
+    observacao: string | null
+    registradoPor: string | null
+    createdAt: Date | null
+  }
+
+  export type PaymentLogCountAggregateOutputType = {
+    id: number
+    tenantId: number
+    valor: number
+    vencimentoAntes: number
+    vencimentoApos: number
+    observacao: number
+    registradoPor: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type PaymentLogAvgAggregateInputType = {
+    valor?: true
+  }
+
+  export type PaymentLogSumAggregateInputType = {
+    valor?: true
+  }
+
+  export type PaymentLogMinAggregateInputType = {
+    id?: true
+    tenantId?: true
+    valor?: true
+    vencimentoAntes?: true
+    vencimentoApos?: true
+    observacao?: true
+    registradoPor?: true
+    createdAt?: true
+  }
+
+  export type PaymentLogMaxAggregateInputType = {
+    id?: true
+    tenantId?: true
+    valor?: true
+    vencimentoAntes?: true
+    vencimentoApos?: true
+    observacao?: true
+    registradoPor?: true
+    createdAt?: true
+  }
+
+  export type PaymentLogCountAggregateInputType = {
+    id?: true
+    tenantId?: true
+    valor?: true
+    vencimentoAntes?: true
+    vencimentoApos?: true
+    observacao?: true
+    registradoPor?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type PaymentLogAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which PaymentLog to aggregate.
+     */
+    where?: PaymentLogWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of PaymentLogs to fetch.
+     */
+    orderBy?: PaymentLogOrderByWithRelationInput | PaymentLogOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: PaymentLogWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` PaymentLogs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` PaymentLogs.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned PaymentLogs
+    **/
+    _count?: true | PaymentLogCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: PaymentLogAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: PaymentLogSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: PaymentLogMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: PaymentLogMaxAggregateInputType
+  }
+
+  export type GetPaymentLogAggregateType<T extends PaymentLogAggregateArgs> = {
+        [P in keyof T & keyof AggregatePaymentLog]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregatePaymentLog[P]>
+      : GetScalarType<T[P], AggregatePaymentLog[P]>
+  }
+
+
+
+
+  export type PaymentLogGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: PaymentLogWhereInput
+    orderBy?: PaymentLogOrderByWithAggregationInput | PaymentLogOrderByWithAggregationInput[]
+    by: PaymentLogScalarFieldEnum[] | PaymentLogScalarFieldEnum
+    having?: PaymentLogScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: PaymentLogCountAggregateInputType | true
+    _avg?: PaymentLogAvgAggregateInputType
+    _sum?: PaymentLogSumAggregateInputType
+    _min?: PaymentLogMinAggregateInputType
+    _max?: PaymentLogMaxAggregateInputType
+  }
+
+  export type PaymentLogGroupByOutputType = {
+    id: string
+    tenantId: string
+    valor: Decimal
+    vencimentoAntes: Date
+    vencimentoApos: Date
+    observacao: string | null
+    registradoPor: string | null
+    createdAt: Date
+    _count: PaymentLogCountAggregateOutputType | null
+    _avg: PaymentLogAvgAggregateOutputType | null
+    _sum: PaymentLogSumAggregateOutputType | null
+    _min: PaymentLogMinAggregateOutputType | null
+    _max: PaymentLogMaxAggregateOutputType | null
+  }
+
+  type GetPaymentLogGroupByPayload<T extends PaymentLogGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<PaymentLogGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof PaymentLogGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], PaymentLogGroupByOutputType[P]>
+            : GetScalarType<T[P], PaymentLogGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type PaymentLogSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tenantId?: boolean
+    valor?: boolean
+    vencimentoAntes?: boolean
+    vencimentoApos?: boolean
+    observacao?: boolean
+    registradoPor?: boolean
+    createdAt?: boolean
+    tenant?: boolean | TenantDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["paymentLog"]>
+
+
+
+  export type PaymentLogSelectScalar = {
+    id?: boolean
+    tenantId?: boolean
+    valor?: boolean
+    vencimentoAntes?: boolean
+    vencimentoApos?: boolean
+    observacao?: boolean
+    registradoPor?: boolean
+    createdAt?: boolean
+  }
+
+  export type PaymentLogOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "tenantId" | "valor" | "vencimentoAntes" | "vencimentoApos" | "observacao" | "registradoPor" | "createdAt", ExtArgs["result"]["paymentLog"]>
+  export type PaymentLogInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    tenant?: boolean | TenantDefaultArgs<ExtArgs>
+  }
+
+  export type $PaymentLogPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "PaymentLog"
+    objects: {
+      tenant: Prisma.$TenantPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      tenantId: string
+      valor: Prisma.Decimal
+      vencimentoAntes: Date
+      vencimentoApos: Date
+      observacao: string | null
+      registradoPor: string | null
+      createdAt: Date
+    }, ExtArgs["result"]["paymentLog"]>
+    composites: {}
+  }
+
+  type PaymentLogGetPayload<S extends boolean | null | undefined | PaymentLogDefaultArgs> = $Result.GetResult<Prisma.$PaymentLogPayload, S>
+
+  type PaymentLogCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<PaymentLogFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: PaymentLogCountAggregateInputType | true
+    }
+
+  export interface PaymentLogDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['PaymentLog'], meta: { name: 'PaymentLog' } }
+    /**
+     * Find zero or one PaymentLog that matches the filter.
+     * @param {PaymentLogFindUniqueArgs} args - Arguments to find a PaymentLog
+     * @example
+     * // Get one PaymentLog
+     * const paymentLog = await prisma.paymentLog.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends PaymentLogFindUniqueArgs>(args: SelectSubset<T, PaymentLogFindUniqueArgs<ExtArgs>>): Prisma__PaymentLogClient<$Result.GetResult<Prisma.$PaymentLogPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one PaymentLog that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {PaymentLogFindUniqueOrThrowArgs} args - Arguments to find a PaymentLog
+     * @example
+     * // Get one PaymentLog
+     * const paymentLog = await prisma.paymentLog.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends PaymentLogFindUniqueOrThrowArgs>(args: SelectSubset<T, PaymentLogFindUniqueOrThrowArgs<ExtArgs>>): Prisma__PaymentLogClient<$Result.GetResult<Prisma.$PaymentLogPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first PaymentLog that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PaymentLogFindFirstArgs} args - Arguments to find a PaymentLog
+     * @example
+     * // Get one PaymentLog
+     * const paymentLog = await prisma.paymentLog.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends PaymentLogFindFirstArgs>(args?: SelectSubset<T, PaymentLogFindFirstArgs<ExtArgs>>): Prisma__PaymentLogClient<$Result.GetResult<Prisma.$PaymentLogPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first PaymentLog that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PaymentLogFindFirstOrThrowArgs} args - Arguments to find a PaymentLog
+     * @example
+     * // Get one PaymentLog
+     * const paymentLog = await prisma.paymentLog.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends PaymentLogFindFirstOrThrowArgs>(args?: SelectSubset<T, PaymentLogFindFirstOrThrowArgs<ExtArgs>>): Prisma__PaymentLogClient<$Result.GetResult<Prisma.$PaymentLogPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more PaymentLogs that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PaymentLogFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all PaymentLogs
+     * const paymentLogs = await prisma.paymentLog.findMany()
+     * 
+     * // Get first 10 PaymentLogs
+     * const paymentLogs = await prisma.paymentLog.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const paymentLogWithIdOnly = await prisma.paymentLog.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends PaymentLogFindManyArgs>(args?: SelectSubset<T, PaymentLogFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PaymentLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a PaymentLog.
+     * @param {PaymentLogCreateArgs} args - Arguments to create a PaymentLog.
+     * @example
+     * // Create one PaymentLog
+     * const PaymentLog = await prisma.paymentLog.create({
+     *   data: {
+     *     // ... data to create a PaymentLog
+     *   }
+     * })
+     * 
+     */
+    create<T extends PaymentLogCreateArgs>(args: SelectSubset<T, PaymentLogCreateArgs<ExtArgs>>): Prisma__PaymentLogClient<$Result.GetResult<Prisma.$PaymentLogPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many PaymentLogs.
+     * @param {PaymentLogCreateManyArgs} args - Arguments to create many PaymentLogs.
+     * @example
+     * // Create many PaymentLogs
+     * const paymentLog = await prisma.paymentLog.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends PaymentLogCreateManyArgs>(args?: SelectSubset<T, PaymentLogCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a PaymentLog.
+     * @param {PaymentLogDeleteArgs} args - Arguments to delete one PaymentLog.
+     * @example
+     * // Delete one PaymentLog
+     * const PaymentLog = await prisma.paymentLog.delete({
+     *   where: {
+     *     // ... filter to delete one PaymentLog
+     *   }
+     * })
+     * 
+     */
+    delete<T extends PaymentLogDeleteArgs>(args: SelectSubset<T, PaymentLogDeleteArgs<ExtArgs>>): Prisma__PaymentLogClient<$Result.GetResult<Prisma.$PaymentLogPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one PaymentLog.
+     * @param {PaymentLogUpdateArgs} args - Arguments to update one PaymentLog.
+     * @example
+     * // Update one PaymentLog
+     * const paymentLog = await prisma.paymentLog.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends PaymentLogUpdateArgs>(args: SelectSubset<T, PaymentLogUpdateArgs<ExtArgs>>): Prisma__PaymentLogClient<$Result.GetResult<Prisma.$PaymentLogPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more PaymentLogs.
+     * @param {PaymentLogDeleteManyArgs} args - Arguments to filter PaymentLogs to delete.
+     * @example
+     * // Delete a few PaymentLogs
+     * const { count } = await prisma.paymentLog.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends PaymentLogDeleteManyArgs>(args?: SelectSubset<T, PaymentLogDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more PaymentLogs.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PaymentLogUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many PaymentLogs
+     * const paymentLog = await prisma.paymentLog.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends PaymentLogUpdateManyArgs>(args: SelectSubset<T, PaymentLogUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one PaymentLog.
+     * @param {PaymentLogUpsertArgs} args - Arguments to update or create a PaymentLog.
+     * @example
+     * // Update or create a PaymentLog
+     * const paymentLog = await prisma.paymentLog.upsert({
+     *   create: {
+     *     // ... data to create a PaymentLog
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the PaymentLog we want to update
+     *   }
+     * })
+     */
+    upsert<T extends PaymentLogUpsertArgs>(args: SelectSubset<T, PaymentLogUpsertArgs<ExtArgs>>): Prisma__PaymentLogClient<$Result.GetResult<Prisma.$PaymentLogPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of PaymentLogs.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PaymentLogCountArgs} args - Arguments to filter PaymentLogs to count.
+     * @example
+     * // Count the number of PaymentLogs
+     * const count = await prisma.paymentLog.count({
+     *   where: {
+     *     // ... the filter for the PaymentLogs we want to count
+     *   }
+     * })
+    **/
+    count<T extends PaymentLogCountArgs>(
+      args?: Subset<T, PaymentLogCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], PaymentLogCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a PaymentLog.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PaymentLogAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends PaymentLogAggregateArgs>(args: Subset<T, PaymentLogAggregateArgs>): Prisma.PrismaPromise<GetPaymentLogAggregateType<T>>
+
+    /**
+     * Group by PaymentLog.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {PaymentLogGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends PaymentLogGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: PaymentLogGroupByArgs['orderBy'] }
+        : { orderBy?: PaymentLogGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, PaymentLogGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetPaymentLogGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the PaymentLog model
+   */
+  readonly fields: PaymentLogFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for PaymentLog.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__PaymentLogClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    tenant<T extends TenantDefaultArgs<ExtArgs> = {}>(args?: Subset<T, TenantDefaultArgs<ExtArgs>>): Prisma__TenantClient<$Result.GetResult<Prisma.$TenantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the PaymentLog model
+   */
+  interface PaymentLogFieldRefs {
+    readonly id: FieldRef<"PaymentLog", 'String'>
+    readonly tenantId: FieldRef<"PaymentLog", 'String'>
+    readonly valor: FieldRef<"PaymentLog", 'Decimal'>
+    readonly vencimentoAntes: FieldRef<"PaymentLog", 'DateTime'>
+    readonly vencimentoApos: FieldRef<"PaymentLog", 'DateTime'>
+    readonly observacao: FieldRef<"PaymentLog", 'String'>
+    readonly registradoPor: FieldRef<"PaymentLog", 'String'>
+    readonly createdAt: FieldRef<"PaymentLog", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * PaymentLog findUnique
+   */
+  export type PaymentLogFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the PaymentLog
+     */
+    select?: PaymentLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the PaymentLog
+     */
+    omit?: PaymentLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PaymentLogInclude<ExtArgs> | null
+    /**
+     * Filter, which PaymentLog to fetch.
+     */
+    where: PaymentLogWhereUniqueInput
+  }
+
+  /**
+   * PaymentLog findUniqueOrThrow
+   */
+  export type PaymentLogFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the PaymentLog
+     */
+    select?: PaymentLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the PaymentLog
+     */
+    omit?: PaymentLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PaymentLogInclude<ExtArgs> | null
+    /**
+     * Filter, which PaymentLog to fetch.
+     */
+    where: PaymentLogWhereUniqueInput
+  }
+
+  /**
+   * PaymentLog findFirst
+   */
+  export type PaymentLogFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the PaymentLog
+     */
+    select?: PaymentLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the PaymentLog
+     */
+    omit?: PaymentLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PaymentLogInclude<ExtArgs> | null
+    /**
+     * Filter, which PaymentLog to fetch.
+     */
+    where?: PaymentLogWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of PaymentLogs to fetch.
+     */
+    orderBy?: PaymentLogOrderByWithRelationInput | PaymentLogOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for PaymentLogs.
+     */
+    cursor?: PaymentLogWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` PaymentLogs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` PaymentLogs.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of PaymentLogs.
+     */
+    distinct?: PaymentLogScalarFieldEnum | PaymentLogScalarFieldEnum[]
+  }
+
+  /**
+   * PaymentLog findFirstOrThrow
+   */
+  export type PaymentLogFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the PaymentLog
+     */
+    select?: PaymentLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the PaymentLog
+     */
+    omit?: PaymentLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PaymentLogInclude<ExtArgs> | null
+    /**
+     * Filter, which PaymentLog to fetch.
+     */
+    where?: PaymentLogWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of PaymentLogs to fetch.
+     */
+    orderBy?: PaymentLogOrderByWithRelationInput | PaymentLogOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for PaymentLogs.
+     */
+    cursor?: PaymentLogWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` PaymentLogs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` PaymentLogs.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of PaymentLogs.
+     */
+    distinct?: PaymentLogScalarFieldEnum | PaymentLogScalarFieldEnum[]
+  }
+
+  /**
+   * PaymentLog findMany
+   */
+  export type PaymentLogFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the PaymentLog
+     */
+    select?: PaymentLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the PaymentLog
+     */
+    omit?: PaymentLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PaymentLogInclude<ExtArgs> | null
+    /**
+     * Filter, which PaymentLogs to fetch.
+     */
+    where?: PaymentLogWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of PaymentLogs to fetch.
+     */
+    orderBy?: PaymentLogOrderByWithRelationInput | PaymentLogOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing PaymentLogs.
+     */
+    cursor?: PaymentLogWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` PaymentLogs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` PaymentLogs.
+     */
+    skip?: number
+    distinct?: PaymentLogScalarFieldEnum | PaymentLogScalarFieldEnum[]
+  }
+
+  /**
+   * PaymentLog create
+   */
+  export type PaymentLogCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the PaymentLog
+     */
+    select?: PaymentLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the PaymentLog
+     */
+    omit?: PaymentLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PaymentLogInclude<ExtArgs> | null
+    /**
+     * The data needed to create a PaymentLog.
+     */
+    data: XOR<PaymentLogCreateInput, PaymentLogUncheckedCreateInput>
+  }
+
+  /**
+   * PaymentLog createMany
+   */
+  export type PaymentLogCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many PaymentLogs.
+     */
+    data: PaymentLogCreateManyInput | PaymentLogCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * PaymentLog update
+   */
+  export type PaymentLogUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the PaymentLog
+     */
+    select?: PaymentLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the PaymentLog
+     */
+    omit?: PaymentLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PaymentLogInclude<ExtArgs> | null
+    /**
+     * The data needed to update a PaymentLog.
+     */
+    data: XOR<PaymentLogUpdateInput, PaymentLogUncheckedUpdateInput>
+    /**
+     * Choose, which PaymentLog to update.
+     */
+    where: PaymentLogWhereUniqueInput
+  }
+
+  /**
+   * PaymentLog updateMany
+   */
+  export type PaymentLogUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update PaymentLogs.
+     */
+    data: XOR<PaymentLogUpdateManyMutationInput, PaymentLogUncheckedUpdateManyInput>
+    /**
+     * Filter which PaymentLogs to update
+     */
+    where?: PaymentLogWhereInput
+    /**
+     * Limit how many PaymentLogs to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * PaymentLog upsert
+   */
+  export type PaymentLogUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the PaymentLog
+     */
+    select?: PaymentLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the PaymentLog
+     */
+    omit?: PaymentLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PaymentLogInclude<ExtArgs> | null
+    /**
+     * The filter to search for the PaymentLog to update in case it exists.
+     */
+    where: PaymentLogWhereUniqueInput
+    /**
+     * In case the PaymentLog found by the `where` argument doesn't exist, create a new PaymentLog with this data.
+     */
+    create: XOR<PaymentLogCreateInput, PaymentLogUncheckedCreateInput>
+    /**
+     * In case the PaymentLog was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<PaymentLogUpdateInput, PaymentLogUncheckedUpdateInput>
+  }
+
+  /**
+   * PaymentLog delete
+   */
+  export type PaymentLogDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the PaymentLog
+     */
+    select?: PaymentLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the PaymentLog
+     */
+    omit?: PaymentLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PaymentLogInclude<ExtArgs> | null
+    /**
+     * Filter which PaymentLog to delete.
+     */
+    where: PaymentLogWhereUniqueInput
+  }
+
+  /**
+   * PaymentLog deleteMany
+   */
+  export type PaymentLogDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which PaymentLogs to delete
+     */
+    where?: PaymentLogWhereInput
+    /**
+     * Limit how many PaymentLogs to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * PaymentLog without action
+   */
+  export type PaymentLogDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the PaymentLog
+     */
+    select?: PaymentLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the PaymentLog
+     */
+    omit?: PaymentLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PaymentLogInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model Lead
+   */
+
+  export type AggregateLead = {
+    _count: LeadCountAggregateOutputType | null
+    _min: LeadMinAggregateOutputType | null
+    _max: LeadMaxAggregateOutputType | null
+  }
+
+  export type LeadMinAggregateOutputType = {
+    id: string | null
+    name: string | null
+    whatsapp: string | null
+    status: string | null
+    source: string | null
+    notes: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type LeadMaxAggregateOutputType = {
+    id: string | null
+    name: string | null
+    whatsapp: string | null
+    status: string | null
+    source: string | null
+    notes: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type LeadCountAggregateOutputType = {
+    id: number
+    name: number
+    whatsapp: number
+    status: number
+    source: number
+    notes: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type LeadMinAggregateInputType = {
+    id?: true
+    name?: true
+    whatsapp?: true
+    status?: true
+    source?: true
+    notes?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type LeadMaxAggregateInputType = {
+    id?: true
+    name?: true
+    whatsapp?: true
+    status?: true
+    source?: true
+    notes?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type LeadCountAggregateInputType = {
+    id?: true
+    name?: true
+    whatsapp?: true
+    status?: true
+    source?: true
+    notes?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type LeadAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Lead to aggregate.
+     */
+    where?: LeadWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Leads to fetch.
+     */
+    orderBy?: LeadOrderByWithRelationInput | LeadOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: LeadWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Leads from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Leads.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned Leads
+    **/
+    _count?: true | LeadCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: LeadMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: LeadMaxAggregateInputType
+  }
+
+  export type GetLeadAggregateType<T extends LeadAggregateArgs> = {
+        [P in keyof T & keyof AggregateLead]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateLead[P]>
+      : GetScalarType<T[P], AggregateLead[P]>
+  }
+
+
+
+
+  export type LeadGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: LeadWhereInput
+    orderBy?: LeadOrderByWithAggregationInput | LeadOrderByWithAggregationInput[]
+    by: LeadScalarFieldEnum[] | LeadScalarFieldEnum
+    having?: LeadScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: LeadCountAggregateInputType | true
+    _min?: LeadMinAggregateInputType
+    _max?: LeadMaxAggregateInputType
+  }
+
+  export type LeadGroupByOutputType = {
+    id: string
+    name: string
+    whatsapp: string
+    status: string
+    source: string
+    notes: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: LeadCountAggregateOutputType | null
+    _min: LeadMinAggregateOutputType | null
+    _max: LeadMaxAggregateOutputType | null
+  }
+
+  type GetLeadGroupByPayload<T extends LeadGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<LeadGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof LeadGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], LeadGroupByOutputType[P]>
+            : GetScalarType<T[P], LeadGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type LeadSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    whatsapp?: boolean
+    status?: boolean
+    source?: boolean
+    notes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["lead"]>
+
+
+
+  export type LeadSelectScalar = {
+    id?: boolean
+    name?: boolean
+    whatsapp?: boolean
+    status?: boolean
+    source?: boolean
+    notes?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type LeadOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "whatsapp" | "status" | "source" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["lead"]>
+
+  export type $LeadPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "Lead"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      name: string
+      whatsapp: string
+      status: string
+      source: string
+      notes: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["lead"]>
+    composites: {}
+  }
+
+  type LeadGetPayload<S extends boolean | null | undefined | LeadDefaultArgs> = $Result.GetResult<Prisma.$LeadPayload, S>
+
+  type LeadCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<LeadFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: LeadCountAggregateInputType | true
+    }
+
+  export interface LeadDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Lead'], meta: { name: 'Lead' } }
+    /**
+     * Find zero or one Lead that matches the filter.
+     * @param {LeadFindUniqueArgs} args - Arguments to find a Lead
+     * @example
+     * // Get one Lead
+     * const lead = await prisma.lead.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends LeadFindUniqueArgs>(args: SelectSubset<T, LeadFindUniqueArgs<ExtArgs>>): Prisma__LeadClient<$Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one Lead that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {LeadFindUniqueOrThrowArgs} args - Arguments to find a Lead
+     * @example
+     * // Get one Lead
+     * const lead = await prisma.lead.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends LeadFindUniqueOrThrowArgs>(args: SelectSubset<T, LeadFindUniqueOrThrowArgs<ExtArgs>>): Prisma__LeadClient<$Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Lead that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LeadFindFirstArgs} args - Arguments to find a Lead
+     * @example
+     * // Get one Lead
+     * const lead = await prisma.lead.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends LeadFindFirstArgs>(args?: SelectSubset<T, LeadFindFirstArgs<ExtArgs>>): Prisma__LeadClient<$Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Lead that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LeadFindFirstOrThrowArgs} args - Arguments to find a Lead
+     * @example
+     * // Get one Lead
+     * const lead = await prisma.lead.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends LeadFindFirstOrThrowArgs>(args?: SelectSubset<T, LeadFindFirstOrThrowArgs<ExtArgs>>): Prisma__LeadClient<$Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more Leads that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LeadFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Leads
+     * const leads = await prisma.lead.findMany()
+     * 
+     * // Get first 10 Leads
+     * const leads = await prisma.lead.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const leadWithIdOnly = await prisma.lead.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends LeadFindManyArgs>(args?: SelectSubset<T, LeadFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a Lead.
+     * @param {LeadCreateArgs} args - Arguments to create a Lead.
+     * @example
+     * // Create one Lead
+     * const Lead = await prisma.lead.create({
+     *   data: {
+     *     // ... data to create a Lead
+     *   }
+     * })
+     * 
+     */
+    create<T extends LeadCreateArgs>(args: SelectSubset<T, LeadCreateArgs<ExtArgs>>): Prisma__LeadClient<$Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many Leads.
+     * @param {LeadCreateManyArgs} args - Arguments to create many Leads.
+     * @example
+     * // Create many Leads
+     * const lead = await prisma.lead.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends LeadCreateManyArgs>(args?: SelectSubset<T, LeadCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a Lead.
+     * @param {LeadDeleteArgs} args - Arguments to delete one Lead.
+     * @example
+     * // Delete one Lead
+     * const Lead = await prisma.lead.delete({
+     *   where: {
+     *     // ... filter to delete one Lead
+     *   }
+     * })
+     * 
+     */
+    delete<T extends LeadDeleteArgs>(args: SelectSubset<T, LeadDeleteArgs<ExtArgs>>): Prisma__LeadClient<$Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one Lead.
+     * @param {LeadUpdateArgs} args - Arguments to update one Lead.
+     * @example
+     * // Update one Lead
+     * const lead = await prisma.lead.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends LeadUpdateArgs>(args: SelectSubset<T, LeadUpdateArgs<ExtArgs>>): Prisma__LeadClient<$Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more Leads.
+     * @param {LeadDeleteManyArgs} args - Arguments to filter Leads to delete.
+     * @example
+     * // Delete a few Leads
+     * const { count } = await prisma.lead.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends LeadDeleteManyArgs>(args?: SelectSubset<T, LeadDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Leads.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LeadUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Leads
+     * const lead = await prisma.lead.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends LeadUpdateManyArgs>(args: SelectSubset<T, LeadUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one Lead.
+     * @param {LeadUpsertArgs} args - Arguments to update or create a Lead.
+     * @example
+     * // Update or create a Lead
+     * const lead = await prisma.lead.upsert({
+     *   create: {
+     *     // ... data to create a Lead
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Lead we want to update
+     *   }
+     * })
+     */
+    upsert<T extends LeadUpsertArgs>(args: SelectSubset<T, LeadUpsertArgs<ExtArgs>>): Prisma__LeadClient<$Result.GetResult<Prisma.$LeadPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of Leads.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LeadCountArgs} args - Arguments to filter Leads to count.
+     * @example
+     * // Count the number of Leads
+     * const count = await prisma.lead.count({
+     *   where: {
+     *     // ... the filter for the Leads we want to count
+     *   }
+     * })
+    **/
+    count<T extends LeadCountArgs>(
+      args?: Subset<T, LeadCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], LeadCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Lead.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LeadAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends LeadAggregateArgs>(args: Subset<T, LeadAggregateArgs>): Prisma.PrismaPromise<GetLeadAggregateType<T>>
+
+    /**
+     * Group by Lead.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {LeadGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends LeadGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: LeadGroupByArgs['orderBy'] }
+        : { orderBy?: LeadGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, LeadGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetLeadGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the Lead model
+   */
+  readonly fields: LeadFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for Lead.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__LeadClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the Lead model
+   */
+  interface LeadFieldRefs {
+    readonly id: FieldRef<"Lead", 'String'>
+    readonly name: FieldRef<"Lead", 'String'>
+    readonly whatsapp: FieldRef<"Lead", 'String'>
+    readonly status: FieldRef<"Lead", 'String'>
+    readonly source: FieldRef<"Lead", 'String'>
+    readonly notes: FieldRef<"Lead", 'String'>
+    readonly createdAt: FieldRef<"Lead", 'DateTime'>
+    readonly updatedAt: FieldRef<"Lead", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * Lead findUnique
+   */
+  export type LeadFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Lead
+     */
+    select?: LeadSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Lead
+     */
+    omit?: LeadOmit<ExtArgs> | null
+    /**
+     * Filter, which Lead to fetch.
+     */
+    where: LeadWhereUniqueInput
+  }
+
+  /**
+   * Lead findUniqueOrThrow
+   */
+  export type LeadFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Lead
+     */
+    select?: LeadSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Lead
+     */
+    omit?: LeadOmit<ExtArgs> | null
+    /**
+     * Filter, which Lead to fetch.
+     */
+    where: LeadWhereUniqueInput
+  }
+
+  /**
+   * Lead findFirst
+   */
+  export type LeadFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Lead
+     */
+    select?: LeadSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Lead
+     */
+    omit?: LeadOmit<ExtArgs> | null
+    /**
+     * Filter, which Lead to fetch.
+     */
+    where?: LeadWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Leads to fetch.
+     */
+    orderBy?: LeadOrderByWithRelationInput | LeadOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Leads.
+     */
+    cursor?: LeadWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Leads from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Leads.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Leads.
+     */
+    distinct?: LeadScalarFieldEnum | LeadScalarFieldEnum[]
+  }
+
+  /**
+   * Lead findFirstOrThrow
+   */
+  export type LeadFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Lead
+     */
+    select?: LeadSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Lead
+     */
+    omit?: LeadOmit<ExtArgs> | null
+    /**
+     * Filter, which Lead to fetch.
+     */
+    where?: LeadWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Leads to fetch.
+     */
+    orderBy?: LeadOrderByWithRelationInput | LeadOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Leads.
+     */
+    cursor?: LeadWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Leads from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Leads.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Leads.
+     */
+    distinct?: LeadScalarFieldEnum | LeadScalarFieldEnum[]
+  }
+
+  /**
+   * Lead findMany
+   */
+  export type LeadFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Lead
+     */
+    select?: LeadSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Lead
+     */
+    omit?: LeadOmit<ExtArgs> | null
+    /**
+     * Filter, which Leads to fetch.
+     */
+    where?: LeadWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Leads to fetch.
+     */
+    orderBy?: LeadOrderByWithRelationInput | LeadOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing Leads.
+     */
+    cursor?: LeadWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Leads from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Leads.
+     */
+    skip?: number
+    distinct?: LeadScalarFieldEnum | LeadScalarFieldEnum[]
+  }
+
+  /**
+   * Lead create
+   */
+  export type LeadCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Lead
+     */
+    select?: LeadSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Lead
+     */
+    omit?: LeadOmit<ExtArgs> | null
+    /**
+     * The data needed to create a Lead.
+     */
+    data: XOR<LeadCreateInput, LeadUncheckedCreateInput>
+  }
+
+  /**
+   * Lead createMany
+   */
+  export type LeadCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many Leads.
+     */
+    data: LeadCreateManyInput | LeadCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * Lead update
+   */
+  export type LeadUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Lead
+     */
+    select?: LeadSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Lead
+     */
+    omit?: LeadOmit<ExtArgs> | null
+    /**
+     * The data needed to update a Lead.
+     */
+    data: XOR<LeadUpdateInput, LeadUncheckedUpdateInput>
+    /**
+     * Choose, which Lead to update.
+     */
+    where: LeadWhereUniqueInput
+  }
+
+  /**
+   * Lead updateMany
+   */
+  export type LeadUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update Leads.
+     */
+    data: XOR<LeadUpdateManyMutationInput, LeadUncheckedUpdateManyInput>
+    /**
+     * Filter which Leads to update
+     */
+    where?: LeadWhereInput
+    /**
+     * Limit how many Leads to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * Lead upsert
+   */
+  export type LeadUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Lead
+     */
+    select?: LeadSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Lead
+     */
+    omit?: LeadOmit<ExtArgs> | null
+    /**
+     * The filter to search for the Lead to update in case it exists.
+     */
+    where: LeadWhereUniqueInput
+    /**
+     * In case the Lead found by the `where` argument doesn't exist, create a new Lead with this data.
+     */
+    create: XOR<LeadCreateInput, LeadUncheckedCreateInput>
+    /**
+     * In case the Lead was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<LeadUpdateInput, LeadUncheckedUpdateInput>
+  }
+
+  /**
+   * Lead delete
+   */
+  export type LeadDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Lead
+     */
+    select?: LeadSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Lead
+     */
+    omit?: LeadOmit<ExtArgs> | null
+    /**
+     * Filter which Lead to delete.
+     */
+    where: LeadWhereUniqueInput
+  }
+
+  /**
+   * Lead deleteMany
+   */
+  export type LeadDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Leads to delete
+     */
+    where?: LeadWhereInput
+    /**
+     * Limit how many Leads to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * Lead without action
+   */
+  export type LeadDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Lead
+     */
+    select?: LeadSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Lead
+     */
+    omit?: LeadOmit<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -6391,6 +18334,7 @@ export namespace Prisma {
     status: 'status',
     logoUrl: 'logoUrl',
     modulos: 'modulos',
+    tvPublicId: 'tvPublicId',
     razaoSocial: 'razaoSocial',
     nomeFantasia: 'nomeFantasia',
     cnpj: 'cnpj',
@@ -6419,6 +18363,9 @@ export namespace Prisma {
     cosmosApiKey: 'cosmosApiKey',
     mensalidadeValor: 'mensalidadeValor',
     mensalidadeVencimento: 'mensalidadeVencimento',
+    telefoneContato: 'telefoneContato',
+    emailContato: 'emailContato',
+    observacoes: 'observacoes',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
     termsAcceptedAt: 'termsAcceptedAt'
@@ -6436,6 +18383,7 @@ export namespace Prisma {
     role: 'role',
     pin: 'pin',
     active: 'active',
+    groupId: 'groupId',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -6482,6 +18430,155 @@ export namespace Prisma {
   };
 
   export type TenantIntegrationScalarFieldEnum = (typeof TenantIntegrationScalarFieldEnum)[keyof typeof TenantIntegrationScalarFieldEnum]
+
+
+  export const TenantGroupScalarFieldEnum: {
+    id: 'id',
+    name: 'name',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type TenantGroupScalarFieldEnum = (typeof TenantGroupScalarFieldEnum)[keyof typeof TenantGroupScalarFieldEnum]
+
+
+  export const TenantGroupMemberScalarFieldEnum: {
+    id: 'id',
+    groupId: 'groupId',
+    tenantId: 'tenantId',
+    alias: 'alias'
+  };
+
+  export type TenantGroupMemberScalarFieldEnum = (typeof TenantGroupMemberScalarFieldEnum)[keyof typeof TenantGroupMemberScalarFieldEnum]
+
+
+  export const NfeSyncStateScalarFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    ultimoNSU: 'ultimoNSU',
+    ultimaConsulta: 'ultimaConsulta',
+    status: 'status',
+    notasBaixadas: 'notasBaixadas',
+    tempoGastoMs: 'tempoGastoMs',
+    lastError: 'lastError',
+    correlationId: 'correlationId',
+    lastDiagnostico: 'lastDiagnostico',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type NfeSyncStateScalarFieldEnum = (typeof NfeSyncStateScalarFieldEnum)[keyof typeof NfeSyncStateScalarFieldEnum]
+
+
+  export const StoreProfileScalarFieldEnum: {
+    id: 'id',
+    slug: 'slug',
+    name: 'name',
+    icon: 'icon',
+    description: 'description'
+  };
+
+  export type StoreProfileScalarFieldEnum = (typeof StoreProfileScalarFieldEnum)[keyof typeof StoreProfileScalarFieldEnum]
+
+
+  export const StoreProfileFiscalScalarFieldEnum: {
+    storeProfileId: 'storeProfileId',
+    fiscalProfileId: 'fiscalProfileId'
+  };
+
+  export type StoreProfileFiscalScalarFieldEnum = (typeof StoreProfileFiscalScalarFieldEnum)[keyof typeof StoreProfileFiscalScalarFieldEnum]
+
+
+  export const FiscalProfileScalarFieldEnum: {
+    id: 'id',
+    name: 'name',
+    icon: 'icon',
+    group: 'group',
+    description: 'description',
+    scope: 'scope',
+    tenantId: 'tenantId',
+    version: 'version',
+    status: 'status',
+    emiteNfce: 'emiteNfce',
+    ncm: 'ncm',
+    cest: 'cest',
+    unit: 'unit',
+    observacoes: 'observacoes'
+  };
+
+  export type FiscalProfileScalarFieldEnum = (typeof FiscalProfileScalarFieldEnum)[keyof typeof FiscalProfileScalarFieldEnum]
+
+
+  export const FiscalTaxRuleScalarFieldEnum: {
+    id: 'id',
+    fiscalProfileId: 'fiscalProfileId',
+    regime: 'regime',
+    csosn: 'csosn',
+    cstIcms: 'cstIcms',
+    aliqIcms: 'aliqIcms',
+    cstPis: 'cstPis',
+    aliqPis: 'aliqPis',
+    cstCofins: 'cstCofins',
+    aliqCofins: 'aliqCofins',
+    ibsCst: 'ibsCst',
+    ibsAliq: 'ibsAliq',
+    cbsCst: 'cbsCst',
+    cbsAliq: 'cbsAliq',
+    validFrom: 'validFrom',
+    validUntil: 'validUntil'
+  };
+
+  export type FiscalTaxRuleScalarFieldEnum = (typeof FiscalTaxRuleScalarFieldEnum)[keyof typeof FiscalTaxRuleScalarFieldEnum]
+
+
+  export const FiscalProfileHistoryScalarFieldEnum: {
+    id: 'id',
+    fiscalProfileId: 'fiscalProfileId',
+    changedBy: 'changedBy',
+    changedAt: 'changedAt',
+    field: 'field',
+    oldValue: 'oldValue',
+    newValue: 'newValue',
+    reason: 'reason'
+  };
+
+  export type FiscalProfileHistoryScalarFieldEnum = (typeof FiscalProfileHistoryScalarFieldEnum)[keyof typeof FiscalProfileHistoryScalarFieldEnum]
+
+
+  export const FiscalFavoriteScalarFieldEnum: {
+    tenantId: 'tenantId',
+    fiscalProfileId: 'fiscalProfileId'
+  };
+
+  export type FiscalFavoriteScalarFieldEnum = (typeof FiscalFavoriteScalarFieldEnum)[keyof typeof FiscalFavoriteScalarFieldEnum]
+
+
+  export const PaymentLogScalarFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    valor: 'valor',
+    vencimentoAntes: 'vencimentoAntes',
+    vencimentoApos: 'vencimentoApos',
+    observacao: 'observacao',
+    registradoPor: 'registradoPor',
+    createdAt: 'createdAt'
+  };
+
+  export type PaymentLogScalarFieldEnum = (typeof PaymentLogScalarFieldEnum)[keyof typeof PaymentLogScalarFieldEnum]
+
+
+  export const LeadScalarFieldEnum: {
+    id: 'id',
+    name: 'name',
+    whatsapp: 'whatsapp',
+    status: 'status',
+    source: 'source',
+    notes: 'notes',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type LeadScalarFieldEnum = (typeof LeadScalarFieldEnum)[keyof typeof LeadScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -6539,6 +18636,7 @@ export namespace Prisma {
     name: 'name',
     status: 'status',
     logoUrl: 'logoUrl',
+    tvPublicId: 'tvPublicId',
     razaoSocial: 'razaoSocial',
     nomeFantasia: 'nomeFantasia',
     cnpj: 'cnpj',
@@ -6557,7 +18655,10 @@ export namespace Prisma {
     nfceCsc: 'nfceCsc',
     nfceIdCsc: 'nfceIdCsc',
     certSenha: 'certSenha',
-    cosmosApiKey: 'cosmosApiKey'
+    cosmosApiKey: 'cosmosApiKey',
+    telefoneContato: 'telefoneContato',
+    emailContato: 'emailContato',
+    observacoes: 'observacoes'
   };
 
   export type TenantOrderByRelevanceFieldEnum = (typeof TenantOrderByRelevanceFieldEnum)[keyof typeof TenantOrderByRelevanceFieldEnum]
@@ -6570,7 +18671,8 @@ export namespace Prisma {
     email: 'email',
     password: 'password',
     role: 'role',
-    pin: 'pin'
+    pin: 'pin',
+    groupId: 'groupId'
   };
 
   export type UserOrderByRelevanceFieldEnum = (typeof UserOrderByRelevanceFieldEnum)[keyof typeof UserOrderByRelevanceFieldEnum]
@@ -6608,6 +18710,132 @@ export namespace Prisma {
   };
 
   export type TenantIntegrationOrderByRelevanceFieldEnum = (typeof TenantIntegrationOrderByRelevanceFieldEnum)[keyof typeof TenantIntegrationOrderByRelevanceFieldEnum]
+
+
+  export const TenantGroupOrderByRelevanceFieldEnum: {
+    id: 'id',
+    name: 'name'
+  };
+
+  export type TenantGroupOrderByRelevanceFieldEnum = (typeof TenantGroupOrderByRelevanceFieldEnum)[keyof typeof TenantGroupOrderByRelevanceFieldEnum]
+
+
+  export const TenantGroupMemberOrderByRelevanceFieldEnum: {
+    id: 'id',
+    groupId: 'groupId',
+    tenantId: 'tenantId',
+    alias: 'alias'
+  };
+
+  export type TenantGroupMemberOrderByRelevanceFieldEnum = (typeof TenantGroupMemberOrderByRelevanceFieldEnum)[keyof typeof TenantGroupMemberOrderByRelevanceFieldEnum]
+
+
+  export const NfeSyncStateOrderByRelevanceFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    ultimoNSU: 'ultimoNSU',
+    status: 'status',
+    lastError: 'lastError',
+    correlationId: 'correlationId'
+  };
+
+  export type NfeSyncStateOrderByRelevanceFieldEnum = (typeof NfeSyncStateOrderByRelevanceFieldEnum)[keyof typeof NfeSyncStateOrderByRelevanceFieldEnum]
+
+
+  export const StoreProfileOrderByRelevanceFieldEnum: {
+    id: 'id',
+    slug: 'slug',
+    name: 'name',
+    icon: 'icon',
+    description: 'description'
+  };
+
+  export type StoreProfileOrderByRelevanceFieldEnum = (typeof StoreProfileOrderByRelevanceFieldEnum)[keyof typeof StoreProfileOrderByRelevanceFieldEnum]
+
+
+  export const StoreProfileFiscalOrderByRelevanceFieldEnum: {
+    storeProfileId: 'storeProfileId',
+    fiscalProfileId: 'fiscalProfileId'
+  };
+
+  export type StoreProfileFiscalOrderByRelevanceFieldEnum = (typeof StoreProfileFiscalOrderByRelevanceFieldEnum)[keyof typeof StoreProfileFiscalOrderByRelevanceFieldEnum]
+
+
+  export const FiscalProfileOrderByRelevanceFieldEnum: {
+    id: 'id',
+    name: 'name',
+    icon: 'icon',
+    group: 'group',
+    description: 'description',
+    scope: 'scope',
+    tenantId: 'tenantId',
+    version: 'version',
+    status: 'status',
+    ncm: 'ncm',
+    cest: 'cest',
+    unit: 'unit',
+    observacoes: 'observacoes'
+  };
+
+  export type FiscalProfileOrderByRelevanceFieldEnum = (typeof FiscalProfileOrderByRelevanceFieldEnum)[keyof typeof FiscalProfileOrderByRelevanceFieldEnum]
+
+
+  export const FiscalTaxRuleOrderByRelevanceFieldEnum: {
+    id: 'id',
+    fiscalProfileId: 'fiscalProfileId',
+    regime: 'regime',
+    csosn: 'csosn',
+    cstIcms: 'cstIcms',
+    cstPis: 'cstPis',
+    cstCofins: 'cstCofins',
+    ibsCst: 'ibsCst',
+    cbsCst: 'cbsCst'
+  };
+
+  export type FiscalTaxRuleOrderByRelevanceFieldEnum = (typeof FiscalTaxRuleOrderByRelevanceFieldEnum)[keyof typeof FiscalTaxRuleOrderByRelevanceFieldEnum]
+
+
+  export const FiscalProfileHistoryOrderByRelevanceFieldEnum: {
+    id: 'id',
+    fiscalProfileId: 'fiscalProfileId',
+    changedBy: 'changedBy',
+    field: 'field',
+    oldValue: 'oldValue',
+    newValue: 'newValue',
+    reason: 'reason'
+  };
+
+  export type FiscalProfileHistoryOrderByRelevanceFieldEnum = (typeof FiscalProfileHistoryOrderByRelevanceFieldEnum)[keyof typeof FiscalProfileHistoryOrderByRelevanceFieldEnum]
+
+
+  export const FiscalFavoriteOrderByRelevanceFieldEnum: {
+    tenantId: 'tenantId',
+    fiscalProfileId: 'fiscalProfileId'
+  };
+
+  export type FiscalFavoriteOrderByRelevanceFieldEnum = (typeof FiscalFavoriteOrderByRelevanceFieldEnum)[keyof typeof FiscalFavoriteOrderByRelevanceFieldEnum]
+
+
+  export const PaymentLogOrderByRelevanceFieldEnum: {
+    id: 'id',
+    tenantId: 'tenantId',
+    observacao: 'observacao',
+    registradoPor: 'registradoPor'
+  };
+
+  export type PaymentLogOrderByRelevanceFieldEnum = (typeof PaymentLogOrderByRelevanceFieldEnum)[keyof typeof PaymentLogOrderByRelevanceFieldEnum]
+
+
+  export const LeadOrderByRelevanceFieldEnum: {
+    id: 'id',
+    name: 'name',
+    whatsapp: 'whatsapp',
+    status: 'status',
+    source: 'source',
+    notes: 'notes'
+  };
+
+  export type LeadOrderByRelevanceFieldEnum = (typeof LeadOrderByRelevanceFieldEnum)[keyof typeof LeadOrderByRelevanceFieldEnum]
 
 
   /**
@@ -6692,6 +18920,7 @@ export namespace Prisma {
     status?: StringFilter<"Tenant"> | string
     logoUrl?: StringNullableFilter<"Tenant"> | string | null
     modulos?: JsonNullableFilter<"Tenant">
+    tvPublicId?: StringNullableFilter<"Tenant"> | string | null
     razaoSocial?: StringNullableFilter<"Tenant"> | string | null
     nomeFantasia?: StringNullableFilter<"Tenant"> | string | null
     cnpj?: StringNullableFilter<"Tenant"> | string | null
@@ -6720,11 +18949,16 @@ export namespace Prisma {
     cosmosApiKey?: StringNullableFilter<"Tenant"> | string | null
     mensalidadeValor?: DecimalNullableFilter<"Tenant"> | Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: DateTimeNullableFilter<"Tenant"> | Date | string | null
+    telefoneContato?: StringNullableFilter<"Tenant"> | string | null
+    emailContato?: StringNullableFilter<"Tenant"> | string | null
+    observacoes?: StringNullableFilter<"Tenant"> | string | null
     createdAt?: DateTimeFilter<"Tenant"> | Date | string
     updatedAt?: DateTimeFilter<"Tenant"> | Date | string
     termsAcceptedAt?: DateTimeNullableFilter<"Tenant"> | Date | string | null
     users?: UserListRelationFilter
     tenantIntegrations?: TenantIntegrationListRelationFilter
+    groupMembers?: TenantGroupMemberListRelationFilter
+    paymentLogs?: PaymentLogListRelationFilter
   }
 
   export type TenantOrderByWithRelationInput = {
@@ -6735,6 +18969,7 @@ export namespace Prisma {
     status?: SortOrder
     logoUrl?: SortOrderInput | SortOrder
     modulos?: SortOrderInput | SortOrder
+    tvPublicId?: SortOrderInput | SortOrder
     razaoSocial?: SortOrderInput | SortOrder
     nomeFantasia?: SortOrderInput | SortOrder
     cnpj?: SortOrderInput | SortOrder
@@ -6763,17 +18998,23 @@ export namespace Prisma {
     cosmosApiKey?: SortOrderInput | SortOrder
     mensalidadeValor?: SortOrderInput | SortOrder
     mensalidadeVencimento?: SortOrderInput | SortOrder
+    telefoneContato?: SortOrderInput | SortOrder
+    emailContato?: SortOrderInput | SortOrder
+    observacoes?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     termsAcceptedAt?: SortOrderInput | SortOrder
     users?: UserOrderByRelationAggregateInput
     tenantIntegrations?: TenantIntegrationOrderByRelationAggregateInput
+    groupMembers?: TenantGroupMemberOrderByRelationAggregateInput
+    paymentLogs?: PaymentLogOrderByRelationAggregateInput
     _relevance?: TenantOrderByRelevanceInput
   }
 
   export type TenantWhereUniqueInput = Prisma.AtLeast<{
     id?: string
     databaseName?: string
+    tvPublicId?: string
     cnpj?: string
     AND?: TenantWhereInput | TenantWhereInput[]
     OR?: TenantWhereInput[]
@@ -6810,12 +19051,17 @@ export namespace Prisma {
     cosmosApiKey?: StringNullableFilter<"Tenant"> | string | null
     mensalidadeValor?: DecimalNullableFilter<"Tenant"> | Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: DateTimeNullableFilter<"Tenant"> | Date | string | null
+    telefoneContato?: StringNullableFilter<"Tenant"> | string | null
+    emailContato?: StringNullableFilter<"Tenant"> | string | null
+    observacoes?: StringNullableFilter<"Tenant"> | string | null
     createdAt?: DateTimeFilter<"Tenant"> | Date | string
     updatedAt?: DateTimeFilter<"Tenant"> | Date | string
     termsAcceptedAt?: DateTimeNullableFilter<"Tenant"> | Date | string | null
     users?: UserListRelationFilter
     tenantIntegrations?: TenantIntegrationListRelationFilter
-  }, "id" | "databaseName" | "cnpj">
+    groupMembers?: TenantGroupMemberListRelationFilter
+    paymentLogs?: PaymentLogListRelationFilter
+  }, "id" | "databaseName" | "tvPublicId" | "cnpj">
 
   export type TenantOrderByWithAggregationInput = {
     id?: SortOrder
@@ -6825,6 +19071,7 @@ export namespace Prisma {
     status?: SortOrder
     logoUrl?: SortOrderInput | SortOrder
     modulos?: SortOrderInput | SortOrder
+    tvPublicId?: SortOrderInput | SortOrder
     razaoSocial?: SortOrderInput | SortOrder
     nomeFantasia?: SortOrderInput | SortOrder
     cnpj?: SortOrderInput | SortOrder
@@ -6853,6 +19100,9 @@ export namespace Prisma {
     cosmosApiKey?: SortOrderInput | SortOrder
     mensalidadeValor?: SortOrderInput | SortOrder
     mensalidadeVencimento?: SortOrderInput | SortOrder
+    telefoneContato?: SortOrderInput | SortOrder
+    emailContato?: SortOrderInput | SortOrder
+    observacoes?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     termsAcceptedAt?: SortOrderInput | SortOrder
@@ -6874,6 +19124,7 @@ export namespace Prisma {
     status?: StringWithAggregatesFilter<"Tenant"> | string
     logoUrl?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     modulos?: JsonNullableWithAggregatesFilter<"Tenant">
+    tvPublicId?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     razaoSocial?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     nomeFantasia?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     cnpj?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
@@ -6902,6 +19153,9 @@ export namespace Prisma {
     cosmosApiKey?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     mensalidadeValor?: DecimalNullableWithAggregatesFilter<"Tenant"> | Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: DateTimeNullableWithAggregatesFilter<"Tenant"> | Date | string | null
+    telefoneContato?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
+    emailContato?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
+    observacoes?: StringNullableWithAggregatesFilter<"Tenant"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Tenant"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Tenant"> | Date | string
     termsAcceptedAt?: DateTimeNullableWithAggregatesFilter<"Tenant"> | Date | string | null
@@ -6919,9 +19173,11 @@ export namespace Prisma {
     role?: StringFilter<"User"> | string
     pin?: StringNullableFilter<"User"> | string | null
     active?: BoolFilter<"User"> | boolean
+    groupId?: StringNullableFilter<"User"> | string | null
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     tenant?: XOR<TenantScalarRelationFilter, TenantWhereInput>
+    group?: XOR<TenantGroupNullableScalarRelationFilter, TenantGroupWhereInput> | null
   }
 
   export type UserOrderByWithRelationInput = {
@@ -6933,9 +19189,11 @@ export namespace Prisma {
     role?: SortOrder
     pin?: SortOrderInput | SortOrder
     active?: SortOrder
+    groupId?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     tenant?: TenantOrderByWithRelationInput
+    group?: TenantGroupOrderByWithRelationInput
     _relevance?: UserOrderByRelevanceInput
   }
 
@@ -6951,9 +19209,11 @@ export namespace Prisma {
     role?: StringFilter<"User"> | string
     pin?: StringNullableFilter<"User"> | string | null
     active?: BoolFilter<"User"> | boolean
+    groupId?: StringNullableFilter<"User"> | string | null
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
     tenant?: XOR<TenantScalarRelationFilter, TenantWhereInput>
+    group?: XOR<TenantGroupNullableScalarRelationFilter, TenantGroupWhereInput> | null
   }, "id" | "email">
 
   export type UserOrderByWithAggregationInput = {
@@ -6965,6 +19225,7 @@ export namespace Prisma {
     role?: SortOrder
     pin?: SortOrderInput | SortOrder
     active?: SortOrder
+    groupId?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: UserCountOrderByAggregateInput
@@ -6984,6 +19245,7 @@ export namespace Prisma {
     role?: StringWithAggregatesFilter<"User"> | string
     pin?: StringNullableWithAggregatesFilter<"User"> | string | null
     active?: BoolWithAggregatesFilter<"User"> | boolean
+    groupId?: StringNullableWithAggregatesFilter<"User"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
   }
@@ -6993,7 +19255,7 @@ export namespace Prisma {
     OR?: MasterProductWhereInput[]
     NOT?: MasterProductWhereInput | MasterProductWhereInput[]
     id?: StringFilter<"MasterProduct"> | string
-    ean?: StringFilter<"MasterProduct"> | string
+    ean?: StringNullableFilter<"MasterProduct"> | string | null
     name?: StringFilter<"MasterProduct"> | string
     brand?: StringNullableFilter<"MasterProduct"> | string | null
     ncm?: StringNullableFilter<"MasterProduct"> | string | null
@@ -7007,7 +19269,7 @@ export namespace Prisma {
 
   export type MasterProductOrderByWithRelationInput = {
     id?: SortOrder
-    ean?: SortOrder
+    ean?: SortOrderInput | SortOrder
     name?: SortOrder
     brand?: SortOrderInput | SortOrder
     ncm?: SortOrderInput | SortOrder
@@ -7039,7 +19301,7 @@ export namespace Prisma {
 
   export type MasterProductOrderByWithAggregationInput = {
     id?: SortOrder
-    ean?: SortOrder
+    ean?: SortOrderInput | SortOrder
     name?: SortOrder
     brand?: SortOrderInput | SortOrder
     ncm?: SortOrderInput | SortOrder
@@ -7059,7 +19321,7 @@ export namespace Prisma {
     OR?: MasterProductScalarWhereWithAggregatesInput[]
     NOT?: MasterProductScalarWhereWithAggregatesInput | MasterProductScalarWhereWithAggregatesInput[]
     id?: StringWithAggregatesFilter<"MasterProduct"> | string
-    ean?: StringWithAggregatesFilter<"MasterProduct"> | string
+    ean?: StringNullableWithAggregatesFilter<"MasterProduct"> | string | null
     name?: StringWithAggregatesFilter<"MasterProduct"> | string
     brand?: StringNullableWithAggregatesFilter<"MasterProduct"> | string | null
     ncm?: StringNullableWithAggregatesFilter<"MasterProduct"> | string | null
@@ -7191,6 +19453,783 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"TenantIntegration"> | Date | string
   }
 
+  export type TenantGroupWhereInput = {
+    AND?: TenantGroupWhereInput | TenantGroupWhereInput[]
+    OR?: TenantGroupWhereInput[]
+    NOT?: TenantGroupWhereInput | TenantGroupWhereInput[]
+    id?: StringFilter<"TenantGroup"> | string
+    name?: StringFilter<"TenantGroup"> | string
+    createdAt?: DateTimeFilter<"TenantGroup"> | Date | string
+    updatedAt?: DateTimeFilter<"TenantGroup"> | Date | string
+    members?: TenantGroupMemberListRelationFilter
+    users?: UserListRelationFilter
+  }
+
+  export type TenantGroupOrderByWithRelationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    members?: TenantGroupMemberOrderByRelationAggregateInput
+    users?: UserOrderByRelationAggregateInput
+    _relevance?: TenantGroupOrderByRelevanceInput
+  }
+
+  export type TenantGroupWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: TenantGroupWhereInput | TenantGroupWhereInput[]
+    OR?: TenantGroupWhereInput[]
+    NOT?: TenantGroupWhereInput | TenantGroupWhereInput[]
+    name?: StringFilter<"TenantGroup"> | string
+    createdAt?: DateTimeFilter<"TenantGroup"> | Date | string
+    updatedAt?: DateTimeFilter<"TenantGroup"> | Date | string
+    members?: TenantGroupMemberListRelationFilter
+    users?: UserListRelationFilter
+  }, "id">
+
+  export type TenantGroupOrderByWithAggregationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: TenantGroupCountOrderByAggregateInput
+    _max?: TenantGroupMaxOrderByAggregateInput
+    _min?: TenantGroupMinOrderByAggregateInput
+  }
+
+  export type TenantGroupScalarWhereWithAggregatesInput = {
+    AND?: TenantGroupScalarWhereWithAggregatesInput | TenantGroupScalarWhereWithAggregatesInput[]
+    OR?: TenantGroupScalarWhereWithAggregatesInput[]
+    NOT?: TenantGroupScalarWhereWithAggregatesInput | TenantGroupScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"TenantGroup"> | string
+    name?: StringWithAggregatesFilter<"TenantGroup"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"TenantGroup"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"TenantGroup"> | Date | string
+  }
+
+  export type TenantGroupMemberWhereInput = {
+    AND?: TenantGroupMemberWhereInput | TenantGroupMemberWhereInput[]
+    OR?: TenantGroupMemberWhereInput[]
+    NOT?: TenantGroupMemberWhereInput | TenantGroupMemberWhereInput[]
+    id?: StringFilter<"TenantGroupMember"> | string
+    groupId?: StringFilter<"TenantGroupMember"> | string
+    tenantId?: StringFilter<"TenantGroupMember"> | string
+    alias?: StringNullableFilter<"TenantGroupMember"> | string | null
+    group?: XOR<TenantGroupScalarRelationFilter, TenantGroupWhereInput>
+    tenant?: XOR<TenantScalarRelationFilter, TenantWhereInput>
+  }
+
+  export type TenantGroupMemberOrderByWithRelationInput = {
+    id?: SortOrder
+    groupId?: SortOrder
+    tenantId?: SortOrder
+    alias?: SortOrderInput | SortOrder
+    group?: TenantGroupOrderByWithRelationInput
+    tenant?: TenantOrderByWithRelationInput
+    _relevance?: TenantGroupMemberOrderByRelevanceInput
+  }
+
+  export type TenantGroupMemberWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    groupId_tenantId?: TenantGroupMemberGroupIdTenantIdCompoundUniqueInput
+    AND?: TenantGroupMemberWhereInput | TenantGroupMemberWhereInput[]
+    OR?: TenantGroupMemberWhereInput[]
+    NOT?: TenantGroupMemberWhereInput | TenantGroupMemberWhereInput[]
+    groupId?: StringFilter<"TenantGroupMember"> | string
+    tenantId?: StringFilter<"TenantGroupMember"> | string
+    alias?: StringNullableFilter<"TenantGroupMember"> | string | null
+    group?: XOR<TenantGroupScalarRelationFilter, TenantGroupWhereInput>
+    tenant?: XOR<TenantScalarRelationFilter, TenantWhereInput>
+  }, "id" | "groupId_tenantId">
+
+  export type TenantGroupMemberOrderByWithAggregationInput = {
+    id?: SortOrder
+    groupId?: SortOrder
+    tenantId?: SortOrder
+    alias?: SortOrderInput | SortOrder
+    _count?: TenantGroupMemberCountOrderByAggregateInput
+    _max?: TenantGroupMemberMaxOrderByAggregateInput
+    _min?: TenantGroupMemberMinOrderByAggregateInput
+  }
+
+  export type TenantGroupMemberScalarWhereWithAggregatesInput = {
+    AND?: TenantGroupMemberScalarWhereWithAggregatesInput | TenantGroupMemberScalarWhereWithAggregatesInput[]
+    OR?: TenantGroupMemberScalarWhereWithAggregatesInput[]
+    NOT?: TenantGroupMemberScalarWhereWithAggregatesInput | TenantGroupMemberScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"TenantGroupMember"> | string
+    groupId?: StringWithAggregatesFilter<"TenantGroupMember"> | string
+    tenantId?: StringWithAggregatesFilter<"TenantGroupMember"> | string
+    alias?: StringNullableWithAggregatesFilter<"TenantGroupMember"> | string | null
+  }
+
+  export type NfeSyncStateWhereInput = {
+    AND?: NfeSyncStateWhereInput | NfeSyncStateWhereInput[]
+    OR?: NfeSyncStateWhereInput[]
+    NOT?: NfeSyncStateWhereInput | NfeSyncStateWhereInput[]
+    id?: StringFilter<"NfeSyncState"> | string
+    tenantId?: StringFilter<"NfeSyncState"> | string
+    ultimoNSU?: StringFilter<"NfeSyncState"> | string
+    ultimaConsulta?: DateTimeNullableFilter<"NfeSyncState"> | Date | string | null
+    status?: StringFilter<"NfeSyncState"> | string
+    notasBaixadas?: IntFilter<"NfeSyncState"> | number
+    tempoGastoMs?: IntFilter<"NfeSyncState"> | number
+    lastError?: StringNullableFilter<"NfeSyncState"> | string | null
+    correlationId?: StringNullableFilter<"NfeSyncState"> | string | null
+    lastDiagnostico?: JsonNullableFilter<"NfeSyncState">
+    createdAt?: DateTimeFilter<"NfeSyncState"> | Date | string
+    updatedAt?: DateTimeFilter<"NfeSyncState"> | Date | string
+  }
+
+  export type NfeSyncStateOrderByWithRelationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    ultimoNSU?: SortOrder
+    ultimaConsulta?: SortOrderInput | SortOrder
+    status?: SortOrder
+    notasBaixadas?: SortOrder
+    tempoGastoMs?: SortOrder
+    lastError?: SortOrderInput | SortOrder
+    correlationId?: SortOrderInput | SortOrder
+    lastDiagnostico?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _relevance?: NfeSyncStateOrderByRelevanceInput
+  }
+
+  export type NfeSyncStateWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    tenantId?: string
+    AND?: NfeSyncStateWhereInput | NfeSyncStateWhereInput[]
+    OR?: NfeSyncStateWhereInput[]
+    NOT?: NfeSyncStateWhereInput | NfeSyncStateWhereInput[]
+    ultimoNSU?: StringFilter<"NfeSyncState"> | string
+    ultimaConsulta?: DateTimeNullableFilter<"NfeSyncState"> | Date | string | null
+    status?: StringFilter<"NfeSyncState"> | string
+    notasBaixadas?: IntFilter<"NfeSyncState"> | number
+    tempoGastoMs?: IntFilter<"NfeSyncState"> | number
+    lastError?: StringNullableFilter<"NfeSyncState"> | string | null
+    correlationId?: StringNullableFilter<"NfeSyncState"> | string | null
+    lastDiagnostico?: JsonNullableFilter<"NfeSyncState">
+    createdAt?: DateTimeFilter<"NfeSyncState"> | Date | string
+    updatedAt?: DateTimeFilter<"NfeSyncState"> | Date | string
+  }, "id" | "tenantId">
+
+  export type NfeSyncStateOrderByWithAggregationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    ultimoNSU?: SortOrder
+    ultimaConsulta?: SortOrderInput | SortOrder
+    status?: SortOrder
+    notasBaixadas?: SortOrder
+    tempoGastoMs?: SortOrder
+    lastError?: SortOrderInput | SortOrder
+    correlationId?: SortOrderInput | SortOrder
+    lastDiagnostico?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: NfeSyncStateCountOrderByAggregateInput
+    _avg?: NfeSyncStateAvgOrderByAggregateInput
+    _max?: NfeSyncStateMaxOrderByAggregateInput
+    _min?: NfeSyncStateMinOrderByAggregateInput
+    _sum?: NfeSyncStateSumOrderByAggregateInput
+  }
+
+  export type NfeSyncStateScalarWhereWithAggregatesInput = {
+    AND?: NfeSyncStateScalarWhereWithAggregatesInput | NfeSyncStateScalarWhereWithAggregatesInput[]
+    OR?: NfeSyncStateScalarWhereWithAggregatesInput[]
+    NOT?: NfeSyncStateScalarWhereWithAggregatesInput | NfeSyncStateScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"NfeSyncState"> | string
+    tenantId?: StringWithAggregatesFilter<"NfeSyncState"> | string
+    ultimoNSU?: StringWithAggregatesFilter<"NfeSyncState"> | string
+    ultimaConsulta?: DateTimeNullableWithAggregatesFilter<"NfeSyncState"> | Date | string | null
+    status?: StringWithAggregatesFilter<"NfeSyncState"> | string
+    notasBaixadas?: IntWithAggregatesFilter<"NfeSyncState"> | number
+    tempoGastoMs?: IntWithAggregatesFilter<"NfeSyncState"> | number
+    lastError?: StringNullableWithAggregatesFilter<"NfeSyncState"> | string | null
+    correlationId?: StringNullableWithAggregatesFilter<"NfeSyncState"> | string | null
+    lastDiagnostico?: JsonNullableWithAggregatesFilter<"NfeSyncState">
+    createdAt?: DateTimeWithAggregatesFilter<"NfeSyncState"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"NfeSyncState"> | Date | string
+  }
+
+  export type StoreProfileWhereInput = {
+    AND?: StoreProfileWhereInput | StoreProfileWhereInput[]
+    OR?: StoreProfileWhereInput[]
+    NOT?: StoreProfileWhereInput | StoreProfileWhereInput[]
+    id?: StringFilter<"StoreProfile"> | string
+    slug?: StringFilter<"StoreProfile"> | string
+    name?: StringFilter<"StoreProfile"> | string
+    icon?: StringNullableFilter<"StoreProfile"> | string | null
+    description?: StringNullableFilter<"StoreProfile"> | string | null
+    profiles?: StoreProfileFiscalListRelationFilter
+  }
+
+  export type StoreProfileOrderByWithRelationInput = {
+    id?: SortOrder
+    slug?: SortOrder
+    name?: SortOrder
+    icon?: SortOrderInput | SortOrder
+    description?: SortOrderInput | SortOrder
+    profiles?: StoreProfileFiscalOrderByRelationAggregateInput
+    _relevance?: StoreProfileOrderByRelevanceInput
+  }
+
+  export type StoreProfileWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    slug?: string
+    AND?: StoreProfileWhereInput | StoreProfileWhereInput[]
+    OR?: StoreProfileWhereInput[]
+    NOT?: StoreProfileWhereInput | StoreProfileWhereInput[]
+    name?: StringFilter<"StoreProfile"> | string
+    icon?: StringNullableFilter<"StoreProfile"> | string | null
+    description?: StringNullableFilter<"StoreProfile"> | string | null
+    profiles?: StoreProfileFiscalListRelationFilter
+  }, "id" | "slug">
+
+  export type StoreProfileOrderByWithAggregationInput = {
+    id?: SortOrder
+    slug?: SortOrder
+    name?: SortOrder
+    icon?: SortOrderInput | SortOrder
+    description?: SortOrderInput | SortOrder
+    _count?: StoreProfileCountOrderByAggregateInput
+    _max?: StoreProfileMaxOrderByAggregateInput
+    _min?: StoreProfileMinOrderByAggregateInput
+  }
+
+  export type StoreProfileScalarWhereWithAggregatesInput = {
+    AND?: StoreProfileScalarWhereWithAggregatesInput | StoreProfileScalarWhereWithAggregatesInput[]
+    OR?: StoreProfileScalarWhereWithAggregatesInput[]
+    NOT?: StoreProfileScalarWhereWithAggregatesInput | StoreProfileScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"StoreProfile"> | string
+    slug?: StringWithAggregatesFilter<"StoreProfile"> | string
+    name?: StringWithAggregatesFilter<"StoreProfile"> | string
+    icon?: StringNullableWithAggregatesFilter<"StoreProfile"> | string | null
+    description?: StringNullableWithAggregatesFilter<"StoreProfile"> | string | null
+  }
+
+  export type StoreProfileFiscalWhereInput = {
+    AND?: StoreProfileFiscalWhereInput | StoreProfileFiscalWhereInput[]
+    OR?: StoreProfileFiscalWhereInput[]
+    NOT?: StoreProfileFiscalWhereInput | StoreProfileFiscalWhereInput[]
+    storeProfileId?: StringFilter<"StoreProfileFiscal"> | string
+    fiscalProfileId?: StringFilter<"StoreProfileFiscal"> | string
+    storeProfile?: XOR<StoreProfileScalarRelationFilter, StoreProfileWhereInput>
+    fiscalProfile?: XOR<FiscalProfileScalarRelationFilter, FiscalProfileWhereInput>
+  }
+
+  export type StoreProfileFiscalOrderByWithRelationInput = {
+    storeProfileId?: SortOrder
+    fiscalProfileId?: SortOrder
+    storeProfile?: StoreProfileOrderByWithRelationInput
+    fiscalProfile?: FiscalProfileOrderByWithRelationInput
+    _relevance?: StoreProfileFiscalOrderByRelevanceInput
+  }
+
+  export type StoreProfileFiscalWhereUniqueInput = Prisma.AtLeast<{
+    storeProfileId_fiscalProfileId?: StoreProfileFiscalStoreProfileIdFiscalProfileIdCompoundUniqueInput
+    AND?: StoreProfileFiscalWhereInput | StoreProfileFiscalWhereInput[]
+    OR?: StoreProfileFiscalWhereInput[]
+    NOT?: StoreProfileFiscalWhereInput | StoreProfileFiscalWhereInput[]
+    storeProfileId?: StringFilter<"StoreProfileFiscal"> | string
+    fiscalProfileId?: StringFilter<"StoreProfileFiscal"> | string
+    storeProfile?: XOR<StoreProfileScalarRelationFilter, StoreProfileWhereInput>
+    fiscalProfile?: XOR<FiscalProfileScalarRelationFilter, FiscalProfileWhereInput>
+  }, "storeProfileId_fiscalProfileId">
+
+  export type StoreProfileFiscalOrderByWithAggregationInput = {
+    storeProfileId?: SortOrder
+    fiscalProfileId?: SortOrder
+    _count?: StoreProfileFiscalCountOrderByAggregateInput
+    _max?: StoreProfileFiscalMaxOrderByAggregateInput
+    _min?: StoreProfileFiscalMinOrderByAggregateInput
+  }
+
+  export type StoreProfileFiscalScalarWhereWithAggregatesInput = {
+    AND?: StoreProfileFiscalScalarWhereWithAggregatesInput | StoreProfileFiscalScalarWhereWithAggregatesInput[]
+    OR?: StoreProfileFiscalScalarWhereWithAggregatesInput[]
+    NOT?: StoreProfileFiscalScalarWhereWithAggregatesInput | StoreProfileFiscalScalarWhereWithAggregatesInput[]
+    storeProfileId?: StringWithAggregatesFilter<"StoreProfileFiscal"> | string
+    fiscalProfileId?: StringWithAggregatesFilter<"StoreProfileFiscal"> | string
+  }
+
+  export type FiscalProfileWhereInput = {
+    AND?: FiscalProfileWhereInput | FiscalProfileWhereInput[]
+    OR?: FiscalProfileWhereInput[]
+    NOT?: FiscalProfileWhereInput | FiscalProfileWhereInput[]
+    id?: StringFilter<"FiscalProfile"> | string
+    name?: StringFilter<"FiscalProfile"> | string
+    icon?: StringNullableFilter<"FiscalProfile"> | string | null
+    group?: StringFilter<"FiscalProfile"> | string
+    description?: StringNullableFilter<"FiscalProfile"> | string | null
+    scope?: StringFilter<"FiscalProfile"> | string
+    tenantId?: StringNullableFilter<"FiscalProfile"> | string | null
+    version?: StringFilter<"FiscalProfile"> | string
+    status?: StringFilter<"FiscalProfile"> | string
+    emiteNfce?: BoolFilter<"FiscalProfile"> | boolean
+    ncm?: StringNullableFilter<"FiscalProfile"> | string | null
+    cest?: StringNullableFilter<"FiscalProfile"> | string | null
+    unit?: StringFilter<"FiscalProfile"> | string
+    observacoes?: StringNullableFilter<"FiscalProfile"> | string | null
+    taxRules?: FiscalTaxRuleListRelationFilter
+    history?: FiscalProfileHistoryListRelationFilter
+    storeProfiles?: StoreProfileFiscalListRelationFilter
+    favoritedBy?: FiscalFavoriteListRelationFilter
+  }
+
+  export type FiscalProfileOrderByWithRelationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    icon?: SortOrderInput | SortOrder
+    group?: SortOrder
+    description?: SortOrderInput | SortOrder
+    scope?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    version?: SortOrder
+    status?: SortOrder
+    emiteNfce?: SortOrder
+    ncm?: SortOrderInput | SortOrder
+    cest?: SortOrderInput | SortOrder
+    unit?: SortOrder
+    observacoes?: SortOrderInput | SortOrder
+    taxRules?: FiscalTaxRuleOrderByRelationAggregateInput
+    history?: FiscalProfileHistoryOrderByRelationAggregateInput
+    storeProfiles?: StoreProfileFiscalOrderByRelationAggregateInput
+    favoritedBy?: FiscalFavoriteOrderByRelationAggregateInput
+    _relevance?: FiscalProfileOrderByRelevanceInput
+  }
+
+  export type FiscalProfileWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: FiscalProfileWhereInput | FiscalProfileWhereInput[]
+    OR?: FiscalProfileWhereInput[]
+    NOT?: FiscalProfileWhereInput | FiscalProfileWhereInput[]
+    name?: StringFilter<"FiscalProfile"> | string
+    icon?: StringNullableFilter<"FiscalProfile"> | string | null
+    group?: StringFilter<"FiscalProfile"> | string
+    description?: StringNullableFilter<"FiscalProfile"> | string | null
+    scope?: StringFilter<"FiscalProfile"> | string
+    tenantId?: StringNullableFilter<"FiscalProfile"> | string | null
+    version?: StringFilter<"FiscalProfile"> | string
+    status?: StringFilter<"FiscalProfile"> | string
+    emiteNfce?: BoolFilter<"FiscalProfile"> | boolean
+    ncm?: StringNullableFilter<"FiscalProfile"> | string | null
+    cest?: StringNullableFilter<"FiscalProfile"> | string | null
+    unit?: StringFilter<"FiscalProfile"> | string
+    observacoes?: StringNullableFilter<"FiscalProfile"> | string | null
+    taxRules?: FiscalTaxRuleListRelationFilter
+    history?: FiscalProfileHistoryListRelationFilter
+    storeProfiles?: StoreProfileFiscalListRelationFilter
+    favoritedBy?: FiscalFavoriteListRelationFilter
+  }, "id">
+
+  export type FiscalProfileOrderByWithAggregationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    icon?: SortOrderInput | SortOrder
+    group?: SortOrder
+    description?: SortOrderInput | SortOrder
+    scope?: SortOrder
+    tenantId?: SortOrderInput | SortOrder
+    version?: SortOrder
+    status?: SortOrder
+    emiteNfce?: SortOrder
+    ncm?: SortOrderInput | SortOrder
+    cest?: SortOrderInput | SortOrder
+    unit?: SortOrder
+    observacoes?: SortOrderInput | SortOrder
+    _count?: FiscalProfileCountOrderByAggregateInput
+    _max?: FiscalProfileMaxOrderByAggregateInput
+    _min?: FiscalProfileMinOrderByAggregateInput
+  }
+
+  export type FiscalProfileScalarWhereWithAggregatesInput = {
+    AND?: FiscalProfileScalarWhereWithAggregatesInput | FiscalProfileScalarWhereWithAggregatesInput[]
+    OR?: FiscalProfileScalarWhereWithAggregatesInput[]
+    NOT?: FiscalProfileScalarWhereWithAggregatesInput | FiscalProfileScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"FiscalProfile"> | string
+    name?: StringWithAggregatesFilter<"FiscalProfile"> | string
+    icon?: StringNullableWithAggregatesFilter<"FiscalProfile"> | string | null
+    group?: StringWithAggregatesFilter<"FiscalProfile"> | string
+    description?: StringNullableWithAggregatesFilter<"FiscalProfile"> | string | null
+    scope?: StringWithAggregatesFilter<"FiscalProfile"> | string
+    tenantId?: StringNullableWithAggregatesFilter<"FiscalProfile"> | string | null
+    version?: StringWithAggregatesFilter<"FiscalProfile"> | string
+    status?: StringWithAggregatesFilter<"FiscalProfile"> | string
+    emiteNfce?: BoolWithAggregatesFilter<"FiscalProfile"> | boolean
+    ncm?: StringNullableWithAggregatesFilter<"FiscalProfile"> | string | null
+    cest?: StringNullableWithAggregatesFilter<"FiscalProfile"> | string | null
+    unit?: StringWithAggregatesFilter<"FiscalProfile"> | string
+    observacoes?: StringNullableWithAggregatesFilter<"FiscalProfile"> | string | null
+  }
+
+  export type FiscalTaxRuleWhereInput = {
+    AND?: FiscalTaxRuleWhereInput | FiscalTaxRuleWhereInput[]
+    OR?: FiscalTaxRuleWhereInput[]
+    NOT?: FiscalTaxRuleWhereInput | FiscalTaxRuleWhereInput[]
+    id?: StringFilter<"FiscalTaxRule"> | string
+    fiscalProfileId?: StringFilter<"FiscalTaxRule"> | string
+    regime?: StringFilter<"FiscalTaxRule"> | string
+    csosn?: StringNullableFilter<"FiscalTaxRule"> | string | null
+    cstIcms?: StringNullableFilter<"FiscalTaxRule"> | string | null
+    aliqIcms?: FloatFilter<"FiscalTaxRule"> | number
+    cstPis?: StringFilter<"FiscalTaxRule"> | string
+    aliqPis?: FloatFilter<"FiscalTaxRule"> | number
+    cstCofins?: StringFilter<"FiscalTaxRule"> | string
+    aliqCofins?: FloatFilter<"FiscalTaxRule"> | number
+    ibsCst?: StringFilter<"FiscalTaxRule"> | string
+    ibsAliq?: FloatFilter<"FiscalTaxRule"> | number
+    cbsCst?: StringFilter<"FiscalTaxRule"> | string
+    cbsAliq?: FloatFilter<"FiscalTaxRule"> | number
+    validFrom?: DateTimeFilter<"FiscalTaxRule"> | Date | string
+    validUntil?: DateTimeNullableFilter<"FiscalTaxRule"> | Date | string | null
+    fiscalProfile?: XOR<FiscalProfileScalarRelationFilter, FiscalProfileWhereInput>
+  }
+
+  export type FiscalTaxRuleOrderByWithRelationInput = {
+    id?: SortOrder
+    fiscalProfileId?: SortOrder
+    regime?: SortOrder
+    csosn?: SortOrderInput | SortOrder
+    cstIcms?: SortOrderInput | SortOrder
+    aliqIcms?: SortOrder
+    cstPis?: SortOrder
+    aliqPis?: SortOrder
+    cstCofins?: SortOrder
+    aliqCofins?: SortOrder
+    ibsCst?: SortOrder
+    ibsAliq?: SortOrder
+    cbsCst?: SortOrder
+    cbsAliq?: SortOrder
+    validFrom?: SortOrder
+    validUntil?: SortOrderInput | SortOrder
+    fiscalProfile?: FiscalProfileOrderByWithRelationInput
+    _relevance?: FiscalTaxRuleOrderByRelevanceInput
+  }
+
+  export type FiscalTaxRuleWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: FiscalTaxRuleWhereInput | FiscalTaxRuleWhereInput[]
+    OR?: FiscalTaxRuleWhereInput[]
+    NOT?: FiscalTaxRuleWhereInput | FiscalTaxRuleWhereInput[]
+    fiscalProfileId?: StringFilter<"FiscalTaxRule"> | string
+    regime?: StringFilter<"FiscalTaxRule"> | string
+    csosn?: StringNullableFilter<"FiscalTaxRule"> | string | null
+    cstIcms?: StringNullableFilter<"FiscalTaxRule"> | string | null
+    aliqIcms?: FloatFilter<"FiscalTaxRule"> | number
+    cstPis?: StringFilter<"FiscalTaxRule"> | string
+    aliqPis?: FloatFilter<"FiscalTaxRule"> | number
+    cstCofins?: StringFilter<"FiscalTaxRule"> | string
+    aliqCofins?: FloatFilter<"FiscalTaxRule"> | number
+    ibsCst?: StringFilter<"FiscalTaxRule"> | string
+    ibsAliq?: FloatFilter<"FiscalTaxRule"> | number
+    cbsCst?: StringFilter<"FiscalTaxRule"> | string
+    cbsAliq?: FloatFilter<"FiscalTaxRule"> | number
+    validFrom?: DateTimeFilter<"FiscalTaxRule"> | Date | string
+    validUntil?: DateTimeNullableFilter<"FiscalTaxRule"> | Date | string | null
+    fiscalProfile?: XOR<FiscalProfileScalarRelationFilter, FiscalProfileWhereInput>
+  }, "id">
+
+  export type FiscalTaxRuleOrderByWithAggregationInput = {
+    id?: SortOrder
+    fiscalProfileId?: SortOrder
+    regime?: SortOrder
+    csosn?: SortOrderInput | SortOrder
+    cstIcms?: SortOrderInput | SortOrder
+    aliqIcms?: SortOrder
+    cstPis?: SortOrder
+    aliqPis?: SortOrder
+    cstCofins?: SortOrder
+    aliqCofins?: SortOrder
+    ibsCst?: SortOrder
+    ibsAliq?: SortOrder
+    cbsCst?: SortOrder
+    cbsAliq?: SortOrder
+    validFrom?: SortOrder
+    validUntil?: SortOrderInput | SortOrder
+    _count?: FiscalTaxRuleCountOrderByAggregateInput
+    _avg?: FiscalTaxRuleAvgOrderByAggregateInput
+    _max?: FiscalTaxRuleMaxOrderByAggregateInput
+    _min?: FiscalTaxRuleMinOrderByAggregateInput
+    _sum?: FiscalTaxRuleSumOrderByAggregateInput
+  }
+
+  export type FiscalTaxRuleScalarWhereWithAggregatesInput = {
+    AND?: FiscalTaxRuleScalarWhereWithAggregatesInput | FiscalTaxRuleScalarWhereWithAggregatesInput[]
+    OR?: FiscalTaxRuleScalarWhereWithAggregatesInput[]
+    NOT?: FiscalTaxRuleScalarWhereWithAggregatesInput | FiscalTaxRuleScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"FiscalTaxRule"> | string
+    fiscalProfileId?: StringWithAggregatesFilter<"FiscalTaxRule"> | string
+    regime?: StringWithAggregatesFilter<"FiscalTaxRule"> | string
+    csosn?: StringNullableWithAggregatesFilter<"FiscalTaxRule"> | string | null
+    cstIcms?: StringNullableWithAggregatesFilter<"FiscalTaxRule"> | string | null
+    aliqIcms?: FloatWithAggregatesFilter<"FiscalTaxRule"> | number
+    cstPis?: StringWithAggregatesFilter<"FiscalTaxRule"> | string
+    aliqPis?: FloatWithAggregatesFilter<"FiscalTaxRule"> | number
+    cstCofins?: StringWithAggregatesFilter<"FiscalTaxRule"> | string
+    aliqCofins?: FloatWithAggregatesFilter<"FiscalTaxRule"> | number
+    ibsCst?: StringWithAggregatesFilter<"FiscalTaxRule"> | string
+    ibsAliq?: FloatWithAggregatesFilter<"FiscalTaxRule"> | number
+    cbsCst?: StringWithAggregatesFilter<"FiscalTaxRule"> | string
+    cbsAliq?: FloatWithAggregatesFilter<"FiscalTaxRule"> | number
+    validFrom?: DateTimeWithAggregatesFilter<"FiscalTaxRule"> | Date | string
+    validUntil?: DateTimeNullableWithAggregatesFilter<"FiscalTaxRule"> | Date | string | null
+  }
+
+  export type FiscalProfileHistoryWhereInput = {
+    AND?: FiscalProfileHistoryWhereInput | FiscalProfileHistoryWhereInput[]
+    OR?: FiscalProfileHistoryWhereInput[]
+    NOT?: FiscalProfileHistoryWhereInput | FiscalProfileHistoryWhereInput[]
+    id?: StringFilter<"FiscalProfileHistory"> | string
+    fiscalProfileId?: StringFilter<"FiscalProfileHistory"> | string
+    changedBy?: StringFilter<"FiscalProfileHistory"> | string
+    changedAt?: DateTimeFilter<"FiscalProfileHistory"> | Date | string
+    field?: StringFilter<"FiscalProfileHistory"> | string
+    oldValue?: StringFilter<"FiscalProfileHistory"> | string
+    newValue?: StringFilter<"FiscalProfileHistory"> | string
+    reason?: StringNullableFilter<"FiscalProfileHistory"> | string | null
+    fiscalProfile?: XOR<FiscalProfileScalarRelationFilter, FiscalProfileWhereInput>
+  }
+
+  export type FiscalProfileHistoryOrderByWithRelationInput = {
+    id?: SortOrder
+    fiscalProfileId?: SortOrder
+    changedBy?: SortOrder
+    changedAt?: SortOrder
+    field?: SortOrder
+    oldValue?: SortOrder
+    newValue?: SortOrder
+    reason?: SortOrderInput | SortOrder
+    fiscalProfile?: FiscalProfileOrderByWithRelationInput
+    _relevance?: FiscalProfileHistoryOrderByRelevanceInput
+  }
+
+  export type FiscalProfileHistoryWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: FiscalProfileHistoryWhereInput | FiscalProfileHistoryWhereInput[]
+    OR?: FiscalProfileHistoryWhereInput[]
+    NOT?: FiscalProfileHistoryWhereInput | FiscalProfileHistoryWhereInput[]
+    fiscalProfileId?: StringFilter<"FiscalProfileHistory"> | string
+    changedBy?: StringFilter<"FiscalProfileHistory"> | string
+    changedAt?: DateTimeFilter<"FiscalProfileHistory"> | Date | string
+    field?: StringFilter<"FiscalProfileHistory"> | string
+    oldValue?: StringFilter<"FiscalProfileHistory"> | string
+    newValue?: StringFilter<"FiscalProfileHistory"> | string
+    reason?: StringNullableFilter<"FiscalProfileHistory"> | string | null
+    fiscalProfile?: XOR<FiscalProfileScalarRelationFilter, FiscalProfileWhereInput>
+  }, "id">
+
+  export type FiscalProfileHistoryOrderByWithAggregationInput = {
+    id?: SortOrder
+    fiscalProfileId?: SortOrder
+    changedBy?: SortOrder
+    changedAt?: SortOrder
+    field?: SortOrder
+    oldValue?: SortOrder
+    newValue?: SortOrder
+    reason?: SortOrderInput | SortOrder
+    _count?: FiscalProfileHistoryCountOrderByAggregateInput
+    _max?: FiscalProfileHistoryMaxOrderByAggregateInput
+    _min?: FiscalProfileHistoryMinOrderByAggregateInput
+  }
+
+  export type FiscalProfileHistoryScalarWhereWithAggregatesInput = {
+    AND?: FiscalProfileHistoryScalarWhereWithAggregatesInput | FiscalProfileHistoryScalarWhereWithAggregatesInput[]
+    OR?: FiscalProfileHistoryScalarWhereWithAggregatesInput[]
+    NOT?: FiscalProfileHistoryScalarWhereWithAggregatesInput | FiscalProfileHistoryScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"FiscalProfileHistory"> | string
+    fiscalProfileId?: StringWithAggregatesFilter<"FiscalProfileHistory"> | string
+    changedBy?: StringWithAggregatesFilter<"FiscalProfileHistory"> | string
+    changedAt?: DateTimeWithAggregatesFilter<"FiscalProfileHistory"> | Date | string
+    field?: StringWithAggregatesFilter<"FiscalProfileHistory"> | string
+    oldValue?: StringWithAggregatesFilter<"FiscalProfileHistory"> | string
+    newValue?: StringWithAggregatesFilter<"FiscalProfileHistory"> | string
+    reason?: StringNullableWithAggregatesFilter<"FiscalProfileHistory"> | string | null
+  }
+
+  export type FiscalFavoriteWhereInput = {
+    AND?: FiscalFavoriteWhereInput | FiscalFavoriteWhereInput[]
+    OR?: FiscalFavoriteWhereInput[]
+    NOT?: FiscalFavoriteWhereInput | FiscalFavoriteWhereInput[]
+    tenantId?: StringFilter<"FiscalFavorite"> | string
+    fiscalProfileId?: StringFilter<"FiscalFavorite"> | string
+    fiscalProfile?: XOR<FiscalProfileScalarRelationFilter, FiscalProfileWhereInput>
+  }
+
+  export type FiscalFavoriteOrderByWithRelationInput = {
+    tenantId?: SortOrder
+    fiscalProfileId?: SortOrder
+    fiscalProfile?: FiscalProfileOrderByWithRelationInput
+    _relevance?: FiscalFavoriteOrderByRelevanceInput
+  }
+
+  export type FiscalFavoriteWhereUniqueInput = Prisma.AtLeast<{
+    tenantId_fiscalProfileId?: FiscalFavoriteTenantIdFiscalProfileIdCompoundUniqueInput
+    AND?: FiscalFavoriteWhereInput | FiscalFavoriteWhereInput[]
+    OR?: FiscalFavoriteWhereInput[]
+    NOT?: FiscalFavoriteWhereInput | FiscalFavoriteWhereInput[]
+    tenantId?: StringFilter<"FiscalFavorite"> | string
+    fiscalProfileId?: StringFilter<"FiscalFavorite"> | string
+    fiscalProfile?: XOR<FiscalProfileScalarRelationFilter, FiscalProfileWhereInput>
+  }, "tenantId_fiscalProfileId">
+
+  export type FiscalFavoriteOrderByWithAggregationInput = {
+    tenantId?: SortOrder
+    fiscalProfileId?: SortOrder
+    _count?: FiscalFavoriteCountOrderByAggregateInput
+    _max?: FiscalFavoriteMaxOrderByAggregateInput
+    _min?: FiscalFavoriteMinOrderByAggregateInput
+  }
+
+  export type FiscalFavoriteScalarWhereWithAggregatesInput = {
+    AND?: FiscalFavoriteScalarWhereWithAggregatesInput | FiscalFavoriteScalarWhereWithAggregatesInput[]
+    OR?: FiscalFavoriteScalarWhereWithAggregatesInput[]
+    NOT?: FiscalFavoriteScalarWhereWithAggregatesInput | FiscalFavoriteScalarWhereWithAggregatesInput[]
+    tenantId?: StringWithAggregatesFilter<"FiscalFavorite"> | string
+    fiscalProfileId?: StringWithAggregatesFilter<"FiscalFavorite"> | string
+  }
+
+  export type PaymentLogWhereInput = {
+    AND?: PaymentLogWhereInput | PaymentLogWhereInput[]
+    OR?: PaymentLogWhereInput[]
+    NOT?: PaymentLogWhereInput | PaymentLogWhereInput[]
+    id?: StringFilter<"PaymentLog"> | string
+    tenantId?: StringFilter<"PaymentLog"> | string
+    valor?: DecimalFilter<"PaymentLog"> | Decimal | DecimalJsLike | number | string
+    vencimentoAntes?: DateTimeFilter<"PaymentLog"> | Date | string
+    vencimentoApos?: DateTimeFilter<"PaymentLog"> | Date | string
+    observacao?: StringNullableFilter<"PaymentLog"> | string | null
+    registradoPor?: StringNullableFilter<"PaymentLog"> | string | null
+    createdAt?: DateTimeFilter<"PaymentLog"> | Date | string
+    tenant?: XOR<TenantScalarRelationFilter, TenantWhereInput>
+  }
+
+  export type PaymentLogOrderByWithRelationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    valor?: SortOrder
+    vencimentoAntes?: SortOrder
+    vencimentoApos?: SortOrder
+    observacao?: SortOrderInput | SortOrder
+    registradoPor?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    tenant?: TenantOrderByWithRelationInput
+    _relevance?: PaymentLogOrderByRelevanceInput
+  }
+
+  export type PaymentLogWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: PaymentLogWhereInput | PaymentLogWhereInput[]
+    OR?: PaymentLogWhereInput[]
+    NOT?: PaymentLogWhereInput | PaymentLogWhereInput[]
+    tenantId?: StringFilter<"PaymentLog"> | string
+    valor?: DecimalFilter<"PaymentLog"> | Decimal | DecimalJsLike | number | string
+    vencimentoAntes?: DateTimeFilter<"PaymentLog"> | Date | string
+    vencimentoApos?: DateTimeFilter<"PaymentLog"> | Date | string
+    observacao?: StringNullableFilter<"PaymentLog"> | string | null
+    registradoPor?: StringNullableFilter<"PaymentLog"> | string | null
+    createdAt?: DateTimeFilter<"PaymentLog"> | Date | string
+    tenant?: XOR<TenantScalarRelationFilter, TenantWhereInput>
+  }, "id">
+
+  export type PaymentLogOrderByWithAggregationInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    valor?: SortOrder
+    vencimentoAntes?: SortOrder
+    vencimentoApos?: SortOrder
+    observacao?: SortOrderInput | SortOrder
+    registradoPor?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: PaymentLogCountOrderByAggregateInput
+    _avg?: PaymentLogAvgOrderByAggregateInput
+    _max?: PaymentLogMaxOrderByAggregateInput
+    _min?: PaymentLogMinOrderByAggregateInput
+    _sum?: PaymentLogSumOrderByAggregateInput
+  }
+
+  export type PaymentLogScalarWhereWithAggregatesInput = {
+    AND?: PaymentLogScalarWhereWithAggregatesInput | PaymentLogScalarWhereWithAggregatesInput[]
+    OR?: PaymentLogScalarWhereWithAggregatesInput[]
+    NOT?: PaymentLogScalarWhereWithAggregatesInput | PaymentLogScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"PaymentLog"> | string
+    tenantId?: StringWithAggregatesFilter<"PaymentLog"> | string
+    valor?: DecimalWithAggregatesFilter<"PaymentLog"> | Decimal | DecimalJsLike | number | string
+    vencimentoAntes?: DateTimeWithAggregatesFilter<"PaymentLog"> | Date | string
+    vencimentoApos?: DateTimeWithAggregatesFilter<"PaymentLog"> | Date | string
+    observacao?: StringNullableWithAggregatesFilter<"PaymentLog"> | string | null
+    registradoPor?: StringNullableWithAggregatesFilter<"PaymentLog"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"PaymentLog"> | Date | string
+  }
+
+  export type LeadWhereInput = {
+    AND?: LeadWhereInput | LeadWhereInput[]
+    OR?: LeadWhereInput[]
+    NOT?: LeadWhereInput | LeadWhereInput[]
+    id?: StringFilter<"Lead"> | string
+    name?: StringFilter<"Lead"> | string
+    whatsapp?: StringFilter<"Lead"> | string
+    status?: StringFilter<"Lead"> | string
+    source?: StringFilter<"Lead"> | string
+    notes?: StringNullableFilter<"Lead"> | string | null
+    createdAt?: DateTimeFilter<"Lead"> | Date | string
+    updatedAt?: DateTimeFilter<"Lead"> | Date | string
+  }
+
+  export type LeadOrderByWithRelationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    whatsapp?: SortOrder
+    status?: SortOrder
+    source?: SortOrder
+    notes?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _relevance?: LeadOrderByRelevanceInput
+  }
+
+  export type LeadWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: LeadWhereInput | LeadWhereInput[]
+    OR?: LeadWhereInput[]
+    NOT?: LeadWhereInput | LeadWhereInput[]
+    name?: StringFilter<"Lead"> | string
+    whatsapp?: StringFilter<"Lead"> | string
+    status?: StringFilter<"Lead"> | string
+    source?: StringFilter<"Lead"> | string
+    notes?: StringNullableFilter<"Lead"> | string | null
+    createdAt?: DateTimeFilter<"Lead"> | Date | string
+    updatedAt?: DateTimeFilter<"Lead"> | Date | string
+  }, "id">
+
+  export type LeadOrderByWithAggregationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    whatsapp?: SortOrder
+    status?: SortOrder
+    source?: SortOrder
+    notes?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: LeadCountOrderByAggregateInput
+    _max?: LeadMaxOrderByAggregateInput
+    _min?: LeadMinOrderByAggregateInput
+  }
+
+  export type LeadScalarWhereWithAggregatesInput = {
+    AND?: LeadScalarWhereWithAggregatesInput | LeadScalarWhereWithAggregatesInput[]
+    OR?: LeadScalarWhereWithAggregatesInput[]
+    NOT?: LeadScalarWhereWithAggregatesInput | LeadScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"Lead"> | string
+    name?: StringWithAggregatesFilter<"Lead"> | string
+    whatsapp?: StringWithAggregatesFilter<"Lead"> | string
+    status?: StringWithAggregatesFilter<"Lead"> | string
+    source?: StringWithAggregatesFilter<"Lead"> | string
+    notes?: StringNullableWithAggregatesFilter<"Lead"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"Lead"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"Lead"> | Date | string
+  }
+
   export type TenantCreateInput = {
     id?: string
     databaseName: string
@@ -7199,6 +20238,7 @@ export namespace Prisma {
     status?: string
     logoUrl?: string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: string | null
     razaoSocial?: string | null
     nomeFantasia?: string | null
     cnpj?: string | null
@@ -7227,11 +20267,16 @@ export namespace Prisma {
     cosmosApiKey?: string | null
     mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: Date | string | null
+    telefoneContato?: string | null
+    emailContato?: string | null
+    observacoes?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     termsAcceptedAt?: Date | string | null
     users?: UserCreateNestedManyWithoutTenantInput
     tenantIntegrations?: TenantIntegrationCreateNestedManyWithoutTenantInput
+    groupMembers?: TenantGroupMemberCreateNestedManyWithoutTenantInput
+    paymentLogs?: PaymentLogCreateNestedManyWithoutTenantInput
   }
 
   export type TenantUncheckedCreateInput = {
@@ -7242,6 +20287,7 @@ export namespace Prisma {
     status?: string
     logoUrl?: string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: string | null
     razaoSocial?: string | null
     nomeFantasia?: string | null
     cnpj?: string | null
@@ -7270,11 +20316,16 @@ export namespace Prisma {
     cosmosApiKey?: string | null
     mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: Date | string | null
+    telefoneContato?: string | null
+    emailContato?: string | null
+    observacoes?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     termsAcceptedAt?: Date | string | null
     users?: UserUncheckedCreateNestedManyWithoutTenantInput
     tenantIntegrations?: TenantIntegrationUncheckedCreateNestedManyWithoutTenantInput
+    groupMembers?: TenantGroupMemberUncheckedCreateNestedManyWithoutTenantInput
+    paymentLogs?: PaymentLogUncheckedCreateNestedManyWithoutTenantInput
   }
 
   export type TenantUpdateInput = {
@@ -7285,6 +20336,7 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: NullableStringFieldUpdateOperationsInput | string | null
     razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
     nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
     cnpj?: NullableStringFieldUpdateOperationsInput | string | null
@@ -7313,11 +20365,16 @@ export namespace Prisma {
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    telefoneContato?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContato?: NullableStringFieldUpdateOperationsInput | string | null
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     users?: UserUpdateManyWithoutTenantNestedInput
     tenantIntegrations?: TenantIntegrationUpdateManyWithoutTenantNestedInput
+    groupMembers?: TenantGroupMemberUpdateManyWithoutTenantNestedInput
+    paymentLogs?: PaymentLogUpdateManyWithoutTenantNestedInput
   }
 
   export type TenantUncheckedUpdateInput = {
@@ -7328,6 +20385,7 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: NullableStringFieldUpdateOperationsInput | string | null
     razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
     nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
     cnpj?: NullableStringFieldUpdateOperationsInput | string | null
@@ -7356,11 +20414,16 @@ export namespace Prisma {
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    telefoneContato?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContato?: NullableStringFieldUpdateOperationsInput | string | null
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     users?: UserUncheckedUpdateManyWithoutTenantNestedInput
     tenantIntegrations?: TenantIntegrationUncheckedUpdateManyWithoutTenantNestedInput
+    groupMembers?: TenantGroupMemberUncheckedUpdateManyWithoutTenantNestedInput
+    paymentLogs?: PaymentLogUncheckedUpdateManyWithoutTenantNestedInput
   }
 
   export type TenantCreateManyInput = {
@@ -7371,6 +20434,7 @@ export namespace Prisma {
     status?: string
     logoUrl?: string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: string | null
     razaoSocial?: string | null
     nomeFantasia?: string | null
     cnpj?: string | null
@@ -7399,6 +20463,9 @@ export namespace Prisma {
     cosmosApiKey?: string | null
     mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: Date | string | null
+    telefoneContato?: string | null
+    emailContato?: string | null
+    observacoes?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     termsAcceptedAt?: Date | string | null
@@ -7412,6 +20479,7 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: NullableStringFieldUpdateOperationsInput | string | null
     razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
     nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
     cnpj?: NullableStringFieldUpdateOperationsInput | string | null
@@ -7440,6 +20508,9 @@ export namespace Prisma {
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    telefoneContato?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContato?: NullableStringFieldUpdateOperationsInput | string | null
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7453,6 +20524,7 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: NullableStringFieldUpdateOperationsInput | string | null
     razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
     nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
     cnpj?: NullableStringFieldUpdateOperationsInput | string | null
@@ -7481,6 +20553,9 @@ export namespace Prisma {
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    telefoneContato?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContato?: NullableStringFieldUpdateOperationsInput | string | null
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7497,6 +20572,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     tenant: TenantCreateNestedOneWithoutUsersInput
+    group?: TenantGroupCreateNestedOneWithoutUsersInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -7508,6 +20584,7 @@ export namespace Prisma {
     role?: string
     pin?: string | null
     active?: boolean
+    groupId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -7523,6 +20600,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     tenant?: TenantUpdateOneRequiredWithoutUsersNestedInput
+    group?: TenantGroupUpdateOneWithoutUsersNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -7534,6 +20612,7 @@ export namespace Prisma {
     role?: StringFieldUpdateOperationsInput | string
     pin?: NullableStringFieldUpdateOperationsInput | string | null
     active?: BoolFieldUpdateOperationsInput | boolean
+    groupId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -7547,6 +20626,7 @@ export namespace Prisma {
     role?: string
     pin?: string | null
     active?: boolean
+    groupId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -7572,13 +20652,14 @@ export namespace Prisma {
     role?: StringFieldUpdateOperationsInput | string
     pin?: NullableStringFieldUpdateOperationsInput | string | null
     active?: BoolFieldUpdateOperationsInput | boolean
+    groupId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type MasterProductCreateInput = {
     id?: string
-    ean: string
+    ean?: string | null
     name: string
     brand?: string | null
     ncm?: string | null
@@ -7592,7 +20673,7 @@ export namespace Prisma {
 
   export type MasterProductUncheckedCreateInput = {
     id?: string
-    ean: string
+    ean?: string | null
     name: string
     brand?: string | null
     ncm?: string | null
@@ -7606,7 +20687,7 @@ export namespace Prisma {
 
   export type MasterProductUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    ean?: StringFieldUpdateOperationsInput | string
+    ean?: NullableStringFieldUpdateOperationsInput | string | null
     name?: StringFieldUpdateOperationsInput | string
     brand?: NullableStringFieldUpdateOperationsInput | string | null
     ncm?: NullableStringFieldUpdateOperationsInput | string | null
@@ -7620,7 +20701,7 @@ export namespace Prisma {
 
   export type MasterProductUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    ean?: StringFieldUpdateOperationsInput | string
+    ean?: NullableStringFieldUpdateOperationsInput | string | null
     name?: StringFieldUpdateOperationsInput | string
     brand?: NullableStringFieldUpdateOperationsInput | string | null
     ncm?: NullableStringFieldUpdateOperationsInput | string | null
@@ -7634,7 +20715,7 @@ export namespace Prisma {
 
   export type MasterProductCreateManyInput = {
     id?: string
-    ean: string
+    ean?: string | null
     name: string
     brand?: string | null
     ncm?: string | null
@@ -7648,7 +20729,7 @@ export namespace Prisma {
 
   export type MasterProductUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    ean?: StringFieldUpdateOperationsInput | string
+    ean?: NullableStringFieldUpdateOperationsInput | string | null
     name?: StringFieldUpdateOperationsInput | string
     brand?: NullableStringFieldUpdateOperationsInput | string | null
     ncm?: NullableStringFieldUpdateOperationsInput | string | null
@@ -7662,7 +20743,7 @@ export namespace Prisma {
 
   export type MasterProductUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
-    ean?: StringFieldUpdateOperationsInput | string
+    ean?: NullableStringFieldUpdateOperationsInput | string | null
     name?: StringFieldUpdateOperationsInput | string
     brand?: NullableStringFieldUpdateOperationsInput | string | null
     ncm?: NullableStringFieldUpdateOperationsInput | string | null
@@ -7799,6 +20880,839 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type TenantGroupCreateInput = {
+    id?: string
+    name: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    members?: TenantGroupMemberCreateNestedManyWithoutGroupInput
+    users?: UserCreateNestedManyWithoutGroupInput
+  }
+
+  export type TenantGroupUncheckedCreateInput = {
+    id?: string
+    name: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    members?: TenantGroupMemberUncheckedCreateNestedManyWithoutGroupInput
+    users?: UserUncheckedCreateNestedManyWithoutGroupInput
+  }
+
+  export type TenantGroupUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    members?: TenantGroupMemberUpdateManyWithoutGroupNestedInput
+    users?: UserUpdateManyWithoutGroupNestedInput
+  }
+
+  export type TenantGroupUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    members?: TenantGroupMemberUncheckedUpdateManyWithoutGroupNestedInput
+    users?: UserUncheckedUpdateManyWithoutGroupNestedInput
+  }
+
+  export type TenantGroupCreateManyInput = {
+    id?: string
+    name: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TenantGroupUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TenantGroupUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TenantGroupMemberCreateInput = {
+    id?: string
+    alias?: string | null
+    group: TenantGroupCreateNestedOneWithoutMembersInput
+    tenant: TenantCreateNestedOneWithoutGroupMembersInput
+  }
+
+  export type TenantGroupMemberUncheckedCreateInput = {
+    id?: string
+    groupId: string
+    tenantId: string
+    alias?: string | null
+  }
+
+  export type TenantGroupMemberUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    alias?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: TenantGroupUpdateOneRequiredWithoutMembersNestedInput
+    tenant?: TenantUpdateOneRequiredWithoutGroupMembersNestedInput
+  }
+
+  export type TenantGroupMemberUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    groupId?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    alias?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type TenantGroupMemberCreateManyInput = {
+    id?: string
+    groupId: string
+    tenantId: string
+    alias?: string | null
+  }
+
+  export type TenantGroupMemberUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    alias?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type TenantGroupMemberUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    groupId?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    alias?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type NfeSyncStateCreateInput = {
+    id?: string
+    tenantId: string
+    ultimoNSU?: string
+    ultimaConsulta?: Date | string | null
+    status?: string
+    notasBaixadas?: number
+    tempoGastoMs?: number
+    lastError?: string | null
+    correlationId?: string | null
+    lastDiagnostico?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type NfeSyncStateUncheckedCreateInput = {
+    id?: string
+    tenantId: string
+    ultimoNSU?: string
+    ultimaConsulta?: Date | string | null
+    status?: string
+    notasBaixadas?: number
+    tempoGastoMs?: number
+    lastError?: string | null
+    correlationId?: string | null
+    lastDiagnostico?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type NfeSyncStateUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    ultimoNSU?: StringFieldUpdateOperationsInput | string
+    ultimaConsulta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    notasBaixadas?: IntFieldUpdateOperationsInput | number
+    tempoGastoMs?: IntFieldUpdateOperationsInput | number
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    correlationId?: NullableStringFieldUpdateOperationsInput | string | null
+    lastDiagnostico?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type NfeSyncStateUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    ultimoNSU?: StringFieldUpdateOperationsInput | string
+    ultimaConsulta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    notasBaixadas?: IntFieldUpdateOperationsInput | number
+    tempoGastoMs?: IntFieldUpdateOperationsInput | number
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    correlationId?: NullableStringFieldUpdateOperationsInput | string | null
+    lastDiagnostico?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type NfeSyncStateCreateManyInput = {
+    id?: string
+    tenantId: string
+    ultimoNSU?: string
+    ultimaConsulta?: Date | string | null
+    status?: string
+    notasBaixadas?: number
+    tempoGastoMs?: number
+    lastError?: string | null
+    correlationId?: string | null
+    lastDiagnostico?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type NfeSyncStateUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    ultimoNSU?: StringFieldUpdateOperationsInput | string
+    ultimaConsulta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    notasBaixadas?: IntFieldUpdateOperationsInput | number
+    tempoGastoMs?: IntFieldUpdateOperationsInput | number
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    correlationId?: NullableStringFieldUpdateOperationsInput | string | null
+    lastDiagnostico?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type NfeSyncStateUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    ultimoNSU?: StringFieldUpdateOperationsInput | string
+    ultimaConsulta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    status?: StringFieldUpdateOperationsInput | string
+    notasBaixadas?: IntFieldUpdateOperationsInput | number
+    tempoGastoMs?: IntFieldUpdateOperationsInput | number
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    correlationId?: NullableStringFieldUpdateOperationsInput | string | null
+    lastDiagnostico?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type StoreProfileCreateInput = {
+    id?: string
+    slug: string
+    name: string
+    icon?: string | null
+    description?: string | null
+    profiles?: StoreProfileFiscalCreateNestedManyWithoutStoreProfileInput
+  }
+
+  export type StoreProfileUncheckedCreateInput = {
+    id?: string
+    slug: string
+    name: string
+    icon?: string | null
+    description?: string | null
+    profiles?: StoreProfileFiscalUncheckedCreateNestedManyWithoutStoreProfileInput
+  }
+
+  export type StoreProfileUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    slug?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    profiles?: StoreProfileFiscalUpdateManyWithoutStoreProfileNestedInput
+  }
+
+  export type StoreProfileUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    slug?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    profiles?: StoreProfileFiscalUncheckedUpdateManyWithoutStoreProfileNestedInput
+  }
+
+  export type StoreProfileCreateManyInput = {
+    id?: string
+    slug: string
+    name: string
+    icon?: string | null
+    description?: string | null
+  }
+
+  export type StoreProfileUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    slug?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type StoreProfileUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    slug?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type StoreProfileFiscalCreateInput = {
+    storeProfile: StoreProfileCreateNestedOneWithoutProfilesInput
+    fiscalProfile: FiscalProfileCreateNestedOneWithoutStoreProfilesInput
+  }
+
+  export type StoreProfileFiscalUncheckedCreateInput = {
+    storeProfileId: string
+    fiscalProfileId: string
+  }
+
+  export type StoreProfileFiscalUpdateInput = {
+    storeProfile?: StoreProfileUpdateOneRequiredWithoutProfilesNestedInput
+    fiscalProfile?: FiscalProfileUpdateOneRequiredWithoutStoreProfilesNestedInput
+  }
+
+  export type StoreProfileFiscalUncheckedUpdateInput = {
+    storeProfileId?: StringFieldUpdateOperationsInput | string
+    fiscalProfileId?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type StoreProfileFiscalCreateManyInput = {
+    storeProfileId: string
+    fiscalProfileId: string
+  }
+
+  export type StoreProfileFiscalUpdateManyMutationInput = {
+
+  }
+
+  export type StoreProfileFiscalUncheckedUpdateManyInput = {
+    storeProfileId?: StringFieldUpdateOperationsInput | string
+    fiscalProfileId?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type FiscalProfileCreateInput = {
+    id?: string
+    name: string
+    icon?: string | null
+    group: string
+    description?: string | null
+    scope: string
+    tenantId?: string | null
+    version: string
+    status?: string
+    emiteNfce?: boolean
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    observacoes?: string | null
+    taxRules?: FiscalTaxRuleCreateNestedManyWithoutFiscalProfileInput
+    history?: FiscalProfileHistoryCreateNestedManyWithoutFiscalProfileInput
+    storeProfiles?: StoreProfileFiscalCreateNestedManyWithoutFiscalProfileInput
+    favoritedBy?: FiscalFavoriteCreateNestedManyWithoutFiscalProfileInput
+  }
+
+  export type FiscalProfileUncheckedCreateInput = {
+    id?: string
+    name: string
+    icon?: string | null
+    group: string
+    description?: string | null
+    scope: string
+    tenantId?: string | null
+    version: string
+    status?: string
+    emiteNfce?: boolean
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    observacoes?: string | null
+    taxRules?: FiscalTaxRuleUncheckedCreateNestedManyWithoutFiscalProfileInput
+    history?: FiscalProfileHistoryUncheckedCreateNestedManyWithoutFiscalProfileInput
+    storeProfiles?: StoreProfileFiscalUncheckedCreateNestedManyWithoutFiscalProfileInput
+    favoritedBy?: FiscalFavoriteUncheckedCreateNestedManyWithoutFiscalProfileInput
+  }
+
+  export type FiscalProfileUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    scope?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    emiteNfce?: BoolFieldUpdateOperationsInput | boolean
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    taxRules?: FiscalTaxRuleUpdateManyWithoutFiscalProfileNestedInput
+    history?: FiscalProfileHistoryUpdateManyWithoutFiscalProfileNestedInput
+    storeProfiles?: StoreProfileFiscalUpdateManyWithoutFiscalProfileNestedInput
+    favoritedBy?: FiscalFavoriteUpdateManyWithoutFiscalProfileNestedInput
+  }
+
+  export type FiscalProfileUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    scope?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    emiteNfce?: BoolFieldUpdateOperationsInput | boolean
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    taxRules?: FiscalTaxRuleUncheckedUpdateManyWithoutFiscalProfileNestedInput
+    history?: FiscalProfileHistoryUncheckedUpdateManyWithoutFiscalProfileNestedInput
+    storeProfiles?: StoreProfileFiscalUncheckedUpdateManyWithoutFiscalProfileNestedInput
+    favoritedBy?: FiscalFavoriteUncheckedUpdateManyWithoutFiscalProfileNestedInput
+  }
+
+  export type FiscalProfileCreateManyInput = {
+    id?: string
+    name: string
+    icon?: string | null
+    group: string
+    description?: string | null
+    scope: string
+    tenantId?: string | null
+    version: string
+    status?: string
+    emiteNfce?: boolean
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    observacoes?: string | null
+  }
+
+  export type FiscalProfileUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    scope?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    emiteNfce?: BoolFieldUpdateOperationsInput | boolean
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type FiscalProfileUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    scope?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    emiteNfce?: BoolFieldUpdateOperationsInput | boolean
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type FiscalTaxRuleCreateInput = {
+    id?: string
+    regime: string
+    csosn?: string | null
+    cstIcms?: string | null
+    aliqIcms?: number
+    cstPis?: string
+    aliqPis?: number
+    cstCofins?: string
+    aliqCofins?: number
+    ibsCst?: string
+    ibsAliq?: number
+    cbsCst?: string
+    cbsAliq?: number
+    validFrom?: Date | string
+    validUntil?: Date | string | null
+    fiscalProfile: FiscalProfileCreateNestedOneWithoutTaxRulesInput
+  }
+
+  export type FiscalTaxRuleUncheckedCreateInput = {
+    id?: string
+    fiscalProfileId: string
+    regime: string
+    csosn?: string | null
+    cstIcms?: string | null
+    aliqIcms?: number
+    cstPis?: string
+    aliqPis?: number
+    cstCofins?: string
+    aliqCofins?: number
+    ibsCst?: string
+    ibsAliq?: number
+    cbsCst?: string
+    cbsAliq?: number
+    validFrom?: Date | string
+    validUntil?: Date | string | null
+  }
+
+  export type FiscalTaxRuleUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    regime?: StringFieldUpdateOperationsInput | string
+    csosn?: NullableStringFieldUpdateOperationsInput | string | null
+    cstIcms?: NullableStringFieldUpdateOperationsInput | string | null
+    aliqIcms?: FloatFieldUpdateOperationsInput | number
+    cstPis?: StringFieldUpdateOperationsInput | string
+    aliqPis?: FloatFieldUpdateOperationsInput | number
+    cstCofins?: StringFieldUpdateOperationsInput | string
+    aliqCofins?: FloatFieldUpdateOperationsInput | number
+    ibsCst?: StringFieldUpdateOperationsInput | string
+    ibsAliq?: FloatFieldUpdateOperationsInput | number
+    cbsCst?: StringFieldUpdateOperationsInput | string
+    cbsAliq?: FloatFieldUpdateOperationsInput | number
+    validFrom?: DateTimeFieldUpdateOperationsInput | Date | string
+    validUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    fiscalProfile?: FiscalProfileUpdateOneRequiredWithoutTaxRulesNestedInput
+  }
+
+  export type FiscalTaxRuleUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    fiscalProfileId?: StringFieldUpdateOperationsInput | string
+    regime?: StringFieldUpdateOperationsInput | string
+    csosn?: NullableStringFieldUpdateOperationsInput | string | null
+    cstIcms?: NullableStringFieldUpdateOperationsInput | string | null
+    aliqIcms?: FloatFieldUpdateOperationsInput | number
+    cstPis?: StringFieldUpdateOperationsInput | string
+    aliqPis?: FloatFieldUpdateOperationsInput | number
+    cstCofins?: StringFieldUpdateOperationsInput | string
+    aliqCofins?: FloatFieldUpdateOperationsInput | number
+    ibsCst?: StringFieldUpdateOperationsInput | string
+    ibsAliq?: FloatFieldUpdateOperationsInput | number
+    cbsCst?: StringFieldUpdateOperationsInput | string
+    cbsAliq?: FloatFieldUpdateOperationsInput | number
+    validFrom?: DateTimeFieldUpdateOperationsInput | Date | string
+    validUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type FiscalTaxRuleCreateManyInput = {
+    id?: string
+    fiscalProfileId: string
+    regime: string
+    csosn?: string | null
+    cstIcms?: string | null
+    aliqIcms?: number
+    cstPis?: string
+    aliqPis?: number
+    cstCofins?: string
+    aliqCofins?: number
+    ibsCst?: string
+    ibsAliq?: number
+    cbsCst?: string
+    cbsAliq?: number
+    validFrom?: Date | string
+    validUntil?: Date | string | null
+  }
+
+  export type FiscalTaxRuleUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    regime?: StringFieldUpdateOperationsInput | string
+    csosn?: NullableStringFieldUpdateOperationsInput | string | null
+    cstIcms?: NullableStringFieldUpdateOperationsInput | string | null
+    aliqIcms?: FloatFieldUpdateOperationsInput | number
+    cstPis?: StringFieldUpdateOperationsInput | string
+    aliqPis?: FloatFieldUpdateOperationsInput | number
+    cstCofins?: StringFieldUpdateOperationsInput | string
+    aliqCofins?: FloatFieldUpdateOperationsInput | number
+    ibsCst?: StringFieldUpdateOperationsInput | string
+    ibsAliq?: FloatFieldUpdateOperationsInput | number
+    cbsCst?: StringFieldUpdateOperationsInput | string
+    cbsAliq?: FloatFieldUpdateOperationsInput | number
+    validFrom?: DateTimeFieldUpdateOperationsInput | Date | string
+    validUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type FiscalTaxRuleUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    fiscalProfileId?: StringFieldUpdateOperationsInput | string
+    regime?: StringFieldUpdateOperationsInput | string
+    csosn?: NullableStringFieldUpdateOperationsInput | string | null
+    cstIcms?: NullableStringFieldUpdateOperationsInput | string | null
+    aliqIcms?: FloatFieldUpdateOperationsInput | number
+    cstPis?: StringFieldUpdateOperationsInput | string
+    aliqPis?: FloatFieldUpdateOperationsInput | number
+    cstCofins?: StringFieldUpdateOperationsInput | string
+    aliqCofins?: FloatFieldUpdateOperationsInput | number
+    ibsCst?: StringFieldUpdateOperationsInput | string
+    ibsAliq?: FloatFieldUpdateOperationsInput | number
+    cbsCst?: StringFieldUpdateOperationsInput | string
+    cbsAliq?: FloatFieldUpdateOperationsInput | number
+    validFrom?: DateTimeFieldUpdateOperationsInput | Date | string
+    validUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type FiscalProfileHistoryCreateInput = {
+    id?: string
+    changedBy: string
+    changedAt?: Date | string
+    field: string
+    oldValue: string
+    newValue: string
+    reason?: string | null
+    fiscalProfile: FiscalProfileCreateNestedOneWithoutHistoryInput
+  }
+
+  export type FiscalProfileHistoryUncheckedCreateInput = {
+    id?: string
+    fiscalProfileId: string
+    changedBy: string
+    changedAt?: Date | string
+    field: string
+    oldValue: string
+    newValue: string
+    reason?: string | null
+  }
+
+  export type FiscalProfileHistoryUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    changedBy?: StringFieldUpdateOperationsInput | string
+    changedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    field?: StringFieldUpdateOperationsInput | string
+    oldValue?: StringFieldUpdateOperationsInput | string
+    newValue?: StringFieldUpdateOperationsInput | string
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    fiscalProfile?: FiscalProfileUpdateOneRequiredWithoutHistoryNestedInput
+  }
+
+  export type FiscalProfileHistoryUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    fiscalProfileId?: StringFieldUpdateOperationsInput | string
+    changedBy?: StringFieldUpdateOperationsInput | string
+    changedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    field?: StringFieldUpdateOperationsInput | string
+    oldValue?: StringFieldUpdateOperationsInput | string
+    newValue?: StringFieldUpdateOperationsInput | string
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type FiscalProfileHistoryCreateManyInput = {
+    id?: string
+    fiscalProfileId: string
+    changedBy: string
+    changedAt?: Date | string
+    field: string
+    oldValue: string
+    newValue: string
+    reason?: string | null
+  }
+
+  export type FiscalProfileHistoryUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    changedBy?: StringFieldUpdateOperationsInput | string
+    changedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    field?: StringFieldUpdateOperationsInput | string
+    oldValue?: StringFieldUpdateOperationsInput | string
+    newValue?: StringFieldUpdateOperationsInput | string
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type FiscalProfileHistoryUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    fiscalProfileId?: StringFieldUpdateOperationsInput | string
+    changedBy?: StringFieldUpdateOperationsInput | string
+    changedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    field?: StringFieldUpdateOperationsInput | string
+    oldValue?: StringFieldUpdateOperationsInput | string
+    newValue?: StringFieldUpdateOperationsInput | string
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type FiscalFavoriteCreateInput = {
+    tenantId: string
+    fiscalProfile: FiscalProfileCreateNestedOneWithoutFavoritedByInput
+  }
+
+  export type FiscalFavoriteUncheckedCreateInput = {
+    tenantId: string
+    fiscalProfileId: string
+  }
+
+  export type FiscalFavoriteUpdateInput = {
+    tenantId?: StringFieldUpdateOperationsInput | string
+    fiscalProfile?: FiscalProfileUpdateOneRequiredWithoutFavoritedByNestedInput
+  }
+
+  export type FiscalFavoriteUncheckedUpdateInput = {
+    tenantId?: StringFieldUpdateOperationsInput | string
+    fiscalProfileId?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type FiscalFavoriteCreateManyInput = {
+    tenantId: string
+    fiscalProfileId: string
+  }
+
+  export type FiscalFavoriteUpdateManyMutationInput = {
+    tenantId?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type FiscalFavoriteUncheckedUpdateManyInput = {
+    tenantId?: StringFieldUpdateOperationsInput | string
+    fiscalProfileId?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type PaymentLogCreateInput = {
+    id?: string
+    valor: Decimal | DecimalJsLike | number | string
+    vencimentoAntes: Date | string
+    vencimentoApos: Date | string
+    observacao?: string | null
+    registradoPor?: string | null
+    createdAt?: Date | string
+    tenant: TenantCreateNestedOneWithoutPaymentLogsInput
+  }
+
+  export type PaymentLogUncheckedCreateInput = {
+    id?: string
+    tenantId: string
+    valor: Decimal | DecimalJsLike | number | string
+    vencimentoAntes: Date | string
+    vencimentoApos: Date | string
+    observacao?: string | null
+    registradoPor?: string | null
+    createdAt?: Date | string
+  }
+
+  export type PaymentLogUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    valor?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    vencimentoAntes?: DateTimeFieldUpdateOperationsInput | Date | string
+    vencimentoApos?: DateTimeFieldUpdateOperationsInput | Date | string
+    observacao?: NullableStringFieldUpdateOperationsInput | string | null
+    registradoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    tenant?: TenantUpdateOneRequiredWithoutPaymentLogsNestedInput
+  }
+
+  export type PaymentLogUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    valor?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    vencimentoAntes?: DateTimeFieldUpdateOperationsInput | Date | string
+    vencimentoApos?: DateTimeFieldUpdateOperationsInput | Date | string
+    observacao?: NullableStringFieldUpdateOperationsInput | string | null
+    registradoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PaymentLogCreateManyInput = {
+    id?: string
+    tenantId: string
+    valor: Decimal | DecimalJsLike | number | string
+    vencimentoAntes: Date | string
+    vencimentoApos: Date | string
+    observacao?: string | null
+    registradoPor?: string | null
+    createdAt?: Date | string
+  }
+
+  export type PaymentLogUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    valor?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    vencimentoAntes?: DateTimeFieldUpdateOperationsInput | Date | string
+    vencimentoApos?: DateTimeFieldUpdateOperationsInput | Date | string
+    observacao?: NullableStringFieldUpdateOperationsInput | string | null
+    registradoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PaymentLogUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    valor?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    vencimentoAntes?: DateTimeFieldUpdateOperationsInput | Date | string
+    vencimentoApos?: DateTimeFieldUpdateOperationsInput | Date | string
+    observacao?: NullableStringFieldUpdateOperationsInput | string | null
+    registradoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type LeadCreateInput = {
+    id?: string
+    name: string
+    whatsapp: string
+    status?: string
+    source?: string
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type LeadUncheckedCreateInput = {
+    id?: string
+    name: string
+    whatsapp: string
+    status?: string
+    source?: string
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type LeadUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    whatsapp?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type LeadUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    whatsapp?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type LeadCreateManyInput = {
+    id?: string
+    name: string
+    whatsapp: string
+    status?: string
+    source?: string
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type LeadUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    whatsapp?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type LeadUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    whatsapp?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    source?: StringFieldUpdateOperationsInput | string
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[]
@@ -7920,6 +21834,18 @@ export namespace Prisma {
     none?: TenantIntegrationWhereInput
   }
 
+  export type TenantGroupMemberListRelationFilter = {
+    every?: TenantGroupMemberWhereInput
+    some?: TenantGroupMemberWhereInput
+    none?: TenantGroupMemberWhereInput
+  }
+
+  export type PaymentLogListRelationFilter = {
+    every?: PaymentLogWhereInput
+    some?: PaymentLogWhereInput
+    none?: PaymentLogWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -7930,6 +21856,14 @@ export namespace Prisma {
   }
 
   export type TenantIntegrationOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type TenantGroupMemberOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type PaymentLogOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -7947,6 +21881,7 @@ export namespace Prisma {
     status?: SortOrder
     logoUrl?: SortOrder
     modulos?: SortOrder
+    tvPublicId?: SortOrder
     razaoSocial?: SortOrder
     nomeFantasia?: SortOrder
     cnpj?: SortOrder
@@ -7975,6 +21910,9 @@ export namespace Prisma {
     cosmosApiKey?: SortOrder
     mensalidadeValor?: SortOrder
     mensalidadeVencimento?: SortOrder
+    telefoneContato?: SortOrder
+    emailContato?: SortOrder
+    observacoes?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     termsAcceptedAt?: SortOrder
@@ -7994,6 +21932,7 @@ export namespace Prisma {
     name?: SortOrder
     status?: SortOrder
     logoUrl?: SortOrder
+    tvPublicId?: SortOrder
     razaoSocial?: SortOrder
     nomeFantasia?: SortOrder
     cnpj?: SortOrder
@@ -8022,6 +21961,9 @@ export namespace Prisma {
     cosmosApiKey?: SortOrder
     mensalidadeValor?: SortOrder
     mensalidadeVencimento?: SortOrder
+    telefoneContato?: SortOrder
+    emailContato?: SortOrder
+    observacoes?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     termsAcceptedAt?: SortOrder
@@ -8034,6 +21976,7 @@ export namespace Prisma {
     name?: SortOrder
     status?: SortOrder
     logoUrl?: SortOrder
+    tvPublicId?: SortOrder
     razaoSocial?: SortOrder
     nomeFantasia?: SortOrder
     cnpj?: SortOrder
@@ -8062,6 +22005,9 @@ export namespace Prisma {
     cosmosApiKey?: SortOrder
     mensalidadeValor?: SortOrder
     mensalidadeVencimento?: SortOrder
+    telefoneContato?: SortOrder
+    emailContato?: SortOrder
+    observacoes?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     termsAcceptedAt?: SortOrder
@@ -8219,6 +22165,11 @@ export namespace Prisma {
     isNot?: TenantWhereInput
   }
 
+  export type TenantGroupNullableScalarRelationFilter = {
+    is?: TenantGroupWhereInput | null
+    isNot?: TenantGroupWhereInput | null
+  }
+
   export type UserOrderByRelevanceInput = {
     fields: UserOrderByRelevanceFieldEnum | UserOrderByRelevanceFieldEnum[]
     sort: SortOrder
@@ -8234,6 +22185,7 @@ export namespace Prisma {
     role?: SortOrder
     pin?: SortOrder
     active?: SortOrder
+    groupId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -8247,6 +22199,7 @@ export namespace Prisma {
     role?: SortOrder
     pin?: SortOrder
     active?: SortOrder
+    groupId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -8260,6 +22213,7 @@ export namespace Prisma {
     role?: SortOrder
     pin?: SortOrder
     active?: SortOrder
+    groupId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -8445,6 +22399,576 @@ export namespace Prisma {
     _max?: NestedJsonFilter<$PrismaModel>
   }
 
+  export type TenantGroupOrderByRelevanceInput = {
+    fields: TenantGroupOrderByRelevanceFieldEnum | TenantGroupOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type TenantGroupCountOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type TenantGroupMaxOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type TenantGroupMinOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type TenantGroupScalarRelationFilter = {
+    is?: TenantGroupWhereInput
+    isNot?: TenantGroupWhereInput
+  }
+
+  export type TenantGroupMemberOrderByRelevanceInput = {
+    fields: TenantGroupMemberOrderByRelevanceFieldEnum | TenantGroupMemberOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type TenantGroupMemberGroupIdTenantIdCompoundUniqueInput = {
+    groupId: string
+    tenantId: string
+  }
+
+  export type TenantGroupMemberCountOrderByAggregateInput = {
+    id?: SortOrder
+    groupId?: SortOrder
+    tenantId?: SortOrder
+    alias?: SortOrder
+  }
+
+  export type TenantGroupMemberMaxOrderByAggregateInput = {
+    id?: SortOrder
+    groupId?: SortOrder
+    tenantId?: SortOrder
+    alias?: SortOrder
+  }
+
+  export type TenantGroupMemberMinOrderByAggregateInput = {
+    id?: SortOrder
+    groupId?: SortOrder
+    tenantId?: SortOrder
+    alias?: SortOrder
+  }
+
+  export type NfeSyncStateOrderByRelevanceInput = {
+    fields: NfeSyncStateOrderByRelevanceFieldEnum | NfeSyncStateOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type NfeSyncStateCountOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    ultimoNSU?: SortOrder
+    ultimaConsulta?: SortOrder
+    status?: SortOrder
+    notasBaixadas?: SortOrder
+    tempoGastoMs?: SortOrder
+    lastError?: SortOrder
+    correlationId?: SortOrder
+    lastDiagnostico?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type NfeSyncStateAvgOrderByAggregateInput = {
+    notasBaixadas?: SortOrder
+    tempoGastoMs?: SortOrder
+  }
+
+  export type NfeSyncStateMaxOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    ultimoNSU?: SortOrder
+    ultimaConsulta?: SortOrder
+    status?: SortOrder
+    notasBaixadas?: SortOrder
+    tempoGastoMs?: SortOrder
+    lastError?: SortOrder
+    correlationId?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type NfeSyncStateMinOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    ultimoNSU?: SortOrder
+    ultimaConsulta?: SortOrder
+    status?: SortOrder
+    notasBaixadas?: SortOrder
+    tempoGastoMs?: SortOrder
+    lastError?: SortOrder
+    correlationId?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type NfeSyncStateSumOrderByAggregateInput = {
+    notasBaixadas?: SortOrder
+    tempoGastoMs?: SortOrder
+  }
+
+  export type StoreProfileFiscalListRelationFilter = {
+    every?: StoreProfileFiscalWhereInput
+    some?: StoreProfileFiscalWhereInput
+    none?: StoreProfileFiscalWhereInput
+  }
+
+  export type StoreProfileFiscalOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type StoreProfileOrderByRelevanceInput = {
+    fields: StoreProfileOrderByRelevanceFieldEnum | StoreProfileOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type StoreProfileCountOrderByAggregateInput = {
+    id?: SortOrder
+    slug?: SortOrder
+    name?: SortOrder
+    icon?: SortOrder
+    description?: SortOrder
+  }
+
+  export type StoreProfileMaxOrderByAggregateInput = {
+    id?: SortOrder
+    slug?: SortOrder
+    name?: SortOrder
+    icon?: SortOrder
+    description?: SortOrder
+  }
+
+  export type StoreProfileMinOrderByAggregateInput = {
+    id?: SortOrder
+    slug?: SortOrder
+    name?: SortOrder
+    icon?: SortOrder
+    description?: SortOrder
+  }
+
+  export type StoreProfileScalarRelationFilter = {
+    is?: StoreProfileWhereInput
+    isNot?: StoreProfileWhereInput
+  }
+
+  export type FiscalProfileScalarRelationFilter = {
+    is?: FiscalProfileWhereInput
+    isNot?: FiscalProfileWhereInput
+  }
+
+  export type StoreProfileFiscalOrderByRelevanceInput = {
+    fields: StoreProfileFiscalOrderByRelevanceFieldEnum | StoreProfileFiscalOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type StoreProfileFiscalStoreProfileIdFiscalProfileIdCompoundUniqueInput = {
+    storeProfileId: string
+    fiscalProfileId: string
+  }
+
+  export type StoreProfileFiscalCountOrderByAggregateInput = {
+    storeProfileId?: SortOrder
+    fiscalProfileId?: SortOrder
+  }
+
+  export type StoreProfileFiscalMaxOrderByAggregateInput = {
+    storeProfileId?: SortOrder
+    fiscalProfileId?: SortOrder
+  }
+
+  export type StoreProfileFiscalMinOrderByAggregateInput = {
+    storeProfileId?: SortOrder
+    fiscalProfileId?: SortOrder
+  }
+
+  export type FiscalTaxRuleListRelationFilter = {
+    every?: FiscalTaxRuleWhereInput
+    some?: FiscalTaxRuleWhereInput
+    none?: FiscalTaxRuleWhereInput
+  }
+
+  export type FiscalProfileHistoryListRelationFilter = {
+    every?: FiscalProfileHistoryWhereInput
+    some?: FiscalProfileHistoryWhereInput
+    none?: FiscalProfileHistoryWhereInput
+  }
+
+  export type FiscalFavoriteListRelationFilter = {
+    every?: FiscalFavoriteWhereInput
+    some?: FiscalFavoriteWhereInput
+    none?: FiscalFavoriteWhereInput
+  }
+
+  export type FiscalTaxRuleOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type FiscalProfileHistoryOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type FiscalFavoriteOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type FiscalProfileOrderByRelevanceInput = {
+    fields: FiscalProfileOrderByRelevanceFieldEnum | FiscalProfileOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type FiscalProfileCountOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    icon?: SortOrder
+    group?: SortOrder
+    description?: SortOrder
+    scope?: SortOrder
+    tenantId?: SortOrder
+    version?: SortOrder
+    status?: SortOrder
+    emiteNfce?: SortOrder
+    ncm?: SortOrder
+    cest?: SortOrder
+    unit?: SortOrder
+    observacoes?: SortOrder
+  }
+
+  export type FiscalProfileMaxOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    icon?: SortOrder
+    group?: SortOrder
+    description?: SortOrder
+    scope?: SortOrder
+    tenantId?: SortOrder
+    version?: SortOrder
+    status?: SortOrder
+    emiteNfce?: SortOrder
+    ncm?: SortOrder
+    cest?: SortOrder
+    unit?: SortOrder
+    observacoes?: SortOrder
+  }
+
+  export type FiscalProfileMinOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    icon?: SortOrder
+    group?: SortOrder
+    description?: SortOrder
+    scope?: SortOrder
+    tenantId?: SortOrder
+    version?: SortOrder
+    status?: SortOrder
+    emiteNfce?: SortOrder
+    ncm?: SortOrder
+    cest?: SortOrder
+    unit?: SortOrder
+    observacoes?: SortOrder
+  }
+
+  export type FloatFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatFilter<$PrismaModel> | number
+  }
+
+  export type FiscalTaxRuleOrderByRelevanceInput = {
+    fields: FiscalTaxRuleOrderByRelevanceFieldEnum | FiscalTaxRuleOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type FiscalTaxRuleCountOrderByAggregateInput = {
+    id?: SortOrder
+    fiscalProfileId?: SortOrder
+    regime?: SortOrder
+    csosn?: SortOrder
+    cstIcms?: SortOrder
+    aliqIcms?: SortOrder
+    cstPis?: SortOrder
+    aliqPis?: SortOrder
+    cstCofins?: SortOrder
+    aliqCofins?: SortOrder
+    ibsCst?: SortOrder
+    ibsAliq?: SortOrder
+    cbsCst?: SortOrder
+    cbsAliq?: SortOrder
+    validFrom?: SortOrder
+    validUntil?: SortOrder
+  }
+
+  export type FiscalTaxRuleAvgOrderByAggregateInput = {
+    aliqIcms?: SortOrder
+    aliqPis?: SortOrder
+    aliqCofins?: SortOrder
+    ibsAliq?: SortOrder
+    cbsAliq?: SortOrder
+  }
+
+  export type FiscalTaxRuleMaxOrderByAggregateInput = {
+    id?: SortOrder
+    fiscalProfileId?: SortOrder
+    regime?: SortOrder
+    csosn?: SortOrder
+    cstIcms?: SortOrder
+    aliqIcms?: SortOrder
+    cstPis?: SortOrder
+    aliqPis?: SortOrder
+    cstCofins?: SortOrder
+    aliqCofins?: SortOrder
+    ibsCst?: SortOrder
+    ibsAliq?: SortOrder
+    cbsCst?: SortOrder
+    cbsAliq?: SortOrder
+    validFrom?: SortOrder
+    validUntil?: SortOrder
+  }
+
+  export type FiscalTaxRuleMinOrderByAggregateInput = {
+    id?: SortOrder
+    fiscalProfileId?: SortOrder
+    regime?: SortOrder
+    csosn?: SortOrder
+    cstIcms?: SortOrder
+    aliqIcms?: SortOrder
+    cstPis?: SortOrder
+    aliqPis?: SortOrder
+    cstCofins?: SortOrder
+    aliqCofins?: SortOrder
+    ibsCst?: SortOrder
+    ibsAliq?: SortOrder
+    cbsCst?: SortOrder
+    cbsAliq?: SortOrder
+    validFrom?: SortOrder
+    validUntil?: SortOrder
+  }
+
+  export type FiscalTaxRuleSumOrderByAggregateInput = {
+    aliqIcms?: SortOrder
+    aliqPis?: SortOrder
+    aliqCofins?: SortOrder
+    ibsAliq?: SortOrder
+    cbsAliq?: SortOrder
+  }
+
+  export type FloatWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedFloatFilter<$PrismaModel>
+    _min?: NestedFloatFilter<$PrismaModel>
+    _max?: NestedFloatFilter<$PrismaModel>
+  }
+
+  export type FiscalProfileHistoryOrderByRelevanceInput = {
+    fields: FiscalProfileHistoryOrderByRelevanceFieldEnum | FiscalProfileHistoryOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type FiscalProfileHistoryCountOrderByAggregateInput = {
+    id?: SortOrder
+    fiscalProfileId?: SortOrder
+    changedBy?: SortOrder
+    changedAt?: SortOrder
+    field?: SortOrder
+    oldValue?: SortOrder
+    newValue?: SortOrder
+    reason?: SortOrder
+  }
+
+  export type FiscalProfileHistoryMaxOrderByAggregateInput = {
+    id?: SortOrder
+    fiscalProfileId?: SortOrder
+    changedBy?: SortOrder
+    changedAt?: SortOrder
+    field?: SortOrder
+    oldValue?: SortOrder
+    newValue?: SortOrder
+    reason?: SortOrder
+  }
+
+  export type FiscalProfileHistoryMinOrderByAggregateInput = {
+    id?: SortOrder
+    fiscalProfileId?: SortOrder
+    changedBy?: SortOrder
+    changedAt?: SortOrder
+    field?: SortOrder
+    oldValue?: SortOrder
+    newValue?: SortOrder
+    reason?: SortOrder
+  }
+
+  export type FiscalFavoriteOrderByRelevanceInput = {
+    fields: FiscalFavoriteOrderByRelevanceFieldEnum | FiscalFavoriteOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type FiscalFavoriteTenantIdFiscalProfileIdCompoundUniqueInput = {
+    tenantId: string
+    fiscalProfileId: string
+  }
+
+  export type FiscalFavoriteCountOrderByAggregateInput = {
+    tenantId?: SortOrder
+    fiscalProfileId?: SortOrder
+  }
+
+  export type FiscalFavoriteMaxOrderByAggregateInput = {
+    tenantId?: SortOrder
+    fiscalProfileId?: SortOrder
+  }
+
+  export type FiscalFavoriteMinOrderByAggregateInput = {
+    tenantId?: SortOrder
+    fiscalProfileId?: SortOrder
+  }
+
+  export type DecimalFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[]
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[]
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string
+  }
+
+  export type PaymentLogOrderByRelevanceInput = {
+    fields: PaymentLogOrderByRelevanceFieldEnum | PaymentLogOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type PaymentLogCountOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    valor?: SortOrder
+    vencimentoAntes?: SortOrder
+    vencimentoApos?: SortOrder
+    observacao?: SortOrder
+    registradoPor?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type PaymentLogAvgOrderByAggregateInput = {
+    valor?: SortOrder
+  }
+
+  export type PaymentLogMaxOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    valor?: SortOrder
+    vencimentoAntes?: SortOrder
+    vencimentoApos?: SortOrder
+    observacao?: SortOrder
+    registradoPor?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type PaymentLogMinOrderByAggregateInput = {
+    id?: SortOrder
+    tenantId?: SortOrder
+    valor?: SortOrder
+    vencimentoAntes?: SortOrder
+    vencimentoApos?: SortOrder
+    observacao?: SortOrder
+    registradoPor?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type PaymentLogSumOrderByAggregateInput = {
+    valor?: SortOrder
+  }
+
+  export type DecimalWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[]
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[]
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedDecimalFilter<$PrismaModel>
+    _sum?: NestedDecimalFilter<$PrismaModel>
+    _min?: NestedDecimalFilter<$PrismaModel>
+    _max?: NestedDecimalFilter<$PrismaModel>
+  }
+
+  export type LeadOrderByRelevanceInput = {
+    fields: LeadOrderByRelevanceFieldEnum | LeadOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type LeadCountOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    whatsapp?: SortOrder
+    status?: SortOrder
+    source?: SortOrder
+    notes?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type LeadMaxOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    whatsapp?: SortOrder
+    status?: SortOrder
+    source?: SortOrder
+    notes?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type LeadMinOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    whatsapp?: SortOrder
+    status?: SortOrder
+    source?: SortOrder
+    notes?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
   export type UserCreateNestedManyWithoutTenantInput = {
     create?: XOR<UserCreateWithoutTenantInput, UserUncheckedCreateWithoutTenantInput> | UserCreateWithoutTenantInput[] | UserUncheckedCreateWithoutTenantInput[]
     connectOrCreate?: UserCreateOrConnectWithoutTenantInput | UserCreateOrConnectWithoutTenantInput[]
@@ -8459,6 +22983,20 @@ export namespace Prisma {
     connect?: TenantIntegrationWhereUniqueInput | TenantIntegrationWhereUniqueInput[]
   }
 
+  export type TenantGroupMemberCreateNestedManyWithoutTenantInput = {
+    create?: XOR<TenantGroupMemberCreateWithoutTenantInput, TenantGroupMemberUncheckedCreateWithoutTenantInput> | TenantGroupMemberCreateWithoutTenantInput[] | TenantGroupMemberUncheckedCreateWithoutTenantInput[]
+    connectOrCreate?: TenantGroupMemberCreateOrConnectWithoutTenantInput | TenantGroupMemberCreateOrConnectWithoutTenantInput[]
+    createMany?: TenantGroupMemberCreateManyTenantInputEnvelope
+    connect?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+  }
+
+  export type PaymentLogCreateNestedManyWithoutTenantInput = {
+    create?: XOR<PaymentLogCreateWithoutTenantInput, PaymentLogUncheckedCreateWithoutTenantInput> | PaymentLogCreateWithoutTenantInput[] | PaymentLogUncheckedCreateWithoutTenantInput[]
+    connectOrCreate?: PaymentLogCreateOrConnectWithoutTenantInput | PaymentLogCreateOrConnectWithoutTenantInput[]
+    createMany?: PaymentLogCreateManyTenantInputEnvelope
+    connect?: PaymentLogWhereUniqueInput | PaymentLogWhereUniqueInput[]
+  }
+
   export type UserUncheckedCreateNestedManyWithoutTenantInput = {
     create?: XOR<UserCreateWithoutTenantInput, UserUncheckedCreateWithoutTenantInput> | UserCreateWithoutTenantInput[] | UserUncheckedCreateWithoutTenantInput[]
     connectOrCreate?: UserCreateOrConnectWithoutTenantInput | UserCreateOrConnectWithoutTenantInput[]
@@ -8471,6 +23009,20 @@ export namespace Prisma {
     connectOrCreate?: TenantIntegrationCreateOrConnectWithoutTenantInput | TenantIntegrationCreateOrConnectWithoutTenantInput[]
     createMany?: TenantIntegrationCreateManyTenantInputEnvelope
     connect?: TenantIntegrationWhereUniqueInput | TenantIntegrationWhereUniqueInput[]
+  }
+
+  export type TenantGroupMemberUncheckedCreateNestedManyWithoutTenantInput = {
+    create?: XOR<TenantGroupMemberCreateWithoutTenantInput, TenantGroupMemberUncheckedCreateWithoutTenantInput> | TenantGroupMemberCreateWithoutTenantInput[] | TenantGroupMemberUncheckedCreateWithoutTenantInput[]
+    connectOrCreate?: TenantGroupMemberCreateOrConnectWithoutTenantInput | TenantGroupMemberCreateOrConnectWithoutTenantInput[]
+    createMany?: TenantGroupMemberCreateManyTenantInputEnvelope
+    connect?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+  }
+
+  export type PaymentLogUncheckedCreateNestedManyWithoutTenantInput = {
+    create?: XOR<PaymentLogCreateWithoutTenantInput, PaymentLogUncheckedCreateWithoutTenantInput> | PaymentLogCreateWithoutTenantInput[] | PaymentLogUncheckedCreateWithoutTenantInput[]
+    connectOrCreate?: PaymentLogCreateOrConnectWithoutTenantInput | PaymentLogCreateOrConnectWithoutTenantInput[]
+    createMany?: PaymentLogCreateManyTenantInputEnvelope
+    connect?: PaymentLogWhereUniqueInput | PaymentLogWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -8541,6 +23093,34 @@ export namespace Prisma {
     deleteMany?: TenantIntegrationScalarWhereInput | TenantIntegrationScalarWhereInput[]
   }
 
+  export type TenantGroupMemberUpdateManyWithoutTenantNestedInput = {
+    create?: XOR<TenantGroupMemberCreateWithoutTenantInput, TenantGroupMemberUncheckedCreateWithoutTenantInput> | TenantGroupMemberCreateWithoutTenantInput[] | TenantGroupMemberUncheckedCreateWithoutTenantInput[]
+    connectOrCreate?: TenantGroupMemberCreateOrConnectWithoutTenantInput | TenantGroupMemberCreateOrConnectWithoutTenantInput[]
+    upsert?: TenantGroupMemberUpsertWithWhereUniqueWithoutTenantInput | TenantGroupMemberUpsertWithWhereUniqueWithoutTenantInput[]
+    createMany?: TenantGroupMemberCreateManyTenantInputEnvelope
+    set?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    disconnect?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    delete?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    connect?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    update?: TenantGroupMemberUpdateWithWhereUniqueWithoutTenantInput | TenantGroupMemberUpdateWithWhereUniqueWithoutTenantInput[]
+    updateMany?: TenantGroupMemberUpdateManyWithWhereWithoutTenantInput | TenantGroupMemberUpdateManyWithWhereWithoutTenantInput[]
+    deleteMany?: TenantGroupMemberScalarWhereInput | TenantGroupMemberScalarWhereInput[]
+  }
+
+  export type PaymentLogUpdateManyWithoutTenantNestedInput = {
+    create?: XOR<PaymentLogCreateWithoutTenantInput, PaymentLogUncheckedCreateWithoutTenantInput> | PaymentLogCreateWithoutTenantInput[] | PaymentLogUncheckedCreateWithoutTenantInput[]
+    connectOrCreate?: PaymentLogCreateOrConnectWithoutTenantInput | PaymentLogCreateOrConnectWithoutTenantInput[]
+    upsert?: PaymentLogUpsertWithWhereUniqueWithoutTenantInput | PaymentLogUpsertWithWhereUniqueWithoutTenantInput[]
+    createMany?: PaymentLogCreateManyTenantInputEnvelope
+    set?: PaymentLogWhereUniqueInput | PaymentLogWhereUniqueInput[]
+    disconnect?: PaymentLogWhereUniqueInput | PaymentLogWhereUniqueInput[]
+    delete?: PaymentLogWhereUniqueInput | PaymentLogWhereUniqueInput[]
+    connect?: PaymentLogWhereUniqueInput | PaymentLogWhereUniqueInput[]
+    update?: PaymentLogUpdateWithWhereUniqueWithoutTenantInput | PaymentLogUpdateWithWhereUniqueWithoutTenantInput[]
+    updateMany?: PaymentLogUpdateManyWithWhereWithoutTenantInput | PaymentLogUpdateManyWithWhereWithoutTenantInput[]
+    deleteMany?: PaymentLogScalarWhereInput | PaymentLogScalarWhereInput[]
+  }
+
   export type UserUncheckedUpdateManyWithoutTenantNestedInput = {
     create?: XOR<UserCreateWithoutTenantInput, UserUncheckedCreateWithoutTenantInput> | UserCreateWithoutTenantInput[] | UserUncheckedCreateWithoutTenantInput[]
     connectOrCreate?: UserCreateOrConnectWithoutTenantInput | UserCreateOrConnectWithoutTenantInput[]
@@ -8569,10 +23149,44 @@ export namespace Prisma {
     deleteMany?: TenantIntegrationScalarWhereInput | TenantIntegrationScalarWhereInput[]
   }
 
+  export type TenantGroupMemberUncheckedUpdateManyWithoutTenantNestedInput = {
+    create?: XOR<TenantGroupMemberCreateWithoutTenantInput, TenantGroupMemberUncheckedCreateWithoutTenantInput> | TenantGroupMemberCreateWithoutTenantInput[] | TenantGroupMemberUncheckedCreateWithoutTenantInput[]
+    connectOrCreate?: TenantGroupMemberCreateOrConnectWithoutTenantInput | TenantGroupMemberCreateOrConnectWithoutTenantInput[]
+    upsert?: TenantGroupMemberUpsertWithWhereUniqueWithoutTenantInput | TenantGroupMemberUpsertWithWhereUniqueWithoutTenantInput[]
+    createMany?: TenantGroupMemberCreateManyTenantInputEnvelope
+    set?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    disconnect?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    delete?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    connect?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    update?: TenantGroupMemberUpdateWithWhereUniqueWithoutTenantInput | TenantGroupMemberUpdateWithWhereUniqueWithoutTenantInput[]
+    updateMany?: TenantGroupMemberUpdateManyWithWhereWithoutTenantInput | TenantGroupMemberUpdateManyWithWhereWithoutTenantInput[]
+    deleteMany?: TenantGroupMemberScalarWhereInput | TenantGroupMemberScalarWhereInput[]
+  }
+
+  export type PaymentLogUncheckedUpdateManyWithoutTenantNestedInput = {
+    create?: XOR<PaymentLogCreateWithoutTenantInput, PaymentLogUncheckedCreateWithoutTenantInput> | PaymentLogCreateWithoutTenantInput[] | PaymentLogUncheckedCreateWithoutTenantInput[]
+    connectOrCreate?: PaymentLogCreateOrConnectWithoutTenantInput | PaymentLogCreateOrConnectWithoutTenantInput[]
+    upsert?: PaymentLogUpsertWithWhereUniqueWithoutTenantInput | PaymentLogUpsertWithWhereUniqueWithoutTenantInput[]
+    createMany?: PaymentLogCreateManyTenantInputEnvelope
+    set?: PaymentLogWhereUniqueInput | PaymentLogWhereUniqueInput[]
+    disconnect?: PaymentLogWhereUniqueInput | PaymentLogWhereUniqueInput[]
+    delete?: PaymentLogWhereUniqueInput | PaymentLogWhereUniqueInput[]
+    connect?: PaymentLogWhereUniqueInput | PaymentLogWhereUniqueInput[]
+    update?: PaymentLogUpdateWithWhereUniqueWithoutTenantInput | PaymentLogUpdateWithWhereUniqueWithoutTenantInput[]
+    updateMany?: PaymentLogUpdateManyWithWhereWithoutTenantInput | PaymentLogUpdateManyWithWhereWithoutTenantInput[]
+    deleteMany?: PaymentLogScalarWhereInput | PaymentLogScalarWhereInput[]
+  }
+
   export type TenantCreateNestedOneWithoutUsersInput = {
     create?: XOR<TenantCreateWithoutUsersInput, TenantUncheckedCreateWithoutUsersInput>
     connectOrCreate?: TenantCreateOrConnectWithoutUsersInput
     connect?: TenantWhereUniqueInput
+  }
+
+  export type TenantGroupCreateNestedOneWithoutUsersInput = {
+    create?: XOR<TenantGroupCreateWithoutUsersInput, TenantGroupUncheckedCreateWithoutUsersInput>
+    connectOrCreate?: TenantGroupCreateOrConnectWithoutUsersInput
+    connect?: TenantGroupWhereUniqueInput
   }
 
   export type TenantUpdateOneRequiredWithoutUsersNestedInput = {
@@ -8581,6 +23195,16 @@ export namespace Prisma {
     upsert?: TenantUpsertWithoutUsersInput
     connect?: TenantWhereUniqueInput
     update?: XOR<XOR<TenantUpdateToOneWithWhereWithoutUsersInput, TenantUpdateWithoutUsersInput>, TenantUncheckedUpdateWithoutUsersInput>
+  }
+
+  export type TenantGroupUpdateOneWithoutUsersNestedInput = {
+    create?: XOR<TenantGroupCreateWithoutUsersInput, TenantGroupUncheckedCreateWithoutUsersInput>
+    connectOrCreate?: TenantGroupCreateOrConnectWithoutUsersInput
+    upsert?: TenantGroupUpsertWithoutUsersInput
+    disconnect?: TenantGroupWhereInput | boolean
+    delete?: TenantGroupWhereInput | boolean
+    connect?: TenantGroupWhereUniqueInput
+    update?: XOR<XOR<TenantGroupUpdateToOneWithWhereWithoutUsersInput, TenantGroupUpdateWithoutUsersInput>, TenantGroupUncheckedUpdateWithoutUsersInput>
   }
 
   export type BytesFieldUpdateOperationsInput = {
@@ -8599,6 +23223,428 @@ export namespace Prisma {
     upsert?: TenantUpsertWithoutTenantIntegrationsInput
     connect?: TenantWhereUniqueInput
     update?: XOR<XOR<TenantUpdateToOneWithWhereWithoutTenantIntegrationsInput, TenantUpdateWithoutTenantIntegrationsInput>, TenantUncheckedUpdateWithoutTenantIntegrationsInput>
+  }
+
+  export type TenantGroupMemberCreateNestedManyWithoutGroupInput = {
+    create?: XOR<TenantGroupMemberCreateWithoutGroupInput, TenantGroupMemberUncheckedCreateWithoutGroupInput> | TenantGroupMemberCreateWithoutGroupInput[] | TenantGroupMemberUncheckedCreateWithoutGroupInput[]
+    connectOrCreate?: TenantGroupMemberCreateOrConnectWithoutGroupInput | TenantGroupMemberCreateOrConnectWithoutGroupInput[]
+    createMany?: TenantGroupMemberCreateManyGroupInputEnvelope
+    connect?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+  }
+
+  export type UserCreateNestedManyWithoutGroupInput = {
+    create?: XOR<UserCreateWithoutGroupInput, UserUncheckedCreateWithoutGroupInput> | UserCreateWithoutGroupInput[] | UserUncheckedCreateWithoutGroupInput[]
+    connectOrCreate?: UserCreateOrConnectWithoutGroupInput | UserCreateOrConnectWithoutGroupInput[]
+    createMany?: UserCreateManyGroupInputEnvelope
+    connect?: UserWhereUniqueInput | UserWhereUniqueInput[]
+  }
+
+  export type TenantGroupMemberUncheckedCreateNestedManyWithoutGroupInput = {
+    create?: XOR<TenantGroupMemberCreateWithoutGroupInput, TenantGroupMemberUncheckedCreateWithoutGroupInput> | TenantGroupMemberCreateWithoutGroupInput[] | TenantGroupMemberUncheckedCreateWithoutGroupInput[]
+    connectOrCreate?: TenantGroupMemberCreateOrConnectWithoutGroupInput | TenantGroupMemberCreateOrConnectWithoutGroupInput[]
+    createMany?: TenantGroupMemberCreateManyGroupInputEnvelope
+    connect?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+  }
+
+  export type UserUncheckedCreateNestedManyWithoutGroupInput = {
+    create?: XOR<UserCreateWithoutGroupInput, UserUncheckedCreateWithoutGroupInput> | UserCreateWithoutGroupInput[] | UserUncheckedCreateWithoutGroupInput[]
+    connectOrCreate?: UserCreateOrConnectWithoutGroupInput | UserCreateOrConnectWithoutGroupInput[]
+    createMany?: UserCreateManyGroupInputEnvelope
+    connect?: UserWhereUniqueInput | UserWhereUniqueInput[]
+  }
+
+  export type TenantGroupMemberUpdateManyWithoutGroupNestedInput = {
+    create?: XOR<TenantGroupMemberCreateWithoutGroupInput, TenantGroupMemberUncheckedCreateWithoutGroupInput> | TenantGroupMemberCreateWithoutGroupInput[] | TenantGroupMemberUncheckedCreateWithoutGroupInput[]
+    connectOrCreate?: TenantGroupMemberCreateOrConnectWithoutGroupInput | TenantGroupMemberCreateOrConnectWithoutGroupInput[]
+    upsert?: TenantGroupMemberUpsertWithWhereUniqueWithoutGroupInput | TenantGroupMemberUpsertWithWhereUniqueWithoutGroupInput[]
+    createMany?: TenantGroupMemberCreateManyGroupInputEnvelope
+    set?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    disconnect?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    delete?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    connect?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    update?: TenantGroupMemberUpdateWithWhereUniqueWithoutGroupInput | TenantGroupMemberUpdateWithWhereUniqueWithoutGroupInput[]
+    updateMany?: TenantGroupMemberUpdateManyWithWhereWithoutGroupInput | TenantGroupMemberUpdateManyWithWhereWithoutGroupInput[]
+    deleteMany?: TenantGroupMemberScalarWhereInput | TenantGroupMemberScalarWhereInput[]
+  }
+
+  export type UserUpdateManyWithoutGroupNestedInput = {
+    create?: XOR<UserCreateWithoutGroupInput, UserUncheckedCreateWithoutGroupInput> | UserCreateWithoutGroupInput[] | UserUncheckedCreateWithoutGroupInput[]
+    connectOrCreate?: UserCreateOrConnectWithoutGroupInput | UserCreateOrConnectWithoutGroupInput[]
+    upsert?: UserUpsertWithWhereUniqueWithoutGroupInput | UserUpsertWithWhereUniqueWithoutGroupInput[]
+    createMany?: UserCreateManyGroupInputEnvelope
+    set?: UserWhereUniqueInput | UserWhereUniqueInput[]
+    disconnect?: UserWhereUniqueInput | UserWhereUniqueInput[]
+    delete?: UserWhereUniqueInput | UserWhereUniqueInput[]
+    connect?: UserWhereUniqueInput | UserWhereUniqueInput[]
+    update?: UserUpdateWithWhereUniqueWithoutGroupInput | UserUpdateWithWhereUniqueWithoutGroupInput[]
+    updateMany?: UserUpdateManyWithWhereWithoutGroupInput | UserUpdateManyWithWhereWithoutGroupInput[]
+    deleteMany?: UserScalarWhereInput | UserScalarWhereInput[]
+  }
+
+  export type TenantGroupMemberUncheckedUpdateManyWithoutGroupNestedInput = {
+    create?: XOR<TenantGroupMemberCreateWithoutGroupInput, TenantGroupMemberUncheckedCreateWithoutGroupInput> | TenantGroupMemberCreateWithoutGroupInput[] | TenantGroupMemberUncheckedCreateWithoutGroupInput[]
+    connectOrCreate?: TenantGroupMemberCreateOrConnectWithoutGroupInput | TenantGroupMemberCreateOrConnectWithoutGroupInput[]
+    upsert?: TenantGroupMemberUpsertWithWhereUniqueWithoutGroupInput | TenantGroupMemberUpsertWithWhereUniqueWithoutGroupInput[]
+    createMany?: TenantGroupMemberCreateManyGroupInputEnvelope
+    set?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    disconnect?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    delete?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    connect?: TenantGroupMemberWhereUniqueInput | TenantGroupMemberWhereUniqueInput[]
+    update?: TenantGroupMemberUpdateWithWhereUniqueWithoutGroupInput | TenantGroupMemberUpdateWithWhereUniqueWithoutGroupInput[]
+    updateMany?: TenantGroupMemberUpdateManyWithWhereWithoutGroupInput | TenantGroupMemberUpdateManyWithWhereWithoutGroupInput[]
+    deleteMany?: TenantGroupMemberScalarWhereInput | TenantGroupMemberScalarWhereInput[]
+  }
+
+  export type UserUncheckedUpdateManyWithoutGroupNestedInput = {
+    create?: XOR<UserCreateWithoutGroupInput, UserUncheckedCreateWithoutGroupInput> | UserCreateWithoutGroupInput[] | UserUncheckedCreateWithoutGroupInput[]
+    connectOrCreate?: UserCreateOrConnectWithoutGroupInput | UserCreateOrConnectWithoutGroupInput[]
+    upsert?: UserUpsertWithWhereUniqueWithoutGroupInput | UserUpsertWithWhereUniqueWithoutGroupInput[]
+    createMany?: UserCreateManyGroupInputEnvelope
+    set?: UserWhereUniqueInput | UserWhereUniqueInput[]
+    disconnect?: UserWhereUniqueInput | UserWhereUniqueInput[]
+    delete?: UserWhereUniqueInput | UserWhereUniqueInput[]
+    connect?: UserWhereUniqueInput | UserWhereUniqueInput[]
+    update?: UserUpdateWithWhereUniqueWithoutGroupInput | UserUpdateWithWhereUniqueWithoutGroupInput[]
+    updateMany?: UserUpdateManyWithWhereWithoutGroupInput | UserUpdateManyWithWhereWithoutGroupInput[]
+    deleteMany?: UserScalarWhereInput | UserScalarWhereInput[]
+  }
+
+  export type TenantGroupCreateNestedOneWithoutMembersInput = {
+    create?: XOR<TenantGroupCreateWithoutMembersInput, TenantGroupUncheckedCreateWithoutMembersInput>
+    connectOrCreate?: TenantGroupCreateOrConnectWithoutMembersInput
+    connect?: TenantGroupWhereUniqueInput
+  }
+
+  export type TenantCreateNestedOneWithoutGroupMembersInput = {
+    create?: XOR<TenantCreateWithoutGroupMembersInput, TenantUncheckedCreateWithoutGroupMembersInput>
+    connectOrCreate?: TenantCreateOrConnectWithoutGroupMembersInput
+    connect?: TenantWhereUniqueInput
+  }
+
+  export type TenantGroupUpdateOneRequiredWithoutMembersNestedInput = {
+    create?: XOR<TenantGroupCreateWithoutMembersInput, TenantGroupUncheckedCreateWithoutMembersInput>
+    connectOrCreate?: TenantGroupCreateOrConnectWithoutMembersInput
+    upsert?: TenantGroupUpsertWithoutMembersInput
+    connect?: TenantGroupWhereUniqueInput
+    update?: XOR<XOR<TenantGroupUpdateToOneWithWhereWithoutMembersInput, TenantGroupUpdateWithoutMembersInput>, TenantGroupUncheckedUpdateWithoutMembersInput>
+  }
+
+  export type TenantUpdateOneRequiredWithoutGroupMembersNestedInput = {
+    create?: XOR<TenantCreateWithoutGroupMembersInput, TenantUncheckedCreateWithoutGroupMembersInput>
+    connectOrCreate?: TenantCreateOrConnectWithoutGroupMembersInput
+    upsert?: TenantUpsertWithoutGroupMembersInput
+    connect?: TenantWhereUniqueInput
+    update?: XOR<XOR<TenantUpdateToOneWithWhereWithoutGroupMembersInput, TenantUpdateWithoutGroupMembersInput>, TenantUncheckedUpdateWithoutGroupMembersInput>
+  }
+
+  export type StoreProfileFiscalCreateNestedManyWithoutStoreProfileInput = {
+    create?: XOR<StoreProfileFiscalCreateWithoutStoreProfileInput, StoreProfileFiscalUncheckedCreateWithoutStoreProfileInput> | StoreProfileFiscalCreateWithoutStoreProfileInput[] | StoreProfileFiscalUncheckedCreateWithoutStoreProfileInput[]
+    connectOrCreate?: StoreProfileFiscalCreateOrConnectWithoutStoreProfileInput | StoreProfileFiscalCreateOrConnectWithoutStoreProfileInput[]
+    createMany?: StoreProfileFiscalCreateManyStoreProfileInputEnvelope
+    connect?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+  }
+
+  export type StoreProfileFiscalUncheckedCreateNestedManyWithoutStoreProfileInput = {
+    create?: XOR<StoreProfileFiscalCreateWithoutStoreProfileInput, StoreProfileFiscalUncheckedCreateWithoutStoreProfileInput> | StoreProfileFiscalCreateWithoutStoreProfileInput[] | StoreProfileFiscalUncheckedCreateWithoutStoreProfileInput[]
+    connectOrCreate?: StoreProfileFiscalCreateOrConnectWithoutStoreProfileInput | StoreProfileFiscalCreateOrConnectWithoutStoreProfileInput[]
+    createMany?: StoreProfileFiscalCreateManyStoreProfileInputEnvelope
+    connect?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+  }
+
+  export type StoreProfileFiscalUpdateManyWithoutStoreProfileNestedInput = {
+    create?: XOR<StoreProfileFiscalCreateWithoutStoreProfileInput, StoreProfileFiscalUncheckedCreateWithoutStoreProfileInput> | StoreProfileFiscalCreateWithoutStoreProfileInput[] | StoreProfileFiscalUncheckedCreateWithoutStoreProfileInput[]
+    connectOrCreate?: StoreProfileFiscalCreateOrConnectWithoutStoreProfileInput | StoreProfileFiscalCreateOrConnectWithoutStoreProfileInput[]
+    upsert?: StoreProfileFiscalUpsertWithWhereUniqueWithoutStoreProfileInput | StoreProfileFiscalUpsertWithWhereUniqueWithoutStoreProfileInput[]
+    createMany?: StoreProfileFiscalCreateManyStoreProfileInputEnvelope
+    set?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    disconnect?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    delete?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    connect?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    update?: StoreProfileFiscalUpdateWithWhereUniqueWithoutStoreProfileInput | StoreProfileFiscalUpdateWithWhereUniqueWithoutStoreProfileInput[]
+    updateMany?: StoreProfileFiscalUpdateManyWithWhereWithoutStoreProfileInput | StoreProfileFiscalUpdateManyWithWhereWithoutStoreProfileInput[]
+    deleteMany?: StoreProfileFiscalScalarWhereInput | StoreProfileFiscalScalarWhereInput[]
+  }
+
+  export type StoreProfileFiscalUncheckedUpdateManyWithoutStoreProfileNestedInput = {
+    create?: XOR<StoreProfileFiscalCreateWithoutStoreProfileInput, StoreProfileFiscalUncheckedCreateWithoutStoreProfileInput> | StoreProfileFiscalCreateWithoutStoreProfileInput[] | StoreProfileFiscalUncheckedCreateWithoutStoreProfileInput[]
+    connectOrCreate?: StoreProfileFiscalCreateOrConnectWithoutStoreProfileInput | StoreProfileFiscalCreateOrConnectWithoutStoreProfileInput[]
+    upsert?: StoreProfileFiscalUpsertWithWhereUniqueWithoutStoreProfileInput | StoreProfileFiscalUpsertWithWhereUniqueWithoutStoreProfileInput[]
+    createMany?: StoreProfileFiscalCreateManyStoreProfileInputEnvelope
+    set?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    disconnect?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    delete?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    connect?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    update?: StoreProfileFiscalUpdateWithWhereUniqueWithoutStoreProfileInput | StoreProfileFiscalUpdateWithWhereUniqueWithoutStoreProfileInput[]
+    updateMany?: StoreProfileFiscalUpdateManyWithWhereWithoutStoreProfileInput | StoreProfileFiscalUpdateManyWithWhereWithoutStoreProfileInput[]
+    deleteMany?: StoreProfileFiscalScalarWhereInput | StoreProfileFiscalScalarWhereInput[]
+  }
+
+  export type StoreProfileCreateNestedOneWithoutProfilesInput = {
+    create?: XOR<StoreProfileCreateWithoutProfilesInput, StoreProfileUncheckedCreateWithoutProfilesInput>
+    connectOrCreate?: StoreProfileCreateOrConnectWithoutProfilesInput
+    connect?: StoreProfileWhereUniqueInput
+  }
+
+  export type FiscalProfileCreateNestedOneWithoutStoreProfilesInput = {
+    create?: XOR<FiscalProfileCreateWithoutStoreProfilesInput, FiscalProfileUncheckedCreateWithoutStoreProfilesInput>
+    connectOrCreate?: FiscalProfileCreateOrConnectWithoutStoreProfilesInput
+    connect?: FiscalProfileWhereUniqueInput
+  }
+
+  export type StoreProfileUpdateOneRequiredWithoutProfilesNestedInput = {
+    create?: XOR<StoreProfileCreateWithoutProfilesInput, StoreProfileUncheckedCreateWithoutProfilesInput>
+    connectOrCreate?: StoreProfileCreateOrConnectWithoutProfilesInput
+    upsert?: StoreProfileUpsertWithoutProfilesInput
+    connect?: StoreProfileWhereUniqueInput
+    update?: XOR<XOR<StoreProfileUpdateToOneWithWhereWithoutProfilesInput, StoreProfileUpdateWithoutProfilesInput>, StoreProfileUncheckedUpdateWithoutProfilesInput>
+  }
+
+  export type FiscalProfileUpdateOneRequiredWithoutStoreProfilesNestedInput = {
+    create?: XOR<FiscalProfileCreateWithoutStoreProfilesInput, FiscalProfileUncheckedCreateWithoutStoreProfilesInput>
+    connectOrCreate?: FiscalProfileCreateOrConnectWithoutStoreProfilesInput
+    upsert?: FiscalProfileUpsertWithoutStoreProfilesInput
+    connect?: FiscalProfileWhereUniqueInput
+    update?: XOR<XOR<FiscalProfileUpdateToOneWithWhereWithoutStoreProfilesInput, FiscalProfileUpdateWithoutStoreProfilesInput>, FiscalProfileUncheckedUpdateWithoutStoreProfilesInput>
+  }
+
+  export type FiscalTaxRuleCreateNestedManyWithoutFiscalProfileInput = {
+    create?: XOR<FiscalTaxRuleCreateWithoutFiscalProfileInput, FiscalTaxRuleUncheckedCreateWithoutFiscalProfileInput> | FiscalTaxRuleCreateWithoutFiscalProfileInput[] | FiscalTaxRuleUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: FiscalTaxRuleCreateOrConnectWithoutFiscalProfileInput | FiscalTaxRuleCreateOrConnectWithoutFiscalProfileInput[]
+    createMany?: FiscalTaxRuleCreateManyFiscalProfileInputEnvelope
+    connect?: FiscalTaxRuleWhereUniqueInput | FiscalTaxRuleWhereUniqueInput[]
+  }
+
+  export type FiscalProfileHistoryCreateNestedManyWithoutFiscalProfileInput = {
+    create?: XOR<FiscalProfileHistoryCreateWithoutFiscalProfileInput, FiscalProfileHistoryUncheckedCreateWithoutFiscalProfileInput> | FiscalProfileHistoryCreateWithoutFiscalProfileInput[] | FiscalProfileHistoryUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: FiscalProfileHistoryCreateOrConnectWithoutFiscalProfileInput | FiscalProfileHistoryCreateOrConnectWithoutFiscalProfileInput[]
+    createMany?: FiscalProfileHistoryCreateManyFiscalProfileInputEnvelope
+    connect?: FiscalProfileHistoryWhereUniqueInput | FiscalProfileHistoryWhereUniqueInput[]
+  }
+
+  export type StoreProfileFiscalCreateNestedManyWithoutFiscalProfileInput = {
+    create?: XOR<StoreProfileFiscalCreateWithoutFiscalProfileInput, StoreProfileFiscalUncheckedCreateWithoutFiscalProfileInput> | StoreProfileFiscalCreateWithoutFiscalProfileInput[] | StoreProfileFiscalUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: StoreProfileFiscalCreateOrConnectWithoutFiscalProfileInput | StoreProfileFiscalCreateOrConnectWithoutFiscalProfileInput[]
+    createMany?: StoreProfileFiscalCreateManyFiscalProfileInputEnvelope
+    connect?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+  }
+
+  export type FiscalFavoriteCreateNestedManyWithoutFiscalProfileInput = {
+    create?: XOR<FiscalFavoriteCreateWithoutFiscalProfileInput, FiscalFavoriteUncheckedCreateWithoutFiscalProfileInput> | FiscalFavoriteCreateWithoutFiscalProfileInput[] | FiscalFavoriteUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: FiscalFavoriteCreateOrConnectWithoutFiscalProfileInput | FiscalFavoriteCreateOrConnectWithoutFiscalProfileInput[]
+    createMany?: FiscalFavoriteCreateManyFiscalProfileInputEnvelope
+    connect?: FiscalFavoriteWhereUniqueInput | FiscalFavoriteWhereUniqueInput[]
+  }
+
+  export type FiscalTaxRuleUncheckedCreateNestedManyWithoutFiscalProfileInput = {
+    create?: XOR<FiscalTaxRuleCreateWithoutFiscalProfileInput, FiscalTaxRuleUncheckedCreateWithoutFiscalProfileInput> | FiscalTaxRuleCreateWithoutFiscalProfileInput[] | FiscalTaxRuleUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: FiscalTaxRuleCreateOrConnectWithoutFiscalProfileInput | FiscalTaxRuleCreateOrConnectWithoutFiscalProfileInput[]
+    createMany?: FiscalTaxRuleCreateManyFiscalProfileInputEnvelope
+    connect?: FiscalTaxRuleWhereUniqueInput | FiscalTaxRuleWhereUniqueInput[]
+  }
+
+  export type FiscalProfileHistoryUncheckedCreateNestedManyWithoutFiscalProfileInput = {
+    create?: XOR<FiscalProfileHistoryCreateWithoutFiscalProfileInput, FiscalProfileHistoryUncheckedCreateWithoutFiscalProfileInput> | FiscalProfileHistoryCreateWithoutFiscalProfileInput[] | FiscalProfileHistoryUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: FiscalProfileHistoryCreateOrConnectWithoutFiscalProfileInput | FiscalProfileHistoryCreateOrConnectWithoutFiscalProfileInput[]
+    createMany?: FiscalProfileHistoryCreateManyFiscalProfileInputEnvelope
+    connect?: FiscalProfileHistoryWhereUniqueInput | FiscalProfileHistoryWhereUniqueInput[]
+  }
+
+  export type StoreProfileFiscalUncheckedCreateNestedManyWithoutFiscalProfileInput = {
+    create?: XOR<StoreProfileFiscalCreateWithoutFiscalProfileInput, StoreProfileFiscalUncheckedCreateWithoutFiscalProfileInput> | StoreProfileFiscalCreateWithoutFiscalProfileInput[] | StoreProfileFiscalUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: StoreProfileFiscalCreateOrConnectWithoutFiscalProfileInput | StoreProfileFiscalCreateOrConnectWithoutFiscalProfileInput[]
+    createMany?: StoreProfileFiscalCreateManyFiscalProfileInputEnvelope
+    connect?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+  }
+
+  export type FiscalFavoriteUncheckedCreateNestedManyWithoutFiscalProfileInput = {
+    create?: XOR<FiscalFavoriteCreateWithoutFiscalProfileInput, FiscalFavoriteUncheckedCreateWithoutFiscalProfileInput> | FiscalFavoriteCreateWithoutFiscalProfileInput[] | FiscalFavoriteUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: FiscalFavoriteCreateOrConnectWithoutFiscalProfileInput | FiscalFavoriteCreateOrConnectWithoutFiscalProfileInput[]
+    createMany?: FiscalFavoriteCreateManyFiscalProfileInputEnvelope
+    connect?: FiscalFavoriteWhereUniqueInput | FiscalFavoriteWhereUniqueInput[]
+  }
+
+  export type FiscalTaxRuleUpdateManyWithoutFiscalProfileNestedInput = {
+    create?: XOR<FiscalTaxRuleCreateWithoutFiscalProfileInput, FiscalTaxRuleUncheckedCreateWithoutFiscalProfileInput> | FiscalTaxRuleCreateWithoutFiscalProfileInput[] | FiscalTaxRuleUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: FiscalTaxRuleCreateOrConnectWithoutFiscalProfileInput | FiscalTaxRuleCreateOrConnectWithoutFiscalProfileInput[]
+    upsert?: FiscalTaxRuleUpsertWithWhereUniqueWithoutFiscalProfileInput | FiscalTaxRuleUpsertWithWhereUniqueWithoutFiscalProfileInput[]
+    createMany?: FiscalTaxRuleCreateManyFiscalProfileInputEnvelope
+    set?: FiscalTaxRuleWhereUniqueInput | FiscalTaxRuleWhereUniqueInput[]
+    disconnect?: FiscalTaxRuleWhereUniqueInput | FiscalTaxRuleWhereUniqueInput[]
+    delete?: FiscalTaxRuleWhereUniqueInput | FiscalTaxRuleWhereUniqueInput[]
+    connect?: FiscalTaxRuleWhereUniqueInput | FiscalTaxRuleWhereUniqueInput[]
+    update?: FiscalTaxRuleUpdateWithWhereUniqueWithoutFiscalProfileInput | FiscalTaxRuleUpdateWithWhereUniqueWithoutFiscalProfileInput[]
+    updateMany?: FiscalTaxRuleUpdateManyWithWhereWithoutFiscalProfileInput | FiscalTaxRuleUpdateManyWithWhereWithoutFiscalProfileInput[]
+    deleteMany?: FiscalTaxRuleScalarWhereInput | FiscalTaxRuleScalarWhereInput[]
+  }
+
+  export type FiscalProfileHistoryUpdateManyWithoutFiscalProfileNestedInput = {
+    create?: XOR<FiscalProfileHistoryCreateWithoutFiscalProfileInput, FiscalProfileHistoryUncheckedCreateWithoutFiscalProfileInput> | FiscalProfileHistoryCreateWithoutFiscalProfileInput[] | FiscalProfileHistoryUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: FiscalProfileHistoryCreateOrConnectWithoutFiscalProfileInput | FiscalProfileHistoryCreateOrConnectWithoutFiscalProfileInput[]
+    upsert?: FiscalProfileHistoryUpsertWithWhereUniqueWithoutFiscalProfileInput | FiscalProfileHistoryUpsertWithWhereUniqueWithoutFiscalProfileInput[]
+    createMany?: FiscalProfileHistoryCreateManyFiscalProfileInputEnvelope
+    set?: FiscalProfileHistoryWhereUniqueInput | FiscalProfileHistoryWhereUniqueInput[]
+    disconnect?: FiscalProfileHistoryWhereUniqueInput | FiscalProfileHistoryWhereUniqueInput[]
+    delete?: FiscalProfileHistoryWhereUniqueInput | FiscalProfileHistoryWhereUniqueInput[]
+    connect?: FiscalProfileHistoryWhereUniqueInput | FiscalProfileHistoryWhereUniqueInput[]
+    update?: FiscalProfileHistoryUpdateWithWhereUniqueWithoutFiscalProfileInput | FiscalProfileHistoryUpdateWithWhereUniqueWithoutFiscalProfileInput[]
+    updateMany?: FiscalProfileHistoryUpdateManyWithWhereWithoutFiscalProfileInput | FiscalProfileHistoryUpdateManyWithWhereWithoutFiscalProfileInput[]
+    deleteMany?: FiscalProfileHistoryScalarWhereInput | FiscalProfileHistoryScalarWhereInput[]
+  }
+
+  export type StoreProfileFiscalUpdateManyWithoutFiscalProfileNestedInput = {
+    create?: XOR<StoreProfileFiscalCreateWithoutFiscalProfileInput, StoreProfileFiscalUncheckedCreateWithoutFiscalProfileInput> | StoreProfileFiscalCreateWithoutFiscalProfileInput[] | StoreProfileFiscalUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: StoreProfileFiscalCreateOrConnectWithoutFiscalProfileInput | StoreProfileFiscalCreateOrConnectWithoutFiscalProfileInput[]
+    upsert?: StoreProfileFiscalUpsertWithWhereUniqueWithoutFiscalProfileInput | StoreProfileFiscalUpsertWithWhereUniqueWithoutFiscalProfileInput[]
+    createMany?: StoreProfileFiscalCreateManyFiscalProfileInputEnvelope
+    set?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    disconnect?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    delete?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    connect?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    update?: StoreProfileFiscalUpdateWithWhereUniqueWithoutFiscalProfileInput | StoreProfileFiscalUpdateWithWhereUniqueWithoutFiscalProfileInput[]
+    updateMany?: StoreProfileFiscalUpdateManyWithWhereWithoutFiscalProfileInput | StoreProfileFiscalUpdateManyWithWhereWithoutFiscalProfileInput[]
+    deleteMany?: StoreProfileFiscalScalarWhereInput | StoreProfileFiscalScalarWhereInput[]
+  }
+
+  export type FiscalFavoriteUpdateManyWithoutFiscalProfileNestedInput = {
+    create?: XOR<FiscalFavoriteCreateWithoutFiscalProfileInput, FiscalFavoriteUncheckedCreateWithoutFiscalProfileInput> | FiscalFavoriteCreateWithoutFiscalProfileInput[] | FiscalFavoriteUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: FiscalFavoriteCreateOrConnectWithoutFiscalProfileInput | FiscalFavoriteCreateOrConnectWithoutFiscalProfileInput[]
+    upsert?: FiscalFavoriteUpsertWithWhereUniqueWithoutFiscalProfileInput | FiscalFavoriteUpsertWithWhereUniqueWithoutFiscalProfileInput[]
+    createMany?: FiscalFavoriteCreateManyFiscalProfileInputEnvelope
+    set?: FiscalFavoriteWhereUniqueInput | FiscalFavoriteWhereUniqueInput[]
+    disconnect?: FiscalFavoriteWhereUniqueInput | FiscalFavoriteWhereUniqueInput[]
+    delete?: FiscalFavoriteWhereUniqueInput | FiscalFavoriteWhereUniqueInput[]
+    connect?: FiscalFavoriteWhereUniqueInput | FiscalFavoriteWhereUniqueInput[]
+    update?: FiscalFavoriteUpdateWithWhereUniqueWithoutFiscalProfileInput | FiscalFavoriteUpdateWithWhereUniqueWithoutFiscalProfileInput[]
+    updateMany?: FiscalFavoriteUpdateManyWithWhereWithoutFiscalProfileInput | FiscalFavoriteUpdateManyWithWhereWithoutFiscalProfileInput[]
+    deleteMany?: FiscalFavoriteScalarWhereInput | FiscalFavoriteScalarWhereInput[]
+  }
+
+  export type FiscalTaxRuleUncheckedUpdateManyWithoutFiscalProfileNestedInput = {
+    create?: XOR<FiscalTaxRuleCreateWithoutFiscalProfileInput, FiscalTaxRuleUncheckedCreateWithoutFiscalProfileInput> | FiscalTaxRuleCreateWithoutFiscalProfileInput[] | FiscalTaxRuleUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: FiscalTaxRuleCreateOrConnectWithoutFiscalProfileInput | FiscalTaxRuleCreateOrConnectWithoutFiscalProfileInput[]
+    upsert?: FiscalTaxRuleUpsertWithWhereUniqueWithoutFiscalProfileInput | FiscalTaxRuleUpsertWithWhereUniqueWithoutFiscalProfileInput[]
+    createMany?: FiscalTaxRuleCreateManyFiscalProfileInputEnvelope
+    set?: FiscalTaxRuleWhereUniqueInput | FiscalTaxRuleWhereUniqueInput[]
+    disconnect?: FiscalTaxRuleWhereUniqueInput | FiscalTaxRuleWhereUniqueInput[]
+    delete?: FiscalTaxRuleWhereUniqueInput | FiscalTaxRuleWhereUniqueInput[]
+    connect?: FiscalTaxRuleWhereUniqueInput | FiscalTaxRuleWhereUniqueInput[]
+    update?: FiscalTaxRuleUpdateWithWhereUniqueWithoutFiscalProfileInput | FiscalTaxRuleUpdateWithWhereUniqueWithoutFiscalProfileInput[]
+    updateMany?: FiscalTaxRuleUpdateManyWithWhereWithoutFiscalProfileInput | FiscalTaxRuleUpdateManyWithWhereWithoutFiscalProfileInput[]
+    deleteMany?: FiscalTaxRuleScalarWhereInput | FiscalTaxRuleScalarWhereInput[]
+  }
+
+  export type FiscalProfileHistoryUncheckedUpdateManyWithoutFiscalProfileNestedInput = {
+    create?: XOR<FiscalProfileHistoryCreateWithoutFiscalProfileInput, FiscalProfileHistoryUncheckedCreateWithoutFiscalProfileInput> | FiscalProfileHistoryCreateWithoutFiscalProfileInput[] | FiscalProfileHistoryUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: FiscalProfileHistoryCreateOrConnectWithoutFiscalProfileInput | FiscalProfileHistoryCreateOrConnectWithoutFiscalProfileInput[]
+    upsert?: FiscalProfileHistoryUpsertWithWhereUniqueWithoutFiscalProfileInput | FiscalProfileHistoryUpsertWithWhereUniqueWithoutFiscalProfileInput[]
+    createMany?: FiscalProfileHistoryCreateManyFiscalProfileInputEnvelope
+    set?: FiscalProfileHistoryWhereUniqueInput | FiscalProfileHistoryWhereUniqueInput[]
+    disconnect?: FiscalProfileHistoryWhereUniqueInput | FiscalProfileHistoryWhereUniqueInput[]
+    delete?: FiscalProfileHistoryWhereUniqueInput | FiscalProfileHistoryWhereUniqueInput[]
+    connect?: FiscalProfileHistoryWhereUniqueInput | FiscalProfileHistoryWhereUniqueInput[]
+    update?: FiscalProfileHistoryUpdateWithWhereUniqueWithoutFiscalProfileInput | FiscalProfileHistoryUpdateWithWhereUniqueWithoutFiscalProfileInput[]
+    updateMany?: FiscalProfileHistoryUpdateManyWithWhereWithoutFiscalProfileInput | FiscalProfileHistoryUpdateManyWithWhereWithoutFiscalProfileInput[]
+    deleteMany?: FiscalProfileHistoryScalarWhereInput | FiscalProfileHistoryScalarWhereInput[]
+  }
+
+  export type StoreProfileFiscalUncheckedUpdateManyWithoutFiscalProfileNestedInput = {
+    create?: XOR<StoreProfileFiscalCreateWithoutFiscalProfileInput, StoreProfileFiscalUncheckedCreateWithoutFiscalProfileInput> | StoreProfileFiscalCreateWithoutFiscalProfileInput[] | StoreProfileFiscalUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: StoreProfileFiscalCreateOrConnectWithoutFiscalProfileInput | StoreProfileFiscalCreateOrConnectWithoutFiscalProfileInput[]
+    upsert?: StoreProfileFiscalUpsertWithWhereUniqueWithoutFiscalProfileInput | StoreProfileFiscalUpsertWithWhereUniqueWithoutFiscalProfileInput[]
+    createMany?: StoreProfileFiscalCreateManyFiscalProfileInputEnvelope
+    set?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    disconnect?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    delete?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    connect?: StoreProfileFiscalWhereUniqueInput | StoreProfileFiscalWhereUniqueInput[]
+    update?: StoreProfileFiscalUpdateWithWhereUniqueWithoutFiscalProfileInput | StoreProfileFiscalUpdateWithWhereUniqueWithoutFiscalProfileInput[]
+    updateMany?: StoreProfileFiscalUpdateManyWithWhereWithoutFiscalProfileInput | StoreProfileFiscalUpdateManyWithWhereWithoutFiscalProfileInput[]
+    deleteMany?: StoreProfileFiscalScalarWhereInput | StoreProfileFiscalScalarWhereInput[]
+  }
+
+  export type FiscalFavoriteUncheckedUpdateManyWithoutFiscalProfileNestedInput = {
+    create?: XOR<FiscalFavoriteCreateWithoutFiscalProfileInput, FiscalFavoriteUncheckedCreateWithoutFiscalProfileInput> | FiscalFavoriteCreateWithoutFiscalProfileInput[] | FiscalFavoriteUncheckedCreateWithoutFiscalProfileInput[]
+    connectOrCreate?: FiscalFavoriteCreateOrConnectWithoutFiscalProfileInput | FiscalFavoriteCreateOrConnectWithoutFiscalProfileInput[]
+    upsert?: FiscalFavoriteUpsertWithWhereUniqueWithoutFiscalProfileInput | FiscalFavoriteUpsertWithWhereUniqueWithoutFiscalProfileInput[]
+    createMany?: FiscalFavoriteCreateManyFiscalProfileInputEnvelope
+    set?: FiscalFavoriteWhereUniqueInput | FiscalFavoriteWhereUniqueInput[]
+    disconnect?: FiscalFavoriteWhereUniqueInput | FiscalFavoriteWhereUniqueInput[]
+    delete?: FiscalFavoriteWhereUniqueInput | FiscalFavoriteWhereUniqueInput[]
+    connect?: FiscalFavoriteWhereUniqueInput | FiscalFavoriteWhereUniqueInput[]
+    update?: FiscalFavoriteUpdateWithWhereUniqueWithoutFiscalProfileInput | FiscalFavoriteUpdateWithWhereUniqueWithoutFiscalProfileInput[]
+    updateMany?: FiscalFavoriteUpdateManyWithWhereWithoutFiscalProfileInput | FiscalFavoriteUpdateManyWithWhereWithoutFiscalProfileInput[]
+    deleteMany?: FiscalFavoriteScalarWhereInput | FiscalFavoriteScalarWhereInput[]
+  }
+
+  export type FiscalProfileCreateNestedOneWithoutTaxRulesInput = {
+    create?: XOR<FiscalProfileCreateWithoutTaxRulesInput, FiscalProfileUncheckedCreateWithoutTaxRulesInput>
+    connectOrCreate?: FiscalProfileCreateOrConnectWithoutTaxRulesInput
+    connect?: FiscalProfileWhereUniqueInput
+  }
+
+  export type FloatFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
+  export type FiscalProfileUpdateOneRequiredWithoutTaxRulesNestedInput = {
+    create?: XOR<FiscalProfileCreateWithoutTaxRulesInput, FiscalProfileUncheckedCreateWithoutTaxRulesInput>
+    connectOrCreate?: FiscalProfileCreateOrConnectWithoutTaxRulesInput
+    upsert?: FiscalProfileUpsertWithoutTaxRulesInput
+    connect?: FiscalProfileWhereUniqueInput
+    update?: XOR<XOR<FiscalProfileUpdateToOneWithWhereWithoutTaxRulesInput, FiscalProfileUpdateWithoutTaxRulesInput>, FiscalProfileUncheckedUpdateWithoutTaxRulesInput>
+  }
+
+  export type FiscalProfileCreateNestedOneWithoutHistoryInput = {
+    create?: XOR<FiscalProfileCreateWithoutHistoryInput, FiscalProfileUncheckedCreateWithoutHistoryInput>
+    connectOrCreate?: FiscalProfileCreateOrConnectWithoutHistoryInput
+    connect?: FiscalProfileWhereUniqueInput
+  }
+
+  export type FiscalProfileUpdateOneRequiredWithoutHistoryNestedInput = {
+    create?: XOR<FiscalProfileCreateWithoutHistoryInput, FiscalProfileUncheckedCreateWithoutHistoryInput>
+    connectOrCreate?: FiscalProfileCreateOrConnectWithoutHistoryInput
+    upsert?: FiscalProfileUpsertWithoutHistoryInput
+    connect?: FiscalProfileWhereUniqueInput
+    update?: XOR<XOR<FiscalProfileUpdateToOneWithWhereWithoutHistoryInput, FiscalProfileUpdateWithoutHistoryInput>, FiscalProfileUncheckedUpdateWithoutHistoryInput>
+  }
+
+  export type FiscalProfileCreateNestedOneWithoutFavoritedByInput = {
+    create?: XOR<FiscalProfileCreateWithoutFavoritedByInput, FiscalProfileUncheckedCreateWithoutFavoritedByInput>
+    connectOrCreate?: FiscalProfileCreateOrConnectWithoutFavoritedByInput
+    connect?: FiscalProfileWhereUniqueInput
+  }
+
+  export type FiscalProfileUpdateOneRequiredWithoutFavoritedByNestedInput = {
+    create?: XOR<FiscalProfileCreateWithoutFavoritedByInput, FiscalProfileUncheckedCreateWithoutFavoritedByInput>
+    connectOrCreate?: FiscalProfileCreateOrConnectWithoutFavoritedByInput
+    upsert?: FiscalProfileUpsertWithoutFavoritedByInput
+    connect?: FiscalProfileWhereUniqueInput
+    update?: XOR<XOR<FiscalProfileUpdateToOneWithWhereWithoutFavoritedByInput, FiscalProfileUpdateWithoutFavoritedByInput>, FiscalProfileUncheckedUpdateWithoutFavoritedByInput>
+  }
+
+  export type TenantCreateNestedOneWithoutPaymentLogsInput = {
+    create?: XOR<TenantCreateWithoutPaymentLogsInput, TenantUncheckedCreateWithoutPaymentLogsInput>
+    connectOrCreate?: TenantCreateOrConnectWithoutPaymentLogsInput
+    connect?: TenantWhereUniqueInput
+  }
+
+  export type DecimalFieldUpdateOperationsInput = {
+    set?: Decimal | DecimalJsLike | number | string
+    increment?: Decimal | DecimalJsLike | number | string
+    decrement?: Decimal | DecimalJsLike | number | string
+    multiply?: Decimal | DecimalJsLike | number | string
+    divide?: Decimal | DecimalJsLike | number | string
+  }
+
+  export type TenantUpdateOneRequiredWithoutPaymentLogsNestedInput = {
+    create?: XOR<TenantCreateWithoutPaymentLogsInput, TenantUncheckedCreateWithoutPaymentLogsInput>
+    connectOrCreate?: TenantCreateOrConnectWithoutPaymentLogsInput
+    upsert?: TenantUpsertWithoutPaymentLogsInput
+    connect?: TenantWhereUniqueInput
+    update?: XOR<XOR<TenantUpdateToOneWithWhereWithoutPaymentLogsInput, TenantUpdateWithoutPaymentLogsInput>, TenantUncheckedUpdateWithoutPaymentLogsInput>
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -8886,6 +23932,49 @@ export namespace Prisma {
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
+  export type NestedFloatWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedFloatFilter<$PrismaModel>
+    _min?: NestedFloatFilter<$PrismaModel>
+    _max?: NestedFloatFilter<$PrismaModel>
+  }
+
+  export type NestedDecimalFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[]
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[]
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string
+  }
+
+  export type NestedDecimalWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[]
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[]
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedDecimalFilter<$PrismaModel>
+    _sum?: NestedDecimalFilter<$PrismaModel>
+    _min?: NestedDecimalFilter<$PrismaModel>
+    _max?: NestedDecimalFilter<$PrismaModel>
+  }
+
   export type UserCreateWithoutTenantInput = {
     id?: string
     name: string
@@ -8896,6 +23985,7 @@ export namespace Prisma {
     active?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
+    group?: TenantGroupCreateNestedOneWithoutUsersInput
   }
 
   export type UserUncheckedCreateWithoutTenantInput = {
@@ -8906,6 +23996,7 @@ export namespace Prisma {
     role?: string
     pin?: string | null
     active?: boolean
+    groupId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -8950,6 +24041,58 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type TenantGroupMemberCreateWithoutTenantInput = {
+    id?: string
+    alias?: string | null
+    group: TenantGroupCreateNestedOneWithoutMembersInput
+  }
+
+  export type TenantGroupMemberUncheckedCreateWithoutTenantInput = {
+    id?: string
+    groupId: string
+    alias?: string | null
+  }
+
+  export type TenantGroupMemberCreateOrConnectWithoutTenantInput = {
+    where: TenantGroupMemberWhereUniqueInput
+    create: XOR<TenantGroupMemberCreateWithoutTenantInput, TenantGroupMemberUncheckedCreateWithoutTenantInput>
+  }
+
+  export type TenantGroupMemberCreateManyTenantInputEnvelope = {
+    data: TenantGroupMemberCreateManyTenantInput | TenantGroupMemberCreateManyTenantInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type PaymentLogCreateWithoutTenantInput = {
+    id?: string
+    valor: Decimal | DecimalJsLike | number | string
+    vencimentoAntes: Date | string
+    vencimentoApos: Date | string
+    observacao?: string | null
+    registradoPor?: string | null
+    createdAt?: Date | string
+  }
+
+  export type PaymentLogUncheckedCreateWithoutTenantInput = {
+    id?: string
+    valor: Decimal | DecimalJsLike | number | string
+    vencimentoAntes: Date | string
+    vencimentoApos: Date | string
+    observacao?: string | null
+    registradoPor?: string | null
+    createdAt?: Date | string
+  }
+
+  export type PaymentLogCreateOrConnectWithoutTenantInput = {
+    where: PaymentLogWhereUniqueInput
+    create: XOR<PaymentLogCreateWithoutTenantInput, PaymentLogUncheckedCreateWithoutTenantInput>
+  }
+
+  export type PaymentLogCreateManyTenantInputEnvelope = {
+    data: PaymentLogCreateManyTenantInput | PaymentLogCreateManyTenantInput[]
+    skipDuplicates?: boolean
+  }
+
   export type UserUpsertWithWhereUniqueWithoutTenantInput = {
     where: UserWhereUniqueInput
     update: XOR<UserUpdateWithoutTenantInput, UserUncheckedUpdateWithoutTenantInput>
@@ -8978,6 +24121,7 @@ export namespace Prisma {
     role?: StringFilter<"User"> | string
     pin?: StringNullableFilter<"User"> | string | null
     active?: BoolFilter<"User"> | boolean
+    groupId?: StringNullableFilter<"User"> | string | null
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
   }
@@ -9012,6 +24156,62 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"TenantIntegration"> | Date | string
   }
 
+  export type TenantGroupMemberUpsertWithWhereUniqueWithoutTenantInput = {
+    where: TenantGroupMemberWhereUniqueInput
+    update: XOR<TenantGroupMemberUpdateWithoutTenantInput, TenantGroupMemberUncheckedUpdateWithoutTenantInput>
+    create: XOR<TenantGroupMemberCreateWithoutTenantInput, TenantGroupMemberUncheckedCreateWithoutTenantInput>
+  }
+
+  export type TenantGroupMemberUpdateWithWhereUniqueWithoutTenantInput = {
+    where: TenantGroupMemberWhereUniqueInput
+    data: XOR<TenantGroupMemberUpdateWithoutTenantInput, TenantGroupMemberUncheckedUpdateWithoutTenantInput>
+  }
+
+  export type TenantGroupMemberUpdateManyWithWhereWithoutTenantInput = {
+    where: TenantGroupMemberScalarWhereInput
+    data: XOR<TenantGroupMemberUpdateManyMutationInput, TenantGroupMemberUncheckedUpdateManyWithoutTenantInput>
+  }
+
+  export type TenantGroupMemberScalarWhereInput = {
+    AND?: TenantGroupMemberScalarWhereInput | TenantGroupMemberScalarWhereInput[]
+    OR?: TenantGroupMemberScalarWhereInput[]
+    NOT?: TenantGroupMemberScalarWhereInput | TenantGroupMemberScalarWhereInput[]
+    id?: StringFilter<"TenantGroupMember"> | string
+    groupId?: StringFilter<"TenantGroupMember"> | string
+    tenantId?: StringFilter<"TenantGroupMember"> | string
+    alias?: StringNullableFilter<"TenantGroupMember"> | string | null
+  }
+
+  export type PaymentLogUpsertWithWhereUniqueWithoutTenantInput = {
+    where: PaymentLogWhereUniqueInput
+    update: XOR<PaymentLogUpdateWithoutTenantInput, PaymentLogUncheckedUpdateWithoutTenantInput>
+    create: XOR<PaymentLogCreateWithoutTenantInput, PaymentLogUncheckedCreateWithoutTenantInput>
+  }
+
+  export type PaymentLogUpdateWithWhereUniqueWithoutTenantInput = {
+    where: PaymentLogWhereUniqueInput
+    data: XOR<PaymentLogUpdateWithoutTenantInput, PaymentLogUncheckedUpdateWithoutTenantInput>
+  }
+
+  export type PaymentLogUpdateManyWithWhereWithoutTenantInput = {
+    where: PaymentLogScalarWhereInput
+    data: XOR<PaymentLogUpdateManyMutationInput, PaymentLogUncheckedUpdateManyWithoutTenantInput>
+  }
+
+  export type PaymentLogScalarWhereInput = {
+    AND?: PaymentLogScalarWhereInput | PaymentLogScalarWhereInput[]
+    OR?: PaymentLogScalarWhereInput[]
+    NOT?: PaymentLogScalarWhereInput | PaymentLogScalarWhereInput[]
+    id?: StringFilter<"PaymentLog"> | string
+    tenantId?: StringFilter<"PaymentLog"> | string
+    valor?: DecimalFilter<"PaymentLog"> | Decimal | DecimalJsLike | number | string
+    vencimentoAntes?: DateTimeFilter<"PaymentLog"> | Date | string
+    vencimentoApos?: DateTimeFilter<"PaymentLog"> | Date | string
+    observacao?: StringNullableFilter<"PaymentLog"> | string | null
+    registradoPor?: StringNullableFilter<"PaymentLog"> | string | null
+    createdAt?: DateTimeFilter<"PaymentLog"> | Date | string
+  }
+
   export type TenantCreateWithoutUsersInput = {
     id?: string
     databaseName: string
@@ -9020,6 +24220,7 @@ export namespace Prisma {
     status?: string
     logoUrl?: string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: string | null
     razaoSocial?: string | null
     nomeFantasia?: string | null
     cnpj?: string | null
@@ -9048,10 +24249,15 @@ export namespace Prisma {
     cosmosApiKey?: string | null
     mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: Date | string | null
+    telefoneContato?: string | null
+    emailContato?: string | null
+    observacoes?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     termsAcceptedAt?: Date | string | null
     tenantIntegrations?: TenantIntegrationCreateNestedManyWithoutTenantInput
+    groupMembers?: TenantGroupMemberCreateNestedManyWithoutTenantInput
+    paymentLogs?: PaymentLogCreateNestedManyWithoutTenantInput
   }
 
   export type TenantUncheckedCreateWithoutUsersInput = {
@@ -9062,6 +24268,7 @@ export namespace Prisma {
     status?: string
     logoUrl?: string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: string | null
     razaoSocial?: string | null
     nomeFantasia?: string | null
     cnpj?: string | null
@@ -9090,15 +24297,41 @@ export namespace Prisma {
     cosmosApiKey?: string | null
     mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: Date | string | null
+    telefoneContato?: string | null
+    emailContato?: string | null
+    observacoes?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     termsAcceptedAt?: Date | string | null
     tenantIntegrations?: TenantIntegrationUncheckedCreateNestedManyWithoutTenantInput
+    groupMembers?: TenantGroupMemberUncheckedCreateNestedManyWithoutTenantInput
+    paymentLogs?: PaymentLogUncheckedCreateNestedManyWithoutTenantInput
   }
 
   export type TenantCreateOrConnectWithoutUsersInput = {
     where: TenantWhereUniqueInput
     create: XOR<TenantCreateWithoutUsersInput, TenantUncheckedCreateWithoutUsersInput>
+  }
+
+  export type TenantGroupCreateWithoutUsersInput = {
+    id?: string
+    name: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    members?: TenantGroupMemberCreateNestedManyWithoutGroupInput
+  }
+
+  export type TenantGroupUncheckedCreateWithoutUsersInput = {
+    id?: string
+    name: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    members?: TenantGroupMemberUncheckedCreateNestedManyWithoutGroupInput
+  }
+
+  export type TenantGroupCreateOrConnectWithoutUsersInput = {
+    where: TenantGroupWhereUniqueInput
+    create: XOR<TenantGroupCreateWithoutUsersInput, TenantGroupUncheckedCreateWithoutUsersInput>
   }
 
   export type TenantUpsertWithoutUsersInput = {
@@ -9120,6 +24353,7 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: NullableStringFieldUpdateOperationsInput | string | null
     razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
     nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
     cnpj?: NullableStringFieldUpdateOperationsInput | string | null
@@ -9148,10 +24382,15 @@ export namespace Prisma {
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    telefoneContato?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContato?: NullableStringFieldUpdateOperationsInput | string | null
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     tenantIntegrations?: TenantIntegrationUpdateManyWithoutTenantNestedInput
+    groupMembers?: TenantGroupMemberUpdateManyWithoutTenantNestedInput
+    paymentLogs?: PaymentLogUpdateManyWithoutTenantNestedInput
   }
 
   export type TenantUncheckedUpdateWithoutUsersInput = {
@@ -9162,6 +24401,7 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: NullableStringFieldUpdateOperationsInput | string | null
     razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
     nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
     cnpj?: NullableStringFieldUpdateOperationsInput | string | null
@@ -9190,10 +24430,42 @@ export namespace Prisma {
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    telefoneContato?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContato?: NullableStringFieldUpdateOperationsInput | string | null
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     tenantIntegrations?: TenantIntegrationUncheckedUpdateManyWithoutTenantNestedInput
+    groupMembers?: TenantGroupMemberUncheckedUpdateManyWithoutTenantNestedInput
+    paymentLogs?: PaymentLogUncheckedUpdateManyWithoutTenantNestedInput
+  }
+
+  export type TenantGroupUpsertWithoutUsersInput = {
+    update: XOR<TenantGroupUpdateWithoutUsersInput, TenantGroupUncheckedUpdateWithoutUsersInput>
+    create: XOR<TenantGroupCreateWithoutUsersInput, TenantGroupUncheckedCreateWithoutUsersInput>
+    where?: TenantGroupWhereInput
+  }
+
+  export type TenantGroupUpdateToOneWithWhereWithoutUsersInput = {
+    where?: TenantGroupWhereInput
+    data: XOR<TenantGroupUpdateWithoutUsersInput, TenantGroupUncheckedUpdateWithoutUsersInput>
+  }
+
+  export type TenantGroupUpdateWithoutUsersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    members?: TenantGroupMemberUpdateManyWithoutGroupNestedInput
+  }
+
+  export type TenantGroupUncheckedUpdateWithoutUsersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    members?: TenantGroupMemberUncheckedUpdateManyWithoutGroupNestedInput
   }
 
   export type TenantCreateWithoutTenantIntegrationsInput = {
@@ -9204,6 +24476,7 @@ export namespace Prisma {
     status?: string
     logoUrl?: string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: string | null
     razaoSocial?: string | null
     nomeFantasia?: string | null
     cnpj?: string | null
@@ -9232,10 +24505,15 @@ export namespace Prisma {
     cosmosApiKey?: string | null
     mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: Date | string | null
+    telefoneContato?: string | null
+    emailContato?: string | null
+    observacoes?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     termsAcceptedAt?: Date | string | null
     users?: UserCreateNestedManyWithoutTenantInput
+    groupMembers?: TenantGroupMemberCreateNestedManyWithoutTenantInput
+    paymentLogs?: PaymentLogCreateNestedManyWithoutTenantInput
   }
 
   export type TenantUncheckedCreateWithoutTenantIntegrationsInput = {
@@ -9246,6 +24524,7 @@ export namespace Prisma {
     status?: string
     logoUrl?: string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: string | null
     razaoSocial?: string | null
     nomeFantasia?: string | null
     cnpj?: string | null
@@ -9274,10 +24553,15 @@ export namespace Prisma {
     cosmosApiKey?: string | null
     mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: Date | string | null
+    telefoneContato?: string | null
+    emailContato?: string | null
+    observacoes?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     termsAcceptedAt?: Date | string | null
     users?: UserUncheckedCreateNestedManyWithoutTenantInput
+    groupMembers?: TenantGroupMemberUncheckedCreateNestedManyWithoutTenantInput
+    paymentLogs?: PaymentLogUncheckedCreateNestedManyWithoutTenantInput
   }
 
   export type TenantCreateOrConnectWithoutTenantIntegrationsInput = {
@@ -9304,6 +24588,7 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: NullableStringFieldUpdateOperationsInput | string | null
     razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
     nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
     cnpj?: NullableStringFieldUpdateOperationsInput | string | null
@@ -9332,10 +24617,15 @@ export namespace Prisma {
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    telefoneContato?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContato?: NullableStringFieldUpdateOperationsInput | string | null
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     users?: UserUpdateManyWithoutTenantNestedInput
+    groupMembers?: TenantGroupMemberUpdateManyWithoutTenantNestedInput
+    paymentLogs?: PaymentLogUpdateManyWithoutTenantNestedInput
   }
 
   export type TenantUncheckedUpdateWithoutTenantIntegrationsInput = {
@@ -9346,6 +24636,7 @@ export namespace Prisma {
     status?: StringFieldUpdateOperationsInput | string
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: NullableStringFieldUpdateOperationsInput | string | null
     razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
     nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
     cnpj?: NullableStringFieldUpdateOperationsInput | string | null
@@ -9374,10 +24665,1263 @@ export namespace Prisma {
     cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
     mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    telefoneContato?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContato?: NullableStringFieldUpdateOperationsInput | string | null
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     users?: UserUncheckedUpdateManyWithoutTenantNestedInput
+    groupMembers?: TenantGroupMemberUncheckedUpdateManyWithoutTenantNestedInput
+    paymentLogs?: PaymentLogUncheckedUpdateManyWithoutTenantNestedInput
+  }
+
+  export type TenantGroupMemberCreateWithoutGroupInput = {
+    id?: string
+    alias?: string | null
+    tenant: TenantCreateNestedOneWithoutGroupMembersInput
+  }
+
+  export type TenantGroupMemberUncheckedCreateWithoutGroupInput = {
+    id?: string
+    tenantId: string
+    alias?: string | null
+  }
+
+  export type TenantGroupMemberCreateOrConnectWithoutGroupInput = {
+    where: TenantGroupMemberWhereUniqueInput
+    create: XOR<TenantGroupMemberCreateWithoutGroupInput, TenantGroupMemberUncheckedCreateWithoutGroupInput>
+  }
+
+  export type TenantGroupMemberCreateManyGroupInputEnvelope = {
+    data: TenantGroupMemberCreateManyGroupInput | TenantGroupMemberCreateManyGroupInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type UserCreateWithoutGroupInput = {
+    id?: string
+    name: string
+    email: string
+    password: string
+    role?: string
+    pin?: string | null
+    active?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    tenant: TenantCreateNestedOneWithoutUsersInput
+  }
+
+  export type UserUncheckedCreateWithoutGroupInput = {
+    id?: string
+    tenantId: string
+    name: string
+    email: string
+    password: string
+    role?: string
+    pin?: string | null
+    active?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UserCreateOrConnectWithoutGroupInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutGroupInput, UserUncheckedCreateWithoutGroupInput>
+  }
+
+  export type UserCreateManyGroupInputEnvelope = {
+    data: UserCreateManyGroupInput | UserCreateManyGroupInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type TenantGroupMemberUpsertWithWhereUniqueWithoutGroupInput = {
+    where: TenantGroupMemberWhereUniqueInput
+    update: XOR<TenantGroupMemberUpdateWithoutGroupInput, TenantGroupMemberUncheckedUpdateWithoutGroupInput>
+    create: XOR<TenantGroupMemberCreateWithoutGroupInput, TenantGroupMemberUncheckedCreateWithoutGroupInput>
+  }
+
+  export type TenantGroupMemberUpdateWithWhereUniqueWithoutGroupInput = {
+    where: TenantGroupMemberWhereUniqueInput
+    data: XOR<TenantGroupMemberUpdateWithoutGroupInput, TenantGroupMemberUncheckedUpdateWithoutGroupInput>
+  }
+
+  export type TenantGroupMemberUpdateManyWithWhereWithoutGroupInput = {
+    where: TenantGroupMemberScalarWhereInput
+    data: XOR<TenantGroupMemberUpdateManyMutationInput, TenantGroupMemberUncheckedUpdateManyWithoutGroupInput>
+  }
+
+  export type UserUpsertWithWhereUniqueWithoutGroupInput = {
+    where: UserWhereUniqueInput
+    update: XOR<UserUpdateWithoutGroupInput, UserUncheckedUpdateWithoutGroupInput>
+    create: XOR<UserCreateWithoutGroupInput, UserUncheckedCreateWithoutGroupInput>
+  }
+
+  export type UserUpdateWithWhereUniqueWithoutGroupInput = {
+    where: UserWhereUniqueInput
+    data: XOR<UserUpdateWithoutGroupInput, UserUncheckedUpdateWithoutGroupInput>
+  }
+
+  export type UserUpdateManyWithWhereWithoutGroupInput = {
+    where: UserScalarWhereInput
+    data: XOR<UserUpdateManyMutationInput, UserUncheckedUpdateManyWithoutGroupInput>
+  }
+
+  export type TenantGroupCreateWithoutMembersInput = {
+    id?: string
+    name: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    users?: UserCreateNestedManyWithoutGroupInput
+  }
+
+  export type TenantGroupUncheckedCreateWithoutMembersInput = {
+    id?: string
+    name: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    users?: UserUncheckedCreateNestedManyWithoutGroupInput
+  }
+
+  export type TenantGroupCreateOrConnectWithoutMembersInput = {
+    where: TenantGroupWhereUniqueInput
+    create: XOR<TenantGroupCreateWithoutMembersInput, TenantGroupUncheckedCreateWithoutMembersInput>
+  }
+
+  export type TenantCreateWithoutGroupMembersInput = {
+    id?: string
+    databaseName: string
+    databaseUrl: string
+    name?: string
+    status?: string
+    logoUrl?: string | null
+    modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: string | null
+    razaoSocial?: string | null
+    nomeFantasia?: string | null
+    cnpj?: string | null
+    ie?: string | null
+    im?: string | null
+    crt?: number
+    logradouro?: string | null
+    numero?: string | null
+    complemento?: string | null
+    bairro?: string | null
+    municipio?: string | null
+    codMunicipio?: string | null
+    uf?: string | null
+    cep?: string | null
+    telefone?: string | null
+    emailContador?: string | null
+    nfceAtivo?: boolean
+    nfceAutoSync?: boolean
+    nfceSerie?: number
+    nfceAmbiente?: number
+    nfceCsc?: string | null
+    nfceIdCsc?: string | null
+    certPfx?: Bytes | null
+    certSenha?: string | null
+    certValidade?: Date | string | null
+    cosmosApiKey?: string | null
+    mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: Date | string | null
+    telefoneContato?: string | null
+    emailContato?: string | null
+    observacoes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    termsAcceptedAt?: Date | string | null
+    users?: UserCreateNestedManyWithoutTenantInput
+    tenantIntegrations?: TenantIntegrationCreateNestedManyWithoutTenantInput
+    paymentLogs?: PaymentLogCreateNestedManyWithoutTenantInput
+  }
+
+  export type TenantUncheckedCreateWithoutGroupMembersInput = {
+    id?: string
+    databaseName: string
+    databaseUrl: string
+    name?: string
+    status?: string
+    logoUrl?: string | null
+    modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: string | null
+    razaoSocial?: string | null
+    nomeFantasia?: string | null
+    cnpj?: string | null
+    ie?: string | null
+    im?: string | null
+    crt?: number
+    logradouro?: string | null
+    numero?: string | null
+    complemento?: string | null
+    bairro?: string | null
+    municipio?: string | null
+    codMunicipio?: string | null
+    uf?: string | null
+    cep?: string | null
+    telefone?: string | null
+    emailContador?: string | null
+    nfceAtivo?: boolean
+    nfceAutoSync?: boolean
+    nfceSerie?: number
+    nfceAmbiente?: number
+    nfceCsc?: string | null
+    nfceIdCsc?: string | null
+    certPfx?: Bytes | null
+    certSenha?: string | null
+    certValidade?: Date | string | null
+    cosmosApiKey?: string | null
+    mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: Date | string | null
+    telefoneContato?: string | null
+    emailContato?: string | null
+    observacoes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    termsAcceptedAt?: Date | string | null
+    users?: UserUncheckedCreateNestedManyWithoutTenantInput
+    tenantIntegrations?: TenantIntegrationUncheckedCreateNestedManyWithoutTenantInput
+    paymentLogs?: PaymentLogUncheckedCreateNestedManyWithoutTenantInput
+  }
+
+  export type TenantCreateOrConnectWithoutGroupMembersInput = {
+    where: TenantWhereUniqueInput
+    create: XOR<TenantCreateWithoutGroupMembersInput, TenantUncheckedCreateWithoutGroupMembersInput>
+  }
+
+  export type TenantGroupUpsertWithoutMembersInput = {
+    update: XOR<TenantGroupUpdateWithoutMembersInput, TenantGroupUncheckedUpdateWithoutMembersInput>
+    create: XOR<TenantGroupCreateWithoutMembersInput, TenantGroupUncheckedCreateWithoutMembersInput>
+    where?: TenantGroupWhereInput
+  }
+
+  export type TenantGroupUpdateToOneWithWhereWithoutMembersInput = {
+    where?: TenantGroupWhereInput
+    data: XOR<TenantGroupUpdateWithoutMembersInput, TenantGroupUncheckedUpdateWithoutMembersInput>
+  }
+
+  export type TenantGroupUpdateWithoutMembersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    users?: UserUpdateManyWithoutGroupNestedInput
+  }
+
+  export type TenantGroupUncheckedUpdateWithoutMembersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    users?: UserUncheckedUpdateManyWithoutGroupNestedInput
+  }
+
+  export type TenantUpsertWithoutGroupMembersInput = {
+    update: XOR<TenantUpdateWithoutGroupMembersInput, TenantUncheckedUpdateWithoutGroupMembersInput>
+    create: XOR<TenantCreateWithoutGroupMembersInput, TenantUncheckedCreateWithoutGroupMembersInput>
+    where?: TenantWhereInput
+  }
+
+  export type TenantUpdateToOneWithWhereWithoutGroupMembersInput = {
+    where?: TenantWhereInput
+    data: XOR<TenantUpdateWithoutGroupMembersInput, TenantUncheckedUpdateWithoutGroupMembersInput>
+  }
+
+  export type TenantUpdateWithoutGroupMembersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    databaseName?: StringFieldUpdateOperationsInput | string
+    databaseUrl?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: NullableStringFieldUpdateOperationsInput | string | null
+    razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
+    cnpj?: NullableStringFieldUpdateOperationsInput | string | null
+    ie?: NullableStringFieldUpdateOperationsInput | string | null
+    im?: NullableStringFieldUpdateOperationsInput | string | null
+    crt?: IntFieldUpdateOperationsInput | number
+    logradouro?: NullableStringFieldUpdateOperationsInput | string | null
+    numero?: NullableStringFieldUpdateOperationsInput | string | null
+    complemento?: NullableStringFieldUpdateOperationsInput | string | null
+    bairro?: NullableStringFieldUpdateOperationsInput | string | null
+    municipio?: NullableStringFieldUpdateOperationsInput | string | null
+    codMunicipio?: NullableStringFieldUpdateOperationsInput | string | null
+    uf?: NullableStringFieldUpdateOperationsInput | string | null
+    cep?: NullableStringFieldUpdateOperationsInput | string | null
+    telefone?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContador?: NullableStringFieldUpdateOperationsInput | string | null
+    nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
+    nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
+    nfceSerie?: IntFieldUpdateOperationsInput | number
+    nfceAmbiente?: IntFieldUpdateOperationsInput | number
+    nfceCsc?: NullableStringFieldUpdateOperationsInput | string | null
+    nfceIdCsc?: NullableStringFieldUpdateOperationsInput | string | null
+    certPfx?: NullableBytesFieldUpdateOperationsInput | Bytes | null
+    certSenha?: NullableStringFieldUpdateOperationsInput | string | null
+    certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
+    mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    telefoneContato?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContato?: NullableStringFieldUpdateOperationsInput | string | null
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    users?: UserUpdateManyWithoutTenantNestedInput
+    tenantIntegrations?: TenantIntegrationUpdateManyWithoutTenantNestedInput
+    paymentLogs?: PaymentLogUpdateManyWithoutTenantNestedInput
+  }
+
+  export type TenantUncheckedUpdateWithoutGroupMembersInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    databaseName?: StringFieldUpdateOperationsInput | string
+    databaseUrl?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: NullableStringFieldUpdateOperationsInput | string | null
+    razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
+    cnpj?: NullableStringFieldUpdateOperationsInput | string | null
+    ie?: NullableStringFieldUpdateOperationsInput | string | null
+    im?: NullableStringFieldUpdateOperationsInput | string | null
+    crt?: IntFieldUpdateOperationsInput | number
+    logradouro?: NullableStringFieldUpdateOperationsInput | string | null
+    numero?: NullableStringFieldUpdateOperationsInput | string | null
+    complemento?: NullableStringFieldUpdateOperationsInput | string | null
+    bairro?: NullableStringFieldUpdateOperationsInput | string | null
+    municipio?: NullableStringFieldUpdateOperationsInput | string | null
+    codMunicipio?: NullableStringFieldUpdateOperationsInput | string | null
+    uf?: NullableStringFieldUpdateOperationsInput | string | null
+    cep?: NullableStringFieldUpdateOperationsInput | string | null
+    telefone?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContador?: NullableStringFieldUpdateOperationsInput | string | null
+    nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
+    nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
+    nfceSerie?: IntFieldUpdateOperationsInput | number
+    nfceAmbiente?: IntFieldUpdateOperationsInput | number
+    nfceCsc?: NullableStringFieldUpdateOperationsInput | string | null
+    nfceIdCsc?: NullableStringFieldUpdateOperationsInput | string | null
+    certPfx?: NullableBytesFieldUpdateOperationsInput | Bytes | null
+    certSenha?: NullableStringFieldUpdateOperationsInput | string | null
+    certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
+    mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    telefoneContato?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContato?: NullableStringFieldUpdateOperationsInput | string | null
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    users?: UserUncheckedUpdateManyWithoutTenantNestedInput
+    tenantIntegrations?: TenantIntegrationUncheckedUpdateManyWithoutTenantNestedInput
+    paymentLogs?: PaymentLogUncheckedUpdateManyWithoutTenantNestedInput
+  }
+
+  export type StoreProfileFiscalCreateWithoutStoreProfileInput = {
+    fiscalProfile: FiscalProfileCreateNestedOneWithoutStoreProfilesInput
+  }
+
+  export type StoreProfileFiscalUncheckedCreateWithoutStoreProfileInput = {
+    fiscalProfileId: string
+  }
+
+  export type StoreProfileFiscalCreateOrConnectWithoutStoreProfileInput = {
+    where: StoreProfileFiscalWhereUniqueInput
+    create: XOR<StoreProfileFiscalCreateWithoutStoreProfileInput, StoreProfileFiscalUncheckedCreateWithoutStoreProfileInput>
+  }
+
+  export type StoreProfileFiscalCreateManyStoreProfileInputEnvelope = {
+    data: StoreProfileFiscalCreateManyStoreProfileInput | StoreProfileFiscalCreateManyStoreProfileInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type StoreProfileFiscalUpsertWithWhereUniqueWithoutStoreProfileInput = {
+    where: StoreProfileFiscalWhereUniqueInput
+    update: XOR<StoreProfileFiscalUpdateWithoutStoreProfileInput, StoreProfileFiscalUncheckedUpdateWithoutStoreProfileInput>
+    create: XOR<StoreProfileFiscalCreateWithoutStoreProfileInput, StoreProfileFiscalUncheckedCreateWithoutStoreProfileInput>
+  }
+
+  export type StoreProfileFiscalUpdateWithWhereUniqueWithoutStoreProfileInput = {
+    where: StoreProfileFiscalWhereUniqueInput
+    data: XOR<StoreProfileFiscalUpdateWithoutStoreProfileInput, StoreProfileFiscalUncheckedUpdateWithoutStoreProfileInput>
+  }
+
+  export type StoreProfileFiscalUpdateManyWithWhereWithoutStoreProfileInput = {
+    where: StoreProfileFiscalScalarWhereInput
+    data: XOR<StoreProfileFiscalUpdateManyMutationInput, StoreProfileFiscalUncheckedUpdateManyWithoutStoreProfileInput>
+  }
+
+  export type StoreProfileFiscalScalarWhereInput = {
+    AND?: StoreProfileFiscalScalarWhereInput | StoreProfileFiscalScalarWhereInput[]
+    OR?: StoreProfileFiscalScalarWhereInput[]
+    NOT?: StoreProfileFiscalScalarWhereInput | StoreProfileFiscalScalarWhereInput[]
+    storeProfileId?: StringFilter<"StoreProfileFiscal"> | string
+    fiscalProfileId?: StringFilter<"StoreProfileFiscal"> | string
+  }
+
+  export type StoreProfileCreateWithoutProfilesInput = {
+    id?: string
+    slug: string
+    name: string
+    icon?: string | null
+    description?: string | null
+  }
+
+  export type StoreProfileUncheckedCreateWithoutProfilesInput = {
+    id?: string
+    slug: string
+    name: string
+    icon?: string | null
+    description?: string | null
+  }
+
+  export type StoreProfileCreateOrConnectWithoutProfilesInput = {
+    where: StoreProfileWhereUniqueInput
+    create: XOR<StoreProfileCreateWithoutProfilesInput, StoreProfileUncheckedCreateWithoutProfilesInput>
+  }
+
+  export type FiscalProfileCreateWithoutStoreProfilesInput = {
+    id?: string
+    name: string
+    icon?: string | null
+    group: string
+    description?: string | null
+    scope: string
+    tenantId?: string | null
+    version: string
+    status?: string
+    emiteNfce?: boolean
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    observacoes?: string | null
+    taxRules?: FiscalTaxRuleCreateNestedManyWithoutFiscalProfileInput
+    history?: FiscalProfileHistoryCreateNestedManyWithoutFiscalProfileInput
+    favoritedBy?: FiscalFavoriteCreateNestedManyWithoutFiscalProfileInput
+  }
+
+  export type FiscalProfileUncheckedCreateWithoutStoreProfilesInput = {
+    id?: string
+    name: string
+    icon?: string | null
+    group: string
+    description?: string | null
+    scope: string
+    tenantId?: string | null
+    version: string
+    status?: string
+    emiteNfce?: boolean
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    observacoes?: string | null
+    taxRules?: FiscalTaxRuleUncheckedCreateNestedManyWithoutFiscalProfileInput
+    history?: FiscalProfileHistoryUncheckedCreateNestedManyWithoutFiscalProfileInput
+    favoritedBy?: FiscalFavoriteUncheckedCreateNestedManyWithoutFiscalProfileInput
+  }
+
+  export type FiscalProfileCreateOrConnectWithoutStoreProfilesInput = {
+    where: FiscalProfileWhereUniqueInput
+    create: XOR<FiscalProfileCreateWithoutStoreProfilesInput, FiscalProfileUncheckedCreateWithoutStoreProfilesInput>
+  }
+
+  export type StoreProfileUpsertWithoutProfilesInput = {
+    update: XOR<StoreProfileUpdateWithoutProfilesInput, StoreProfileUncheckedUpdateWithoutProfilesInput>
+    create: XOR<StoreProfileCreateWithoutProfilesInput, StoreProfileUncheckedCreateWithoutProfilesInput>
+    where?: StoreProfileWhereInput
+  }
+
+  export type StoreProfileUpdateToOneWithWhereWithoutProfilesInput = {
+    where?: StoreProfileWhereInput
+    data: XOR<StoreProfileUpdateWithoutProfilesInput, StoreProfileUncheckedUpdateWithoutProfilesInput>
+  }
+
+  export type StoreProfileUpdateWithoutProfilesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    slug?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type StoreProfileUncheckedUpdateWithoutProfilesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    slug?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type FiscalProfileUpsertWithoutStoreProfilesInput = {
+    update: XOR<FiscalProfileUpdateWithoutStoreProfilesInput, FiscalProfileUncheckedUpdateWithoutStoreProfilesInput>
+    create: XOR<FiscalProfileCreateWithoutStoreProfilesInput, FiscalProfileUncheckedCreateWithoutStoreProfilesInput>
+    where?: FiscalProfileWhereInput
+  }
+
+  export type FiscalProfileUpdateToOneWithWhereWithoutStoreProfilesInput = {
+    where?: FiscalProfileWhereInput
+    data: XOR<FiscalProfileUpdateWithoutStoreProfilesInput, FiscalProfileUncheckedUpdateWithoutStoreProfilesInput>
+  }
+
+  export type FiscalProfileUpdateWithoutStoreProfilesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    scope?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    emiteNfce?: BoolFieldUpdateOperationsInput | boolean
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    taxRules?: FiscalTaxRuleUpdateManyWithoutFiscalProfileNestedInput
+    history?: FiscalProfileHistoryUpdateManyWithoutFiscalProfileNestedInput
+    favoritedBy?: FiscalFavoriteUpdateManyWithoutFiscalProfileNestedInput
+  }
+
+  export type FiscalProfileUncheckedUpdateWithoutStoreProfilesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    scope?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    emiteNfce?: BoolFieldUpdateOperationsInput | boolean
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    taxRules?: FiscalTaxRuleUncheckedUpdateManyWithoutFiscalProfileNestedInput
+    history?: FiscalProfileHistoryUncheckedUpdateManyWithoutFiscalProfileNestedInput
+    favoritedBy?: FiscalFavoriteUncheckedUpdateManyWithoutFiscalProfileNestedInput
+  }
+
+  export type FiscalTaxRuleCreateWithoutFiscalProfileInput = {
+    id?: string
+    regime: string
+    csosn?: string | null
+    cstIcms?: string | null
+    aliqIcms?: number
+    cstPis?: string
+    aliqPis?: number
+    cstCofins?: string
+    aliqCofins?: number
+    ibsCst?: string
+    ibsAliq?: number
+    cbsCst?: string
+    cbsAliq?: number
+    validFrom?: Date | string
+    validUntil?: Date | string | null
+  }
+
+  export type FiscalTaxRuleUncheckedCreateWithoutFiscalProfileInput = {
+    id?: string
+    regime: string
+    csosn?: string | null
+    cstIcms?: string | null
+    aliqIcms?: number
+    cstPis?: string
+    aliqPis?: number
+    cstCofins?: string
+    aliqCofins?: number
+    ibsCst?: string
+    ibsAliq?: number
+    cbsCst?: string
+    cbsAliq?: number
+    validFrom?: Date | string
+    validUntil?: Date | string | null
+  }
+
+  export type FiscalTaxRuleCreateOrConnectWithoutFiscalProfileInput = {
+    where: FiscalTaxRuleWhereUniqueInput
+    create: XOR<FiscalTaxRuleCreateWithoutFiscalProfileInput, FiscalTaxRuleUncheckedCreateWithoutFiscalProfileInput>
+  }
+
+  export type FiscalTaxRuleCreateManyFiscalProfileInputEnvelope = {
+    data: FiscalTaxRuleCreateManyFiscalProfileInput | FiscalTaxRuleCreateManyFiscalProfileInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type FiscalProfileHistoryCreateWithoutFiscalProfileInput = {
+    id?: string
+    changedBy: string
+    changedAt?: Date | string
+    field: string
+    oldValue: string
+    newValue: string
+    reason?: string | null
+  }
+
+  export type FiscalProfileHistoryUncheckedCreateWithoutFiscalProfileInput = {
+    id?: string
+    changedBy: string
+    changedAt?: Date | string
+    field: string
+    oldValue: string
+    newValue: string
+    reason?: string | null
+  }
+
+  export type FiscalProfileHistoryCreateOrConnectWithoutFiscalProfileInput = {
+    where: FiscalProfileHistoryWhereUniqueInput
+    create: XOR<FiscalProfileHistoryCreateWithoutFiscalProfileInput, FiscalProfileHistoryUncheckedCreateWithoutFiscalProfileInput>
+  }
+
+  export type FiscalProfileHistoryCreateManyFiscalProfileInputEnvelope = {
+    data: FiscalProfileHistoryCreateManyFiscalProfileInput | FiscalProfileHistoryCreateManyFiscalProfileInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type StoreProfileFiscalCreateWithoutFiscalProfileInput = {
+    storeProfile: StoreProfileCreateNestedOneWithoutProfilesInput
+  }
+
+  export type StoreProfileFiscalUncheckedCreateWithoutFiscalProfileInput = {
+    storeProfileId: string
+  }
+
+  export type StoreProfileFiscalCreateOrConnectWithoutFiscalProfileInput = {
+    where: StoreProfileFiscalWhereUniqueInput
+    create: XOR<StoreProfileFiscalCreateWithoutFiscalProfileInput, StoreProfileFiscalUncheckedCreateWithoutFiscalProfileInput>
+  }
+
+  export type StoreProfileFiscalCreateManyFiscalProfileInputEnvelope = {
+    data: StoreProfileFiscalCreateManyFiscalProfileInput | StoreProfileFiscalCreateManyFiscalProfileInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type FiscalFavoriteCreateWithoutFiscalProfileInput = {
+    tenantId: string
+  }
+
+  export type FiscalFavoriteUncheckedCreateWithoutFiscalProfileInput = {
+    tenantId: string
+  }
+
+  export type FiscalFavoriteCreateOrConnectWithoutFiscalProfileInput = {
+    where: FiscalFavoriteWhereUniqueInput
+    create: XOR<FiscalFavoriteCreateWithoutFiscalProfileInput, FiscalFavoriteUncheckedCreateWithoutFiscalProfileInput>
+  }
+
+  export type FiscalFavoriteCreateManyFiscalProfileInputEnvelope = {
+    data: FiscalFavoriteCreateManyFiscalProfileInput | FiscalFavoriteCreateManyFiscalProfileInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type FiscalTaxRuleUpsertWithWhereUniqueWithoutFiscalProfileInput = {
+    where: FiscalTaxRuleWhereUniqueInput
+    update: XOR<FiscalTaxRuleUpdateWithoutFiscalProfileInput, FiscalTaxRuleUncheckedUpdateWithoutFiscalProfileInput>
+    create: XOR<FiscalTaxRuleCreateWithoutFiscalProfileInput, FiscalTaxRuleUncheckedCreateWithoutFiscalProfileInput>
+  }
+
+  export type FiscalTaxRuleUpdateWithWhereUniqueWithoutFiscalProfileInput = {
+    where: FiscalTaxRuleWhereUniqueInput
+    data: XOR<FiscalTaxRuleUpdateWithoutFiscalProfileInput, FiscalTaxRuleUncheckedUpdateWithoutFiscalProfileInput>
+  }
+
+  export type FiscalTaxRuleUpdateManyWithWhereWithoutFiscalProfileInput = {
+    where: FiscalTaxRuleScalarWhereInput
+    data: XOR<FiscalTaxRuleUpdateManyMutationInput, FiscalTaxRuleUncheckedUpdateManyWithoutFiscalProfileInput>
+  }
+
+  export type FiscalTaxRuleScalarWhereInput = {
+    AND?: FiscalTaxRuleScalarWhereInput | FiscalTaxRuleScalarWhereInput[]
+    OR?: FiscalTaxRuleScalarWhereInput[]
+    NOT?: FiscalTaxRuleScalarWhereInput | FiscalTaxRuleScalarWhereInput[]
+    id?: StringFilter<"FiscalTaxRule"> | string
+    fiscalProfileId?: StringFilter<"FiscalTaxRule"> | string
+    regime?: StringFilter<"FiscalTaxRule"> | string
+    csosn?: StringNullableFilter<"FiscalTaxRule"> | string | null
+    cstIcms?: StringNullableFilter<"FiscalTaxRule"> | string | null
+    aliqIcms?: FloatFilter<"FiscalTaxRule"> | number
+    cstPis?: StringFilter<"FiscalTaxRule"> | string
+    aliqPis?: FloatFilter<"FiscalTaxRule"> | number
+    cstCofins?: StringFilter<"FiscalTaxRule"> | string
+    aliqCofins?: FloatFilter<"FiscalTaxRule"> | number
+    ibsCst?: StringFilter<"FiscalTaxRule"> | string
+    ibsAliq?: FloatFilter<"FiscalTaxRule"> | number
+    cbsCst?: StringFilter<"FiscalTaxRule"> | string
+    cbsAliq?: FloatFilter<"FiscalTaxRule"> | number
+    validFrom?: DateTimeFilter<"FiscalTaxRule"> | Date | string
+    validUntil?: DateTimeNullableFilter<"FiscalTaxRule"> | Date | string | null
+  }
+
+  export type FiscalProfileHistoryUpsertWithWhereUniqueWithoutFiscalProfileInput = {
+    where: FiscalProfileHistoryWhereUniqueInput
+    update: XOR<FiscalProfileHistoryUpdateWithoutFiscalProfileInput, FiscalProfileHistoryUncheckedUpdateWithoutFiscalProfileInput>
+    create: XOR<FiscalProfileHistoryCreateWithoutFiscalProfileInput, FiscalProfileHistoryUncheckedCreateWithoutFiscalProfileInput>
+  }
+
+  export type FiscalProfileHistoryUpdateWithWhereUniqueWithoutFiscalProfileInput = {
+    where: FiscalProfileHistoryWhereUniqueInput
+    data: XOR<FiscalProfileHistoryUpdateWithoutFiscalProfileInput, FiscalProfileHistoryUncheckedUpdateWithoutFiscalProfileInput>
+  }
+
+  export type FiscalProfileHistoryUpdateManyWithWhereWithoutFiscalProfileInput = {
+    where: FiscalProfileHistoryScalarWhereInput
+    data: XOR<FiscalProfileHistoryUpdateManyMutationInput, FiscalProfileHistoryUncheckedUpdateManyWithoutFiscalProfileInput>
+  }
+
+  export type FiscalProfileHistoryScalarWhereInput = {
+    AND?: FiscalProfileHistoryScalarWhereInput | FiscalProfileHistoryScalarWhereInput[]
+    OR?: FiscalProfileHistoryScalarWhereInput[]
+    NOT?: FiscalProfileHistoryScalarWhereInput | FiscalProfileHistoryScalarWhereInput[]
+    id?: StringFilter<"FiscalProfileHistory"> | string
+    fiscalProfileId?: StringFilter<"FiscalProfileHistory"> | string
+    changedBy?: StringFilter<"FiscalProfileHistory"> | string
+    changedAt?: DateTimeFilter<"FiscalProfileHistory"> | Date | string
+    field?: StringFilter<"FiscalProfileHistory"> | string
+    oldValue?: StringFilter<"FiscalProfileHistory"> | string
+    newValue?: StringFilter<"FiscalProfileHistory"> | string
+    reason?: StringNullableFilter<"FiscalProfileHistory"> | string | null
+  }
+
+  export type StoreProfileFiscalUpsertWithWhereUniqueWithoutFiscalProfileInput = {
+    where: StoreProfileFiscalWhereUniqueInput
+    update: XOR<StoreProfileFiscalUpdateWithoutFiscalProfileInput, StoreProfileFiscalUncheckedUpdateWithoutFiscalProfileInput>
+    create: XOR<StoreProfileFiscalCreateWithoutFiscalProfileInput, StoreProfileFiscalUncheckedCreateWithoutFiscalProfileInput>
+  }
+
+  export type StoreProfileFiscalUpdateWithWhereUniqueWithoutFiscalProfileInput = {
+    where: StoreProfileFiscalWhereUniqueInput
+    data: XOR<StoreProfileFiscalUpdateWithoutFiscalProfileInput, StoreProfileFiscalUncheckedUpdateWithoutFiscalProfileInput>
+  }
+
+  export type StoreProfileFiscalUpdateManyWithWhereWithoutFiscalProfileInput = {
+    where: StoreProfileFiscalScalarWhereInput
+    data: XOR<StoreProfileFiscalUpdateManyMutationInput, StoreProfileFiscalUncheckedUpdateManyWithoutFiscalProfileInput>
+  }
+
+  export type FiscalFavoriteUpsertWithWhereUniqueWithoutFiscalProfileInput = {
+    where: FiscalFavoriteWhereUniqueInput
+    update: XOR<FiscalFavoriteUpdateWithoutFiscalProfileInput, FiscalFavoriteUncheckedUpdateWithoutFiscalProfileInput>
+    create: XOR<FiscalFavoriteCreateWithoutFiscalProfileInput, FiscalFavoriteUncheckedCreateWithoutFiscalProfileInput>
+  }
+
+  export type FiscalFavoriteUpdateWithWhereUniqueWithoutFiscalProfileInput = {
+    where: FiscalFavoriteWhereUniqueInput
+    data: XOR<FiscalFavoriteUpdateWithoutFiscalProfileInput, FiscalFavoriteUncheckedUpdateWithoutFiscalProfileInput>
+  }
+
+  export type FiscalFavoriteUpdateManyWithWhereWithoutFiscalProfileInput = {
+    where: FiscalFavoriteScalarWhereInput
+    data: XOR<FiscalFavoriteUpdateManyMutationInput, FiscalFavoriteUncheckedUpdateManyWithoutFiscalProfileInput>
+  }
+
+  export type FiscalFavoriteScalarWhereInput = {
+    AND?: FiscalFavoriteScalarWhereInput | FiscalFavoriteScalarWhereInput[]
+    OR?: FiscalFavoriteScalarWhereInput[]
+    NOT?: FiscalFavoriteScalarWhereInput | FiscalFavoriteScalarWhereInput[]
+    tenantId?: StringFilter<"FiscalFavorite"> | string
+    fiscalProfileId?: StringFilter<"FiscalFavorite"> | string
+  }
+
+  export type FiscalProfileCreateWithoutTaxRulesInput = {
+    id?: string
+    name: string
+    icon?: string | null
+    group: string
+    description?: string | null
+    scope: string
+    tenantId?: string | null
+    version: string
+    status?: string
+    emiteNfce?: boolean
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    observacoes?: string | null
+    history?: FiscalProfileHistoryCreateNestedManyWithoutFiscalProfileInput
+    storeProfiles?: StoreProfileFiscalCreateNestedManyWithoutFiscalProfileInput
+    favoritedBy?: FiscalFavoriteCreateNestedManyWithoutFiscalProfileInput
+  }
+
+  export type FiscalProfileUncheckedCreateWithoutTaxRulesInput = {
+    id?: string
+    name: string
+    icon?: string | null
+    group: string
+    description?: string | null
+    scope: string
+    tenantId?: string | null
+    version: string
+    status?: string
+    emiteNfce?: boolean
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    observacoes?: string | null
+    history?: FiscalProfileHistoryUncheckedCreateNestedManyWithoutFiscalProfileInput
+    storeProfiles?: StoreProfileFiscalUncheckedCreateNestedManyWithoutFiscalProfileInput
+    favoritedBy?: FiscalFavoriteUncheckedCreateNestedManyWithoutFiscalProfileInput
+  }
+
+  export type FiscalProfileCreateOrConnectWithoutTaxRulesInput = {
+    where: FiscalProfileWhereUniqueInput
+    create: XOR<FiscalProfileCreateWithoutTaxRulesInput, FiscalProfileUncheckedCreateWithoutTaxRulesInput>
+  }
+
+  export type FiscalProfileUpsertWithoutTaxRulesInput = {
+    update: XOR<FiscalProfileUpdateWithoutTaxRulesInput, FiscalProfileUncheckedUpdateWithoutTaxRulesInput>
+    create: XOR<FiscalProfileCreateWithoutTaxRulesInput, FiscalProfileUncheckedCreateWithoutTaxRulesInput>
+    where?: FiscalProfileWhereInput
+  }
+
+  export type FiscalProfileUpdateToOneWithWhereWithoutTaxRulesInput = {
+    where?: FiscalProfileWhereInput
+    data: XOR<FiscalProfileUpdateWithoutTaxRulesInput, FiscalProfileUncheckedUpdateWithoutTaxRulesInput>
+  }
+
+  export type FiscalProfileUpdateWithoutTaxRulesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    scope?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    emiteNfce?: BoolFieldUpdateOperationsInput | boolean
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    history?: FiscalProfileHistoryUpdateManyWithoutFiscalProfileNestedInput
+    storeProfiles?: StoreProfileFiscalUpdateManyWithoutFiscalProfileNestedInput
+    favoritedBy?: FiscalFavoriteUpdateManyWithoutFiscalProfileNestedInput
+  }
+
+  export type FiscalProfileUncheckedUpdateWithoutTaxRulesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    scope?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    emiteNfce?: BoolFieldUpdateOperationsInput | boolean
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    history?: FiscalProfileHistoryUncheckedUpdateManyWithoutFiscalProfileNestedInput
+    storeProfiles?: StoreProfileFiscalUncheckedUpdateManyWithoutFiscalProfileNestedInput
+    favoritedBy?: FiscalFavoriteUncheckedUpdateManyWithoutFiscalProfileNestedInput
+  }
+
+  export type FiscalProfileCreateWithoutHistoryInput = {
+    id?: string
+    name: string
+    icon?: string | null
+    group: string
+    description?: string | null
+    scope: string
+    tenantId?: string | null
+    version: string
+    status?: string
+    emiteNfce?: boolean
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    observacoes?: string | null
+    taxRules?: FiscalTaxRuleCreateNestedManyWithoutFiscalProfileInput
+    storeProfiles?: StoreProfileFiscalCreateNestedManyWithoutFiscalProfileInput
+    favoritedBy?: FiscalFavoriteCreateNestedManyWithoutFiscalProfileInput
+  }
+
+  export type FiscalProfileUncheckedCreateWithoutHistoryInput = {
+    id?: string
+    name: string
+    icon?: string | null
+    group: string
+    description?: string | null
+    scope: string
+    tenantId?: string | null
+    version: string
+    status?: string
+    emiteNfce?: boolean
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    observacoes?: string | null
+    taxRules?: FiscalTaxRuleUncheckedCreateNestedManyWithoutFiscalProfileInput
+    storeProfiles?: StoreProfileFiscalUncheckedCreateNestedManyWithoutFiscalProfileInput
+    favoritedBy?: FiscalFavoriteUncheckedCreateNestedManyWithoutFiscalProfileInput
+  }
+
+  export type FiscalProfileCreateOrConnectWithoutHistoryInput = {
+    where: FiscalProfileWhereUniqueInput
+    create: XOR<FiscalProfileCreateWithoutHistoryInput, FiscalProfileUncheckedCreateWithoutHistoryInput>
+  }
+
+  export type FiscalProfileUpsertWithoutHistoryInput = {
+    update: XOR<FiscalProfileUpdateWithoutHistoryInput, FiscalProfileUncheckedUpdateWithoutHistoryInput>
+    create: XOR<FiscalProfileCreateWithoutHistoryInput, FiscalProfileUncheckedCreateWithoutHistoryInput>
+    where?: FiscalProfileWhereInput
+  }
+
+  export type FiscalProfileUpdateToOneWithWhereWithoutHistoryInput = {
+    where?: FiscalProfileWhereInput
+    data: XOR<FiscalProfileUpdateWithoutHistoryInput, FiscalProfileUncheckedUpdateWithoutHistoryInput>
+  }
+
+  export type FiscalProfileUpdateWithoutHistoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    scope?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    emiteNfce?: BoolFieldUpdateOperationsInput | boolean
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    taxRules?: FiscalTaxRuleUpdateManyWithoutFiscalProfileNestedInput
+    storeProfiles?: StoreProfileFiscalUpdateManyWithoutFiscalProfileNestedInput
+    favoritedBy?: FiscalFavoriteUpdateManyWithoutFiscalProfileNestedInput
+  }
+
+  export type FiscalProfileUncheckedUpdateWithoutHistoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    scope?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    emiteNfce?: BoolFieldUpdateOperationsInput | boolean
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    taxRules?: FiscalTaxRuleUncheckedUpdateManyWithoutFiscalProfileNestedInput
+    storeProfiles?: StoreProfileFiscalUncheckedUpdateManyWithoutFiscalProfileNestedInput
+    favoritedBy?: FiscalFavoriteUncheckedUpdateManyWithoutFiscalProfileNestedInput
+  }
+
+  export type FiscalProfileCreateWithoutFavoritedByInput = {
+    id?: string
+    name: string
+    icon?: string | null
+    group: string
+    description?: string | null
+    scope: string
+    tenantId?: string | null
+    version: string
+    status?: string
+    emiteNfce?: boolean
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    observacoes?: string | null
+    taxRules?: FiscalTaxRuleCreateNestedManyWithoutFiscalProfileInput
+    history?: FiscalProfileHistoryCreateNestedManyWithoutFiscalProfileInput
+    storeProfiles?: StoreProfileFiscalCreateNestedManyWithoutFiscalProfileInput
+  }
+
+  export type FiscalProfileUncheckedCreateWithoutFavoritedByInput = {
+    id?: string
+    name: string
+    icon?: string | null
+    group: string
+    description?: string | null
+    scope: string
+    tenantId?: string | null
+    version: string
+    status?: string
+    emiteNfce?: boolean
+    ncm?: string | null
+    cest?: string | null
+    unit?: string
+    observacoes?: string | null
+    taxRules?: FiscalTaxRuleUncheckedCreateNestedManyWithoutFiscalProfileInput
+    history?: FiscalProfileHistoryUncheckedCreateNestedManyWithoutFiscalProfileInput
+    storeProfiles?: StoreProfileFiscalUncheckedCreateNestedManyWithoutFiscalProfileInput
+  }
+
+  export type FiscalProfileCreateOrConnectWithoutFavoritedByInput = {
+    where: FiscalProfileWhereUniqueInput
+    create: XOR<FiscalProfileCreateWithoutFavoritedByInput, FiscalProfileUncheckedCreateWithoutFavoritedByInput>
+  }
+
+  export type FiscalProfileUpsertWithoutFavoritedByInput = {
+    update: XOR<FiscalProfileUpdateWithoutFavoritedByInput, FiscalProfileUncheckedUpdateWithoutFavoritedByInput>
+    create: XOR<FiscalProfileCreateWithoutFavoritedByInput, FiscalProfileUncheckedCreateWithoutFavoritedByInput>
+    where?: FiscalProfileWhereInput
+  }
+
+  export type FiscalProfileUpdateToOneWithWhereWithoutFavoritedByInput = {
+    where?: FiscalProfileWhereInput
+    data: XOR<FiscalProfileUpdateWithoutFavoritedByInput, FiscalProfileUncheckedUpdateWithoutFavoritedByInput>
+  }
+
+  export type FiscalProfileUpdateWithoutFavoritedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    scope?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    emiteNfce?: BoolFieldUpdateOperationsInput | boolean
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    taxRules?: FiscalTaxRuleUpdateManyWithoutFiscalProfileNestedInput
+    history?: FiscalProfileHistoryUpdateManyWithoutFiscalProfileNestedInput
+    storeProfiles?: StoreProfileFiscalUpdateManyWithoutFiscalProfileNestedInput
+  }
+
+  export type FiscalProfileUncheckedUpdateWithoutFavoritedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    icon?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: StringFieldUpdateOperationsInput | string
+    description?: NullableStringFieldUpdateOperationsInput | string | null
+    scope?: StringFieldUpdateOperationsInput | string
+    tenantId?: NullableStringFieldUpdateOperationsInput | string | null
+    version?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    emiteNfce?: BoolFieldUpdateOperationsInput | boolean
+    ncm?: NullableStringFieldUpdateOperationsInput | string | null
+    cest?: NullableStringFieldUpdateOperationsInput | string | null
+    unit?: StringFieldUpdateOperationsInput | string
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    taxRules?: FiscalTaxRuleUncheckedUpdateManyWithoutFiscalProfileNestedInput
+    history?: FiscalProfileHistoryUncheckedUpdateManyWithoutFiscalProfileNestedInput
+    storeProfiles?: StoreProfileFiscalUncheckedUpdateManyWithoutFiscalProfileNestedInput
+  }
+
+  export type TenantCreateWithoutPaymentLogsInput = {
+    id?: string
+    databaseName: string
+    databaseUrl: string
+    name?: string
+    status?: string
+    logoUrl?: string | null
+    modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: string | null
+    razaoSocial?: string | null
+    nomeFantasia?: string | null
+    cnpj?: string | null
+    ie?: string | null
+    im?: string | null
+    crt?: number
+    logradouro?: string | null
+    numero?: string | null
+    complemento?: string | null
+    bairro?: string | null
+    municipio?: string | null
+    codMunicipio?: string | null
+    uf?: string | null
+    cep?: string | null
+    telefone?: string | null
+    emailContador?: string | null
+    nfceAtivo?: boolean
+    nfceAutoSync?: boolean
+    nfceSerie?: number
+    nfceAmbiente?: number
+    nfceCsc?: string | null
+    nfceIdCsc?: string | null
+    certPfx?: Bytes | null
+    certSenha?: string | null
+    certValidade?: Date | string | null
+    cosmosApiKey?: string | null
+    mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: Date | string | null
+    telefoneContato?: string | null
+    emailContato?: string | null
+    observacoes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    termsAcceptedAt?: Date | string | null
+    users?: UserCreateNestedManyWithoutTenantInput
+    tenantIntegrations?: TenantIntegrationCreateNestedManyWithoutTenantInput
+    groupMembers?: TenantGroupMemberCreateNestedManyWithoutTenantInput
+  }
+
+  export type TenantUncheckedCreateWithoutPaymentLogsInput = {
+    id?: string
+    databaseName: string
+    databaseUrl: string
+    name?: string
+    status?: string
+    logoUrl?: string | null
+    modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: string | null
+    razaoSocial?: string | null
+    nomeFantasia?: string | null
+    cnpj?: string | null
+    ie?: string | null
+    im?: string | null
+    crt?: number
+    logradouro?: string | null
+    numero?: string | null
+    complemento?: string | null
+    bairro?: string | null
+    municipio?: string | null
+    codMunicipio?: string | null
+    uf?: string | null
+    cep?: string | null
+    telefone?: string | null
+    emailContador?: string | null
+    nfceAtivo?: boolean
+    nfceAutoSync?: boolean
+    nfceSerie?: number
+    nfceAmbiente?: number
+    nfceCsc?: string | null
+    nfceIdCsc?: string | null
+    certPfx?: Bytes | null
+    certSenha?: string | null
+    certValidade?: Date | string | null
+    cosmosApiKey?: string | null
+    mensalidadeValor?: Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: Date | string | null
+    telefoneContato?: string | null
+    emailContato?: string | null
+    observacoes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    termsAcceptedAt?: Date | string | null
+    users?: UserUncheckedCreateNestedManyWithoutTenantInput
+    tenantIntegrations?: TenantIntegrationUncheckedCreateNestedManyWithoutTenantInput
+    groupMembers?: TenantGroupMemberUncheckedCreateNestedManyWithoutTenantInput
+  }
+
+  export type TenantCreateOrConnectWithoutPaymentLogsInput = {
+    where: TenantWhereUniqueInput
+    create: XOR<TenantCreateWithoutPaymentLogsInput, TenantUncheckedCreateWithoutPaymentLogsInput>
+  }
+
+  export type TenantUpsertWithoutPaymentLogsInput = {
+    update: XOR<TenantUpdateWithoutPaymentLogsInput, TenantUncheckedUpdateWithoutPaymentLogsInput>
+    create: XOR<TenantCreateWithoutPaymentLogsInput, TenantUncheckedCreateWithoutPaymentLogsInput>
+    where?: TenantWhereInput
+  }
+
+  export type TenantUpdateToOneWithWhereWithoutPaymentLogsInput = {
+    where?: TenantWhereInput
+    data: XOR<TenantUpdateWithoutPaymentLogsInput, TenantUncheckedUpdateWithoutPaymentLogsInput>
+  }
+
+  export type TenantUpdateWithoutPaymentLogsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    databaseName?: StringFieldUpdateOperationsInput | string
+    databaseUrl?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: NullableStringFieldUpdateOperationsInput | string | null
+    razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
+    cnpj?: NullableStringFieldUpdateOperationsInput | string | null
+    ie?: NullableStringFieldUpdateOperationsInput | string | null
+    im?: NullableStringFieldUpdateOperationsInput | string | null
+    crt?: IntFieldUpdateOperationsInput | number
+    logradouro?: NullableStringFieldUpdateOperationsInput | string | null
+    numero?: NullableStringFieldUpdateOperationsInput | string | null
+    complemento?: NullableStringFieldUpdateOperationsInput | string | null
+    bairro?: NullableStringFieldUpdateOperationsInput | string | null
+    municipio?: NullableStringFieldUpdateOperationsInput | string | null
+    codMunicipio?: NullableStringFieldUpdateOperationsInput | string | null
+    uf?: NullableStringFieldUpdateOperationsInput | string | null
+    cep?: NullableStringFieldUpdateOperationsInput | string | null
+    telefone?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContador?: NullableStringFieldUpdateOperationsInput | string | null
+    nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
+    nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
+    nfceSerie?: IntFieldUpdateOperationsInput | number
+    nfceAmbiente?: IntFieldUpdateOperationsInput | number
+    nfceCsc?: NullableStringFieldUpdateOperationsInput | string | null
+    nfceIdCsc?: NullableStringFieldUpdateOperationsInput | string | null
+    certPfx?: NullableBytesFieldUpdateOperationsInput | Bytes | null
+    certSenha?: NullableStringFieldUpdateOperationsInput | string | null
+    certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
+    mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    telefoneContato?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContato?: NullableStringFieldUpdateOperationsInput | string | null
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    users?: UserUpdateManyWithoutTenantNestedInput
+    tenantIntegrations?: TenantIntegrationUpdateManyWithoutTenantNestedInput
+    groupMembers?: TenantGroupMemberUpdateManyWithoutTenantNestedInput
+  }
+
+  export type TenantUncheckedUpdateWithoutPaymentLogsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    databaseName?: StringFieldUpdateOperationsInput | string
+    databaseUrl?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    modulos?: NullableJsonNullValueInput | InputJsonValue
+    tvPublicId?: NullableStringFieldUpdateOperationsInput | string | null
+    razaoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    nomeFantasia?: NullableStringFieldUpdateOperationsInput | string | null
+    cnpj?: NullableStringFieldUpdateOperationsInput | string | null
+    ie?: NullableStringFieldUpdateOperationsInput | string | null
+    im?: NullableStringFieldUpdateOperationsInput | string | null
+    crt?: IntFieldUpdateOperationsInput | number
+    logradouro?: NullableStringFieldUpdateOperationsInput | string | null
+    numero?: NullableStringFieldUpdateOperationsInput | string | null
+    complemento?: NullableStringFieldUpdateOperationsInput | string | null
+    bairro?: NullableStringFieldUpdateOperationsInput | string | null
+    municipio?: NullableStringFieldUpdateOperationsInput | string | null
+    codMunicipio?: NullableStringFieldUpdateOperationsInput | string | null
+    uf?: NullableStringFieldUpdateOperationsInput | string | null
+    cep?: NullableStringFieldUpdateOperationsInput | string | null
+    telefone?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContador?: NullableStringFieldUpdateOperationsInput | string | null
+    nfceAtivo?: BoolFieldUpdateOperationsInput | boolean
+    nfceAutoSync?: BoolFieldUpdateOperationsInput | boolean
+    nfceSerie?: IntFieldUpdateOperationsInput | number
+    nfceAmbiente?: IntFieldUpdateOperationsInput | number
+    nfceCsc?: NullableStringFieldUpdateOperationsInput | string | null
+    nfceIdCsc?: NullableStringFieldUpdateOperationsInput | string | null
+    certPfx?: NullableBytesFieldUpdateOperationsInput | Bytes | null
+    certSenha?: NullableStringFieldUpdateOperationsInput | string | null
+    certValidade?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    cosmosApiKey?: NullableStringFieldUpdateOperationsInput | string | null
+    mensalidadeValor?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    mensalidadeVencimento?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    telefoneContato?: NullableStringFieldUpdateOperationsInput | string | null
+    emailContato?: NullableStringFieldUpdateOperationsInput | string | null
+    observacoes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    termsAcceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    users?: UserUncheckedUpdateManyWithoutTenantNestedInput
+    tenantIntegrations?: TenantIntegrationUncheckedUpdateManyWithoutTenantNestedInput
+    groupMembers?: TenantGroupMemberUncheckedUpdateManyWithoutTenantNestedInput
   }
 
   export type UserCreateManyTenantInput = {
@@ -9388,6 +25932,7 @@ export namespace Prisma {
     role?: string
     pin?: string | null
     active?: boolean
+    groupId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -9402,6 +25947,22 @@ export namespace Prisma {
     updatedAt?: Date | string
   }
 
+  export type TenantGroupMemberCreateManyTenantInput = {
+    id?: string
+    groupId: string
+    alias?: string | null
+  }
+
+  export type PaymentLogCreateManyTenantInput = {
+    id?: string
+    valor: Decimal | DecimalJsLike | number | string
+    vencimentoAntes: Date | string
+    vencimentoApos: Date | string
+    observacao?: string | null
+    registradoPor?: string | null
+    createdAt?: Date | string
+  }
+
   export type UserUpdateWithoutTenantInput = {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
@@ -9412,6 +25973,7 @@ export namespace Prisma {
     active?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    group?: TenantGroupUpdateOneWithoutUsersNestedInput
   }
 
   export type UserUncheckedUpdateWithoutTenantInput = {
@@ -9422,6 +25984,7 @@ export namespace Prisma {
     role?: StringFieldUpdateOperationsInput | string
     pin?: NullableStringFieldUpdateOperationsInput | string | null
     active?: BoolFieldUpdateOperationsInput | boolean
+    groupId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -9434,6 +25997,7 @@ export namespace Prisma {
     role?: StringFieldUpdateOperationsInput | string
     pin?: NullableStringFieldUpdateOperationsInput | string | null
     active?: BoolFieldUpdateOperationsInput | boolean
+    groupId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -9466,6 +26030,290 @@ export namespace Prisma {
     settings?: JsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TenantGroupMemberUpdateWithoutTenantInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    alias?: NullableStringFieldUpdateOperationsInput | string | null
+    group?: TenantGroupUpdateOneRequiredWithoutMembersNestedInput
+  }
+
+  export type TenantGroupMemberUncheckedUpdateWithoutTenantInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    groupId?: StringFieldUpdateOperationsInput | string
+    alias?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type TenantGroupMemberUncheckedUpdateManyWithoutTenantInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    groupId?: StringFieldUpdateOperationsInput | string
+    alias?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type PaymentLogUpdateWithoutTenantInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    valor?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    vencimentoAntes?: DateTimeFieldUpdateOperationsInput | Date | string
+    vencimentoApos?: DateTimeFieldUpdateOperationsInput | Date | string
+    observacao?: NullableStringFieldUpdateOperationsInput | string | null
+    registradoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PaymentLogUncheckedUpdateWithoutTenantInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    valor?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    vencimentoAntes?: DateTimeFieldUpdateOperationsInput | Date | string
+    vencimentoApos?: DateTimeFieldUpdateOperationsInput | Date | string
+    observacao?: NullableStringFieldUpdateOperationsInput | string | null
+    registradoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PaymentLogUncheckedUpdateManyWithoutTenantInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    valor?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    vencimentoAntes?: DateTimeFieldUpdateOperationsInput | Date | string
+    vencimentoApos?: DateTimeFieldUpdateOperationsInput | Date | string
+    observacao?: NullableStringFieldUpdateOperationsInput | string | null
+    registradoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TenantGroupMemberCreateManyGroupInput = {
+    id?: string
+    tenantId: string
+    alias?: string | null
+  }
+
+  export type UserCreateManyGroupInput = {
+    id?: string
+    tenantId: string
+    name: string
+    email: string
+    password: string
+    role?: string
+    pin?: string | null
+    active?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TenantGroupMemberUpdateWithoutGroupInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    alias?: NullableStringFieldUpdateOperationsInput | string | null
+    tenant?: TenantUpdateOneRequiredWithoutGroupMembersNestedInput
+  }
+
+  export type TenantGroupMemberUncheckedUpdateWithoutGroupInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    alias?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type TenantGroupMemberUncheckedUpdateManyWithoutGroupInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    alias?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type UserUpdateWithoutGroupInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    password?: StringFieldUpdateOperationsInput | string
+    role?: StringFieldUpdateOperationsInput | string
+    pin?: NullableStringFieldUpdateOperationsInput | string | null
+    active?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    tenant?: TenantUpdateOneRequiredWithoutUsersNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutGroupInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    password?: StringFieldUpdateOperationsInput | string
+    role?: StringFieldUpdateOperationsInput | string
+    pin?: NullableStringFieldUpdateOperationsInput | string | null
+    active?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UserUncheckedUpdateManyWithoutGroupInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tenantId?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    password?: StringFieldUpdateOperationsInput | string
+    role?: StringFieldUpdateOperationsInput | string
+    pin?: NullableStringFieldUpdateOperationsInput | string | null
+    active?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type StoreProfileFiscalCreateManyStoreProfileInput = {
+    fiscalProfileId: string
+  }
+
+  export type StoreProfileFiscalUpdateWithoutStoreProfileInput = {
+    fiscalProfile?: FiscalProfileUpdateOneRequiredWithoutStoreProfilesNestedInput
+  }
+
+  export type StoreProfileFiscalUncheckedUpdateWithoutStoreProfileInput = {
+    fiscalProfileId?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type StoreProfileFiscalUncheckedUpdateManyWithoutStoreProfileInput = {
+    fiscalProfileId?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type FiscalTaxRuleCreateManyFiscalProfileInput = {
+    id?: string
+    regime: string
+    csosn?: string | null
+    cstIcms?: string | null
+    aliqIcms?: number
+    cstPis?: string
+    aliqPis?: number
+    cstCofins?: string
+    aliqCofins?: number
+    ibsCst?: string
+    ibsAliq?: number
+    cbsCst?: string
+    cbsAliq?: number
+    validFrom?: Date | string
+    validUntil?: Date | string | null
+  }
+
+  export type FiscalProfileHistoryCreateManyFiscalProfileInput = {
+    id?: string
+    changedBy: string
+    changedAt?: Date | string
+    field: string
+    oldValue: string
+    newValue: string
+    reason?: string | null
+  }
+
+  export type StoreProfileFiscalCreateManyFiscalProfileInput = {
+    storeProfileId: string
+  }
+
+  export type FiscalFavoriteCreateManyFiscalProfileInput = {
+    tenantId: string
+  }
+
+  export type FiscalTaxRuleUpdateWithoutFiscalProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    regime?: StringFieldUpdateOperationsInput | string
+    csosn?: NullableStringFieldUpdateOperationsInput | string | null
+    cstIcms?: NullableStringFieldUpdateOperationsInput | string | null
+    aliqIcms?: FloatFieldUpdateOperationsInput | number
+    cstPis?: StringFieldUpdateOperationsInput | string
+    aliqPis?: FloatFieldUpdateOperationsInput | number
+    cstCofins?: StringFieldUpdateOperationsInput | string
+    aliqCofins?: FloatFieldUpdateOperationsInput | number
+    ibsCst?: StringFieldUpdateOperationsInput | string
+    ibsAliq?: FloatFieldUpdateOperationsInput | number
+    cbsCst?: StringFieldUpdateOperationsInput | string
+    cbsAliq?: FloatFieldUpdateOperationsInput | number
+    validFrom?: DateTimeFieldUpdateOperationsInput | Date | string
+    validUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type FiscalTaxRuleUncheckedUpdateWithoutFiscalProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    regime?: StringFieldUpdateOperationsInput | string
+    csosn?: NullableStringFieldUpdateOperationsInput | string | null
+    cstIcms?: NullableStringFieldUpdateOperationsInput | string | null
+    aliqIcms?: FloatFieldUpdateOperationsInput | number
+    cstPis?: StringFieldUpdateOperationsInput | string
+    aliqPis?: FloatFieldUpdateOperationsInput | number
+    cstCofins?: StringFieldUpdateOperationsInput | string
+    aliqCofins?: FloatFieldUpdateOperationsInput | number
+    ibsCst?: StringFieldUpdateOperationsInput | string
+    ibsAliq?: FloatFieldUpdateOperationsInput | number
+    cbsCst?: StringFieldUpdateOperationsInput | string
+    cbsAliq?: FloatFieldUpdateOperationsInput | number
+    validFrom?: DateTimeFieldUpdateOperationsInput | Date | string
+    validUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type FiscalTaxRuleUncheckedUpdateManyWithoutFiscalProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    regime?: StringFieldUpdateOperationsInput | string
+    csosn?: NullableStringFieldUpdateOperationsInput | string | null
+    cstIcms?: NullableStringFieldUpdateOperationsInput | string | null
+    aliqIcms?: FloatFieldUpdateOperationsInput | number
+    cstPis?: StringFieldUpdateOperationsInput | string
+    aliqPis?: FloatFieldUpdateOperationsInput | number
+    cstCofins?: StringFieldUpdateOperationsInput | string
+    aliqCofins?: FloatFieldUpdateOperationsInput | number
+    ibsCst?: StringFieldUpdateOperationsInput | string
+    ibsAliq?: FloatFieldUpdateOperationsInput | number
+    cbsCst?: StringFieldUpdateOperationsInput | string
+    cbsAliq?: FloatFieldUpdateOperationsInput | number
+    validFrom?: DateTimeFieldUpdateOperationsInput | Date | string
+    validUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type FiscalProfileHistoryUpdateWithoutFiscalProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    changedBy?: StringFieldUpdateOperationsInput | string
+    changedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    field?: StringFieldUpdateOperationsInput | string
+    oldValue?: StringFieldUpdateOperationsInput | string
+    newValue?: StringFieldUpdateOperationsInput | string
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type FiscalProfileHistoryUncheckedUpdateWithoutFiscalProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    changedBy?: StringFieldUpdateOperationsInput | string
+    changedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    field?: StringFieldUpdateOperationsInput | string
+    oldValue?: StringFieldUpdateOperationsInput | string
+    newValue?: StringFieldUpdateOperationsInput | string
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type FiscalProfileHistoryUncheckedUpdateManyWithoutFiscalProfileInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    changedBy?: StringFieldUpdateOperationsInput | string
+    changedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    field?: StringFieldUpdateOperationsInput | string
+    oldValue?: StringFieldUpdateOperationsInput | string
+    newValue?: StringFieldUpdateOperationsInput | string
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type StoreProfileFiscalUpdateWithoutFiscalProfileInput = {
+    storeProfile?: StoreProfileUpdateOneRequiredWithoutProfilesNestedInput
+  }
+
+  export type StoreProfileFiscalUncheckedUpdateWithoutFiscalProfileInput = {
+    storeProfileId?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type StoreProfileFiscalUncheckedUpdateManyWithoutFiscalProfileInput = {
+    storeProfileId?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type FiscalFavoriteUpdateWithoutFiscalProfileInput = {
+    tenantId?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type FiscalFavoriteUncheckedUpdateWithoutFiscalProfileInput = {
+    tenantId?: StringFieldUpdateOperationsInput | string
+  }
+
+  export type FiscalFavoriteUncheckedUpdateManyWithoutFiscalProfileInput = {
+    tenantId?: StringFieldUpdateOperationsInput | string
   }
 
 

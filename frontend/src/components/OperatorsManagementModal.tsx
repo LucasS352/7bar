@@ -27,7 +27,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
   const [jobTitle, setJobTitle] = useState("");
-  const [isManager, setIsManager] = useState(false);
+  const [hideReceipts, setHideReceipts] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -69,7 +69,11 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
 
     setSubmitting(true);
     try {
-      const payload: any = { name, isManager, jobTitle: jobTitle.trim() || null };
+      const payload: any = { 
+        name, 
+        isManager: !hideReceipts, 
+        jobTitle: jobTitle.trim() || null 
+      };
       if (pin) payload.pin = pin;
 
       if (editId) {
@@ -90,7 +94,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
       setName("");
       setPin("");
       setJobTitle("");
-      setIsManager(false);
+      setHideReceipts(true);
       fetchOperators();
     } catch (err: any) {
       toast.error(err.response?.data?.message || `Erro ao ${editId ? 'atualizar' : 'criar'} colaborador.`);
@@ -103,7 +107,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
     setEditId(op.id);
     setName(op.name);
     setJobTitle(op.jobTitle || "");
-    setIsManager(op.isManager || false);
+    setHideReceipts(!op.isManager);
     setPin("");
     setShowForm(true);
   };
@@ -182,18 +186,18 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
               />
             </div>
 
-              <div className="flex items-center gap-3 pt-2">
+              <div className="flex items-start gap-3 pt-2 bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/80">
                 <input
                   type="checkbox"
-                  id="isManager"
-                  checked={isManager}
-                  onChange={(e) => setIsManager(e.target.checked)}
-                  className="w-5 h-5 rounded border-zinc-700 bg-zinc-950 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-900 cursor-pointer"
+                  id="hideReceipts"
+                  checked={hideReceipts}
+                  onChange={(e) => setHideReceipts(e.target.checked)}
+                  className="w-5 h-5 mt-0.5 rounded border-zinc-700 bg-zinc-950 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-900 cursor-pointer shrink-0"
                 />
-                <label htmlFor="isManager" className="text-sm text-zinc-300 cursor-pointer select-none">
-                  <strong className="block text-white">É Gerente de Caixa?</strong>
-                  <span className="text-xs text-zinc-500">
-                    Se marcado, pode visualizar faturamentos totais e auditar a gaveta. Se desmarcado, os valores monetários ficam ocultos no fechamento (Auditoria Cega).
+                <label htmlFor="hideReceipts" className="text-sm text-zinc-300 cursor-pointer select-none">
+                  <strong className="block text-white text-sm">Ocultar recebimentos do caixa</strong>
+                  <span className="text-xs text-zinc-400 leading-relaxed block mt-0.5">
+                    Se marcado, os valores totais de fechamento (dinheiro físico, cartões, pix e total esperado na gaveta) ficam ocultos (Auditoria Cega). O operador ainda visualiza todas as vendas individuais registradas.
                   </span>
                 </label>
               </div>
@@ -201,7 +205,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => { setShowForm(false); setEditId(null); setName(""); setPin(""); setJobTitle(""); setIsManager(false); }}
+                onClick={() => { setShowForm(false); setEditId(null); setName(""); setPin(""); setJobTitle(""); setHideReceipts(true); }}
                 className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all"
               >
                 Cancelar
@@ -251,8 +255,14 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
                       <div className="flex flex-col">
                         <span className="font-bold text-white text-base flex items-center gap-2">
                           {op.name}
-                          {op.isManager && (
-                            <span className="bg-blue-500/20 text-blue-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded border border-blue-500/30">Gerente</span>
+                          {op.isManager ? (
+                            <span className="bg-emerald-500/15 text-emerald-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded border border-emerald-500/25">
+                              Totais Visíveis
+                            </span>
+                          ) : (
+                            <span className="bg-zinc-800 text-zinc-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded border border-zinc-700">
+                              Recebimentos Ocultos
+                            </span>
                           )}
                         </span>
                         <div className="flex items-center gap-2 mt-1">

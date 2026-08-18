@@ -464,6 +464,8 @@ model TenantSettings {
   allowNegativeStock Boolean @default(false)
   /// PIN numérico (hasheado) para autorizar descontos no PDV
   discountPin        String?
+  /// PIN numérico (hasheado) para desbloquear auditoria e valores de caixas restritos no PDV
+  cashierPin         String?
   /// Módulo de Controle de Validade de Lotes
   enableExpiryControl Boolean @default(false)
   /// Dias de antecedência para alerta de vencimento

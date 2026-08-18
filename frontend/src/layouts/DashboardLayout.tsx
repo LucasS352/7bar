@@ -1,6 +1,10 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText, Building2, Users, ChevronLeft, ChevronRight, AlertTriangle, Truck, ShoppingCart, Banknote, CreditCard, FileSpreadsheet, Images, FileDown, ReceiptText, Tv2 } from 'lucide-react';
+import {
+  LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText,
+  Building2, Users, ChevronLeft, ChevronRight, AlertTriangle, Truck, ShoppingCart,
+  Banknote, CreditCard, FileSpreadsheet, Images, FileDown, ReceiptText, Tv2, Menu, X
+} from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useDemoMissionsStore } from '@/store/demoMissions';
 import { api } from '@/lib/api';
@@ -11,14 +15,20 @@ import { CapitaoGelada } from '@/components/CapitaoGelada';
 export function DashboardLayout() {
   const { user, token, logout } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [tenantConfig, setTenantConfig] = useState<any>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (import.meta.env.VITE_APP_MODE === 'demo') {
       useDemoMissionsStore.getState().completeMission('dashboardVisited');
     }
   }, []);
+
+  useEffect(() => {
+    setIsMobileDrawerOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -68,6 +78,9 @@ export function DashboardLayout() {
     ] : []),
   ];
   const inventoryToolItems = [
+    ...(modules.estoque !== false ? [
+      { name: 'Edição em Massa',  to: '/dashboard/inventory/mass-edit',   icon: FileSpreadsheet },
+    ] : []),
     { name: 'Contagem de Estoque', to: '/dashboard/inventory/stock-count', icon: FileSpreadsheet },
     { name: 'Imagens em Massa',   to: '/dashboard/bulk-images',            icon: Images },
     ...((modules.nfce !== false || modules.importacaoXml === true) ? [
@@ -98,7 +111,40 @@ export function DashboardLayout() {
   const isVitrineBlocked = modules?.vitrineDigital !== true && pathname.startsWith('/dashboard/vitrine');
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-white font-sans overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-zinc-950 text-white font-sans overflow-hidden">
+      {/* Mobile Top Navigation Bar */}
+      <header className="md:hidden flex items-center justify-between px-3.5 py-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0 select-none z-30">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            type="button"
+            onClick={() => setIsMobileDrawerOpen(true)}
+            className="p-2 text-zinc-300 hover:text-white bg-zinc-800/80 border border-zinc-700/80 rounded-xl transition active:scale-95 shrink-0 cursor-pointer"
+            title="Menu do Administrador"
+          >
+            <Menu size={19} />
+          </button>
+          {tenantConfig?.logoUrl ? (
+            <img src={getFullUrl(tenantConfig.logoUrl)} alt="Logo" className="h-8 w-8 object-contain drop-shadow-sm shrink-0" />
+          ) : (
+            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-white text-xs shrink-0 shadow">
+              {tenantConfig?.nomeFantasia?.substring(0, 2) || '7B'}
+            </div>
+          )}
+          <span className="font-bold text-xs sm:text-sm text-white truncate max-w-[130px] sm:max-w-[200px]">
+            {tenantConfig?.nomeFantasia || tenantConfig?.razaoSocial || 'Painel Admin'}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <NavLink
+            to="/"
+            className="px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 text-blue-400 font-bold text-xs rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm shrink-0"
+          >
+            <ArrowLeft size={14} /> PDV
+          </NavLink>
+        </div>
+      </header>
+
       {/* Sidebar — hidden on mobile, visible md+ */}
       <aside className={`hidden md:flex flex-col ${isCollapsed ? 'w-20' : 'w-64'} bg-zinc-900 border-r border-zinc-800 transition-all duration-300 relative`}>
         <button
@@ -169,6 +215,134 @@ export function DashboardLayout() {
           </button>
         </div>
       </aside>
+
+      {/* Mobile Admin Navigation Drawer */}
+      {isMobileDrawerOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm md:hidden animate-in fade-in duration-200"
+            onClick={() => setIsMobileDrawerOpen(false)}
+          />
+          <aside
+            className="fixed top-0 bottom-0 left-0 z-[90] md:hidden w-[85vw] max-w-[320px] bg-zinc-900 border-r border-zinc-800 flex flex-col shadow-2xl animate-in slide-in-from-left duration-300 overflow-hidden"
+          >
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/80">
+              <div className="flex items-center gap-2.5 min-w-0">
+                {tenantConfig?.logoUrl ? (
+                  <img src={getFullUrl(tenantConfig.logoUrl)} alt="Logo" className="h-9 w-9 object-contain drop-shadow-sm shrink-0" />
+                ) : (
+                  <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-black text-white text-sm shrink-0 shadow">
+                    {tenantConfig?.nomeFantasia?.substring(0, 2) || '7B'}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="font-bold text-white text-sm truncate">{tenantConfig?.nomeFantasia || tenantConfig?.razaoSocial || 'Painel Admin'}</p>
+                  <p className="text-zinc-500 text-[11px] truncate">{user?.tenant || ''}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileDrawerOpen(false)}
+                className="p-1.5 text-zinc-400 hover:text-white bg-zinc-800 rounded-xl transition cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Links scroll container */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4">
+              {/* Geral & Finanças */}
+              <div>
+                <p className="px-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5">Geral & Finanças</p>
+                <div className="space-y-1">
+                  {navItems.map(item => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.to === '/dashboard'}
+                      onClick={() => setIsMobileDrawerOpen(false)}
+                      className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-xs font-semibold ${
+                        isActive
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                      }`}
+                    >
+                      <item.icon size={17} className="shrink-0" />
+                      <span>{item.name}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+
+              {/* Ferramentas de Inventário & Fiscal */}
+              <div>
+                <p className="px-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <FileSpreadsheet size={11} /> Inventário & Fiscal
+                </p>
+                <div className="space-y-1">
+                  {inventoryToolItems.map(item => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setIsMobileDrawerOpen(false)}
+                      className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-xs font-semibold ${
+                        isActive
+                          ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                      }`}
+                    >
+                      <item.icon size={17} className="shrink-0" />
+                      <span>{item.name}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+
+              {/* Configurações */}
+              <div>
+                <p className="px-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <Settings size={11} /> Configurações
+                </p>
+                <div className="space-y-1">
+                  {configItems.map(item => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setIsMobileDrawerOpen(false)}
+                      className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-xs font-semibold ${
+                        isActive
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                      }`}
+                    >
+                      <item.icon size={17} className="shrink-0" />
+                      <span>{item.name}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="p-3 border-t border-zinc-800 bg-zinc-950/80 space-y-2">
+              <NavLink
+                to="/"
+                onClick={() => setIsMobileDrawerOpen(false)}
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition active:scale-95"
+              >
+                <ArrowLeft size={16} /> Frente de Caixa (PDV)
+              </NavLink>
+              <button
+                onClick={() => { setIsMobileDrawerOpen(false); handleLogout(); }}
+                className="flex items-center justify-center gap-2 w-full py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-bold text-xs transition active:scale-95"
+              >
+                <LogOut size={15} /> Sair da Conta
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
 
       {/* Main — pb-20 on mobile to clear BottomNav, p-3 on mobile */}
       <main className="flex-1 overflow-y-auto bg-zinc-950 p-3 md:p-8 pb-20 md:pb-8 custom-scrollbar">

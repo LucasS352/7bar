@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { FileText, Loader2, X, AlertOctagon, Receipt, Trash2, EyeOff, Edit2 } from 'lucide-react';
+import { FileText, Loader2, X, AlertOctagon, Receipt, Trash2, EyeOff, Edit2, KeyRound, Unlock, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useShift } from '@/contexts/ShiftContext';
 import { EditPaymentModal } from './EditPaymentModal';
@@ -16,22 +16,72 @@ const METHOD_DISPLAY: Record<string, string> = {
   consumo_funcionario:  'Consumo Colaborador',
 };
 
-export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: boolean, onClose: (closed: boolean) => void, registerId: string | undefined }) {
+export function CloseRegisterModal({ 
+  isOpen, 
+  onClose, 
+  registerId,
+  isAdminView = false,
+}: { 
+  isOpen: boolean; 
+  onClose: (closed: boolean) => void; 
+  registerId: string | undefined;
+  isAdminView?: boolean;
+}) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [closingValue, setClosingValue] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<1 | 2>(1); // 1 = auditoria, 2 = confirmação final
+  const [mobileTab, setMobileTab] = useState<'summary' | 'sales'>('summary');
+
+  // Estados de Desbloqueio por PIN do Caixa
+  const [isUnlockedByPin, setIsUnlockedByPin] = useState(false);
+  const [unlockModalOpen, setUnlockModalOpen] = useState(false);
+  const [cashierPinInput, setCashierPinInput] = useState('');
+  const [verifyingCashierPin, setVerifyingCashierPin] = useState(false);
 
   const { user } = useAuthStore();
   const { operator } = useShift();
 
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
-  const isPosShift = Boolean(operator) || data?.register?.status === 'open';
-  const isManager = Boolean(data?.register?.operator?.isManager ?? operator?.isManager);
 
-  const canSeeTotals = isPosShift ? isManager : (isAdmin || isManager);
+  // canSeeTotals:
+  // 1. Se estiver na visão do Dashboard (isAdminView) OU for admin sem operador ativo na sessão:
+  //    -> NUNCA oculta nada! O Admin visualiza todos os totais, dinheiro, cartões, pix, faturamento e quebras.
+  // 2. Se tiver sido desbloqueado via PIN do Caixa / Gerente (isUnlockedByPin):
+  //    -> Revela todos os valores imediatamente na sessão do modal.
+  // 3. Se for no PDV:
+  //    -> Se isManager for true: visualiza totais.
+  //    -> Se isManager for false (ocultar recebimentos ativado): totais ficam mascarados com 'R$ •••••' (Auditoria Cega).
+  const canSeeTotals = isAdminView 
+    ? true 
+    : isUnlockedByPin
+      ? true
+      : isAdmin && !operator 
+        ? true 
+        : Boolean(data?.register?.operator?.isManager ?? operator?.isManager);
+
+  const handleVerifyCashierPin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!cashierPinInput || cashierPinInput.length < 4) {
+      toast.error('Informe o PIN do Caixa (mínimo 4 dígitos).');
+      return;
+    }
+    setVerifyingCashierPin(true);
+    try {
+      await api.post('/tenants/me/verify-cashier-pin', { pin: cashierPinInput });
+      setIsUnlockedByPin(true);
+      setUnlockModalOpen(false);
+      setCashierPinInput('');
+      toast.success('Valores e auditoria do caixa desbloqueados com sucesso!');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'PIN do Caixa incorreto.');
+      setCashierPinInput('');
+    } finally {
+      setVerifyingCashierPin(false);
+    }
+  };
 
   const renderMoney = (
     val: number | string | undefined | null,
@@ -103,6 +153,10 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
     setLoading(true);
     setData(null);
     setStep(1);
+    setMobileTab('summary');
+    setIsUnlockedByPin(false);
+    setUnlockModalOpen(false);
+    setCashierPinInput('');
     api.get(`/cash-registers/${registerId}/report?_t=${Date.now()}`)
       .then(res => {
         setData(res.data);
@@ -166,22 +220,57 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 lg:p-8 transition-all">
       <div className="bg-zinc-950 border border-zinc-800 rounded-[2rem] w-full max-w-6xl shadow-[0_0_100px_rgba(239,68,68,0.1)] overflow-hidden animate-in fade-in zoom-in-95 duration-300 flex flex-col h-full max-h-[95vh] lg:max-h-[90vh]">
         <div className="flex justify-between items-center p-4 md:p-6 border-b border-zinc-800 bg-zinc-900/50 shrink-0">
-          <h2 className="text-2xl font-bold flex items-center gap-3"><FileText className="text-red-500" /> Auditoria de Fechamento</h2>
+          <h2 className="text-xl md:text-2xl font-bold flex items-center gap-3"><FileText className="text-red-500" /> Auditoria de Fechamento</h2>
           <button onClick={() => onClose(false)} className="p-2 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors"><X size={24}/></button>
         </div>
 
         {loading || !data ? (
           <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-red-500" size={48} /></div>
         ) : (
-          <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
-            
-            {/* Lado Esquerdo: Resumo Financeiro e Declaração */}
-            <div className="w-full lg:w-[45%] h-auto lg:h-full flex flex-col border-b lg:border-b-0 lg:border-r border-zinc-800 bg-zinc-900/20 lg:overflow-y-auto custom-scrollbar shrink-0">
-              <div className="p-4 md:p-6 space-y-4 md:space-y-6 flex-1 overflow-y-auto custom-scrollbar">
-                <div className="flex justify-between items-center text-xs text-zinc-400 pb-2 border-b border-zinc-800">
-                  <span>Abertura: <strong className="text-zinc-300 text-sm ml-1">{new Date(data.register.openingTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</strong></span>
-                  <span>Vendas do Turno: <strong className="text-zinc-300 text-sm ml-1">{data.report.countSales}</strong></span>
-                </div>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Abas responsivas para Mobile */}
+            <div className="flex lg:hidden border-b border-zinc-800 bg-zinc-900/80 p-2 gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setMobileTab('summary')}
+                className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                  mobileTab === 'summary'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                    : 'bg-zinc-950 text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <FileText size={15} /> Resumo Financeiro
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab('sales')}
+                className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                  mobileTab === 'sales'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                    : 'bg-zinc-950 text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Receipt size={15} /> Vendas ({data?.report?.countSales || 0})
+              </button>
+            </div>
+
+            <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
+              {/* Lado Esquerdo: Resumo Financeiro e Declaração */}
+              <div className={`w-full lg:w-[45%] h-auto lg:h-full flex-col border-b lg:border-b-0 lg:border-r border-zinc-800 bg-zinc-900/20 lg:overflow-y-auto custom-scrollbar shrink-0 ${
+                mobileTab === 'summary' ? 'flex' : 'hidden lg:flex'
+              }`}>
+                <div className="p-4 md:p-6 space-y-4 md:space-y-6 flex-1 overflow-y-auto custom-scrollbar">
+                  {isUnlockedByPin && (
+                    <div className="flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl text-emerald-400 text-xs font-bold animate-in fade-in duration-200">
+                      <span className="flex items-center gap-2"><ShieldCheck size={16} className="text-emerald-400" /> Auditoria Desbloqueada via PIN</span>
+                      <span className="text-[10px] uppercase bg-emerald-500/20 px-2 py-0.5 rounded font-mono">Visão Completa</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center text-xs text-zinc-400 pb-2 border-b border-zinc-800">
+                    <span>Abertura: <strong className="text-zinc-300 text-sm ml-1">{new Date(data.register.openingTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</strong></span>
+                    <span>Vendas do Turno: <strong className="text-zinc-300 text-sm ml-1">{data.report.countSales}</strong></span>
+                  </div>
                 
                 <div className="space-y-3">
                   <div className="flex justify-between p-4 bg-zinc-950 rounded-2xl border border-zinc-800/80">
@@ -270,9 +359,16 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                     <p className="text-4xl font-black text-red-400 drop-shadow-sm">R$ {Number(data.report.expectedDinheiro).toFixed(2)}</p>
                   </div>
                 ) : (
-                  <div className="p-5 border-l-4 border-l-blue-500 bg-blue-500/10 rounded-r-2xl border border-blue-500/20">
-                    <p className="text-xs text-blue-400 font-extrabold uppercase mb-2 flex items-center gap-2"><EyeOff size={14}/> Auditoria Cega</p>
+                  <div className="p-5 border-l-4 border-l-blue-500 bg-blue-500/10 rounded-r-2xl border border-blue-500/20 space-y-3">
+                    <p className="text-xs text-blue-400 font-extrabold uppercase flex items-center gap-2"><EyeOff size={14}/> Auditoria Cega</p>
                     <p className="text-zinc-300 text-sm">Você não tem acesso ao valor esperado. O gerente fará a conferência da gaveta no fechamento.</p>
+                    <button
+                      type="button"
+                      onClick={() => setUnlockModalOpen(true)}
+                      className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-md shadow-blue-600/20 mt-1"
+                    >
+                      <KeyRound size={14} /> Inserir PIN do Caixa para Revelar
+                    </button>
                   </div>
                 )}
 
@@ -345,8 +441,10 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
             </div>
 
             {/* Lado Direito: Transações Detalhadas (Painel Rolável Grande) */}
-            <div className="w-full lg:w-[55%] h-auto lg:h-full flex flex-col bg-zinc-950/80 shrink-0">
-              <div className="p-6 border-b border-zinc-800/80 flex items-center gap-3 bg-zinc-900/30">
+            <div className={`w-full lg:w-[55%] h-auto lg:h-full flex-col bg-zinc-950/80 shrink-0 ${
+              mobileTab === 'sales' ? 'flex' : 'hidden lg:flex'
+            }`}>
+              <div className="p-4 md:p-6 border-b border-zinc-800/80 flex items-center gap-3 bg-zinc-900/30">
                  <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-zinc-400">
                    <Receipt size={22}/>
                  </div>
@@ -356,35 +454,35 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                  </div>
               </div>
               
-              <div className="flex-1 h-auto lg:h-full overflow-y-visible lg:overflow-y-auto custom-scrollbar p-6 space-y-4 animate-fade-in">
+              <div className="flex-1 h-auto lg:h-full overflow-y-visible lg:overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-4 animate-fade-in">
                 {data.report.salesDetails && data.report.salesDetails.length > 0 ? (
                   data.report.salesDetails.map((s: any) => (
-                    <div key={s.id} className={`bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-5 hover:border-zinc-700 transition-all group relative overflow-hidden ${s.status === 'cancelled' ? 'opacity-40 border-red-900/20' : ''}`}>
+                    <div key={s.id} className={`bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-4 md:p-5 hover:border-zinc-700 transition-all group relative overflow-hidden ${s.status === 'cancelled' ? 'opacity-40 border-red-900/20' : ''}`}>
                       <div className={`absolute left-0 top-0 bottom-0 w-1 ${s.status === 'cancelled' ? 'bg-red-500/40' : 'bg-zinc-800 group-hover:bg-blue-500'} transition-colors`}></div>
                       
                       <div className="flex justify-between items-start mb-4 border-b border-zinc-800/50 pb-4">
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-zinc-300 bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800 shadow-inner text-sm tracking-widest">
+                        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                          <span className="font-bold text-zinc-300 bg-zinc-950 px-2.5 py-1 rounded-lg border border-zinc-800 shadow-inner text-xs tracking-wider">
                              {new Date(s.createdAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit', second:'2-digit'})}
                           </span>
-                          <span className="text-zinc-600 text-xs font-mono bg-zinc-950 px-2 py-1 rounded">ID: {s.id.split('-')[0]}</span>
+                          <span className="text-zinc-600 text-[11px] font-mono bg-zinc-950 px-2 py-0.5 rounded">ID: {s.id.split('-')[0]}</span>
                           {s.status === 'cancelled' && (
-                            <span className="bg-red-500/10 text-red-500 text-[10px] uppercase font-bold px-2.5 py-1 rounded border border-red-500/20 animate-pulse">
+                            <span className="bg-red-500/10 text-red-500 text-[10px] uppercase font-bold px-2 py-0.5 rounded border border-red-500/20 animate-pulse">
                               Cancelada
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className={`font-extrabold text-xl ${s.status === 'cancelled' ? 'text-zinc-500 line-through decoration-red-500/50 decoration-2' : 'text-emerald-400'}`}>
-                            {renderMoney(s.total)}
+                        <div className="flex items-center gap-2 md:gap-3">
+                          <span className={`font-extrabold text-lg md:text-xl ${s.status === 'cancelled' ? 'text-zinc-500 line-through decoration-red-500/50 decoration-2' : 'text-emerald-400'}`}>
+                            R$ {Number(s.total || 0).toFixed(2)}
                           </span>
                           {isAdmin && s.status !== 'cancelled' && data.register.status === 'open' && (
                             <button
                               onClick={() => handleInitiateCancel(s.id)}
-                              className="p-1.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all border border-red-500/20 shadow-lg active:scale-95 cursor-pointer ml-1"
+                              className="p-2 md:p-1.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl md:rounded-lg transition-all border border-red-500/20 shadow-lg active:scale-95 cursor-pointer ml-1"
                               title="Cancelar Venda"
                             >
-                              <Trash2 size={15} />
+                              <Trash2 size={16} />
                             </button>
                           )}
                         </div>
@@ -394,8 +492,8 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                         {s.items.map((i: any) => (
                           <li key={i.id} className="flex items-center gap-3 p-2 hover:bg-zinc-800/40 rounded-lg transition-colors">
                              <span className="text-white font-bold bg-zinc-800 px-2 py-0.5 rounded text-xs">{i.quantity}x</span> 
-                             <span className={`flex-1 font-medium ${s.status === 'cancelled' ? 'line-through text-zinc-500' : ''}`}>{i.product?.name || 'Item Removido/Desconhecido'}</span>
-                             <span className="text-zinc-500 font-mono text-xs">{renderMoney(Number(i.priceUnit) * Number(i.quantity))}</span>
+                             <span className={`flex-1 font-medium text-xs md:text-sm ${s.status === 'cancelled' ? 'line-through text-zinc-500' : ''}`}>{i.product?.name || 'Item Removido/Desconhecido'}</span>
+                             <span className="text-zinc-500 font-mono text-xs">R$ {(Number(i.priceUnit || 0) * Number(i.quantity || 0)).toFixed(2)}</span>
                           </li>
                         ))}
                       </ul>
@@ -403,18 +501,18 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
                       <div className="flex items-center justify-between gap-4 pt-4 border-t border-zinc-800/50">
                         <div className="flex flex-wrap gap-2">
                           {s.payments.map((p: any, idx: number) => (
-                            <span key={idx} className="bg-blue-500/10 text-blue-400 text-[10px] uppercase font-bold px-3 py-1.5 rounded-lg border border-blue-500/20 tracking-wider">
-                              {p.label || METHOD_DISPLAY[p.method] || p.method} ({renderMoney(p.value)})
+                            <span key={idx} className="bg-blue-500/10 text-blue-400 text-[10px] uppercase font-bold px-2.5 py-1 rounded-lg border border-blue-500/20 tracking-wider">
+                              {p.label || METHOD_DISPLAY[p.method] || p.method} (R$ {Number(p.value || 0).toFixed(2)})
                             </span>
                           ))}
                         </div>
                         {s.status !== 'cancelled' && data.register.status === 'open' && (
                           <button
                             onClick={() => setEditingSale(s)}
-                            className="p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors border border-transparent hover:border-blue-500/20 shrink-0"
+                            className="p-2 md:p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl md:rounded-lg transition-colors border border-transparent hover:border-blue-500/20 shrink-0"
                             title="Editar Pagamento"
                           >
-                            <Edit2 size={15} />
+                            <Edit2 size={16} />
                           </button>
                         )}
                       </div>
@@ -443,6 +541,7 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
             </div>
 
           </div>
+        </div>
         )}
       </div>
 
@@ -686,19 +785,80 @@ export function CloseRegisterModal({ isOpen, onClose, registerId }: { isOpen: bo
               <button
                 onClick={() => setCancelSaleId(null)}
                 disabled={cancelling}
-                className="flex-1 py-3 rounded-xl font-bold bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-300 hover:text-white transition-all text-sm"
+                className="flex-1 py-3 rounded-xl font-bold bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-300 hover:text-white transition-all text-sm cursor-pointer"
               >
                 Voltar
               </button>
               <button
                 onClick={handleCancelSale}
                 disabled={cancelling || !cancelReason.trim()}
-                className="flex-[2] py-3 rounded-xl font-bold bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all active:scale-95 flex items-center justify-center gap-2 text-sm"
+                className="flex-[2] py-3 rounded-xl font-bold bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all active:scale-95 flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
                 {cancelling ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
                 {cancelling ? 'Cancelando...' : 'Confirmar Cancelamento'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Modal de Inserção de PIN do Caixa / Gerente para Revelar Valores ═══ */}
+      {unlockModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/60">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                  <KeyRound size={20} className="text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">PIN do Caixa</h3>
+                  <p className="text-xs text-zinc-400">Revelar valores e auditoria</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setUnlockModalOpen(false); setCashierPinInput(''); }}
+                className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleVerifyCashierPin} className="p-6 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-2 text-center">
+                  Digite o PIN do Caixa ou do Gerente
+                </label>
+                <input
+                  type="password"
+                  autoFocus
+                  value={cashierPinInput}
+                  onChange={e => setCashierPinInput(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  placeholder="••••"
+                  className="w-full bg-zinc-950 border-2 border-zinc-800 focus:border-blue-500 rounded-2xl px-4 py-3.5 text-center text-3xl tracking-[0.5em] font-mono font-bold text-white outline-none transition-all"
+                  maxLength={8}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setUnlockModalOpen(false); setCashierPinInput(''); }}
+                  className="flex-1 py-3 rounded-xl border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition font-semibold text-sm cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={verifyingCashierPin || cashierPinInput.length < 4}
+                  className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold transition active:scale-95 text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 cursor-pointer"
+                >
+                  {verifyingCashierPin ? <Loader2 size={16} className="animate-spin" /> : <Unlock size={16} />}
+                  Desbloquear
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

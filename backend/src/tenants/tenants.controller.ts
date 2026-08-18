@@ -215,6 +215,32 @@ export class TenantsController {
     return { valid: true };
   }
 
+  /**
+   * Define ou atualiza o PIN do Caixa para liberação de auditoria (apenas admins)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('me/cashier-pin')
+  async setCashierPin(@Request() req: any, @Body() body: { pin: string }) {
+    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+      throw new UnauthorizedException('Apenas admins podem configurar o PIN do Caixa.');
+    }
+    if (!body.pin || body.pin.length < 4) {
+      throw new BadRequestException('O PIN deve ter no mínimo 4 caracteres.');
+    }
+    return this.tenantsService.setCashierPin(req.user.tenantId, body.pin);
+  }
+
+  /**
+   * Verifica se o PIN do Caixa informado é válido (usado para desbloquear valores no PDV)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('me/verify-cashier-pin')
+  async verifyCashierPin(@Request() req: any, @Body() body: { pin: string }) {
+    const valid = await this.tenantsService.verifyCashierPin(req.user.tenantId, body.pin);
+    if (!valid) throw new UnauthorizedException('PIN do Caixa incorreto.');
+    return { valid: true };
+  }
+
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async deleteTenant(@Request() req: any, @Param('id') id: string) {

@@ -1,16 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
 import { ShoppingCart, Lock, Mail, Loader2, Zap } from 'lucide-react';
 
+const encodePass = (pass: string) => {
+  try { return btoa(encodeURIComponent(pass)); } catch { return pass; }
+};
+const decodePass = (encoded: string) => {
+  try { return decodeURIComponent(atob(encoded)); } catch { return encoded; }
+};
+
 export function LoginPage() {
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [loading,  setLoading]  = useState(false);
+  const [email,      setEmail]      = useState('');
+  const [password,   setPassword]   = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [loading,    setLoading]    = useState(false);
   const { login } = useAuthStore();
   const navigate   = useNavigate();
+
+  useEffect(() => {
+    try {
+      const savedRemember = localStorage.getItem('pdv_remember_me') === 'true';
+      const savedEmail = localStorage.getItem('pdv_remember_email');
+      const savedPass = localStorage.getItem('pdv_remember_pass');
+
+      if (savedRemember && savedEmail) {
+        setEmail(savedEmail);
+        setRememberMe(true);
+        if (savedPass) {
+          setPassword(decodePass(savedPass));
+        }
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar credenciais salvas:', e);
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,6 +44,17 @@ export function LoginPage() {
     try {
       const { data } = await api.post('/auth/login', { email, password });
       login(data.access_token, data.user);
+
+      if (rememberMe) {
+        localStorage.setItem('pdv_remember_me', 'true');
+        localStorage.setItem('pdv_remember_email', email);
+        localStorage.setItem('pdv_remember_pass', encodePass(password));
+      } else {
+        localStorage.removeItem('pdv_remember_me');
+        localStorage.removeItem('pdv_remember_email');
+        localStorage.removeItem('pdv_remember_pass');
+      }
+
       toast.success(`Bem vindo ao ${data.user.tenant}, ${data.user.name}!`);
       if (data.user.role === 'group_owner' || data.user.groupId) {
         navigate('/grupo-portal');
@@ -99,9 +136,23 @@ export function LoginPage() {
             </div>
           </div>
 
+          <div className="flex items-center justify-between pt-1">
+            <label className="flex items-center gap-2 cursor-pointer select-none group">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={e => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-900 cursor-pointer transition-colors"
+              />
+              <span className="text-sm text-zinc-400 group-hover:text-zinc-200 transition-colors">
+                Lembrar-me
+              </span>
+            </label>
+          </div>
+
           <button
             type="submit" disabled={loading}
-            className="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-600/30 active:scale-95 flex justify-center items-center"
+            className="w-full mt-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-600/30 active:scale-95 flex justify-center items-center"
           >
             {loading ? <Loader2 className="animate-spin" /> : 'Entrar'}
           </button>

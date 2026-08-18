@@ -61,18 +61,43 @@ export function CashMovementModal({ isOpen, onClose, registerId }: { isOpen: boo
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-zinc-400 mb-2 block">Diga o Valor da Operação</label>
-            <div className="relative">
+            <label className="text-sm font-semibold text-zinc-400 mb-2 block">Valor da Operação</label>
+            <div className="relative mb-3">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-xl">R$</span>
               <input 
                 autoFocus
                 type="number" 
                 step="0.01"
+                min="0.01"
                 required
                 value={value}
                 onChange={e => setValue(parseFloat(e.target.value) || '')}
+                placeholder="0.00"
                 className="w-full bg-zinc-900 border-2 border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-2xl font-black text-white focus:outline-none focus:border-blue-500 transition-colors shadow-inner"
               />
+            </div>
+
+            {/* Chips de valores rápidos */}
+            <div className="flex flex-wrap gap-2">
+              {[10, 20, 50, 100, 200].map(val => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setValue(prev => (typeof prev === 'number' ? prev + val : val))}
+                  className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 active:scale-95 border border-zinc-800 hover:border-zinc-700 text-zinc-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  +{val}
+                </button>
+              ))}
+              {value !== '' && (
+                <button
+                  type="button"
+                  onClick={() => setValue('')}
+                  className="px-3 py-1.5 bg-zinc-900/60 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 border border-zinc-800/80 rounded-xl text-xs font-semibold transition cursor-pointer"
+                >
+                  Limpar
+                </button>
+              )}
             </div>
           </div>
 
@@ -89,8 +114,8 @@ export function CashMovementModal({ isOpen, onClose, registerId }: { isOpen: boo
 
           <button 
             type="submit"
-            disabled={submitting}
-            className={`w-full py-4 rounded-2xl font-bold text-white transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 ${type === 'OUT' ? 'bg-red-600 hover:bg-red-500' : 'bg-emerald-600 hover:bg-emerald-500'}`}
+            disabled={submitting || !value || Number(value) <= 0}
+            className={`w-full py-4 rounded-2xl font-bold text-white transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${type === 'OUT' ? 'bg-red-600 hover:bg-red-500' : 'bg-emerald-600 hover:bg-emerald-500'}`}
           >
             {submitting ? <Loader2 className="animate-spin" /> : (type === 'OUT' ? 'Retirar Dinheiro (Sangria)' : 'Injetar Reforço (Suprimento)')}
           </button>

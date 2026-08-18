@@ -17,7 +17,14 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const url = error.config?.url || '';
+    // Não desloga a sessão global da loja se o erro 401 for apenas uma tentativa incorreta de PIN ou senha
+    const isAuthEndpoint = 
+      url.includes('/auth/operator-login') || 
+      url.includes('/auth/login') ||
+      Boolean(error.config?.skipAuthRedirect);
+
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       useAuthStore.getState().logout();
       window.location.href = '/login';
     }

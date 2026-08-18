@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useDeferredValue, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
-import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert, X, Truck, ShoppingCart, FileSpreadsheet, Save, AlertTriangle, CalendarClock, PackageOpen, Split, Check, Download, ClipboardList } from 'lucide-react';
+import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert, X, Truck, ShoppingCart, FileSpreadsheet, Save, AlertTriangle, CalendarClock, PackageOpen, Split, Check, Download, ClipboardList, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
 import { AddProductModal } from '@/components/AddProductModal';
@@ -653,49 +653,50 @@ export default function InventoryDashboard() {
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
           <Package className="text-blue-500" size={32} /> Controle de Estoque
         </h1>
-        <div className="flex overflow-x-auto w-full md:w-auto gap-2 pb-2 md:pb-0 custom-scrollbar snap-x">
-
+        <div className="flex overflow-x-auto w-full md:w-auto gap-2 pb-2 md:pb-0 custom-scrollbar snap-x select-none">
           <Link
             to="/dashboard/inventory/categories"
-            className="snap-start shrink-0 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm md:text-base"
+            className="snap-start shrink-0 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-3.5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 transition text-xs sm:text-sm active:scale-95 shadow-sm"
           >
             Categorias
           </Link>
           <Link
             to="/dashboard/suppliers"
-            className="snap-start shrink-0 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-600/30 text-indigo-400 px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm md:text-base"
+            className="snap-start shrink-0 bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-600/30 text-indigo-400 px-3.5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 transition text-xs sm:text-sm active:scale-95 shadow-sm"
           >
-            <Truck size={20} /> Fornecedores
+            <Truck size={17} /> Fornecedores
           </Link>
           <Link
             to="/dashboard/purchase-orders"
-            className="snap-start shrink-0 bg-amber-600/10 hover:bg-amber-600/20 border border-amber-600/30 text-amber-400 px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm md:text-base"
+            className="snap-start shrink-0 bg-amber-600/10 hover:bg-amber-600/20 border border-amber-600/30 text-amber-400 px-3.5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 transition text-xs sm:text-sm active:scale-95 shadow-sm"
           >
-            <ShoppingCart size={20} /> Pedidos
+            <ShoppingCart size={17} /> Pedidos
           </Link>
           <Link
             to="/dashboard/inventory/stock-entry"
-            className="snap-start shrink-0 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-600/30 text-emerald-400 px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm md:text-base"
+            className="snap-start shrink-0 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-600/30 text-emerald-400 px-3.5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 transition text-xs sm:text-sm active:scale-95 shadow-sm whitespace-nowrap"
           >
-            <PackagePlus size={20} /> <span className="hidden sm:inline">Entrada de Estoque</span><span className="sm:hidden">Entrada</span>
+            <PackagePlus size={17} /> <span className="hidden sm:inline">Entrada de Estoque</span><span className="sm:hidden">Entrada</span>
           </Link>
           <Link
             to="/dashboard/inventory/purchases"
-            className="hidden md:flex snap-start shrink-0 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white px-4 py-2.5 rounded-xl font-bold items-center gap-2 transition text-sm md:text-base whitespace-nowrap"
+            className="snap-start shrink-0 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 px-3.5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 transition text-xs sm:text-sm active:scale-95 shadow-sm whitespace-nowrap"
+            title="Lançamento manual de produtos em lote"
           >
-            <Plus size={20} /> <span className="hidden sm:inline">Lançamento de Produtos</span><span className="sm:hidden">Lançamento</span>
+            <Plus size={17} /> <span className="hidden sm:inline">Lançamento de Produtos</span><span className="sm:hidden">Lançamento</span>
           </Link>
           <Link
             to="/dashboard/inventory/mass-edit"
-            className="hidden md:flex snap-start shrink-0 bg-purple-600/10 hover:bg-purple-600/20 border border-purple-600/30 text-purple-400 px-4 py-2.5 rounded-xl font-bold items-center gap-2 transition text-sm md:text-base whitespace-nowrap"
+            className="snap-start shrink-0 bg-purple-600/15 hover:bg-purple-600/25 border border-purple-600/30 text-purple-300 px-3.5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 transition text-xs sm:text-sm active:scale-95 shadow-sm whitespace-nowrap"
+            title="Edição rápida de preços e estoque em massa"
           >
-            <Save size={20} /> <span className="hidden sm:inline">Edição em Massa</span><span className="sm:hidden">Editar</span>
+            <Save size={17} /> <span className="hidden sm:inline">Edição em Massa</span><span className="sm:hidden">Editar</span>
           </Link>
           <button
             onClick={() => setIsAddOpen(true)}
-            className="snap-start shrink-0 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition text-sm md:text-base whitespace-nowrap"
+            className="snap-start shrink-0 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-1.5 transition text-xs sm:text-sm active:scale-95 shadow-lg shadow-blue-600/20 whitespace-nowrap cursor-pointer"
           >
-            <Plus size={20} /> Cadastrar Un.
+            <Plus size={17} /> Cadastrar Un.
           </button>
         </div>
       </div>

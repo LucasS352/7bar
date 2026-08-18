@@ -1,5 +1,9 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { BarChart2, Package, User, LogOut, X, History, Banknote, Store, Download } from 'lucide-react';
+import {
+  BarChart2, Package, User, LogOut, X, History, Banknote, Store, Download,
+  Tv2, Save, FileDown, FileSpreadsheet, Images, Truck, ShoppingCart,
+  Building2, FileText, CreditCard, Users, LayoutGrid, ArrowRight
+} from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth';
 import { ExportXmlModal } from '@/components/ExportXmlModal';
@@ -109,123 +113,250 @@ export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
           </NavLink>
         ))}
 
-        {/* Perfil Tab */}
+        {/* Menu / Mais Tab */}
         <button
           onClick={() => setProfileOpen(true)}
-          className="flex flex-col items-center justify-center gap-1 flex-1 h-full text-zinc-500 hover:text-zinc-300 active:scale-90 transition-all duration-200"
+          className={`flex flex-col items-center justify-center gap-1 flex-1 h-full active:scale-90 transition-all duration-200 cursor-pointer ${
+            profileOpen ? 'text-blue-400' : 'text-zinc-500 hover:text-zinc-300'
+          }`}
         >
-          <div className="p-1 rounded-xl">
-            <User size={22} strokeWidth={1.8} />
+          <div className={`p-1 rounded-xl ${profileOpen ? 'bg-blue-500/15' : ''}`}>
+            <LayoutGrid size={22} strokeWidth={profileOpen ? 2.5 : 1.8} />
           </div>
-          <span className="text-[10px] font-semibold tracking-wide">Perfil</span>
+          <span className="text-[10px] font-semibold tracking-wide">Mais</span>
         </button>
       </nav>
 
-      {/* Profile Drawer (bottom sheet) */}
+      {/* Admin Modules & Profile Drawer (bottom sheet) */}
       {profileOpen && (
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-[80] bg-black/75 backdrop-blur-sm md:hidden animate-in fade-in duration-200"
             onClick={() => setProfileOpen(false)}
           />
 
           {/* Sheet */}
           <div
             className="
-              fixed bottom-0 inset-x-0 z-[70]
+              fixed bottom-0 inset-x-0 z-[90]
               md:hidden
               bg-zinc-900 border-t border-zinc-800
-              rounded-t-3xl
-              p-6
-              animate-in slide-in-from-bottom-4 duration-300
+              rounded-t-[2rem]
+              p-5
+              max-h-[90vh] overflow-y-auto custom-scrollbar
+              shadow-2xl
+              animate-in slide-in-from-bottom duration-300
             "
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.2rem)' }}
           >
             {/* Handle */}
-            <div className="w-10 h-1 bg-zinc-700 rounded-full mx-auto mb-6" />
+            <div className="w-12 h-1 bg-zinc-700 rounded-full mx-auto mb-4" />
 
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                <User size={24} className="text-white" />
+            {/* Profile Info Header */}
+            <div className="flex items-center justify-between p-3.5 bg-zinc-950 rounded-2xl border border-zinc-800 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg text-white font-black text-sm">
+                  {user?.name?.substring(0, 2).toUpperCase() || 'AD'}
+                </div>
+                <div>
+                  <p className="font-bold text-white text-sm leading-tight">{user?.name || 'Administrador'}</p>
+                  <p className="text-zinc-500 text-xs capitalize">{user?.role || 'Admin'} · {user?.tenant || ''}</p>
+                </div>
               </div>
+              <button
+                onClick={() => setProfileOpen(false)}
+                className="p-2 text-zinc-400 hover:text-white bg-zinc-900 rounded-xl border border-zinc-800"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Links organizados por módulos */}
+            <div className="space-y-4 mb-4">
+              {/* Vitrine Digital TV */}
+              {modules?.vitrineDigital === true && (
+                <div className="p-3.5 bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-blue-500/10 rounded-2xl border border-amber-500/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-black text-amber-400 flex items-center gap-1.5 uppercase tracking-wider">
+                      <Tv2 size={16} /> Vitrine Digital TV
+                    </span>
+                    <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">
+                      NOVO
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400 mb-3">Gerencie e publique os produtos em destaque na TV do seu estabelecimento.</p>
+                  <button
+                    type="button"
+                    onClick={() => { setProfileOpen(false); navigate('/dashboard/vitrine'); }}
+                    className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-md shadow-amber-500/20 cursor-pointer"
+                  >
+                    Abrir Vitrine Digital <ArrowRight size={14} />
+                  </button>
+                </div>
+              )}
+
+              {/* Estoque & Compras */}
+              {modules.estoque !== false && (
+                <div>
+                  <p className="px-1 text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Package size={14} className="text-blue-400" /> Estoque & Compras
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setProfileOpen(false); navigate('/dashboard/inventory/mass-edit'); }}
+                      className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold text-xs flex items-center gap-2 text-left active:scale-95 transition"
+                    >
+                      <Save size={16} />
+                      <span>Edição em Massa</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setProfileOpen(false); navigate('/dashboard/inventory/stock-entry'); }}
+                      className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-xs flex items-center gap-2 text-left active:scale-95 transition"
+                    >
+                      <Package size={16} />
+                      <span>Entrada de Estoque</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setProfileOpen(false); navigate('/dashboard/suppliers'); }}
+                      className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-bold text-xs flex items-center gap-2 text-left active:scale-95 transition"
+                    >
+                      <Truck size={16} />
+                      <span>Fornecedores</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setProfileOpen(false); navigate('/dashboard/purchase-orders'); }}
+                      className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-xs flex items-center gap-2 text-left active:scale-95 transition"
+                    >
+                      <ShoppingCart size={16} />
+                      <span>Pedidos Compra</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Ferramentas de Inventário & Fiscal */}
               <div>
-                <p className="font-bold text-white text-lg leading-tight">{user?.name || 'Usuário'}</p>
-                <p className="text-zinc-400 text-sm capitalize">{user?.role || 'Operador'} · {user?.tenant || ''}</p>
+                <p className="px-1 text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <FileSpreadsheet size={14} className="text-purple-400" /> Ferramentas & Fiscal
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setProfileOpen(false); navigate('/dashboard/inventory/purchases/imports'); }}
+                    className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 font-bold text-xs flex items-center gap-2 text-left active:scale-95 transition"
+                  >
+                    <FileDown size={16} />
+                    <span>Importar XML</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setProfileOpen(false); navigate('/dashboard/inventory/stock-count'); }}
+                    className="p-3 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400 font-bold text-xs flex items-center gap-2 text-left active:scale-95 transition"
+                  >
+                    <FileSpreadsheet size={16} />
+                    <span>Contagem Estoque</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setProfileOpen(false); navigate('/dashboard/bulk-images'); }}
+                    className="p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 font-bold text-xs flex items-center gap-2 text-left active:scale-95 transition"
+                  >
+                    <Images size={16} />
+                    <span>Imagens em Massa</span>
+                  </button>
+                  {modules.nfce !== false && (
+                    <button
+                      type="button"
+                      onClick={() => { setProfileOpen(false); navigate('/dashboard/fiscal/gestao'); }}
+                      className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-xs flex items-center gap-2 text-left active:scale-95 transition"
+                    >
+                      <FileText size={16} />
+                      <span>Gestão NFC-e</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Configurações do Sistema */}
+              <div>
+                <p className="px-1 text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Building2 size={14} className="text-zinc-400" /> Configurações
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setProfileOpen(false); navigate('/dashboard/configuracoes/empresa'); }}
+                    className="p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 font-bold text-xs flex items-center gap-2 text-left active:scale-95 transition"
+                  >
+                    <Building2 size={16} />
+                    <span>Empresa & A1</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setProfileOpen(false); navigate('/dashboard/equipe'); }}
+                    className="p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 font-bold text-xs flex items-center gap-2 text-left active:scale-95 transition"
+                  >
+                    <Users size={16} />
+                    <span>Gestão de Equipe</span>
+                  </button>
+                  {modules.nfce !== false && (
+                    <button
+                      type="button"
+                      onClick={() => { setProfileOpen(false); navigate('/dashboard/configuracoes/tributacao'); }}
+                      className="p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 font-bold text-xs flex items-center gap-2 text-left active:scale-95 transition"
+                    >
+                      <FileText size={16} />
+                      <span>Tributação</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setProfileOpen(false); navigate('/dashboard/configuracoes/payment-methods'); }}
+                    className="p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 font-bold text-xs flex items-center gap-2 text-left active:scale-95 transition"
+                  >
+                    <CreditCard size={16} />
+                    <span>Pagamentos</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            {tenantConfig && (
-              <div className="p-4 bg-zinc-950 rounded-2xl border border-zinc-800 space-y-3 mb-6 text-sm text-zinc-300">
-                <div className="flex items-center gap-2 border-b border-zinc-800/60 pb-2">
-                  <div className="w-6 h-6 rounded bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-blue-400">CNPJ</div>
-                  <span className="font-semibold text-white">{tenantConfig.cnpj || 'CNPJ não informado'}</span>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider block">Endereço</span>
-                  <p className="leading-relaxed text-xs">
-                    {tenantConfig.logradouro ? (
-                      <>
-                        {tenantConfig.logradouro}, {tenantConfig.numero}
-                        {tenantConfig.complemento ? ` - ${tenantConfig.complemento}` : ''}
-                        <br />
-                        {tenantConfig.bairro ? `${tenantConfig.bairro}, ` : ''}
-                        {tenantConfig.municipioNome ? `${tenantConfig.municipioNome} - ` : ''}
-                        {tenantConfig.uf || ''}
-                        {tenantConfig.cep ? ` | CEP: ${tenantConfig.cep}` : ''}
-                      </>
-                    ) : (
-                      <span className="text-zinc-500 italic">Endereço não cadastrado</span>
-                    )}
-                  </p>
-                </div>
-                {tenantConfig.telefone && (
-                  <div className="pt-1 text-xs text-zinc-400 flex items-center gap-1.5">
-                    <span className="text-zinc-500">Contato:</span>
-                    <span>{tenantConfig.telefone}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="space-y-2">
+            {/* Ações Rápidas & Sessão */}
+            <div className="space-y-2 pt-2 border-t border-zinc-800">
               <button
+                type="button"
                 onClick={() => { setProfileOpen(false); navigate('/'); }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 font-semibold text-left active:scale-[0.98] transition-all"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs active:scale-[0.98] transition shadow-md shadow-blue-600/20"
               >
-                <Store size={20} />
-                Frente de Caixa (PDV)
+                <Store size={18} />
+                Ir para o Frente de Caixa (PDV)
               </button>
-              <button
-                onClick={() => { setProfileOpen(false); navigate('/dashboard/comandas'); }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-semibold text-left active:scale-[0.98] transition-all"
-              >
-                <User size={20} />
-                {modules?.comandas === true ? 'Comandas & Mesas' : 'Cons. Colaborador'}
-              </button>
-              {modules.nfce !== false && (
+
+              <div className="flex gap-2">
+                {modules.nfce !== false && (
+                  <button
+                    type="button"
+                    onClick={() => { setProfileOpen(false); setIsExportModalOpen(true); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 font-semibold text-xs active:scale-[0.98] transition"
+                  >
+                    <Download size={15} />
+                    Exportar XML
+                  </button>
+                )}
                 <button
-                  onClick={() => { setProfileOpen(false); setIsExportModalOpen(true); }}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-zinc-800 border border-zinc-700 text-zinc-300 font-semibold text-left active:scale-[0.98] transition-all"
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-semibold text-xs active:scale-[0.98] transition"
                 >
-                  <Download size={20} />
-                  Exportar XML
+                  <LogOut size={15} />
+                  Sair da conta
                 </button>
-              )}
-              <button
-                onClick={() => setProfileOpen(false)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-zinc-800 text-zinc-300 font-semibold text-left active:scale-[0.98] transition-all"
-              >
-                <X size={20} />
-                Fechar
-              </button>
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 font-semibold text-left active:scale-[0.98] transition-all"
-              >
-                <LogOut size={20} />
-                Sair da conta
-              </button>
+              </div>
             </div>
           </div>
         </>

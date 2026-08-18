@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useShift } from '@/contexts/ShiftContext';
-import { Lock, User, Loader2, ArrowLeft, LayoutDashboard, LogOut } from 'lucide-react';
+import { Lock, User, Loader2, ArrowLeft, LayoutDashboard, LogOut, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 
@@ -25,6 +25,7 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
   const [selectedOp, setSelectedOp] = useState<OperatorData | null>(null);
   const [pin, setPin] = useState('');
   const [loadingLogin, setLoadingLogin] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const { setOperator } = useShift();
   const navigate = useNavigate();
@@ -49,13 +50,16 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
     if (!selectedOp || pin.length < 4) return;
     
     setLoadingLogin(true);
+    setErrorMessage(null);
     try {
       const res = await api.post('/auth/operator-login', { operatorId: selectedOp.id, pin });
       setOperator(res.data);
       toast.success(`Bem-vindo, ${res.data.name}!`);
       onSuccess();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'PIN incorreto.');
+      const msg = 'Senha incorreta. Ao esquecer, contate o administrador.';
+      setErrorMessage(msg);
+      toast.error(msg, { duration: 4000 });
       setPin('');
     } finally {
       setLoadingLogin(false);
@@ -113,7 +117,7 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
           <form onSubmit={handleLogin} className="space-y-6">
             <button
               type="button"
-              onClick={() => { setSelectedOp(null); setPin(''); }}
+              onClick={() => { setSelectedOp(null); setPin(''); setErrorMessage(null); }}
               className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm font-semibold mb-4"
             >
               <ArrowLeft size={16} /> Voltar aos operadores
@@ -127,17 +131,27 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
               <p className="text-zinc-500 text-sm">{selectedOp.jobTitle || (selectedOp.isManager ? 'Gerente de Caixa' : 'Operador')}</p>
             </div>
 
-            <div>
-              <label className="text-sm font-bold text-zinc-400 mb-2 block text-center">Digite seu PIN (4-6 dígitos)</label>
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-zinc-400 mb-1 block text-center">Digite seu PIN (4-6 dígitos)</label>
               <input
                 type="password"
                 autoFocus
                 value={pin}
-                onChange={e => setPin(e.target.value.replace(/[^0-9]/g, ''))}
+                onChange={e => {
+                  setPin(e.target.value.replace(/[^0-9]/g, ''));
+                  if (errorMessage) setErrorMessage(null);
+                }}
                 maxLength={6}
-                className="w-full bg-zinc-950 border-2 border-zinc-800 focus:border-blue-500 rounded-2xl px-4 py-4 text-center text-3xl tracking-[1em] font-black text-white outline-none transition-colors"
+                className={`w-full bg-zinc-950 border-2 ${errorMessage ? 'border-red-500/80 bg-red-500/5 focus:border-red-500' : 'border-zinc-800 focus:border-blue-500'} rounded-2xl px-4 py-4 text-center text-3xl tracking-[1em] font-black text-white outline-none transition-all`}
                 placeholder="••••"
               />
+
+              {errorMessage && (
+                <div className="flex items-center justify-center gap-2 p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-xs font-semibold animate-in fade-in slide-in-from-top-1 duration-200 text-center">
+                  <AlertCircle size={15} className="shrink-0 text-red-400" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
             </div>
 
             <button

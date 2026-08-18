@@ -14,13 +14,16 @@ import { OpenShiftModal } from '@/components/OpenShiftModal';
 import { CloseRegisterModal } from '@/components/CloseRegisterModal';
 import { CashMovementModal } from '@/components/CashMovementModal';
 import { CompositeModifierModal } from '@/components/CompositeModifierModal';
+import { CameraBarcodeScannerModal } from '@/components/CameraBarcodeScannerModal';
+import { ExportXmlModal } from '@/components/ExportXmlModal';
 import { DemoBanner } from '@/components/DemoBanner';
 import { CapitaoGelada } from '@/components/CapitaoGelada';
 import { useDemoGuideStore } from '@/store/demoGuide';
 import { ShiftProvider, useShift } from '@/contexts/ShiftContext';
 import {
   Search, ShoppingCart, X, LogOut, PackageOpen, Minus, Plus, Trash2,
-  LayoutDashboard, FileText, ArrowDownUp, Database, Layers, UtensilsCrossed, ShoppingBag
+  LayoutDashboard, FileText, ArrowDownUp, Database, Layers, UtensilsCrossed,
+  ShoppingBag, Camera, Menu, Download, UserCheck, Sparkles
 } from 'lucide-react';
 import { getFullUrl } from '@/lib/getFullUrl';
 
@@ -36,6 +39,10 @@ function PosPageContent() {
   const [isPaymentOpen,      setIsPaymentOpen]      = useState(false);
   const [isCloseRegisterOpen,setIsCloseRegisterOpen]= useState(false);
   const [isMobileCartOpen,   setIsMobileCartOpen]   = useState(false);
+  const [isCameraScannerOpen,setIsCameraScannerOpen]= useState(false);
+  const [isMobileMenuOpen,   setIsMobileMenuOpen]   = useState(false);
+  const [isExportXmlOpen,    setIsExportXmlOpen]    = useState(false);
+  const [isSwitchOperatorOpen, setIsSwitchOperatorOpen] = useState(false);
   const [lastTappedId,       setLastTappedId]       = useState<string | null>(null);
   const [badgeBounce,        setBadgeBounce]        = useState(false);
 
@@ -211,13 +218,29 @@ function PosPageContent() {
   useEffect(() => {
     if (token) {
       api.get(`/tenants/me?_t=${Date.now()}`).then(res => setTenantConfig(res.data)).catch(console.error);
+      api.get('/categories').then(res => setCategories(res.data || [])).catch(console.error);
     }
   }, [token]);
 
+  const handleCameraScan = (scannedCode: string) => {
+    const clean = scannedCode.trim().toLowerCase();
+    const match = products.find(p =>
+      p.barcode?.toLowerCase() === clean ||
+      p.shortCode?.toLowerCase() === clean ||
+      p.id.toLowerCase() === clean
+    );
+    if (match) {
+      handleClickProduct(match);
+      toast.success(`Produto adicionado: ${match.name}`);
+      setIsCameraScannerOpen(false);
+    } else {
+      toast.error(`Produto com código "${scannedCode}" não encontrado no catálogo.`);
+    }
+  };
+
+
   useEffect(() => {
     if (!token) { navigate('/login'); return; }
-
-
 
     setIsLoading(true);
 
@@ -263,6 +286,8 @@ function PosPageContent() {
             stock:      Math.round(Number(p.stock)),
             salesCount: Number(p.salesCount || 0),
             active:     p.active !== false,
+            categoryId: p.categoryId,
+            category:   p.category,
             ncm:        null, cest: null, origem: 0,
             cfop:       '5102', csosn: null, cstIcms: null,
             aliqIcms:   0, cstPis: '99', aliqPis: 0,
@@ -322,6 +347,7 @@ function PosPageContent() {
 
     const filtered = products.filter(p => {
       if (p.active === false) return false;
+
       if (searchTerms.length === 0) return true;
       
       const searchString = normalizeStr(`${p.name} ${p.barcode || ''} ${p.shortCode || ''}`);
@@ -391,18 +417,18 @@ function PosPageContent() {
       {/* Esquerda */}
       <div className="flex-1 flex flex-col p-3 lg:p-6 lg:pr-4 pb-[80px] lg:pb-6 relative h-full min-w-0">
         {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:flex-wrap lg:justify-between lg:items-center mb-4 lg:mb-6 gap-3 shrink-0">
-          <div className="flex justify-between items-center w-full lg:w-auto gap-2 lg:gap-4 min-h-[48px] lg:min-h-[64px]">
+        <div className="flex flex-col lg:flex-row lg:flex-wrap lg:justify-between lg:items-center mb-3 lg:mb-6 gap-3 shrink-0">
+          <div className="flex justify-between items-center w-full lg:w-auto gap-2 lg:gap-4 min-h-[44px] lg:min-h-[64px]">
             <div className="flex items-center gap-2 lg:gap-4 shrink-0">
               {tenantConfig === null ? (
-                 <div className="h-10 lg:h-12 w-10 lg:w-12 bg-zinc-800/50 animate-pulse rounded-xl shrink-0"></div>
+                 <div className="h-9 lg:h-12 w-9 lg:w-12 bg-zinc-800/50 animate-pulse rounded-xl shrink-0"></div>
               ) : tenantConfig?.logoUrl ? (
                 <button onClick={() => navigate('/dashboard')} className="flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform focus:outline-none" title="Voltar ao Dashboard">
                   <img src={getFullUrl(tenantConfig.logoUrl)} alt="Logo" className="h-9 w-9 lg:h-12 lg:w-12 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]" />
                 </button>
               ) : (
                 <button onClick={() => navigate('/dashboard')} className="bg-zinc-800 border border-zinc-700 p-1.5 lg:p-2 rounded-xl flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform focus:outline-none" title="Voltar ao Dashboard">
-                  <h1 className="text-lg lg:text-2xl font-black text-white truncate max-w-[80px] lg:max-w-[100px]">
+                  <h1 className="text-sm lg:text-2xl font-black text-white truncate max-w-[70px] lg:max-w-[100px]">
                     {tenantConfig?.nomeFantasia?.substring(0, 2) || tenantConfig?.razaoSocial?.substring(0, 2) || '7B'}
                   </h1>
                 </button>
@@ -420,48 +446,57 @@ function PosPageContent() {
                  )}
               </div>
             </div>
-            {/* Mobile Actions - condensed single row */}
-            <div className="flex items-center gap-2 lg:hidden">
-              <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl px-2 py-1 shadow-inner">
-                <p className="text-emerald-400 font-medium text-[10px] flex items-center gap-1.5 truncate max-w-[80px]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
-                  <span className="truncate">{operator?.name || user?.name}</span>
-                </p>
+
+            {/* Mobile Actions Header */}
+            <div className="flex items-center gap-1.5 lg:hidden">
+              {/* Operator Status Chip - Clickable to switch operator */}
+              <button
+                type="button"
+                onClick={() => setIsSwitchOperatorOpen(true)}
+                className="flex items-center bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl px-2.5 py-1.5 shadow-inner transition active:scale-95 text-left"
+                title="Toque para trocar de operador"
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+                  <span className="text-emerald-400 font-bold text-[11px] truncate max-w-[80px]">
+                    {operator?.name?.split(' ')[0] || user?.name?.split(' ')[0] || 'Caixa'}
+                  </span>
+                </div>
                 <div className="w-px h-3 bg-zinc-700 mx-2" />
-                <div className="scale-90 origin-left -ml-1">
+                <div className="scale-85 origin-left -ml-1">
                   <ConnectionStatus syncState={syncState} />
                 </div>
-              </div>
+              </button>
 
+              {/* Comandas Button */}
               {isComandasEnabled && (
                 <button
+                  type="button"
                   onClick={() => setIsComandasModalOpen(true)}
-                  className={`relative p-2 rounded-xl transition shrink-0 ${
+                  className={`relative p-2.5 rounded-xl transition shrink-0 active:scale-95 cursor-pointer ${
                     openComandas.length > 0
-                      ? 'text-amber-400 bg-amber-500/10 border border-amber-500/30'
-                      : 'text-zinc-400 hover:text-amber-400 bg-zinc-900'
+                      ? 'text-amber-400 bg-amber-500/15 border border-amber-500/30 shadow-md shadow-amber-500/10'
+                      : 'text-zinc-400 hover:text-amber-400 bg-zinc-900 border border-zinc-800'
                   }`}
-                  title={openComandas.length === 0 ? "Comandas & Mesas Abertas" : `Comandas (${openComandas.length} aberta(s))`}
+                  title={openComandas.length === 0 ? "Comandas & Mesas" : `Comandas (${openComandas.length} aberta(s))`}
                 >
-                  <UtensilsCrossed size={18} />
+                  <UtensilsCrossed size={17} />
                   {openComandas.length > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-zinc-950 font-black text-[9px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center border border-zinc-950 shadow">
+                    <span className="absolute -top-1 -right-1 bg-amber-500 text-zinc-950 font-black text-[9px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center border border-zinc-950 shadow">
                       {openComandas.length}
                     </span>
                   )}
                 </button>
               )}
 
-              {cashRegister?.id && (
-                <button onClick={() => setIsMovementOpen(true)} className="p-2 text-zinc-400 hover:text-emerald-400 bg-zinc-900 rounded-xl transition shrink-0" title="Sangria / Reposição">
-                  <ArrowDownUp size={18} />
-                </button>
-              )}
-              <button onClick={() => setIsCloseRegisterOpen(true)} className="p-2 text-zinc-400 hover:text-amber-400 bg-zinc-900 rounded-xl transition shrink-0" title="Relatório de Caixa">
-                <FileText size={18} />
-              </button>
-              <button onClick={handleLogout} className="p-2 text-zinc-400 hover:text-red-400 bg-zinc-900 rounded-xl transition shrink-0" title="Sair">
-                <LogOut size={18} />
+              {/* Menu Hambúrguer de Ações Rápidas Mobile */}
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="p-2.5 text-zinc-300 hover:text-white bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl transition active:scale-95 shrink-0 cursor-pointer"
+                title="Menu de Ações do PDV"
+              >
+                <Menu size={18} />
               </button>
             </div>
           </div>
@@ -510,29 +545,33 @@ function PosPageContent() {
           </div>
         </div>
 
-        {/* Busca + toggle Unidade (mobile) */}
-        <div className="relative mb-3 lg:mb-6 shrink-0 flex items-center gap-2">
+        {/* Busca + Botão Scanner Câmera + toggle Unidade (mobile) */}
+        <div className="relative mb-2 lg:mb-4 shrink-0 flex items-center gap-2">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3 lg:pl-4 flex items-center pointer-events-none">
-              <Search size={20} className="text-blue-500" />
+              <Search size={18} className="text-blue-500" />
             </div>
             <input
               id="product-search-input"
               type="text"
               placeholder="Buscar por nome, código ou EAN..."
-              className="w-full py-3 lg:py-4 pl-10 lg:pl-12 pr-4 text-lg lg:text-2xl font-bold bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-xl lg:rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-zinc-500 shadow-inner tracking-tight"
+              className="w-full py-2.5 lg:py-4 pl-9 lg:pl-12 pr-10 lg:pr-4 text-sm lg:text-2xl font-bold bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-xl lg:rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-zinc-500 shadow-inner tracking-tight"
               value={search} onChange={e => setSearch(e.target.value)} onKeyDown={handleSearchKeyPress}
             />
+            {/* Botão Câmera Scanner */}
+            <button
+              type="button"
+              onClick={() => setIsCameraScannerOpen(true)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-blue-400 transition cursor-pointer active:scale-90"
+              title="Ler código com a câmera"
+            >
+              <Camera size={19} />
+            </button>
           </div>
           {/* Compact Unidade toggle — mobile only */}
-          <label className="lg:hidden flex items-center gap-1.5 text-[10px] text-zinc-400 bg-zinc-900 border border-zinc-800 px-2.5 py-3 rounded-xl cursor-pointer select-none shrink-0 transition hover:border-zinc-700">
+          <label className="lg:hidden flex items-center gap-1.5 text-[10px] text-zinc-400 bg-zinc-900 border border-zinc-800 px-2.5 py-2.5 rounded-xl cursor-pointer select-none shrink-0 transition hover:border-zinc-700">
             <input type="checkbox" checked={promptQuantity} onChange={e => setPromptQuantity(e.target.checked)} className="w-3 h-3 rounded border-zinc-700 bg-zinc-800 text-blue-500" />
             Qtd
-          </label>
-          {/* Toggle Modo PC mobile */}
-          <label className="lg:hidden flex items-center gap-1.5 text-[10px] text-zinc-400 bg-zinc-900 border border-zinc-800 px-2.5 py-3 rounded-xl cursor-pointer select-none shrink-0 transition hover:border-zinc-700">
-            <input type="checkbox" checked={forceDesktop} onChange={e => setForceDesktop(e.target.checked)} className="w-3 h-3 rounded border-zinc-700 bg-zinc-800 text-blue-500" />
-            PC
           </label>
         </div>
 
@@ -821,26 +860,44 @@ function PosPageContent() {
 
               {/* Header do carrinho expandido */}
               <div
-                className="flex items-center justify-between px-4 pt-3 pb-3 border-b border-zinc-800 cursor-pointer"
-                onClick={() => setSheetExpanded(false)}
+                className="flex items-center justify-between px-4 pt-3 pb-3 border-b border-zinc-800"
               >
                 <div className="flex items-center gap-2">
                   <ShoppingCart size={18} className="text-blue-400" />
                   <span className="text-white font-bold text-base">Seu Pedido</span>
                   <span className="text-xs bg-blue-600 text-white font-bold px-2 py-0.5 rounded-full">{totalItemsCount}</span>
                 </div>
-                <div className="flex flex-col items-center gap-0.5">
-                  <div className="w-8 h-1 rounded-full bg-zinc-600" />
-                  <span className="text-[10px] text-zinc-500">fechar</span>
+                <div className="flex items-center gap-3">
+                  {items.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm('Deseja limpar todos os itens do carrinho?')) {
+                          clearCart();
+                        }
+                      }}
+                      className="px-2.5 py-1 text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg font-semibold transition active:scale-95 flex items-center gap-1"
+                    >
+                      <Trash2 size={13} /> Limpar
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSheetExpanded(false)}
+                    className="p-1.5 text-zinc-400 hover:text-white bg-zinc-900 rounded-lg border border-zinc-800 transition"
+                  >
+                    <X size={16} />
+                  </button>
                 </div>
               </div>
 
               {/* Lista de itens com imagens */}
-              <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 custom-scrollbar" style={{ maxHeight: 'calc(88dvh - 145px)' }}>
+              <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2.5 custom-scrollbar" style={{ maxHeight: 'calc(88dvh - 145px)' }}>
                 {items.map(item => (
-                  <div key={item.cartKey} className="flex items-center gap-3 p-2.5 bg-zinc-900 border border-zinc-800 rounded-2xl">
+                  <div key={item.cartKey} className="flex items-center gap-3 p-3 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-sm">
                     {/* Imagem do produto */}
-                    <div className="w-14 h-14 rounded-xl bg-white overflow-hidden flex items-center justify-center shrink-0">
+                    <div className="w-14 h-14 rounded-xl bg-white overflow-hidden flex items-center justify-center shrink-0 border border-zinc-800/40">
                       {item.imageUrl
                         ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
                         : <ShoppingCart size={20} className="text-zinc-400" />
@@ -860,15 +917,29 @@ function PosPageContent() {
                       </div>
                     </div>
 
-                    {/* Controles de quantidade */}
-                    <div className="flex flex-col items-center gap-1 shrink-0">
-                      <button onClick={() => updateQuantity(item.cartKey, item.quantity + 1)} className="w-8 h-8 flex items-center justify-center bg-zinc-800 hover:bg-blue-600 text-white rounded-lg transition active:scale-90"><Plus size={14} /></button>
-                      <span className="font-bold text-sm text-white w-8 text-center">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.cartKey, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center bg-zinc-800 hover:bg-red-600/60 text-zinc-400 hover:text-white rounded-lg transition active:scale-90"><Minus size={14} /></button>
+                    {/* Controles de quantidade com hitboxes confortáveis */}
+                    <div className="flex items-center gap-1 shrink-0 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+                      <button
+                        onClick={() => updateQuantity(item.cartKey, item.quantity - 1)}
+                        className="w-8 h-8 flex items-center justify-center bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg transition active:scale-90"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <span className="font-bold text-sm text-white w-7 text-center">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item.cartKey, item.quantity + 1)}
+                        className="w-8 h-8 flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition active:scale-90"
+                      >
+                        <Plus size={14} />
+                      </button>
                     </div>
 
                     {/* Remover */}
-                    <button onClick={() => removeItem(item.cartKey)} className="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-red-400 transition shrink-0 active:scale-90">
+                    <button
+                      onClick={() => removeItem(item.cartKey)}
+                      className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-red-400 bg-zinc-950 hover:bg-red-500/10 border border-zinc-800 rounded-xl transition shrink-0 active:scale-90"
+                      title="Remover Item"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -884,7 +955,7 @@ function PosPageContent() {
                 <button
                   disabled={totalItemsCount === 0}
                   onClick={() => setIsPaymentOpen(true)}
-                  className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-black py-4 px-4 rounded-2xl text-lg transition-all shadow-lg active:scale-95 flex justify-center items-center gap-2"
+                  className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-black py-4 px-4 rounded-2xl text-lg transition-all shadow-lg active:scale-95 flex justify-center items-center gap-2 cursor-pointer"
                 >
                   <ShoppingCart size={20} />
                   Cobrar — R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -895,9 +966,151 @@ function PosPageContent() {
         </div>
       </div>
 
+      {/* ═══ GAVETA / DRAWER DE AÇÕES RÁPIDAS MOBILE ═══ */}
+      {isMobileMenuOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm lg:hidden animate-in fade-in duration-200"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          <div
+            className="fixed bottom-0 inset-x-0 z-[70] lg:hidden bg-zinc-900 border-t border-zinc-800 rounded-t-[2rem] p-5 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.2rem)' }}
+          >
+            {/* Handle do topo */}
+            <div className="w-12 h-1 bg-zinc-700 rounded-full mx-auto mb-4" />
+
+            {/* Operador Card */}
+            <div className="flex items-center justify-between p-3.5 bg-zinc-950 rounded-2xl border border-zinc-800 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/20 flex items-center justify-center font-black text-sm">
+                  {operator?.name?.substring(0, 2).toUpperCase() || 'OP'}
+                </div>
+                <div>
+                  <p className="font-bold text-white text-sm">{operator?.name || user?.name || 'Operador'}</p>
+                  <p className="text-zinc-500 text-xs">{operator?.role || 'Operador de Caixa'} · {user?.tenant || ''}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setIsMobileMenuOpen(false); setIsSwitchOperatorOpen(true); }}
+                className="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
+              >
+                Trocar
+              </button>
+            </div>
+
+            {/* Grid de Ações Rápidas */}
+            <div className="grid grid-cols-2 gap-2.5 mb-4">
+              {cashRegister?.id && (
+                <button
+                  type="button"
+                  onClick={() => { setIsMobileMenuOpen(false); setIsMovementOpen(true); }}
+                  className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-xs active:scale-95 transition cursor-pointer text-left"
+                >
+                  <ArrowDownUp size={18} />
+                  <span>Sangria / Suprimento</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsMobileMenuOpen(false);
+                  await refreshShift();
+                  setIsCloseRegisterOpen(true);
+                }}
+                className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-xs active:scale-95 transition cursor-pointer text-left"
+              >
+                <FileText size={18} />
+                <span>Relatório de Caixa</span>
+              </button>
+
+              {isComandasEnabled && (
+                <button
+                  type="button"
+                  onClick={() => { setIsMobileMenuOpen(false); setIsComandasModalOpen(true); }}
+                  className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 font-bold text-xs active:scale-95 transition cursor-pointer text-left"
+                >
+                  <UtensilsCrossed size={18} />
+                  <span>Comandas ({openComandas.length})</span>
+                </button>
+              )}
+
+              {modules?.nfce !== false && (
+                <button
+                  type="button"
+                  onClick={() => { setIsMobileMenuOpen(false); setIsExportXmlOpen(true); }}
+                  className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-zinc-800 border border-zinc-700 text-zinc-300 font-bold text-xs active:scale-95 transition cursor-pointer text-left"
+                >
+                  <Download size={18} />
+                  <span>Exportar XML</span>
+                </button>
+              )}
+
+              {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                <button
+                  type="button"
+                  onClick={() => { setIsMobileMenuOpen(false); navigate('/dashboard'); }}
+                  className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold text-xs active:scale-95 transition cursor-pointer text-left"
+                >
+                  <LayoutDashboard size={18} />
+                  <span>Painel Dashboard</span>
+                </button>
+              )}
+            </div>
+
+            {/* Toggles Rápidos */}
+            <div className="p-3.5 bg-zinc-950 rounded-2xl border border-zinc-800 space-y-3 mb-4">
+              <label className="flex items-center justify-between text-xs text-zinc-300 font-semibold cursor-pointer select-none">
+                <span>Modo PC / Tablet</span>
+                <input
+                  type="checkbox"
+                  checked={forceDesktop}
+                  onChange={e => setForceDesktop(e.target.checked)}
+                  className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-blue-500 focus:ring-blue-500"
+                />
+              </label>
+              <div className="border-t border-zinc-800/80" />
+              <label className="flex items-center justify-between text-xs text-zinc-300 font-semibold cursor-pointer select-none">
+                <span>Sempre perguntar quantidade</span>
+                <input
+                  type="checkbox"
+                  checked={promptQuantity}
+                  onChange={e => setPromptQuantity(e.target.checked)}
+                  className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-blue-500 focus:ring-blue-500"
+                />
+              </label>
+            </div>
+
+            {/* Ações de Fechamento / Logout */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex-1 py-3.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs active:scale-95 transition cursor-pointer"
+              >
+                Fechar Menu
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex-1 py-3.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-bold text-xs active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <LogOut size={16} /> Sair da Conta
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Modais de Operador e Turno */}
       {!isShiftLoading && !operator && (
         <OperatorLoginModal onSuccess={() => {}} />
+      )}
+
+      {isSwitchOperatorOpen && (
+        <OperatorLoginModal onSuccess={() => setIsSwitchOperatorOpen(false)} />
       )}
       
       {!isShiftLoading && operator && !cashRegister && (
@@ -918,6 +1131,20 @@ function PosPageContent() {
           }}
         />
       )}
+
+      {/* Scanner de Código de Barras via Câmera */}
+      <CameraBarcodeScannerModal
+        isOpen={isCameraScannerOpen}
+        onClose={() => setIsCameraScannerOpen(false)}
+        onScan={handleCameraScan}
+      />
+
+      {/* Exportação de XML de Notas Fiscais */}
+      <ExportXmlModal
+        isOpen={isExportXmlOpen}
+        onClose={() => setIsExportXmlOpen(false)}
+      />
+
       <PaymentModal
         isOpen={isPaymentOpen}
         onClose={() => {
