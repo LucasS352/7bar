@@ -147,66 +147,68 @@ export default function UsersPage() {
         </div>
       ) : (
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden backdrop-blur-md">
-          <table className="w-full text-left bg-transparent border-collapse">
-            <thead>
-              <tr className="border-b border-zinc-800 text-zinc-400 text-sm">
-                <th className="p-4 font-medium">Colaborador</th>
-                <th className="p-4 font-medium">Função</th>
-                <th className="p-4 font-medium">Status do Acesso</th>
-                <th className="p-4 font-medium">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-800/50">
-              {users.map((u) => (
-                <tr key={u.id} className="hover:bg-zinc-800/30 transition-colors cursor-pointer group" onClick={() => handleRowClick(u)}>
-                  <td className="p-4">
-                    <p className="font-semibold text-white">{u.name}</p>
-                    <p className="text-sm text-zinc-500">{u.email}</p>
-                  </td>
-                  <td className="p-4">
-                    {u.role === "admin" ? (
-                      <span className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 w-fit">
-                        <ShieldAlert size={14} /> Admin
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-md bg-zinc-700/30 text-zinc-300 border border-zinc-600/50 w-fit">
-                        <Shield size={14} /> Operador de Caixa
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-4">
-                    {u.active ? (
-                      <span className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-fit">
-                        <CheckCircle2 size={14} /> Acesso Liberado
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-md bg-red-500/10 text-red-500 border border-red-500/20 w-fit">
-                        <XCircle size={14} /> Acesso Bloqueado
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => toggleStatus(u.id, u.active)}
-                      disabled={u.role === "admin"}
-                      className={`text-sm px-3 py-1.5 rounded-lg border transition-all ${
-                        u.role === "admin"
-                          ? "opacity-30 cursor-not-allowed border-zinc-800 bg-zinc-900"
-                          : u.active
-                          ? "hover:bg-red-500/10 text-red-400 border-red-500/20 hover:border-red-500/50"
-                          : "hover:bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:border-emerald-500/50"
-                      }`}
-                    >
-                      {u.active ? "Bloquear Acesso" : "Liberar Acesso"}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full min-w-[560px] text-left bg-transparent border-collapse">
+              <thead>
+                <tr className="border-b border-zinc-800 text-zinc-400 text-sm">
+                  <th className="p-4 font-medium whitespace-nowrap">Colaborador</th>
+                  <th className="p-4 font-medium whitespace-nowrap">Função</th>
+                  <th className="p-4 font-medium whitespace-nowrap">Status do Acesso</th>
+                  <th className="p-4 font-medium whitespace-nowrap text-right pr-6">Ações</th>
                 </tr>
-              ))}
-              {users.length === 0 && (
-                <tr><td colSpan={4} className="p-8 text-center text-zinc-500">Nenhum colaborador encontrado.</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-zinc-800/50">
+                {users.map((u) => (
+                  <tr key={u.id} className="hover:bg-zinc-800/30 transition-colors cursor-pointer group" onClick={() => handleRowClick(u)}>
+                    <td className="p-4 whitespace-nowrap">
+                      <p className="font-semibold text-white">{u.name}</p>
+                      <p className="text-sm text-zinc-500">{u.email}</p>
+                    </td>
+                    <td className="p-4 whitespace-nowrap">
+                      {u.role === "admin" ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 whitespace-nowrap">
+                          <ShieldAlert size={14} /> Admin
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-zinc-700/30 text-zinc-300 border border-zinc-600/50 whitespace-nowrap">
+                          <Shield size={14} /> Operador de Caixa
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4 whitespace-nowrap">
+                      {u.active ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
+                          <CheckCircle2 size={14} /> Acesso Liberado
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-red-500/10 text-red-500 border border-red-500/20 whitespace-nowrap">
+                          <XCircle size={14} /> Acesso Bloqueado
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4 whitespace-nowrap text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => toggleStatus(u.id, u.active)}
+                        disabled={u.role === "admin"}
+                        className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all whitespace-nowrap ${
+                          u.role === "admin"
+                            ? "opacity-30 cursor-not-allowed border-zinc-800 bg-zinc-900"
+                            : u.active
+                            ? "hover:bg-red-500/10 text-red-400 border-red-500/20 hover:border-red-500/50"
+                            : "hover:bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:border-emerald-500/50"
+                        }`}
+                      >
+                        {u.active ? "Bloquear Acesso" : "Liberar Acesso"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {users.length === 0 && (
+                  <tr><td colSpan={4} className="p-8 text-center text-zinc-500">Nenhum colaborador encontrado.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
           <div className="p-4 bg-zinc-950/30 border-t border-zinc-800/80 text-xs text-zinc-500 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <span>Limites: {users.length} de 2 usuários (Máx. 1 Admin, 1 Operador)</span>
             <div className="flex flex-wrap items-center gap-4">
