@@ -558,11 +558,11 @@ function PosPageContent() {
               className="w-full py-2.5 lg:py-4 pl-9 lg:pl-12 pr-10 lg:pr-4 text-sm lg:text-2xl font-bold bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-xl lg:rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-zinc-500 shadow-inner tracking-tight"
               value={search} onChange={e => setSearch(e.target.value)} onKeyDown={handleSearchKeyPress}
             />
-            {/* Botão Câmera Scanner */}
+            {/* Botão Câmera Scanner — mobile only */}
             <button
               type="button"
               onClick={() => setIsCameraScannerOpen(true)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-blue-400 transition cursor-pointer active:scale-90"
+              className="lg:hidden absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-blue-400 transition cursor-pointer active:scale-90"
               title="Ler código com a câmera"
             >
               <Camera size={19} />
