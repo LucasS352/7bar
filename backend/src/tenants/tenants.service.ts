@@ -99,6 +99,8 @@ export class TenantsService {
       'nfceAtivo', 'nfceSerie', 'nfceAmbiente', 'nfceCsc', 'nfceIdCsc',
       'modulos', 'status', 'emailContador', 'mensalidadeValor', 'mensalidadeVencimento',
       'tvPublicId',
+      // Novos campos de contato e notas
+      'telefoneContato', 'emailContato', 'observacoes',
     ];
     // Tipamos explicitamente como Record<string, any> para evitar erro TS no acesso de chaves dinâmicas
     const safeData: Record<string, any> = Object.fromEntries(
@@ -208,8 +210,56 @@ export class TenantsService {
     return pin === setupPin;
   }
 
-  async migrateTenants(tenantIds: string[]): Promise<any[]> {
+  async migrateTenants(tenantIds: string[], includeHeart = false): Promise<any[]> {
     const results: any[] = [];
+
+    // ── 1. Migrar o banco Heart (master) se solicitado ────────────────────
+    if (includeHeart) {
+      const heartSchemaPath = path.resolve(process.cwd(), 'prisma', 'heart.schema.prisma');
+      const heartDbUrl = process.env.DATABASE_URL_HEART;
+
+      this.logger.log('[Migracao] Iniciando atualização do banco Heart (master)...');
+
+      if (!heartDbUrl) {
+        results.push({
+          tenantId: '__heart__',
+          name: '🫀 Banco Heart (master)',
+          databaseName: 'heart',
+          status: 'error',
+          output: 'Variável de ambiente DATABASE_URL_HEART não encontrada no servidor.',
+        });
+      } else {
+        try {
+          const { stdout, stderr } = await execAsync(
+            `npx prisma db push --schema="${heartSchemaPath}" --skip-generate --accept-data-loss`,
+            {
+              env: { ...process.env, DATABASE_URL_HEART: heartDbUrl },
+              timeout: 120000,
+            }
+          );
+
+          results.push({
+            tenantId: '__heart__',
+            name: '🫀 Banco Heart (master)',
+            databaseName: 'heart',
+            status: 'success',
+            output: stdout || 'Schema Heart atualizado com sucesso.',
+          });
+          this.logger.log('[Migracao] Banco Heart atualizado com sucesso.');
+        } catch (err: any) {
+          this.logger.error(`[Migracao] Erro ao atualizar banco Heart: ${err.message}`);
+          results.push({
+            tenantId: '__heart__',
+            name: '🫀 Banco Heart (master)',
+            databaseName: 'heart',
+            status: 'error',
+            output: `Erro na migração Heart:\n${err.stderr || err.message}\n${err.stdout || ''}`,
+          });
+        }
+      }
+    }
+
+    // ── 2. Migrar bancos dos tenants selecionados ─────────────────────────
     const tenants = await this.heartPrisma.tenant.findMany({
       where: { id: { in: tenantIds } }
     });
@@ -607,21 +657,55 @@ export class TenantsService {
     return { success: true };
   }
 
-  async registrarPagamento(tenantId: string) {
+  /**
+   * Avança a data de vencimento em exatamente 1 mês preservando o dia original.
+   * Trata corretamente dias 29/30/31 que não existem no mês destino (usa o último dia válido).
+   */
+  private addOneMonthSafe(date: Date): Date {
+    const originalDay = date.getDate();
+    const d = new Date(date);
+    d.setDate(1); // Move pro dia 1 para evitar overflow ao mudar o mês
+    d.setMonth(d.getMonth() + 1); // Avança 1 mês
+    // Verifica quantos dias tem o mês destino
+    const lastDayOfNextMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(originalDay, lastDayOfNextMonth));
+    return d;
+  }
+
+  async registrarPagamento(tenantId: string, observacao?: string) {
     const tenant = await this.heartPrisma.tenant.findUnique({
       where: { id: tenantId }
     });
     if (!tenant) throw new NotFoundException('Empresa não encontrada');
 
-    let currentDueDate = tenant.mensalidadeVencimento ? new Date(tenant.mensalidadeVencimento) : new Date();
-    const nextDueDate = new Date(currentDueDate);
-    nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+    const vencimentoAntes = tenant.mensalidadeVencimento ? new Date(tenant.mensalidadeVencimento) : new Date();
+    const vencimentoApos = this.addOneMonthSafe(vencimentoAntes);
 
-    return this.heartPrisma.tenant.update({
-      where: { id: tenantId },
-      data: {
-        mensalidadeVencimento: nextDueDate
-      }
+    // Grava o log de pagamento e atualiza o vencimento atomicamente
+    const [_, updatedTenant] = await this.heartPrisma.$transaction([
+      this.heartPrisma.paymentLog.create({
+        data: {
+          tenantId,
+          valor: Number(tenant.mensalidadeValor) || 0,
+          vencimentoAntes,
+          vencimentoApos,
+          observacao: observacao || null,
+        }
+      }),
+      this.heartPrisma.tenant.update({
+        where: { id: tenantId },
+        data: { mensalidadeVencimento: vencimentoApos }
+      })
+    ]);
+
+    return updatedTenant;
+  }
+
+  async getPaymentHistory(tenantId: string) {
+    return this.heartPrisma.paymentLog.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'desc' },
+      take: 50, // retorna os últimos 50 pagamentos
     });
   }
 

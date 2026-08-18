@@ -70,6 +70,11 @@ model Tenant {
   mensalidadeValor      Decimal?   @db.Decimal(10, 2) @default(0.00) @map("mensalidade_valor")
   mensalidadeVencimento DateTime?  @map("mensalidade_vencimento")
 
+  // Informações de contato do cliente (telefone, e-mail de contato)
+  telefoneContato  String?  @map("telefone_contato")
+  emailContato     String?  @map("email_contato")
+  observacoes      String?  @db.Text // Notas livres sobre o cliente
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   termsAcceptedAt DateTime? @map("terms_accepted_at")
@@ -77,6 +82,7 @@ model Tenant {
   users               User[]
   tenantIntegrations  TenantIntegration[]
   groupMembers        TenantGroupMember[]
+  paymentLogs         PaymentLog[]
 
   @@map("tenants")
 }
@@ -288,6 +294,27 @@ model FiscalFavorite {
   fiscalProfileId String
   fiscalProfile   FiscalProfile @relation(fields: [fiscalProfileId], references: [id], onDelete: Cascade)
   @@id([tenantId, fiscalProfileId])
+}
+
+// ------------------------------------------------------------
+//  PaymentLog — histórico de pagamentos de mensalidade por tenant
+// ------------------------------------------------------------
+model PaymentLog {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  valor           Decimal  @db.Decimal(10, 2)  // Valor cobrado
+  vencimentoAntes DateTime  // Vencimento antes do registro
+  vencimentoApos  DateTime  // Novo vencimento após registro
+  observacao      String?  @db.Text
+  registradoPor   String?  // Nome ou identificação de quem registrou
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([createdAt])
+  @@map("payment_logs")
 }
 
 // ------------------------------------------------------------

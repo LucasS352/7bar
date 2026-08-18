@@ -81,4 +81,40 @@ export class AuthService {
     });
     return { success: true };
   }
+
+  async getTenantStatus(tenantId: string) {
+    const tenant = await this.heartPrisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        status: true,
+        mensalidadeVencimento: true,
+        mensalidadeValor: true,
+        name: true,
+      },
+    });
+
+    if (!tenant) return { status: 'unknown', diasAtraso: 0, vencimento: null };
+
+    const { mensalidadeVencimento, status, mensalidadeValor, name } = tenant;
+
+    if (!mensalidadeVencimento) {
+      return { status, diasAtraso: 0, vencimento: null, valor: mensalidadeValor, nome: name };
+    }
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const venc = new Date(mensalidadeVencimento);
+    venc.setHours(0, 0, 0, 0);
+
+    const diffMs = hoje.getTime() - venc.getTime();
+    const diasAtraso = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    return {
+      status,
+      diasAtraso,         // negativo = dias até vencer | 0 = vence hoje | positivo = dias em atraso
+      vencimento: mensalidadeVencimento,
+      valor: mensalidadeValor,
+      nome: name,
+    };
+  }
 }

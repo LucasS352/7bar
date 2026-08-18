@@ -35,16 +35,17 @@ export class TenantsController {
 
   /** Executa migração de banco de dados para os tenants selecionados (protegido por PIN) */
   @Post('setup/migrate')
-  async migrateTenants(@Request() req: any, @Body() body: { tenantIds: string[] }) {
+  async migrateTenants(@Request() req: any, @Body() body: { tenantIds: string[]; includeHeart?: boolean }) {
     const pin = req.headers['x-setup-pin'] as string;
     const valid = await this.tenantsService.validatePin(pin);
     if (!valid) throw new UnauthorizedException('PIN inválido.');
 
-    if (!body.tenantIds || !Array.isArray(body.tenantIds) || body.tenantIds.length === 0) {
-      throw new BadRequestException('Nenhum tenant selecionado para migração.');
+    const hasIds = body.tenantIds && Array.isArray(body.tenantIds) && body.tenantIds.length > 0;
+    if (!hasIds && !body.includeHeart) {
+      throw new BadRequestException('Nenhum banco selecionado para migração.');
     }
 
-    return this.tenantsService.migrateTenants(body.tenantIds);
+    return this.tenantsService.migrateTenants(body.tenantIds || [], body.includeHeart ?? false);
   }
 
   /**
@@ -264,12 +265,22 @@ export class TenantsController {
 
   /** Registra pagamento de mensalidade via sys-init (protegido por PIN) */
   @Post('setup/:id/registrar-pagamento')
-  async registrarPagamentoSetup(@Request() req: any, @Param('id') id: string) {
+  async registrarPagamentoSetup(@Request() req: any, @Param('id') id: string, @Body() body: any) {
     const pin = req.headers['x-setup-pin'] as string;
     const valid = await this.tenantsService.validatePin(pin);
     if (!valid) throw new UnauthorizedException('PIN inválido.');
-    return this.tenantsService.registrarPagamento(id);
+    return this.tenantsService.registrarPagamento(id, body?.observacao);
   }
+
+  /** Retorna histórico de pagamentos do tenant via sys-init (protegido por PIN) */
+  @Get('setup/:id/payment-history')
+  async getPaymentHistory(@Request() req: any, @Param('id') id: string) {
+    const pin = req.headers['x-setup-pin'] as string;
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN inválido.');
+    return this.tenantsService.getPaymentHistory(id);
+  }
+
   @Get('setup/:id/categories')
   async getTenantCategories(@Request() req: any, @Param('id') id: string) {
     const pin = req.headers['x-setup-pin'] as string;

@@ -43,6 +43,7 @@ import { useAuthStore } from './store/auth';
 // Estilos globais
 import './app/globals.css';
 import { TermsAcceptanceModal } from './components/TermsAcceptanceModal';
+import { OverduePaymentBanner } from './components/OverduePaymentBanner';
 
 // ── PWA Service Worker ──────────────────────────────────────────────────────
 // O vite-plugin-pwa injeta automaticamente o registro do SW.
@@ -73,7 +74,7 @@ const IS_DEMO = import.meta.env.VITE_APP_MODE === 'demo';
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
   if (!token) return <Navigate to={IS_DEMO ? '/demo' : '/login'} replace />;
-  return <>{children}</>;
+  return <><OverduePaymentBanner />{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {

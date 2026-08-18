@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
@@ -29,5 +29,11 @@ export class AuthController {
       throw new UnauthorizedException('Apenas administradores podem aceitar os termos.');
     }
     return this.authService.acceptTerms(user.tenantId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('tenant-status')
+  async getTenantStatus(@CurrentUser() user: any) {
+    return this.authService.getTenantStatus(user.tenantId);
   }
 }

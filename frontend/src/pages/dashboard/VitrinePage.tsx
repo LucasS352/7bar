@@ -64,6 +64,8 @@ interface VitrineConfig {
 interface Product {
   id: string;
   name: string;
+  shortCode?: string | null;
+  barcode?: string | null;
   priceSell: number;
   imageUrl: string | null;
   active: boolean;
@@ -96,6 +98,14 @@ function formatDateTime(iso: string | null): string {
   return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
+function normalizeText(text: string): string {
+  return (text || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function VitrinePage() {
   const { user } = useAuthStore();
@@ -104,6 +114,7 @@ export default function VitrinePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshingProducts, setRefreshingProducts] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -121,21 +132,74 @@ export default function VitrinePage() {
   const [gridSelectedProducts, setGridSelectedProducts] = useState<GridProduct[]>([]);
   const [gridSearch, setGridSearch] = useState('');
 
-  // ── Carregar dados ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    Promise.all([
-      api.get('/vitrine/config'),
-      api.get('/tenants/me'),
-      api.get('/products?limit=200'),
-    ]).then(([vitrine, tenant, prods]) => {
+  // ── Carregar dados iniciais ─────────────────────────────────────────────────
+  const loadInitialData = useCallback(async () => {
+    try {
+      const [vitrine, tenant, prods] = await Promise.all([
+        api.get('/vitrine/config'),
+        api.get('/tenants/me'),
+        api.get('/products?limit=5000'),
+      ]);
       setConfig(vitrine.data);
       setTenantInfo(tenant.data);
       const prodList: Product[] = (prods.data?.data || prods.data || [])
         .filter((p: any) => p.active !== false)
         .sort((a: any, b: any) => a.name.localeCompare(b.name));
       setProducts(prodList);
-    }).catch(console.error).finally(() => setLoading(false));
+    } catch (err) {
+      console.error('Erro ao carregar dados da vitrine:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  // ── Recarregar catálogo manualmente ─────────────────────────────────────────
+  async function refreshCatalog() {
+    setRefreshingProducts(true);
+    try {
+      const prods = await api.get('/products?limit=5000');
+      const prodList: Product[] = (prods.data?.data || prods.data || [])
+        .filter((p: any) => p.active !== false)
+        .sort((a: any, b: any) => a.name.localeCompare(b.name));
+      setProducts(prodList);
+      toast.success('Catálogo atualizado com sucesso!');
+    } catch (err) {
+      console.error('Erro ao atualizar produtos:', err);
+      toast.error('Erro ao atualizar catálogo de produtos.');
+    } finally {
+      setRefreshingProducts(false);
+    }
+  }
+
+  // ── Busca dinâmica no backend (garante produtos recém-criados e buscas amplas) ─
+  useEffect(() => {
+    const term = (search || gridSearch).trim();
+    if (term.length < 2) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.get('/products', { params: { search: term, limit: 100 } });
+        const found: Product[] = (res.data?.data || res.data || [])
+          .filter((p: any) => p.active !== false);
+
+        if (found.length > 0) {
+          setProducts(prev => {
+            const map = new Map(prev.map(p => [p.id, p]));
+            found.forEach(p => map.set(p.id, p));
+            return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+          });
+        }
+      } catch (e) {
+        console.error('Erro ao buscar produtos no backend:', e);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search, gridSearch]);
 
   const tvPublicId = tenantInfo?.tvPublicId;
   const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -151,10 +215,26 @@ export default function VitrinePage() {
       .filter((s): s is VitrineSlide => s.slideType !== 'grid')
       .map(s => s.productId)
   );
-  const availableProducts = products.filter(p =>
-    !addedSingleProductIds.has(p.id) &&
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const searchNorm = normalizeText(search);
+  const availableProducts = products.filter(p => {
+    if (addedSingleProductIds.has(p.id)) return false;
+    if (!searchNorm) return true;
+    const nameNorm = normalizeText(p.name);
+    const codeNorm = normalizeText(p.shortCode || '');
+    const barcode = p.barcode || '';
+    return nameNorm.includes(searchNorm) || codeNorm.includes(searchNorm) || barcode.includes(search.trim());
+  });
+
+  // ── Produtos disponíveis para adicionar na grade de categorias ──────────────
+  const gridSearchNorm = normalizeText(gridSearch);
+  const availableGridProducts = products.filter(p => {
+    if (gridSelectedProducts.some(gp => gp.productId === p.id)) return false;
+    if (!gridSearchNorm) return true;
+    const nameNorm = normalizeText(p.name);
+    const codeNorm = normalizeText(p.shortCode || '');
+    const barcode = p.barcode || '';
+    return nameNorm.includes(gridSearchNorm) || codeNorm.includes(gridSearchNorm) || barcode.includes(gridSearch.trim());
+  });
 
   // ── Auto-salvar rascunho (debounced) ─────────────────────────────────────────
   const saveDraftDebounced = useCallback(
@@ -460,6 +540,15 @@ export default function VitrinePage() {
               <div className="flex items-center gap-2">
                 <Plus size={16} className="text-violet-400" />
                 <span className="font-semibold text-zinc-200 text-sm">Adicionar aos Slides</span>
+                <button
+                  type="button"
+                  onClick={refreshCatalog}
+                  disabled={refreshingProducts}
+                  className="p-1 text-zinc-500 hover:text-zinc-300 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
+                  title="Atualizar catálogo de produtos"
+                >
+                  <RefreshCw size={13} className={refreshingProducts ? 'animate-spin text-violet-400' : ''} />
+                </button>
               </div>
               <button
                 onClick={openCreateGridModal}
@@ -1170,38 +1259,29 @@ export default function VitrinePage() {
 
                   {gridSearch && (
                     <div className="max-h-40 overflow-y-auto space-y-1 mt-2 custom-scrollbar bg-zinc-900/90 border border-zinc-800 rounded-xl p-1.5">
-                      {products
-                        .filter(p =>
-                          !gridSelectedProducts.some(gp => gp.productId === p.id) &&
-                          p.name.toLowerCase().includes(gridSearch.toLowerCase())
-                        )
-                        .slice(0, 10)
-                        .map(p => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => addProductToGrid(p)}
-                            className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-zinc-800 text-left transition-colors cursor-pointer group"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              {p.imageUrl ? (
-                                <img src={getFullUrl(p.imageUrl)} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0 bg-black/20" />
-                              ) : (
-                                <span className="text-xs">📦</span>
-                              )}
-                              <span className="text-xs text-zinc-200 truncate group-hover:text-white transition-colors">{p.name}</span>
-                            </div>
-                            <span className="text-xs text-indigo-400 font-bold flex-shrink-0 ml-2 group-hover:text-indigo-300 transition-colors">
-                              + R$ {formatPrice(p.priceSell)}
-                            </span>
-                          </button>
-                        ))}
-                      {products.filter(p =>
-                        !gridSelectedProducts.some(gp => gp.productId === p.id) &&
-                        p.name.toLowerCase().includes(gridSearch.toLowerCase())
-                      ).length === 0 && (
+                      {availableGridProducts.slice(0, 10).map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => addProductToGrid(p)}
+                          className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-zinc-800 text-left transition-colors cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            {p.imageUrl ? (
+                              <img src={getFullUrl(p.imageUrl)} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0 bg-black/20" />
+                            ) : (
+                              <span className="text-xs">📦</span>
+                            )}
+                            <span className="text-xs text-zinc-200 truncate group-hover:text-white transition-colors">{p.name}</span>
+                          </div>
+                          <span className="text-xs text-indigo-400 font-bold flex-shrink-0 ml-2 group-hover:text-indigo-300 transition-colors">
+                            + R$ {formatPrice(p.priceSell)}
+                          </span>
+                        </button>
+                      ))}
+                      {availableGridProducts.length === 0 && (
                         <div className="text-center text-zinc-500 text-xs py-3">
-                          {products.some(p => p.name.toLowerCase().includes(gridSearch.toLowerCase()))
+                          {products.some(p => normalizeText(p.name).includes(gridSearchNorm))
                             ? '✓ Todos os produtos encontrados já foram adicionados à grade'
                             : 'Nenhum produto encontrado'}
                         </div>
