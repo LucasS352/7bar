@@ -149,6 +149,7 @@ function App() {
         theme="dark" 
         position="top-center" 
         richColors 
+        duration={2000}
         toastOptions={{
           style: { 
             fontSize: '0.95rem', 

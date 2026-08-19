@@ -695,7 +695,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
       setSaleResult(res.data); clearCart();
       useDemoMissionsStore.getState().completeMission('saleCompleted');
       if (actualMode === 'nfce') { toast.info('NFC-e em processamento...', { duration: 3000 }); setNfcePolling(true); }
-      else toast.success('Venda finalizada!');
+      else toast.success('Venda finalizada!', { duration: 1500 });
       // Impressão automática do cupom
       if (autoPrint) {
         setTimeout(() => printReceipt(res.data), 300);
