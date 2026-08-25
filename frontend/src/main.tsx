@@ -36,6 +36,7 @@ import FiscalManagementPage from './app/dashboard/fiscal/gestao/page';
 import BulkImagesPage from './pages/dashboard/BulkImagesPage';
 import VitrinePage from './pages/dashboard/VitrinePage';
 import VitrineTvPage from './pages/VitrineTvPage';
+import { GarcomPage } from './pages/GarcomPage';
 
 // Stores
 import { useAuthStore } from './store/auth';
@@ -72,15 +73,17 @@ document.addEventListener('visibilitychange', () => {
 const IS_DEMO = import.meta.env.VITE_APP_MODE === 'demo';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const token = useAuthStore((s) => s.token);
+  const { token, user } = useAuthStore();
   if (!token) return <Navigate to={IS_DEMO ? '/demo' : '/login'} replace />;
+  if (user?.role === 'stockist') return <Navigate to="/dashboard/inventory" replace />;
   return <><OverduePaymentBanner />{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { token, user } = useAuthStore();
   if (!token) return <Navigate to="/login" replace />;
-  if (user?.role !== 'admin' && user?.role !== 'superadmin') return <Navigate to="/" replace />;
+  const allowedRoles = ['admin', 'superadmin', 'stockist'];
+  if (!allowedRoles.includes(user?.role || '')) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -104,6 +107,16 @@ function App() {
           element={
             <PrivateRoute>
               <PosPage />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Modo Garçom — interface dedicada mobile-first (sem caixa obrigatório) */}
+        <Route
+          path="/garcom"
+          element={
+            <PrivateRoute>
+              <GarcomPage />
             </PrivateRoute>
           }
         />

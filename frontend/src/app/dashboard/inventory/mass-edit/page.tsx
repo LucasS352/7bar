@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Save, ArrowLeft, RefreshCw, Search, Filter, X, Loader2, CheckCircle2, Edit3, Package } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuthStore } from '@/store/auth';
 
 interface ProductRow {
   id: string;
@@ -21,6 +22,8 @@ interface ProductRow {
 }
 
 export default function MassEditPage() {
+  const { user } = useAuthStore();
+  const isStockist = user?.role === 'stockist';
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +114,7 @@ export default function MassEditPage() {
   }, [products, search, filterCat]);
 
   return (
-    <div className="space-y-4 lg:space-y-6 animate-in fade-in duration-500 w-full max-w-none">
+    <div className="space-y-4 lg:space-y-6 animate-in fade-in duration-500 w-full max-w-none pb-[calc(10rem+env(safe-area-inset-bottom,0px))] lg:pb-0">
       <div className="flex flex-col gap-3 border-b border-zinc-800 pb-4">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -178,7 +181,7 @@ export default function MassEditPage() {
                     <th className="px-3 py-3 font-bold uppercase tracking-widest w-[50px]">Foto</th>
                     <th className="px-3 py-3 font-bold uppercase tracking-widest">Produto</th>
                     <th className="px-3 py-3 font-bold uppercase tracking-widest w-[11%]">Categoria</th>
-                    <th className="px-3 py-3 font-bold uppercase tracking-widest text-right w-[120px]">Venda R$</th>
+                    {!isStockist && <th className="px-3 py-3 font-bold uppercase tracking-widest text-right w-[120px]">Venda R$</th>}
                     <th className="px-3 py-3 font-bold uppercase tracking-widest text-right w-[120px]">Custo R$</th>
                     <th className="px-3 py-3 font-bold uppercase tracking-widest text-right w-[120px]">Estoque</th>
                     <th className="px-3 py-3 font-bold uppercase tracking-widest text-center w-[80px]">Salvar</th>
@@ -206,12 +209,14 @@ export default function MassEditPage() {
                           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </td>
+                      {!isStockist && (
                       <td className="px-3 py-2 w-[120px]">
                         <input type="number" step="0.01" value={row.priceSell}
                           onChange={e => updateField(row.id, 'priceSell', e.target.value)}
                           onKeyDown={e => e.key === 'Enter' && saveRow(row)}
                           className="w-full text-right bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-3 py-2 text-sm text-emerald-400 font-black focus:outline-none focus:border-emerald-500 focus:bg-zinc-900 transition-colors" />
                       </td>
+                      )}
                       <td className="px-3 py-2 w-[120px]">
                         <input type="number" step="0.01" value={row.priceCost}
                           onChange={e => updateField(row.id, 'priceCost', e.target.value)}
@@ -261,13 +266,15 @@ export default function MassEditPage() {
                     : row.dirty ? <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
                     : null}
                 </div>
-                <div className="px-3 pb-2 grid grid-cols-3 gap-2">
+                <div className={`px-3 pb-2 grid ${isStockist ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
+                  {!isStockist && (
                   <div>
                     <label className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider block mb-1">Venda R$</label>
                     <input type="number" inputMode="decimal" step="0.01" value={row.priceSell}
                       onChange={e => updateField(row.id, 'priceSell', e.target.value)}
                       className="w-full text-center bg-zinc-950 border border-emerald-500/30 rounded-lg px-1 py-2.5 text-sm text-emerald-400 font-black focus:outline-none focus:border-emerald-400 transition-colors" />
                   </div>
+                  )}
                   <div>
                     <label className="text-[9px] font-bold text-rose-400 uppercase tracking-wider block mb-1">Custo R$</label>
                     <input type="number" inputMode="decimal" step="0.01" value={row.priceCost}
@@ -299,9 +306,9 @@ export default function MassEditPage() {
           </div>
 
           {dirtyCount > 0 && (
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800 z-50">
+            <div className="lg:hidden fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-0 right-0 p-3.5 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800/90 z-40 shadow-[0_-8px_20px_rgba(0,0,0,0.6)]">
               <button onClick={saveAllDirty} disabled={savingAll}
-                className="w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white transition-all shadow-xl active:scale-95 text-base disabled:opacity-50">
+                className="w-full py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 active:scale-[0.98] text-white transition-all shadow-lg shadow-purple-600/30 text-base disabled:opacity-50 cursor-pointer">
                 {savingAll ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                 Salvar {dirtyCount} Alteracao{dirtyCount > 1 ? 'oes' : ''}
               </button>

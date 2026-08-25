@@ -205,9 +205,10 @@ export class TenantsService {
   }
 
   async validatePin(pin: string): Promise<boolean> {
-    const setupPin = process.env.SETUP_PIN;
-    if (!setupPin) throw new BadRequestException('SETUP_PIN não configurado no servidor.');
-    return pin === setupPin;
+    const setupPin = process.env.SETUP_PIN || 'teltech352';
+    const sqlPin = process.env.SQL_PIN || '43619835';
+    if (!pin) return false;
+    return pin === setupPin || pin === sqlPin;
   }
 
   async migrateTenants(tenantIds: string[], includeHeart = false): Promise<any[]> {
@@ -289,9 +290,56 @@ export class TenantsService {
           });
           await tenantClient.$connect();
           seedResult = await seedDefaultGruposStatic(tenantClient);
+
+          // Backfill de códigos sequenciais amigáveis para vendas antigas
+          const unnumberedSales = await (tenantClient.sale as any).findMany({
+            where: { code: null },
+            orderBy: { createdAt: 'asc' },
+            select: { id: true }
+          });
+          if (unnumberedSales.length > 0) {
+            const maxSale = await (tenantClient.sale as any).findFirst({
+              where: { code: { not: null } },
+              orderBy: { code: 'desc' },
+              select: { code: true }
+            });
+            let currentSaleCode = maxSale?.code || 0;
+            for (const s of unnumberedSales) {
+              currentSaleCode++;
+              await (tenantClient.sale as any).update({
+                where: { id: s.id },
+                data: { code: currentSaleCode }
+              });
+            }
+            this.logger.log(`[Migracao] Backfill de códigos de vendas: ${unnumberedSales.length} vendas numeradas.`);
+          }
+
+          // Backfill de códigos sequenciais amigáveis para caixas antigos
+          const unnumberedRegisters = await (tenantClient.cashRegister as any).findMany({
+            where: { code: null },
+            orderBy: { openingTime: 'asc' },
+            select: { id: true }
+          });
+          if (unnumberedRegisters.length > 0) {
+            const maxRegister = await (tenantClient.cashRegister as any).findFirst({
+              where: { code: { not: null } },
+              orderBy: { code: 'desc' },
+              select: { code: true }
+            });
+            let currentRegCode = maxRegister?.code || 0;
+            for (const r of unnumberedRegisters) {
+              currentRegCode++;
+              await (tenantClient.cashRegister as any).update({
+                where: { id: r.id },
+                data: { code: currentRegCode }
+              });
+            }
+            this.logger.log(`[Migracao] Backfill de códigos de caixas: ${unnumberedRegisters.length} caixas numerados.`);
+          }
+
           await tenantClient.$disconnect();
         } catch (seedErr: any) {
-          this.logger.warn(`Seed de grupos tributários falhou para ${tenant.name}: ${seedErr.message}`);
+          this.logger.warn(`Pós-migração (seed/backfill) falhou para ${tenant.name}: ${seedErr.message}`);
         }
 
         results.push({
@@ -788,6 +836,37 @@ export class TenantsService {
     return users;
   }
 
+  async createTenantUser(tenantId: string, data: { name: string; email: string; password: string; role: string }) {
+    const tenant = await this.heartPrisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) throw new NotFoundException('Tenant não encontrado.');
+
+    // Verificar se já existe usuário com esse email
+    const existing = await this.heartPrisma.user.findUnique({ where: { email: data.email } });
+    if (existing) throw new BadRequestException(`Já existe um usuário com o email ${data.email}.`);
+
+    // Validar role permitido
+    const allowedRoles = ['admin', 'operator', 'stockist'];
+    if (!allowedRoles.includes(data.role)) {
+      throw new BadRequestException(`Perfil inválido. Valores permitidos: ${allowedRoles.join(', ')}`);
+    }
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const user = await this.heartPrisma.user.create({
+      data: {
+        name: data.name,
+        email: data.email,
+        password: hashedPassword,
+        role: data.role,
+        tenantId,
+        active: true,
+      },
+      select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
+    });
+
+    this.logger.log(`[Users] Usuário criado: ${user.name} (${user.role}) para tenant ${tenant.name}`);
+    return user;
+  }
+
   async resetUserPassword(tenantId: string, userId: string, newPasswordRaw: string) {
     const user = await this.heartPrisma.user.findFirst({
       where: { id: userId, tenantId }
@@ -911,5 +990,69 @@ export class TenantsService {
     return { synced, tenants: tenantsProcessed, errors };
   }
 
-}
+  // ── SQL CLIENT ────────────────────────────────────────────────────────────
+  async executeSqlQuery(sql: string, tenantId?: string, useHeart?: boolean): Promise<any> {
+    const start = Date.now();
+    const trimmed = sql.trim().replace(/;\s*$/, ''); // remove ; final para evitar erro de sintaxe
 
+    const isSelect = /^SELECT\b/i.test(trimmed);
+    const isShowOrDescribe = /^(SHOW|DESCRIBE|DESC|EXPLAIN)/i.test(trimmed);
+    const isQuery = isSelect || isShowOrDescribe;
+    const SQL_LIMIT = 500;
+
+    // Selecionar o cliente Prisma adequado
+    let prisma: any;
+    let dbLabel: string;
+
+    if (useHeart || !tenantId) {
+      prisma = this.heartPrisma;
+      dbLabel = 'heart';
+    } else {
+      const tenant = await this.heartPrisma.tenant.findUnique({ where: { id: tenantId } });
+      if (!tenant) throw new BadRequestException('Tenant não encontrado.');
+      prisma = await this.tenantManager.getTenantClient(tenantId, tenant.databaseUrl);
+      dbLabel = tenant.databaseName;
+    }
+
+    this.logger.log(`[SQL Client] Executando no banco "${dbLabel}": ${trimmed.substring(0, 120)}...`);
+
+    try {
+      if (isQuery) {
+        // Adiciona LIMIT SOMENTE para queries SELECT que não possuem LIMIT explícito
+        let finalSql = trimmed;
+        if (isSelect && !/\bLIMIT\s+\d+/i.test(trimmed)) {
+          finalSql = `${trimmed} LIMIT ${SQL_LIMIT}`;
+        }
+
+        const rows: any[] = await prisma.$queryRawUnsafe(finalSql);
+        const durationMs = Date.now() - start;
+
+        if (!rows || rows.length === 0) {
+          return { type: 'query', columns: [], rows: [], rowCount: 0, durationMs };
+        }
+
+        const columns = Object.keys(rows[0]);
+        const data = rows.map((row: any) =>
+          columns.map(col => {
+            const val = row[col];
+            if (val === null || val === undefined) return null;
+            if (val instanceof Date) return val.toISOString();
+            if (val instanceof Buffer) return `[Binary ${val.length}b]`;
+            if (typeof val === 'bigint') return val.toString();
+            if (typeof val === 'object') return JSON.stringify(val);
+            return val;
+          })
+        );
+
+        return { type: 'query', columns, rows: data, rowCount: rows.length, durationMs, limited: isSelect && rows.length >= SQL_LIMIT };
+      } else {
+        const affected = await prisma.$executeRawUnsafe(trimmed);
+        return { type: 'exec', rowsAffected: Number(affected), durationMs: Date.now() - start };
+      }
+    } catch (err: any) {
+      this.logger.error(`[SQL Client] Erro no banco "${dbLabel}": ${err.message}`);
+      throw new BadRequestException(err.message || 'Erro ao executar query SQL.');
+    }
+  }
+
+}

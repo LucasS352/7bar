@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { useAuthStore } from '@/store/auth';
 import { 
   ArrowLeft, 
   FileSpreadsheet, 
@@ -80,6 +81,8 @@ interface NfeEntrada {
 }
 
 export default function XmlImportPage() {
+  const { user } = useAuthStore();
+  const isStockist = user?.role === 'stockist';
   const [pendentes, setPendentes] = useState<NfeEntrada[]>([]);
   const [historico, setHistorico] = useState<NfeEntrada[]>([]);
   const [activeTab, setActiveTab] = useState<'pendentes' | 'historico'>('pendentes');
@@ -278,8 +281,8 @@ export default function XmlImportPage() {
       toast.error('Selecione uma categoria.');
       return;
     }
-    const sellPrice = parseFloat(quickCreatePriceSell);
-    if (isNaN(sellPrice) || sellPrice <= 0) {
+    const sellPrice = parseFloat(quickCreatePriceSell) || 0;
+    if (!isStockist && (isNaN(sellPrice) || sellPrice <= 0)) {
       toast.error('Informe um preço de venda maior que zero.');
       return;
     }
@@ -1223,12 +1226,14 @@ export default function XmlImportPage() {
                       Cód: #{p.shortCode} {p.barcode ? `| EAN: ${p.barcode}` : ''}
                     </span>
                   </div>
-                  <div className="flex flex-col items-end whitespace-nowrap ml-4">
-                    <span className="text-[10px] text-zinc-500 font-medium">Preço Venda</span>
-                    <span className="text-sm text-emerald-400 font-black">
-                      R$ {Number(p.priceSell || 0).toFixed(2)}
-                    </span>
-                  </div>
+                  {!isStockist && (
+                    <div className="flex flex-col items-end whitespace-nowrap ml-4">
+                      <span className="text-[10px] text-zinc-500 font-medium">Preço Venda</span>
+                      <span className="text-sm text-emerald-400 font-black">
+                        R$ {Number(p.priceSell || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                 </button>
               ))}
               {filteredSearchProducts.length === 0 && (
@@ -1541,10 +1546,12 @@ export default function XmlImportPage() {
                   min="0"
                   step="0.01"
                   value={quickCreatePriceSell}
-                  onChange={(e) => setQuickCreatePriceSell(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-emerald-405 text-emerald-400 focus:outline-none focus:border-sky-500 transition-colors font-bold"
-                  placeholder="R$ 0,00"
+                  onChange={(e) => !isStockist && setQuickCreatePriceSell(e.target.value)}
+                  disabled={isStockist}
+                  className={`w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm ${isStockist ? 'text-zinc-600 cursor-not-allowed' : 'text-emerald-400 focus:outline-none focus:border-sky-500'} transition-colors font-bold`}
+                  placeholder={isStockist ? 'R$ 0,00 (Bloqueado)' : 'R$ 0,00'}
                 />
+                {isStockist && <p className="text-[10px] text-amber-500/70 mt-1">🔒 Estoquista não altera preço de venda</p>}
               </div>
 
               {/* Categoria */}

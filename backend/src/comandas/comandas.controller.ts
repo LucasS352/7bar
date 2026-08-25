@@ -13,7 +13,7 @@ export class ComandasController {
   }
 
   @Post()
-  async create(@Body() body: { number: string; customerName?: string; notes?: string }) {
+  async create(@Body() body: { number: string; customerName?: string; notes?: string; waiterId?: string }) {
     return this.comandasService.create(body);
   }
 

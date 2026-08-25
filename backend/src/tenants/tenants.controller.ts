@@ -269,6 +269,22 @@ export class TenantsController {
     return this.tenantsService.getTenantUsers(id);
   }
 
+  @Post('setup/:id/users')
+  async createTenantUser(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() body: { name: string; email: string; password: string; role: string }
+  ) {
+    const pin = req.headers['x-setup-pin'] as string;
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN inválido.');
+
+    if (!body.name || !body.email || !body.password || !body.role) {
+      throw new BadRequestException('Nome, email, senha e perfil são obrigatórios.');
+    }
+    return this.tenantsService.createTenantUser(id, body);
+  }
+
   @Patch('setup/:id/users/:userId/password')
   async resetUserPassword(@Request() req: any, @Param('id') id: string, @Param('userId') userId: string, @Body() body: { password: string }) {
     const pin = req.headers['x-setup-pin'] as string;
@@ -313,6 +329,25 @@ export class TenantsController {
     const valid = await this.tenantsService.validatePin(pin);
     if (!valid) throw new UnauthorizedException('PIN inválido.');
     return this.tenantsService.getTenantCategories(id);
+  }
+
+  /** Executa query SQL diretamente em qualquer banco (protegido por PIN do sys-init + PIN exclusivo SQL) */
+  @Post('setup/sql')
+  async executeSql(
+    @Request() req: any,
+    @Body() body: { sql: string; tenantId?: string; useHeart?: boolean }
+  ) {
+    const pin = req.headers['x-setup-pin'] as string;
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN do sys-init inválido.');
+
+    const sqlPin = req.headers['x-sql-pin'] as string;
+    const expectedSqlPin = process.env.SQL_PIN || '43619835';
+    if (sqlPin !== expectedSqlPin) throw new UnauthorizedException('PIN do SQL editor inválido.');
+
+    if (!body.sql?.trim()) throw new BadRequestException('Query SQL vazia.');
+
+    return this.tenantsService.executeSqlQuery(body.sql, body.tenantId, body.useHeart);
   }
 
   @Post('trigger-sync')

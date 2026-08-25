@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Save, Plus, Trash2, ArrowLeft, Send, Upload, AlertTriangle, Info, Image, Loader2, X, Search } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
+import { useAuthStore } from '@/store/auth';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface ProductSuggestion {
@@ -186,6 +187,8 @@ function NameAutocomplete({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function MassEntryPage() {
+  const { user } = useAuthStore();
+  const isStockist = user?.role === 'stockist';
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
@@ -373,7 +376,7 @@ export default function MassEntryPage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-4 lg:space-y-6 animate-in fade-in duration-500 w-full max-w-none">
+    <div className="space-y-4 lg:space-y-6 animate-in fade-in duration-500 w-full max-w-none pb-[calc(10rem+env(safe-area-inset-bottom,0px))] lg:pb-0">
       <input type="file" ref={rowFileInputRef} onChange={handleRowFileChange} accept="image/*" className="hidden" />
 
       {/* Banner */}
@@ -482,7 +485,7 @@ export default function MassEntryPage() {
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-center w-[60px]">Foto</th>
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[18%]">Nome da Mercadoria</th>
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-center w-[140px]">Fracionado</th>
-                <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">Venda (R$)</th>
+                {!isStockist && <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">Venda (R$)</th>}
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[11%]">Categoria</th>
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">Estoque</th>
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[130px]">Cód. Barras</th>
@@ -541,10 +544,12 @@ export default function MassEntryPage() {
                     </div>
                   </td>
 
-                  <td className="px-3 py-2 w-[90px]">
-                    <input type="number" step="0.01" placeholder="0.00" value={row.priceSell} onChange={e => updateRow(row.id, 'priceSell', e.target.value)}
-                      className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-3 py-2 text-sm text-emerald-400 font-black focus:outline-none focus:border-emerald-500 focus:bg-zinc-900 transition-colors" />
-                  </td>
+                  {!isStockist && (
+                    <td className="px-3 py-2 w-[90px]">
+                      <input type="number" step="0.01" placeholder="0.00" value={row.priceSell} onChange={e => updateRow(row.id, 'priceSell', e.target.value)}
+                        className="w-full bg-zinc-950/50 border border-zinc-800/80 rounded-lg px-3 py-2 text-sm text-emerald-400 font-black focus:outline-none focus:border-emerald-500 focus:bg-zinc-900 transition-colors" />
+                    </td>
+                  )}
 
                   <td className="px-3 py-2 w-[11%]">
                     <select value={row.categoryId} onChange={e => updateRow(row.id, 'categoryId', e.target.value)}
@@ -658,13 +663,15 @@ export default function MassEntryPage() {
               </div>
             </div>
 
-            {/* Fields: 3 columns for key data */}
-            <div className="px-3 pt-2 pb-2 grid grid-cols-3 gap-2">
-              <div>
-                <label className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider block mb-1">Venda R$</label>
-                <input type="number" inputMode="decimal" step="0.01" placeholder="0.00" value={row.priceSell} onChange={e => updateRow(row.id, 'priceSell', e.target.value)}
-                  className="w-full text-center bg-zinc-950 border border-emerald-500/30 rounded-lg px-1 py-2.5 text-sm text-emerald-400 font-black focus:outline-none focus:border-emerald-400 transition-colors" />
-              </div>
+            {/* Fields: key data */}
+            <div className={`px-3 pt-2 pb-2 grid ${isStockist ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
+              {!isStockist && (
+                <div>
+                  <label className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider block mb-1">Venda R$</label>
+                  <input type="number" inputMode="decimal" step="0.01" placeholder="0.00" value={row.priceSell} onChange={e => updateRow(row.id, 'priceSell', e.target.value)}
+                    className="w-full text-center bg-zinc-950 border border-emerald-500/30 rounded-lg px-1 py-2.5 text-sm text-emerald-400 font-black focus:outline-none focus:border-emerald-400 transition-colors" />
+                </div>
+              )}
               <div>
                 <label className="text-[9px] font-bold text-blue-400 uppercase tracking-wider block mb-1">Estoque</label>
                 <input type="number" inputMode="decimal" placeholder="Qtd" value={row.stockToAdd} onChange={e => updateRow(row.id, 'stockToAdd', e.target.value)}
@@ -756,10 +763,10 @@ export default function MassEntryPage() {
         </button>
       </div>
 
-      {/* Mobile floating process button */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800 z-50">
+      {/* Mobile floating process button — positioned safely above BottomNavigation */}
+      <div className="lg:hidden fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-0 right-0 p-3.5 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800/90 z-40 shadow-[0_-8px_20px_rgba(0,0,0,0.6)]">
         <button onClick={handleSubmit} disabled={loading}
-          className="w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-xl active:scale-95 text-base disabled:opacity-50">
+          className="w-full py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white transition-all shadow-lg shadow-blue-600/30 text-base disabled:opacity-50 cursor-pointer">
           {loading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
           Processar {rows.filter(r => r.name.trim()).length} Produto(s)
         </button>

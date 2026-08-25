@@ -70,9 +70,21 @@
   animation: item-added 500ms ease-out;
 }
 
-/* Safe area padding for notched devices */
+/* Safe area padding for notched and dynamic island devices */
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top, 0px), 16px);
+}
+.pt-safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
 .pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
+}
+.safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* Bottom sheet drag handle */

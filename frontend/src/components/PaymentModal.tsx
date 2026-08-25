@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { useShift } from '@/contexts/ShiftContext';
@@ -53,11 +53,18 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     return { estoque: true, nfce: true, dashboardMobile: true };
   })();
 
-  const isNfceEnabled = modules.nfce !== false;
+  const isNfceEnabled = modules.nfce !== false && Boolean(tenantConfig?.nfceAtivo);
 
   const [payments, setPayments] = useState<{ id: string; method: string; label?: string; value: number; given: number }[]>([]);
   const [method, setMethod] = useState<string>('dinheiro');
-  const [customMethods, setCustomMethods] = useState<{ id: string; name: string; hasVariablePricing?: boolean }[]>([]);
+  const [customMethods, setCustomMethods] = useState<{ id: string; name: string; hasVariablePricing?: boolean; emitirNfce?: boolean }[]>([]);
+  const [fixedMethodsSettings, setFixedMethodsSettings] = useState<Record<string, { emitirNfce: boolean }>>({
+    dinheiro: { emitirNfce: false },
+    pix: { emitirNfce: false },
+    credito: { emitirNfce: false },
+    debito: { emitirNfce: false },
+    consumo_funcionario: { emitirNfce: false },
+  });
   const [operatorsList, setOperatorsList] = useState<{ id: string; name: string }[]>([]);
   const [selectedOperatorId, setSelectedOperatorId] = useState('');
   const [inputValue, setInputValue] = useState('');
@@ -204,6 +211,23 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   const remaining = Math.max(0, Math.round((effectiveTotal - totalPaid) * 100) / 100);
   const change = payments.filter(p => p.method === 'dinheiro').reduce((acc, p) => acc + (p.given - p.value), 0);
 
+  // Determina dinamicamente se a venda atual exige emissão de NFC-e conforme a Regra de Prevalência Fiscal
+  const willEmitNfce = useMemo(() => {
+    if (!isNfceEnabled) return false;
+    const listToCheck = payments.length > 0 ? payments : [{ method }];
+    return listToCheck.some(p => {
+      const norm = (p.method || '').toLowerCase().trim();
+      if (norm in fixedMethodsSettings) {
+        return fixedMethodsSettings[norm]?.emitirNfce !== false;
+      }
+      const custom = customMethods.find(cm => cm.id === p.method);
+      if (custom) {
+        return custom.emitirNfce !== false;
+      }
+      return true;
+    });
+  }, [isNfceEnabled, payments, method, fixedMethodsSettings, customMethods]);
+
   const [autoNfce, setAutoNfce] = useState(() => {
     if (typeof window !== 'undefined') return localStorage.getItem('7bar_auto_nfce') === 'true';
     return false;
@@ -349,6 +373,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
       setSaleResult(null); setNfcePolling(false); setSavedOffline(false);
       setDiscountValue(0); setDiscountPinInput(''); setPinVerified(false); setPendingDiscountStr('');
       setSelectedOperatorId(''); setAdvancedOpen(false);
+      if (!isNfceEnabled) setAutoNfce(false);
       
       api.get('/operators')
         .then(res => setOperatorsList(res.data || []))
@@ -362,6 +387,12 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
             !standardKeys.includes((m.name || '').toLowerCase().trim()) && 
             !standardKeys.includes((m.id || '').toLowerCase().trim())
           ));
+        })
+        .catch(console.error);
+
+      api.get('/payment-methods/settings')
+        .then(res => {
+          if (res.data) setFixedMethodsSettings(res.data);
         })
         .catch(console.error);
 

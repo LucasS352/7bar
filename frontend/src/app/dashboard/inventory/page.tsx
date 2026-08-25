@@ -159,6 +159,7 @@ function SupplierSelector({ product, suppliers, onToggle }: { product: Product, 
 export default function InventoryDashboard() {
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  const isStockist = user?.role === 'stockist';
   const navigate = useNavigate();
 
   const [products,            setProducts]            = useState<Product[]>([]);
@@ -806,23 +807,27 @@ export default function InventoryDashboard() {
             </div>
           )}
       {/* Cards KPI */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      <div className={`grid grid-cols-2 ${isStockist ? 'md:grid-cols-2' : 'md:grid-cols-4'} gap-3 md:gap-4`}>
         <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center">
           <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><Package size={16}/> SKUs / Físico</div>
           <div className="text-xl md:text-2xl font-black text-white">{totalVarieties.toLocaleString('pt-BR')} <span className="text-xs md:text-sm font-medium text-zinc-500">tipos</span> / {Math.round(totalItemsCount).toLocaleString('pt-BR')} <span className="text-xs md:text-sm font-medium text-zinc-500">unid.</span></div>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-rose-500/50">
-          <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><BarChart3 size={16} className="text-rose-400"/> <span className="hidden sm:inline">Custo Imobilizado</span><span className="sm:hidden">Custo</span></div>
-          <div className="text-xl md:text-2xl font-black text-rose-400 truncate">{totalCostValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-        </div>
-        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-blue-500/50">
-          <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><DollarSign size={16} className="text-blue-400"/> <span className="hidden sm:inline">Valor Bruto de Venda</span><span className="sm:hidden">Varejo</span></div>
-          <div className="text-xl md:text-2xl font-black text-blue-400 truncate">{totalGrossValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-        </div>
-        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-emerald-500/50">
-          <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><TrendingUp size={16} className="text-emerald-400"/> Lucro Projetado</div>
-          <div className="text-xl md:text-2xl font-black text-emerald-400 truncate">{expectedProfit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-        </div>
+        {!isStockist && (
+          <>
+            <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-rose-500/50">
+              <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><BarChart3 size={16} className="text-rose-400"/> <span className="hidden sm:inline">Custo Imobilizado</span><span className="sm:hidden">Custo</span></div>
+              <div className="text-xl md:text-2xl font-black text-rose-400 truncate">{totalCostValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-blue-500/50">
+              <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><DollarSign size={16} className="text-blue-400"/> <span className="hidden sm:inline">Valor Bruto de Venda</span><span className="sm:hidden">Varejo</span></div>
+              <div className="text-xl md:text-2xl font-black text-blue-400 truncate">{totalGrossValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-5 rounded-2xl flex flex-col justify-center border-b-4 border-b-emerald-500/50">
+              <div className="text-zinc-400 font-medium text-xs md:text-sm flex items-center gap-2 mb-2"><TrendingUp size={16} className="text-emerald-400"/> Lucro Projetado</div>
+              <div className="text-xl md:text-2xl font-black text-emerald-400 truncate">{expectedProfit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Busca + Toggle Admin */}
@@ -940,9 +945,9 @@ export default function InventoryDashboard() {
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">Fornecedores</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">Atalho</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-left">Cód. Barras</th>
-                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-right">Custo</th>
-                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-right">Varejo</th>
-                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">% Lucro</th>
+                {!isStockist && <th className="px-6 py-4 font-semibold uppercase tracking-wider text-right">Custo</th>}
+                {!isStockist && <th className="px-6 py-4 font-semibold uppercase tracking-wider text-right">Varejo</th>}
+                {!isStockist && <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">% Lucro</th>}
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">Status</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">Físico</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">Ações</th>
@@ -988,15 +993,21 @@ export default function InventoryDashboard() {
                   <td className="px-6 py-5 text-zinc-500 text-sm font-mono">
                     {product.barcode || 'Sem Cód.'}
                   </td>
-                  <td className="px-6 py-5 text-rose-400/80 font-medium text-right">
-                    R$ {product.priceCost ? Number(product.priceCost).toFixed(2) : '0.00'}
-                  </td>
-                  <td className="px-6 py-5 text-emerald-400 font-bold text-right">
-                    R$ {Number(product.priceSell).toFixed(2)}
-                  </td>
-                  <td className="px-6 py-5 text-amber-400 font-bold text-center">
-                    {Number(product.priceSell) > 0 ? (((Number(product.priceSell) - Number(product.priceCost)) / Number(product.priceSell)) * 100).toFixed(1) + '%' : '0.0%'}
-                  </td>
+                  {!isStockist && (
+                    <td className="px-6 py-5 text-rose-400/80 font-medium text-right">
+                      R$ {product.priceCost ? Number(product.priceCost).toFixed(2) : '0.00'}
+                    </td>
+                  )}
+                  {!isStockist && (
+                    <td className="px-6 py-5 text-emerald-400 font-bold text-right">
+                      R$ {Number(product.priceSell).toFixed(2)}
+                    </td>
+                  )}
+                  {!isStockist && (
+                    <td className="px-6 py-5 text-amber-400 font-bold text-center">
+                      {Number(product.priceSell) > 0 ? (((Number(product.priceSell) - Number(product.priceCost)) / Number(product.priceSell)) * 100).toFixed(1) + '%' : '0.0%'}
+                    </td>
+                  )}
                   <td className="px-6 py-5 text-center">
                     <button
                       onClick={() => handleToggleActive(product.id, product.active !== false)}
@@ -1090,6 +1101,7 @@ export default function InventoryDashboard() {
                 </div>
 
                 {/* Preços e Margem */}
+                {!isStockist && (
                 <div className="bg-zinc-950/80 rounded-xl border border-zinc-800 p-3 mt-1 grid grid-cols-2 gap-y-3 gap-x-2">
                   <div className="flex flex-col">
                     <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Custo</span>
@@ -1113,6 +1125,7 @@ export default function InventoryDashboard() {
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Ações e Estoque */}
                 <div className="flex justify-between items-center mt-1 gap-2">

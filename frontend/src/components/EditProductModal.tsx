@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Edit3, X, Loader2, Save, DollarSign, FileText, Tag, PackageOpen, Upload, Trash2 } from 'lucide-react';
 import { ProductSearchSelect } from './ProductSearchSelect';
+import { useAuthStore } from '@/store/auth';
 
 const UNIT_OPTIONS = ['UN', 'KG', 'LT', 'CX', 'DZ', 'PCT', 'FD', 'ML', 'GR'];
 const ORIGEM_OPTIONS = [
@@ -44,6 +45,8 @@ export function EditProductModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const { user } = useAuthStore();
+  const isStockist = user?.role === 'stockist';
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [grupos, setGrupos] = useState<GrupoTributacao[]>([]);
   const [loading, setLoading] = useState(false);
@@ -498,8 +501,9 @@ export function EditProductModal({
                 <label className={lbl}>Preço de Venda *</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm font-bold">R$</span>
-                  <input required type="number" step="0.01" min="0" className={`${inp} pl-9 text-emerald-400 font-black`} value={formData.priceSell} onChange={e => f('priceSell', e.target.value)} />
+                  <input required type="number" step="0.01" min="0" className={`${inp} pl-9 ${isStockist ? 'text-zinc-600 cursor-not-allowed' : 'text-emerald-400 font-black'}`} value={formData.priceSell} onChange={e => !isStockist && f('priceSell', e.target.value)} disabled={isStockist} title={isStockist ? 'Estoquista não pode alterar preço de venda' : ''} />
                 </div>
+                {isStockist && <p className="text-[10px] text-amber-500/70 mt-1">🔒 Sem permissão para alterar preço de venda</p>}
               </div>
             </div>
 

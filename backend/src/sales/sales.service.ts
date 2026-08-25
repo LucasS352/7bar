@@ -227,7 +227,7 @@ export class SalesService {
       const finalTotalStr = total.toDecimalPlaces(2);
 
 
-      // ─── 3. Checar se a venda contém apenas produtos SNF (Sem Nota) ─────────
+      // ─── 3. Checar formas de pagamento e produtos SNF ──────────────────────
       const isSnfProduct = (p: any) => {
         const grupoNome = (p?.grupoTributacao?.nome || p?.category?.grupoTributacao?.nome || '').toLowerCase();
         return grupoNome.includes('snf') || grupoNome.includes('sem nota');
@@ -237,6 +237,36 @@ export class SalesService {
         const p = productMap.get(item.productId);
         return p && isSnfProduct(p);
       });
+
+      // Carregar configurações de formas de pagamento para aplicar a Regra de Prevalência Fiscal
+      const defaultFixedMethodsConfig: Record<string, { emitirNfce: boolean }> = {
+        dinheiro: { emitirNfce: false },
+        pix: { emitirNfce: false },
+        credito: { emitirNfce: false },
+        debito: { emitirNfce: false },
+        consumo_funcionario: { emitirNfce: false },
+      };
+      const fixedConfig = {
+        ...defaultFixedMethodsConfig,
+        ...((tenantSettings?.paymentMethodsConfig as Record<string, any>) || {}),
+      };
+
+      const customPaymentMethods = await tx.tenantPaymentMethod.findMany();
+      const customMethodMap = new Map(customPaymentMethods.map(m => [m.id, m]));
+
+      const isMethodFiscal = (methodKey: string) => {
+        const normKey = (methodKey || '').toLowerCase();
+        if (normKey in fixedConfig) {
+          return fixedConfig[normKey]?.emitirNfce === true;
+        }
+        const custom = customMethodMap.get(methodKey) as any;
+        if (custom) {
+          return custom.emitirNfce === true;
+        }
+        return false;
+      };
+
+      const hasAnyFiscalPayment = (data.payments || []).some((p: any) => isMethodFiscal(p.method));
 
       let nfceNumero: number | null = null;
       let emitirNfce = Boolean(data.emitirNfce);
@@ -249,6 +279,11 @@ export class SalesService {
           emitirNfce = false;
           initialNfceStatus = 'nao_emitida';
           initialNfceMotivo = 'Venda contém apenas produtos sem nota (SNF).';
+        } else if (!hasAnyFiscalPayment) {
+          // Venda 100% em formas não-fiscais (ex: 100% Dinheiro desmarcado)
+          emitirNfce = false;
+          initialNfceStatus = 'nao_emitida';
+          initialNfceMotivo = 'Forma de pagamento não fiscal (sem emissão).';
         } else {
           const serie = data.nfceSerie ?? 1;
           const numeracao = await tx.numeracaoNfce.upsert({
@@ -270,8 +305,16 @@ export class SalesService {
         }
       }
 
+      // Obter próximo código sequencial amigável de venda
+      const lastSale = await tx.sale.findFirst({
+        orderBy: { code: 'desc' },
+        select: { code: true }
+      });
+      const nextSaleCode = (lastSale?.code ?? 0) + 1;
+
       const sale = await tx.sale.create({
         data: {
+          code:           nextSaleCode,
           customerId:     data.customerId || null,
           operatorId,
           cashRegisterId: data.cashRegisterId || null,

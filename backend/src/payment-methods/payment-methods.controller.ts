@@ -12,13 +12,23 @@ export class PaymentMethodsController {
     return this.service.findAll();
   }
 
+  @Get('settings')
+  getSettings() {
+    return this.service.getSettings();
+  }
+
+  @Patch('settings')
+  updateSettings(@Body() body: Record<string, { emitirNfce: boolean }>) {
+    return this.service.updateSettings(body);
+  }
+
   @Post()
-  create(@Body() body: { name: string; tPag?: string; hasVariablePricing?: boolean }) {
+  create(@Body() body: { name: string; tPag?: string; hasVariablePricing?: boolean; emitirNfce?: boolean }) {
     return this.service.create(body);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: { name?: string; tPag?: string; active?: boolean; hasVariablePricing?: boolean }) {
+  update(@Param('id') id: string, @Body() body: { name?: string; tPag?: string; active?: boolean; hasVariablePricing?: boolean; emitirNfce?: boolean }) {
     return this.service.update(id, body);
   }
 

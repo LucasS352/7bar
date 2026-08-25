@@ -58,6 +58,8 @@ export function LoginPage() {
       toast.success(`Bem vindo ao ${data.user.tenant}, ${data.user.name}!`);
       if (data.user.role === 'group_owner' || data.user.groupId) {
         navigate('/grupo-portal');
+      } else if (data.user.role === 'stockist') {
+        navigate('/dashboard/inventory');
       } else if (data.user.role === 'admin' || data.user.role === 'superadmin') {
         navigate('/dashboard');
       } else {

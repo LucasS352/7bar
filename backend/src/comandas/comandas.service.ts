@@ -45,6 +45,13 @@ export class ComandasService {
             createdAt: true,
           },
         },
+        waiter: {
+          select: {
+            id: true,
+            name: true,
+            jobTitle: true,
+          },
+        },
       },
       orderBy: { updatedAt: 'desc' },
     });
@@ -64,6 +71,13 @@ export class ComandasService {
           orderBy: { createdAt: 'desc' },
         },
         sale: true,
+        waiter: {
+          select: {
+            id: true,
+            name: true,
+            jobTitle: true,
+          },
+        },
       },
     });
 
@@ -74,7 +88,7 @@ export class ComandasService {
     return comanda;
   }
 
-  async create(data: { number: string; customerName?: string; notes?: string }) {
+  async create(data: { number: string; customerName?: string; notes?: string; waiterId?: string }) {
     const prisma = await this.getPrisma();
 
     if (!data.number || data.number.trim() === '') {
@@ -93,18 +107,26 @@ export class ComandasService {
       throw new BadRequestException(`Já existe uma comanda/mesa aberta com a identificação "${data.number}".`);
     }
 
+    const createData: any = {
+      number: data.number.trim(),
+      customerName: data.customerName?.trim() || null,
+      notes: data.notes?.trim() || null,
+      status: 'open',
+      total: 0,
+    };
+
+    // Vincular garçom se informado (Módulo Restaurante — campo opcional)
+    if (data.waiterId) {
+      try {
+        createData.waiterId = data.waiterId;
+      } catch { /* ignora se coluna ainda não existe */ }
+    }
+
     const comanda = await (prisma as any).comanda.create({
-      data: {
-        number: data.number.trim(),
-        customerName: data.customerName?.trim() || null,
-        notes: data.notes?.trim() || null,
-        status: 'open',
-        total: 0,
-      },
+      data: createData,
       include: {
-        items: {
-          include: { product: true },
-        },
+        items: { include: { product: true } },
+        waiter: { select: { id: true, name: true, jobTitle: true } },
       },
     });
 

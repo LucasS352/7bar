@@ -32,8 +32,15 @@ export class CashRegistersService {
           throw new BadRequestException(`Você já possui um caixa aberto. Feche-o antes de abrir um novo.`);
         }
 
+        const lastRegister = await tx.cashRegister.findFirst({
+          orderBy: { code: 'desc' },
+          select: { code: true }
+        });
+        const nextCode = (lastRegister?.code ?? 0) + 1;
+
         return await tx.cashRegister.create({
           data: {
+            code: nextCode,
             operatorId: currentOpId,
             openingValue,
             status: 'open'

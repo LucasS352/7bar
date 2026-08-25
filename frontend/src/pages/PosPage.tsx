@@ -86,6 +86,7 @@ function PosPageContent() {
   const [loadingComandas, setLoadingComandas] = useState(false);
   const [comandaSearch, setComandaSearch] = useState('');
   const [selectedComandaId, setSelectedComandaId] = useState<string | null>(null);
+  const [newComandaBadge, setNewComandaBadge] = useState(false); // Badge de nova comanda
 
   const modules = useMemo(() => {
     try {
@@ -104,7 +105,29 @@ function PosPageContent() {
     setLoadingComandas(true);
     try {
       const res = await api.get('/v1/comandas?status=open');
-      setOpenComandas(res.data || []);
+      const newList: any[] = res.data || [];
+      setOpenComandas(prev => {
+        // Detectar se chegou nova comanda desde o último polling
+        const prevIds = new Set(prev.map((c: any) => c.id));
+        const hasNew = newList.some(c => !prevIds.has(c.id));
+        if (hasNew && prev.length > 0) {
+          setNewComandaBadge(true);
+          // Beep sonoro discreto via Web Audio API
+          try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.3);
+          } catch { /* silencia se AudioContext não disponível */ }
+        }
+        return newList;
+      });
     } catch (err) {
       console.error(err);
     } finally {
@@ -416,7 +439,12 @@ function PosPageContent() {
       <DemoBanner />
       <CapitaoGelada />
       {/* Esquerda */}
-      <div className="flex-1 flex flex-col p-3 lg:p-6 lg:pr-4 pb-[80px] lg:pb-6 relative h-full min-w-0">
+      <div
+        className="flex-1 flex flex-col p-3 lg:p-6 lg:pr-4 pb-[80px] lg:pb-6 relative h-full min-w-0"
+        style={{
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)',
+        }}
+      >
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:flex-wrap lg:justify-between lg:items-center mb-3 lg:mb-6 gap-3 shrink-0">
           <div className="flex justify-between items-center w-full lg:w-auto gap-2 lg:gap-4 min-h-[44px] lg:min-h-[64px]">
@@ -473,19 +501,26 @@ function PosPageContent() {
               {isComandasEnabled && (
                 <button
                   type="button"
-                  onClick={() => setIsComandasModalOpen(true)}
+                  onClick={() => { setIsComandasModalOpen(true); setNewComandaBadge(false); }}
                   className={`relative p-2.5 rounded-xl transition shrink-0 active:scale-95 cursor-pointer ${
-                    openComandas.length > 0
-                      ? 'text-amber-400 bg-amber-500/15 border border-amber-500/30 shadow-md shadow-amber-500/10'
-                      : 'text-zinc-400 hover:text-amber-400 bg-zinc-900 border border-zinc-800'
+                    newComandaBadge
+                      ? 'text-orange-400 bg-orange-500/15 border border-orange-500/40 shadow-md shadow-orange-500/20 animate-pulse'
+                      : openComandas.length > 0
+                        ? 'text-amber-400 bg-amber-500/15 border border-amber-500/30 shadow-md shadow-amber-500/10'
+                        : 'text-zinc-400 hover:text-amber-400 bg-zinc-900 border border-zinc-800'
                   }`}
                   title={openComandas.length === 0 ? "Comandas & Mesas" : `Comandas (${openComandas.length} aberta(s))`}
                 >
                   <UtensilsCrossed size={17} />
                   {openComandas.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-amber-500 text-zinc-950 font-black text-[9px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center border border-zinc-950 shadow">
+                    <span className={`absolute -top-1 -right-1 font-black text-[9px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center border border-zinc-950 shadow ${
+                      newComandaBadge ? 'bg-orange-500 text-white' : 'bg-amber-500 text-zinc-950'
+                    }`}>
                       {openComandas.length}
                     </span>
+                  )}
+                  {newComandaBadge && (
+                    <span className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 rounded-full bg-orange-500 border border-zinc-950 animate-ping opacity-75" />
                   )}
                 </button>
               )}

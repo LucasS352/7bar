@@ -5,6 +5,7 @@ import { useDemoMissionsStore } from '@/store/demoMissions';
 import { toast } from 'sonner';
 import { PackagePlus, X, Loader2, Save, DollarSign, Barcode, CheckCircle2, HelpCircle, Upload, Image, Trash2 } from 'lucide-react';
 import { ProductSearchSelect } from './ProductSearchSelect';
+import { useAuthStore } from '@/store/auth';
 
 const UNIT_OPTIONS = ['UN', 'KG', 'LT', 'CX', 'DZ', 'PCT', 'FD', 'ML', 'GR'];
 const ORIGEM_OPTIONS = [
@@ -19,6 +20,8 @@ interface GrupoTributacao { id: string; nome: string; csosn?: string; cfop: stri
 export function AddProductModal({ isOpen, onClose, onSuccess }: {
   isOpen: boolean; onClose: () => void; onSuccess: () => void;
 }) {
+  const { user } = useAuthStore();
+  const isStockist = user?.role === 'stockist';
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [grupos, setGrupos] = useState<GrupoTributacao[]>([]);
   const [loading, setLoading] = useState(false);
@@ -498,14 +501,17 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">R$</span>
                   <input
-                    required
+                    required={!isStockist}
                     type="number" step="0.01" min="0"
-                    className={`${inputCls} pl-9 text-emerald-400 font-black`}
+                    className={`${inputCls} pl-9 ${isStockist ? 'text-zinc-600 cursor-not-allowed' : 'text-emerald-400 font-black'}`}
                     placeholder="0.00"
                     value={formData.priceSell}
-                    onChange={e => f('priceSell', e.target.value)}
+                    onChange={e => !isStockist && f('priceSell', e.target.value)}
+                    disabled={isStockist}
+                    title={isStockist ? 'Estoquista não pode alterar preço de venda' : ''}
                   />
                 </div>
+                {isStockist && <p className="text-[10px] text-amber-500/70 mt-1">🔒 Sem permissão para alterar preço de venda</p>}
               </div>
               <div>
                 <label className={labelCls}>Categoria <span className="text-red-500">*</span></label>

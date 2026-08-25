@@ -195,6 +195,7 @@ model Operator {
   sales         Sale[]
   cashRegisters CashRegister[]
   consumptions  OperatorConsumption[] @relation("OperatorConsumptions")
+  comandasAsWaiter Comanda[]          @relation("ComandaWaiter") // Módulo Restaurante
 
   @@map("operators")
 }
@@ -264,6 +265,7 @@ model Sale {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  code                Int?          // Código sequencial amigável da venda (ex: 1, 2, 3...)
   cancelReason        String?       @db.Text
   cancelledAt         DateTime?
 
@@ -272,6 +274,7 @@ model Sale {
   operatorConsumption OperatorConsumption?
   comandas            Comanda[]
 
+  @@index([code])
   @@index([createdAt])
   @@map("sales")
 }
@@ -354,6 +357,7 @@ model TenantPaymentMethod {
   name               String   // Ex: "iFood", "Ticket Alimentação"
   tPag               String   @default("99") // código SEFAZ (99=Outros por padrão)
   active             Boolean  @default(true)
+  emitirNfce         Boolean  @default(false) // Se true, pagamentos com este método exigem emissão de NFC-e
   hasVariablePricing Boolean  @default(false) // Se true, abre tabela de preços customizada no PDV
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -389,6 +393,7 @@ model CashRegister {
   id           String    @id @default(uuid())
   operatorId   String?   // ID do colaborador
   operator     Operator? @relation(fields: [operatorId], references: [id])
+  code         Int?      // Código sequencial amigável do turno/caixa (ex: 1, 2, 3...)
   openingTime  DateTime  @default(now())
   closingTime  DateTime?
   openingValue Decimal   @default(0) @db.Decimal(10, 2)
@@ -398,6 +403,7 @@ model CashRegister {
   movements CashMovement[]
   sales     Sale[]
 
+  @@index([code])
   @@index([status])
   @@map("cash_registers")
 }
@@ -472,6 +478,8 @@ model TenantSettings {
   expiryAlertDays    Int     @default(30)
   /// Limite padrão de estoque baixo (para produtos sem minStock definido)
   lowStockAlertDefault Int   @default(5)
+  /// Configurações fiscais e de comportamento das formas de pagamento fixas (dinheiro, pix, cartões, etc.)
+  paymentMethodsConfig Json?
 
   @@map("tenant_settings")
 }
@@ -844,9 +852,12 @@ model Comanda {
   status       String        @default("open") // open, closed, cancelled
   total        Decimal       @default(0) @db.Decimal(10, 2)
   notes        String?
-  
+
+  waiterId     String?       // Garçom responsável pela comanda (Módulo Restaurante)
+  waiter       Operator?     @relation("ComandaWaiter", fields: [waiterId], references: [id])
+
   items        ComandaItem[]
-  
+
   saleId       String?       // Venda gerada no fechamento
   sale         Sale?         @relation(fields: [saleId], references: [id])
 
@@ -854,6 +865,7 @@ model Comanda {
   updatedAt    DateTime      @updatedAt
 
   @@index([status])
+  @@index([waiterId])
   @@map("comandas")
 }
 
