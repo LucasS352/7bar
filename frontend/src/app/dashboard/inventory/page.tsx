@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useDeferredValue, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
-import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert, X, Truck, ShoppingCart, FileSpreadsheet, Save, AlertTriangle, CalendarClock, PackageOpen, Split, Check, Download, ClipboardList, FileDown } from 'lucide-react';
+import { Package, Search, Edit3, Loader2, DollarSign, TrendingUp, BarChart3, AlertOctagon, Plus, PackagePlus, ShieldAlert, X, Truck, ShoppingCart, FileSpreadsheet, Save, AlertTriangle, CalendarClock, PackageOpen, Split, Check, Download, ClipboardList, FileDown, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
 import { AddProductModal } from '@/components/AddProductModal';
@@ -219,6 +219,10 @@ export default function InventoryDashboard() {
   // ── Módulo NFC-e (controla exibição de avisos fiscais) ──
   const [nfceModuleEnabled, setNfceModuleEnabled] = useState(false);
 
+  // ── Filtro de Ativos / Inativos e Configurações ──
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
+  const [showStockSettings, setShowStockSettings] = useState(false);
+
   const fetchExpiryData = useCallback((daysToUse: number) => {
     api.get(`/products/lots/expiring?days=${daysToUse}`)
       .then(lotsRes => {
@@ -298,19 +302,20 @@ export default function InventoryDashboard() {
     if (!lotModalProduct || !registerLotQty || Number(registerLotQty) <= 0) return;
     try {
       setIsRegisteringLot(true);
-      await api.post(`/products/lots/register-existing/${lotModalProduct.id}`, {
+      await api.post(`/products/${lotModalProduct.id}/lots`, {
         quantity: Number(registerLotQty),
-        costPrice: Number(lotModalProduct.priceCost) || 0,
-        lotNumber: registerLotNumber || undefined,
         expiresAt: registerLotExpiry || undefined,
+        lotNumber: registerLotNumber || undefined
       });
-      toast.success(`Lote registrado: ${registerLotQty} un.`);
+      toast.success('Estoque registrado como lote com sucesso!');
+      handleOpenLotsModal(lotModalProduct);
+      fetchProducts();
+      if (enableExpiryControl) {
+        fetchExpiryData(expiryAlertDays);
+      }
       setIsRegisterLotOpen(false);
       setRegisterLotQty('');
       setRegisterLotExpiry('');
-      setRegisterLotNumber('');
-      handleOpenLotsModal(lotModalProduct);
-      fetchProducts();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Erro ao registrar lote.');
     } finally {
@@ -320,7 +325,7 @@ export default function InventoryDashboard() {
 
   const fetchProducts = useCallback(() => {
     setLoading(true);
-    api.get('/products?limit=2000')
+    api.get('/products?limit=5000&includeInactive=true')
       .then(res => {
         const data = Array.isArray(res.data) ? res.data : (res.data as any).data;
         setProducts(data || []);
@@ -606,6 +611,8 @@ export default function InventoryDashboard() {
     const searchTerms = normalizeStr(debouncedSearch).split(' ').filter(t => t.trim() !== '');
     
     const filtered = products.filter(p => {
+      if (statusFilter === 'active' && p.active === false) return false;
+      if (statusFilter === 'inactive' && p.active !== false) return false;
       if (selectedCategory && p.categoryId !== selectedCategory) return false;
       if (searchTerms.length === 0) return true;
       const searchString = normalizeStr(`${p.name} ${p.barcode || ''} ${p.shortCode || ''}`);
@@ -617,16 +624,17 @@ export default function InventoryDashboard() {
     const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
     
     return { displayedProducts: paginated, totalPages: totalPagesCount };
-  }, [products, debouncedSearch, currentPage, selectedCategory]);
+  }, [products, debouncedSearch, currentPage, selectedCategory, statusFilter]);
 
   const { totalVarieties, totalItemsCount, totalGrossValue, totalCostValue, expectedProfit, lowStockProducts } = useMemo(() => {
-    const totalVarieties  = products.length;
+    const activeProducts = products.filter(p => p.active !== false);
+    const totalVarieties  = activeProducts.length;
     let totalItemsCount = 0;
     let totalGrossValue = 0;
     let totalCostValue  = 0;
     const lowStockProducts = [];
 
-    for (const p of products) {
+    for (const p of activeProducts) {
       const stock = Number(p.stock);
       totalItemsCount += stock;
       totalGrossValue += Number(p.priceSell) * stock;
@@ -830,110 +838,187 @@ export default function InventoryDashboard() {
         )}
       </div>
 
-      {/* Busca + Toggle Admin */}
+      {/* Busca + Filtros + Configurações do Estoque */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
-        <div className="p-4 md:p-6 border-b border-zinc-800 bg-zinc-900/50 flex flex-col md:flex-row items-stretch md:items-center gap-4">
-          <div className="relative w-full md:flex-1 md:max-w-md">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={18} className="text-zinc-500" />
-            </div>
-            <input
-              type="text"
-              placeholder="Buscar no catálogo..."
-              className="w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:ring-1 focus:ring-blue-500 text-white placeholder-zinc-500 focus:outline-none"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="relative w-full md:w-auto min-w-[200px]">
-            <select
-              value={selectedCategory}
-              onChange={e => setSelectedCategory(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 appearance-none"
-            >
-              <option value="">Todas as Categorias</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 md:ml-auto">
-          {/* Toggle Vender sem Estoque — Exclusivo para Admin */}
-          {isAdmin && (
-            <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors ${allowNegativeStock ? 'bg-amber-500/10 border-amber-500/30' : 'bg-zinc-950/50 border-zinc-700'}`}>
-              <ShieldAlert size={18} className={allowNegativeStock ? 'text-amber-400' : 'text-zinc-500'} />
-              <span className={`text-sm font-bold ${allowNegativeStock ? 'text-amber-400' : 'text-zinc-500'}`}>
-                Vender sem estoque
-              </span>
-              <button
-                onClick={() => handleToggleNegativeStock(!allowNegativeStock)}
-                disabled={savingSettings}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${allowNegativeStock ? 'bg-amber-500' : 'bg-zinc-700'} ${savingSettings ? 'opacity-50 cursor-wait' : ''}`}
-                title={allowNegativeStock ? 'Clique para desativar venda sem estoque' : 'Clique para permitir venda sem estoque'}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${allowNegativeStock ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
-            </div>
-          )}
-
-          {/* Toggle Controle de Validade — Exclusivo para Admin */}
-          {isAdmin && (
-            <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors ${enableExpiryControl ? 'bg-blue-500/10 border-blue-500/30' : 'bg-zinc-950/50 border-zinc-700'}`}>
-              <CalendarClock size={18} className={enableExpiryControl ? 'text-blue-400' : 'text-zinc-500'} />
-              <span className={`text-sm font-bold ${enableExpiryControl ? 'text-blue-400' : 'text-zinc-500'}`}>
-                Controle de Validade
-              </span>
-              <button
-                onClick={() => handleToggleExpiryControl(!enableExpiryControl)}
-                disabled={savingExpirySettings}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${enableExpiryControl ? 'bg-blue-500' : 'bg-zinc-700'} ${savingExpirySettings ? 'opacity-50 cursor-wait' : ''}`}
-                title={enableExpiryControl ? 'Clique para desativar o controle de validades' : 'Clique para ativar o controle de validades'}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enableExpiryControl ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
-              {enableExpiryControl && (
-                <div className="flex items-center gap-1 border-l border-blue-500/30 pl-3 ml-1">
-                  <input
-                    type="number"
-                    min="1"
-                    max="365"
-                    value={expiryAlertDaysInput}
-                    onChange={(e) => setExpiryAlertDaysInput(e.target.value)}
-                    onBlur={handleSaveExpiryDays}
-                    className="w-12 bg-zinc-950 border border-zinc-700 rounded-md px-1.5 py-0.5 text-xs text-center text-white focus:outline-none focus:border-blue-500 hide-arrows"
-                    title="Avisar quantos dias antes do vencimento?"
-                  />
-                  <span className="text-xs text-zinc-400 font-medium">dias <AlertTriangle size={10} className="inline opacity-50"/></span>
-                </div>
+        <div className="p-3.5 md:p-4 border-b border-zinc-800 bg-zinc-900/60">
+          
+          {/* Barra Principal (1 Linha Proporcional no Desktop / 2 Linhas no Mobile) */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5 sm:gap-3">
+            
+            {/* Input de Busca */}
+            <div className="relative flex-1 min-w-0 md:max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
+                <Search size={16} />
+              </div>
+              <input
+                type="text"
+                placeholder="Buscar por nome, código ou EAN..."
+                className="w-full pl-9 pr-8 py-2 bg-zinc-950 border border-zinc-800 focus:border-blue-500 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none transition"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
               )}
             </div>
-          )}
 
-          <div className="flex items-center gap-2 bg-zinc-800/50 border border-zinc-700 px-4 py-2 rounded-xl text-zinc-300 font-bold text-sm whitespace-nowrap">
-            Total Cadastrados: <span className="text-white">{products.length}</span>
+            {/* Grupo de Filtros (2 colunas no mobile, larguras elegantes no desktop) */}
+            <div className="grid grid-cols-2 md:flex md:items-center gap-2 sm:gap-3">
+              <div className="relative md:w-52">
+                <select
+                  value={selectedCategory}
+                  onChange={e => {
+                    setSelectedCategory(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 transition cursor-pointer appearance-none truncate"
+                >
+                  <option value="">📁 Todas Categorias</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="relative md:w-44">
+                <select
+                  value={statusFilter}
+                  onChange={e => {
+                    setStatusFilter(e.target.value as any);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-zinc-300 focus:outline-none focus:border-blue-500 transition cursor-pointer appearance-none truncate font-medium"
+                >
+                  <option value="active">🟢 Ativos ({products.filter(p => p.active !== false).length})</option>
+                  <option value="inactive">⚪ Inativos ({products.filter(p => p.active === false).length})</option>
+                  <option value="all">📋 Todos ({products.length})</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Botão Regras + Contador (lado direito no desktop) */}
+            <div className="flex items-center justify-between md:justify-end gap-3 md:ml-auto">
+              <div className="text-xs text-zinc-500 font-medium">
+                Exibindo <strong className="text-zinc-300">{displayedProducts.length}</strong> de <strong className="text-zinc-300">{products.length}</strong>
+              </div>
+
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setShowStockSettings(!showStockSettings)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 shadow-sm ${
+                    showStockSettings
+                      ? 'bg-blue-600 border-blue-500 text-white shadow-blue-600/20'
+                      : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800/80'
+                  }`}
+                  title="Configurações e Regras de Estoque"
+                >
+                  <SlidersHorizontal size={14} />
+                  <span>Regras</span>
+                  {showStockSettings ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                </button>
+              )}
+            </div>
+
           </div>
 
-          {/* Alerta de Reposição padrão */}
-          {isAdmin && (
-            <div className="flex items-center gap-2 bg-zinc-950/50 border border-zinc-700 px-4 py-2 rounded-xl text-zinc-400 text-sm font-medium">
-              <AlertOctagon size={16} className="text-red-400 shrink-0" />
-              <span className="text-zinc-400 text-sm font-bold whitespace-nowrap">Alerta de Reposição:</span>
-              <input
-                type="number"
-                min="0"
-                value={lowStockAlertInput}
-                onChange={e => setLowStockAlertInput(e.target.value)}
-                onBlur={handleSaveLowStockAlert}
-                disabled={savingLowStockAlert}
-                className="w-14 bg-zinc-950 border border-zinc-700 rounded-md px-1.5 py-0.5 text-xs text-center text-white focus:outline-none focus:border-red-500 hide-arrows disabled:opacity-50"
-                title="Avisar quando estoque estiver abaixo deste valor (padrão para produtos sem mínimo definido)"
-              />
-              <span className="text-xs text-zinc-500 whitespace-nowrap">un.</span>
+          {/* Painel Retrátil de Regras do Estoque (Accordion Suave) */}
+          {isAdmin && showStockSettings && (
+            <div className="pt-3 border-t border-zinc-800/80 grid grid-cols-1 sm:grid-cols-3 gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
+              
+              {/* Toggle Vender sem Estoque */}
+              <div className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-all ${
+                allowNegativeStock ? 'bg-amber-500/10 border-amber-500/30' : 'bg-zinc-950/70 border-zinc-800'
+              }`}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <ShieldAlert size={16} className={allowNegativeStock ? 'text-amber-400' : 'text-zinc-500'} />
+                  <span className={`text-xs font-bold truncate ${allowNegativeStock ? 'text-amber-400' : 'text-zinc-400'}`}>
+                    Vender sem estoque
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleNegativeStock(!allowNegativeStock)}
+                  disabled={savingSettings}
+                  className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
+                    allowNegativeStock ? 'bg-amber-500' : 'bg-zinc-700'
+                  } ${savingSettings ? 'opacity-50 cursor-wait' : ''}`}
+                >
+                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                    allowNegativeStock ? 'translate-x-4' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+
+              {/* Toggle Controle de Validade */}
+              <div className={`flex items-center justify-between gap-2 p-3 rounded-xl border transition-all ${
+                enableExpiryControl ? 'bg-blue-500/10 border-blue-500/30' : 'bg-zinc-950/70 border-zinc-800'
+              }`}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <CalendarClock size={16} className={enableExpiryControl ? 'text-blue-400' : 'text-zinc-500'} />
+                  <span className={`text-xs font-bold truncate ${enableExpiryControl ? 'text-blue-400' : 'text-zinc-400'}`}>
+                    Controle Validade
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {enableExpiryControl && (
+                    <input
+                      type="number"
+                      min="1"
+                      max="365"
+                      value={expiryAlertDaysInput}
+                      onChange={(e) => setExpiryAlertDaysInput(e.target.value)}
+                      onBlur={handleSaveExpiryDays}
+                      className="w-10 bg-zinc-950 border border-zinc-700 rounded px-1 py-0.5 text-[11px] text-center text-white focus:outline-none focus:border-blue-500 hide-arrows"
+                      title="Dias antes do vencimento"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleExpiryControl(!enableExpiryControl)}
+                    disabled={savingExpirySettings}
+                    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
+                      enableExpiryControl ? 'bg-blue-500' : 'bg-zinc-700'
+                    } ${savingExpirySettings ? 'opacity-50 cursor-wait' : ''}`}
+                  >
+                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      enableExpiryControl ? 'translate-x-4' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Alerta de Reposição Padrão */}
+              <div className="flex items-center justify-between gap-2 p-3 rounded-xl border bg-zinc-950/70 border-zinc-800">
+                <div className="flex items-center gap-2 min-w-0">
+                  <AlertOctagon size={16} className="text-red-400 shrink-0" />
+                  <span className="text-xs font-bold text-zinc-400 truncate">
+                    Alerta Reposição
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    value={lowStockAlertInput}
+                    onChange={e => setLowStockAlertInput(e.target.value)}
+                    onBlur={handleSaveLowStockAlert}
+                    disabled={savingLowStockAlert}
+                    className="w-12 bg-zinc-900 border border-zinc-700 rounded px-1.5 py-0.5 text-xs text-center text-white font-bold focus:outline-none focus:border-red-500 hide-arrows disabled:opacity-50"
+                  />
+                  <span className="text-[11px] text-zinc-500">un.</span>
+                </div>
+              </div>
+
             </div>
           )}
-          </div>
+
         </div>
 
         {/* Tabela de Produtos (Desktop) */}
@@ -964,7 +1049,14 @@ export default function InventoryDashboard() {
                         </div>
                       )}
                       <div className="flex flex-col">
-                        <span>{product.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{product.name}</span>
+                          {product.active === false && (
+                            <span className="text-[10px] uppercase font-black tracking-wider bg-zinc-800 text-zinc-400 border border-zinc-700 px-2 py-0.5 rounded-md shadow-sm">
+                              Inativo
+                            </span>
+                          )}
+                        </div>
                         {nfceModuleEnabled && (!product.ncm || !product.grupoTributacaoId) && (
                           <span className="flex items-center gap-1 text-[10px] text-yellow-500/80 uppercase font-bold mt-1" title="Faltam dados fiscais para emitir NFC-e">
                             <AlertOctagon size={12} /> Faltam Dados Fiscais
@@ -1066,7 +1158,14 @@ export default function InventoryDashboard() {
                       </div>
                     )}
                     <div className="flex flex-col flex-1 min-w-0">
-                      <div className="font-bold text-white text-base leading-tight line-clamp-2 pr-2">{product.name}</div>
+                      <div className="flex items-center gap-2 pr-2">
+                        <div className="font-bold text-white text-base leading-tight line-clamp-2">{product.name}</div>
+                        {product.active === false && (
+                          <span className="shrink-0 text-[9px] uppercase font-black tracking-wider bg-zinc-800 text-zinc-400 border border-zinc-700 px-1.5 py-0.5 rounded shadow-sm">
+                            Inativo
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs font-mono text-zinc-500 mt-1 truncate">{product.barcode || 'Sem cód. barras'}</div>
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         {product.shortCode && (

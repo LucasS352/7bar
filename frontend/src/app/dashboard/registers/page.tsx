@@ -6,12 +6,16 @@ import { CloseRegisterModal } from '@/components/CloseRegisterModal';
 
 type CashRegister = {
   id: string;
-  userId: string;
+  userId?: string;
+  operator?: { id: string; name: string };
+  code?: number;
   openingTime: string;
   closingTime?: string;
   openingValue: number;
   closingValue?: number;
   status: string;
+  totalSales?: number;
+  closingDetails?: any;
 };
 
 export default function CashRegistersHistoryPage() {
@@ -62,6 +66,7 @@ export default function CashRegistersHistoryPage() {
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-left">Abertura</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-left">Fechamento</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-right">Fundo (Início)</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-right">Faturamento</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-right">Terminou com</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-center">Ações</th>
               </tr>
@@ -87,6 +92,9 @@ export default function CashRegistersHistoryPage() {
                   <td className="px-6 py-5 text-right font-bold text-blue-400">
                     R$ {Number(reg.openingValue || 0).toFixed(2)}
                   </td>
+                  <td className="px-6 py-5 text-right font-bold text-emerald-400">
+                    R$ {Number(reg.totalSales || 0).toFixed(2)}
+                  </td>
                   <td className="px-6 py-5 text-right font-bold text-zinc-400">
                     {reg.status === 'open' ? '--' : reg.closingValue != null ? `R$ ${Number(reg.closingValue).toFixed(2)}` : <span className="text-amber-500/80 text-xs uppercase">Pendente</span>}
                   </td>
@@ -103,7 +111,7 @@ export default function CashRegistersHistoryPage() {
               ))}
               {registers.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-zinc-500">Nenhum caixa encontrado no banco de dados da loja.</td>
+                  <td colSpan={7} className="px-6 py-12 text-center text-zinc-500">Nenhum caixa encontrado no banco de dados da loja.</td>
                 </tr>
               )}
             </tbody>
@@ -142,6 +150,16 @@ export default function CashRegistersHistoryPage() {
                   <span className="text-zinc-500 text-xs block">Terminou com</span>
                   <span className="text-zinc-400 font-bold">{reg.status === 'open' ? '--' : reg.closingValue != null ? `R$ ${Number(reg.closingValue).toFixed(2)}` : <span className="text-amber-500/80 uppercase text-[10px]">Pendente</span>}</span>
                 </div>
+                <div>
+                  <span className="text-zinc-500 text-xs block">Total Vendas</span>
+                  <span className="text-emerald-400 font-bold">R$ {Number(reg.totalSales || 0).toFixed(2)}</span>
+                </div>
+                {reg.operator?.name && (
+                  <div>
+                    <span className="text-zinc-500 text-xs block">Operador</span>
+                    <span className="text-zinc-300 font-medium truncate block">{reg.operator.name}</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end pt-2">

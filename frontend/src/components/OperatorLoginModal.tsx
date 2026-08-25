@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useShift } from '@/contexts/ShiftContext';
-import { Lock, User, Loader2, ArrowLeft, LayoutDashboard, LogOut, AlertCircle } from 'lucide-react';
+import { Lock, User, Loader2, ArrowLeft, LayoutDashboard, LogOut, AlertCircle, UtensilsCrossed } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 
@@ -21,6 +21,7 @@ interface OperatorData {
 export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
   const [operators, setOperators] = useState<OperatorData[]>([]);
   const [loadingOps, setLoadingOps] = useState(true);
+  const [hasRestaurantModule, setHasRestaurantModule] = useState(false);
   
   const [selectedOp, setSelectedOp] = useState<OperatorData | null>(null);
   const [pin, setPin] = useState('');
@@ -43,6 +44,16 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
       ))
       .catch(() => toast.error('Erro ao carregar operadores.'))
       .finally(() => setLoadingOps(false));
+
+    api.get('/tenants/me')
+      .then(res => {
+        const mod = res.data?.modulos;
+        const parsed = typeof mod === 'string' ? JSON.parse(mod) : (mod || {});
+        if (parsed?.restaurante === true) {
+          setHasRestaurantModule(true);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -166,16 +177,30 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
         )}
         
         <div className="mt-8 pt-6 border-t border-zinc-800 flex flex-col gap-4">
-          <button 
-            onClick={() => navigate('/dashboard')} 
-            className="text-zinc-500 hover:text-zinc-300 font-semibold text-sm transition-colors flex items-center justify-center gap-2 mx-auto"
-          >
-            <LayoutDashboard size={16} /> Voltar ao Painel Administrativo
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button 
+              type="button"
+              onClick={() => navigate('/dashboard')} 
+              className="text-zinc-500 hover:text-zinc-300 font-semibold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <LayoutDashboard size={16} /> Voltar ao Painel Administrativo
+            </button>
+
+            {hasRestaurantModule && (
+              <button 
+                type="button"
+                onClick={() => navigate('/garcom')} 
+                className="bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 border border-orange-500/30 hover:border-orange-500/50 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-95"
+              >
+                <UtensilsCrossed size={14} /> Modo Garçom
+              </button>
+            )}
+          </div>
           
           <button 
+            type="button"
             onClick={handleGlobalLogout} 
-            className="text-red-500/70 hover:text-red-400 font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2 mx-auto"
+            className="text-red-500/70 hover:text-red-400 font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2 mx-auto cursor-pointer"
           >
             <LogOut size={14} /> Sair do Sistema (Logout)
           </button>

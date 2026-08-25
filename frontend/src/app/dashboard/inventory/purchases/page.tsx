@@ -379,44 +379,46 @@ export default function MassEntryPage() {
     <div className="space-y-4 lg:space-y-6 animate-in fade-in duration-500 w-full max-w-none pb-[calc(10rem+env(safe-area-inset-bottom,0px))] lg:pb-0">
       <input type="file" ref={rowFileInputRef} onChange={handleRowFileChange} accept="image/*" className="hidden" />
 
-      {/* Banner */}
-      <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 flex items-start gap-3">
-        <Info size={20} className="text-blue-400 mt-0.5 shrink-0" />
-        <div>
-          <p className="text-blue-300 font-bold text-sm">Área de Lançamento Rápido de Produtos</p>
-          <p className="text-blue-400/70 text-xs mt-0.5">
-            Para repor o estoque de produtos já existentes, use a tela <Link to="/dashboard/inventory/stock-entry" className="underline hover:text-blue-300">Entrada de Estoque</Link>.
-            Se um produto desta lista já existir por código de barras ou atalho, o estoque será somado automaticamente.
+      {/* Banner de Orientação */}
+      <div className="bg-blue-500/10 border border-blue-500/25 rounded-2xl p-3.5 sm:p-4 flex items-start gap-3 shadow-sm">
+        <Info size={18} className="text-blue-400 mt-0.5 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-blue-300 font-bold text-xs sm:text-sm">Lançamento Rápido em Lote</p>
+          <p className="text-blue-400/70 text-[11px] sm:text-xs mt-0.5 leading-relaxed">
+            Para repor o estoque existente, use a tela <Link to="/dashboard/inventory/stock-entry" className="underline font-semibold hover:text-blue-200">Entrada de Estoque</Link>. Se o item já existir por código ou atalho, o estoque será somado.
           </p>
         </div>
       </div>
 
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6 border-b border-zinc-800 pb-4">
-        <div>
-          <Link to="/dashboard/inventory" className="text-zinc-500 hover:text-blue-400 flex items-center gap-2 text-sm font-semibold mb-2 transition-colors">
-            <ArrowLeft size={16} /> Voltar ao Catálogo Geral
+      {/* Header Responsivo */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-zinc-800/80">
+        <div className="space-y-1">
+          <Link to="/dashboard/inventory" className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-blue-400 transition-colors">
+            <ArrowLeft size={14} /> Voltar ao Catálogo Geral
           </Link>
-          <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
-            Lançamento de Produtos
-            <span className="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-500/20 uppercase font-bold tracking-widest translate-y-[-2px]">Fast Grid</span>
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Digite o nome do produto — produtos já cadastrados aparecerão como sugestão com imagem.
-            O estoque será <strong>somado</strong> para produtos existentes.
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white flex items-center gap-2">
+              Lançamento de Produtos
+            </h1>
+            <span className="text-[10px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-500/30 uppercase font-black tracking-wider">
+              Fast Grid
+            </span>
+          </div>
+          <p className="text-zinc-400 text-xs sm:text-sm max-w-xl">
+            Digite o nome do produto ou importe uma planilha para cadastrar produtos rapidamente.
           </p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           {/* Import spreadsheet */}
-          <div className="relative group">
-            <label className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-sm cursor-pointer border border-zinc-700 text-sm">
-              <Upload size={18} />
+          <div className="relative group shrink-0">
+            <label className="bg-zinc-800 hover:bg-zinc-750 text-zinc-200 hover:text-white px-3.5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-sm cursor-pointer border border-zinc-700/80 text-xs sm:text-sm active:scale-95 whitespace-nowrap">
+              <Upload size={16} className="text-indigo-400" />
               <span>Importar Planilha</span>
               <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileUpload} />
             </label>
             {/* Tooltip Excel */}
-            <div className="absolute right-full top-0 mr-3 w-[340px] bg-white border border-zinc-300 rounded-xl shadow-2xl overflow-hidden opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
+            <div className="absolute right-0 sm:right-full top-full sm:top-0 sm:mr-3 mt-2 sm:mt-0 w-[300px] sm:w-[340px] bg-white border border-zinc-300 rounded-xl shadow-2xl overflow-hidden opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
               <div className="bg-[#217346] px-3 py-2 flex items-center gap-2">
                 <svg viewBox="0 0 20 20" className="w-4 h-4 fill-white" xmlns="http://www.w3.org/2000/svg"><path d="M2 2h16v16H2z" fill="none"/><path d="M11 2v7h7V2h-7zm0 9v7h7v-7h-7zM2 2v7h7V2H2zm0 9v7h7v-7H2z" fill="white" opacity=".3"/><text x="3" y="14" fontSize="10" fontWeight="bold" fill="white">XLS</text></svg>
                 <span className="text-white text-xs font-bold">Formato da Planilha</span>
@@ -456,21 +458,21 @@ export default function MassEntryPage() {
           {/* Link to mass edit */}
           <Link
             to="/dashboard/inventory/mass-edit"
-            className="bg-purple-600/10 hover:bg-purple-600/20 border border-purple-600/30 text-purple-400 px-3 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all text-sm"
+            className="bg-purple-600/10 hover:bg-purple-600/20 border border-purple-600/30 text-purple-300 px-3.5 py-2.5 rounded-xl font-bold flex items-center gap-1.5 transition-all text-xs sm:text-sm shrink-0 active:scale-95 whitespace-nowrap"
           >
-            <Save size={16} />
+            <Save size={15} />
             <span className="hidden sm:inline">Edição em Massa</span>
             <span className="sm:hidden">Editar</span>
           </Link>
 
+          {/* Desktop submit button */}
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95 text-sm lg:text-base"
+            className="hidden sm:flex bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl font-bold items-center gap-2 transition-all shadow-lg shadow-blue-600/20 active:scale-95 text-xs sm:text-sm shrink-0 cursor-pointer whitespace-nowrap"
           >
-            {loading ? <Save className="animate-spin" size={18} /> : <Send size={18} />}
-            <span className="hidden sm:inline">Processar Tabela</span>
-            <span className="sm:hidden">Processar</span>
+            {loading ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
+            <span>Processar Tabela</span>
           </button>
         </div>
       </div>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import { getFullUrl } from "@/lib/getFullUrl";
@@ -25,7 +25,7 @@ function slugify(text: string) {
     .replace(/^_|_$/g, "");
 }
 
-/** AvanÃ§a a data em exatamente 1 mÃªs, preservando o dia e sem overflow (dia 31 â†’ Ãºltimo dia do mÃªs) */
+/** Avança a data em exatamente 1 mês, preservando o dia e sem overflow (dia 31 → último dia do mês) */
 function addOneMonthSafe(date: Date): Date {
   const originalDay = date.getDate();
   const d = new Date(date);
@@ -36,7 +36,7 @@ function addOneMonthSafe(date: Date): Date {
   return d;
 }
 
-/** Converte string "YYYY-MM-DD" para Date no horÃ¡rio local (sem offset de timezone) */
+/** Converte string "YYYY-MM-DD" para Date no horário local (sem offset de timezone) */
 function parseDateLocal(dateStr: string): Date {
   const [y, m, d] = dateStr.split('-').map(Number);
   return new Date(y, m - 1, d, 12, 0, 0);
@@ -87,11 +87,11 @@ export default function SysInitPage() {
 
   const [activeTab, setActiveTab] = useState<"tenants" | "groups" | "leads" | "sql">("tenants");
 
-  // â”€â”€ SQL EDITOR STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── SQL EDITOR STATE ──────────────────────────────────────────────────
   const [sqlPinUnlocked, setSqlPinUnlocked] = useState(false);
   const [sqlPinInput, setSqlPinInput] = useState('');
   const [sqlPinError, setSqlPinError] = useState('');
-  const [sqlSelectedDb, setSqlSelectedDb] = useState<{ tenantId?: string; useHeart?: boolean; label: string }>({ useHeart: true, label: 'ðŸ«€ Heart (master)' });
+  const [sqlSelectedDb, setSqlSelectedDb] = useState<{ tenantId?: string; useHeart?: boolean; label: string }>({ useHeart: true, label: '🫀 Heart (master)' });
   const [sqlQuery, setSqlQuery] = useState('SELECT * FROM tenants LIMIT 10');
   const [sqlResult, setSqlResult] = useState<any>(null);
   const [sqlLoading, setSqlLoading] = useState(false);
@@ -104,7 +104,7 @@ export default function SysInitPage() {
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; column: string; value: string; id: string } | null>(null);
   const [updatingRowId, setUpdatingRowId] = useState<string | null>(null);
 
-  // â”€â”€ LEADS LIST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── LEADS LIST ────────────────────────────────────────────────────────
   const [leads, setLeads] = useState<any[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(false);
   const [leadStatusFilter, setLeadStatusFilter] = useState("");
@@ -118,7 +118,7 @@ export default function SysInitPage() {
       const res = await api.get(url, { headers: { 'x-setup-pin': pin } });
       setLeads(res.data || []);
     } catch (err) {
-      console.warn('Leads nÃ£o disponÃ­veis no ambiente atual.');
+      console.warn('Leads não disponíveis no ambiente atual.');
     } finally {
       setLoadingLeads(false);
     }
@@ -136,14 +136,14 @@ export default function SysInitPage() {
     }
   };
 
-  // â”€â”€ TENANT LIST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── TENANT LIST ───────────────────────────────────────────────────────
   const [tenants, setTenants] = useState<any[]>([]);
   const [loadingTenants, setLoadingTenants] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
   const [includeHeart, setIncludeHeart] = useState(false);
 
-  // â”€â”€ GROUPS LIST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── GROUPS LIST ───────────────────────────────────────────────────────
   const [groups, setGroups] = useState<any[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
@@ -161,20 +161,20 @@ export default function SysInitPage() {
   const [addingMember, setAddingMember] = useState(false);
   const [addingUser, setAddingUser] = useState(false);
 
-  // â”€â”€ DATABASE MIGRATION STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── DATABASE MIGRATION STATE ──────────────────────────────────────────
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const [migrating, setMigrating] = useState(false);
   const [migrationResults, setMigrationResults] = useState<any[]>([]);
   const [activeLogTenantId, setActiveLogTenantId] = useState<string | null>(null);
 
-  // â”€â”€ PIN step â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── PIN step ──────────────────────────────────────────────────────────
   const [pinDigits, setPinDigits] = useState<string[]>(Array(PIN_LENGTH).fill(""));
   const [pinError, setpinError] = useState("");
   const [pinShake, setPinShake] = useState(false);
   const [pinLoading, setPinLoading] = useState(false);
   const pinRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // â”€â”€ Create Form step â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Create Form step ──────────────────────────────────────────────────
   const [tenantName, setTenantName] = useState("");
   const [dbName, setDbName] = useState("");
   const [dbNameManual, setDbNameManual] = useState(false);
@@ -190,12 +190,12 @@ export default function SysInitPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [successData, setSuccessData] = useState<any>(null);
 
-  // â”€â”€ Edit Form step â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Edit Form step ────────────────────────────────────────────────────
   const [editingTenant, setEditingTenant] = useState<any>(null);
   const [editTab, setEditTab] = useState<"identidade" | "modulos" | "fiscal" | "financeiro" | "integracoes" | "usuarios">("identidade");
   const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
 
-  // IntegraÃ§Ã£o States
+  // Integração States
   const [integrationCreds, setIntegrationCreds] = useState<{clientId: string, clientSecret: string, merchantId: string, allowedCategories?: string[], priceMarkup?: number, syncStock?: boolean}>({ clientId: '', clientSecret: '', merchantId: '', allowedCategories: [], priceMarkup: 0, syncStock: false });
   const [tenantCategories, setTenantCategories] = useState<any[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -247,7 +247,7 @@ export default function SysInitPage() {
       const res = await api.get(`/tenants/setup/${tenantId}/payment-history`, { headers: { 'x-setup-pin': pin } });
       setPaymentHistory(res.data || []);
     } catch (e) {
-      toast.error('Erro ao carregar histÃ³rico.');
+      toast.error('Erro ao carregar histórico.');
     } finally {
       setLoadingPaymentHistory(false);
     }
@@ -271,7 +271,7 @@ export default function SysInitPage() {
       toast.success(`${data.synced} produto(s) sincronizados com o iFood!`);
     } catch (err: any) {
       console.error(err);
-      toast.error(err.response?.data?.message || err.message || 'Erro ao sincronizar catÃ¡logo');
+      toast.error(err.response?.data?.message || err.message || 'Erro ao sincronizar catálogo');
     } finally {
       setSyncLoading(false);
     }
@@ -310,13 +310,13 @@ export default function SysInitPage() {
       const res = await api.get(`/groups/setup/${groupId}/users`, { headers: { 'x-setup-pin': pin } });
       setGroupUsers(res.data);
     } catch (err) {
-      toast.error('Erro ao carregar usuÃ¡rios do grupo.');
+      toast.error('Erro ao carregar usuários do grupo.');
     } finally {
       setLoadingGroupUsers(false);
     }
   };
 
-  // Auto-restaurar sessÃ£o do PIN se jÃ¡ autenticado na aba atual
+  // Auto-restaurar sessão do PIN se já autenticado na aba atual
   useEffect(() => {
     try {
       const savedPin = sessionStorage.getItem('7bar_sysinit_pin');
@@ -401,13 +401,13 @@ export default function SysInitPage() {
         email: newUserEmail,
         password: newUserPassword
       }, { headers: { 'x-setup-pin': pin } });
-      toast.success('UsuÃ¡rio adicionado com sucesso!');
+      toast.success('Usuário adicionado com sucesso!');
       setNewUserName("");
       setNewUserEmail("");
       setNewUserPassword("");
       loadGroupUsers(selectedGroup.id);
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erro ao adicionar usuÃ¡rio.');
+      toast.error(err.response?.data?.message || 'Erro ao adicionar usuário.');
     } finally {
       setAddingUser(false);
     }
@@ -458,7 +458,7 @@ export default function SysInitPage() {
 
   const handleProvision = async (e: React.FormEvent) => {
     e.preventDefault(); setFormError("");
-    if (adminPassword !== adminPasswordConfirm) { setFormError("As senhas nÃ£o coincidem."); return; }
+    if (adminPassword !== adminPasswordConfirm) { setFormError("As senhas não coincidem."); return; }
     if (adminPassword.length < 6) { setFormError("A senha deve ter pelo menos 6 caracteres."); return; }
     setFormLoading(true);
     try {
@@ -481,7 +481,7 @@ export default function SysInitPage() {
     let parsedModulos = { nfce: true, estoque: true, dashboardMobile: true };
     try {
       if (tenant.modulos) parsedModulos = typeof tenant.modulos === 'string' ? JSON.parse(tenant.modulos) : tenant.modulos;
-    } catch (e) { console.error("Erro ao fazer parse dos mÃ³dulos:", e); }
+    } catch (e) { console.error("Erro ao fazer parse dos módulos:", e); }
     setModulos(parsedModulos);
     setEditTab("identidade");
     setPaymentHistory([]);
@@ -516,7 +516,7 @@ export default function SysInitPage() {
       setLogoFile(null); setStep("list"); loadTenants();
     } catch (err: any) {
       console.error(err.response?.data || err);
-      toast.error(err.response?.data?.message || "Erro ao salvar alteraÃ§Ãµes.");
+      toast.error(err.response?.data?.message || "Erro ao salvar alterações.");
     } finally {
       setEditLoading(false);
     }
@@ -531,11 +531,11 @@ export default function SysInitPage() {
         credentials: integrationCreds,
         settings: { active: true }
       }, { headers: { 'x-setup-pin': pin } });
-      toast.success("IntegraÃ§Ã£o salva com sucesso!");
+      toast.success("Integração salva com sucesso!");
       setSelectedIntegration(null); loadTenants(); setEditingTenant(null); setStep("list");
     } catch (err: any) {
       console.error(err.response?.data || err);
-      toast.error(err.response?.data?.message || "Erro ao salvar integraÃ§Ã£o.");
+      toast.error(err.response?.data?.message || "Erro ao salvar integração.");
     } finally {
       setEditLoading(false);
     }
@@ -543,16 +543,16 @@ export default function SysInitPage() {
 
   const handleDeleteTenant = async (tenant: any) => {
     const confirmName = window.prompt(
-      `ATENÃ‡ÃƒO: Isso excluirÃ¡ PERMANENTEMENTE o banco de dados "${tenant.databaseName}" e todos os registros da empresa "${tenant.name || tenant.nomeFantasia}".\n\nEsta operaÃ§Ã£o NÃƒO PODE SER DESFEITA.\n\nPara confirmar, digite o nome do banco de dados (${tenant.databaseName}):`
+      `ATENÇÃO: Isso excluirá PERMANENTEMENTE o banco de dados "${tenant.databaseName}" e todos os registros da empresa "${tenant.name || tenant.nomeFantasia}".\n\nEsta operação NÃO PODE SER DESFEITA.\n\nPara confirmar, digite o nome do banco de dados (${tenant.databaseName}):`
     );
     if (confirmName !== tenant.databaseName) {
-      if (confirmName !== null) toast.error("ConfirmaÃ§Ã£o incorreta. A exclusÃ£o foi cancelada.");
+      if (confirmName !== null) toast.error("Confirmação incorreta. A exclusão foi cancelada.");
       return;
     }
     try {
       const pin = pinDigits.join('');
       await api.delete(`/tenants/setup/${tenant.id}`, { headers: { 'x-setup-pin': pin } });
-      toast.success("Tenant e banco de dados excluÃ­dos com sucesso!");
+      toast.success("Tenant e banco de dados excluídos com sucesso!");
       loadTenants();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Erro ao excluir tenant.");
@@ -564,10 +564,10 @@ export default function SysInitPage() {
     try {
       const pin = pinDigits.join('');
       await api.post(`/tenants/setup/${tenantId}/registrar-pagamento`, { observacao }, { headers: { 'x-setup-pin': pin } });
-      toast.success("Pagamento registrado! Vencimento avanÃ§ado 1 mÃªs.");
+      toast.success("Pagamento registrado! Vencimento avançado 1 mês.");
       loadTenants();
       if (editingTenant?.id === tenantId) {
-        // Recarrega o tenant editado e o histÃ³rico
+        // Recarrega o tenant editado e o histórico
         const res = await api.get('/tenants/setup/list', { headers: { 'x-setup-pin': pin } });
         const updated = res.data.find((t: any) => t.id === tenantId);
         if (updated) setEditingTenant((prev: any) => ({ ...prev, mensalidadeVencimento: updated.mensalidadeVencimento }));
@@ -589,7 +589,7 @@ export default function SysInitPage() {
     if (includeHeart) {
       initialResults.push({
         tenantId: '__heart__',
-        name: 'ðŸ«€ Banco Heart (master)',
+        name: '🫀 Banco Heart (master)',
         databaseName: 'heart',
         status: 'processing',
         output: ''
@@ -605,9 +605,9 @@ export default function SysInitPage() {
       const pin = pinDigits.join('');
       const res = await api.post('/tenants/setup/migrate', { tenantIds: selectedTenantIds, includeHeart }, { headers: { 'x-setup-pin': pin } });
       setMigrationResults(res.data);
-      toast.success('MigraÃ§Ã£o de bancos concluÃ­da!');
+      toast.success('Migração de bancos concluída!');
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Erro ao executar migraÃ§Ã£o.';
+      const msg = err.response?.data?.message || 'Erro ao executar migração.';
       toast.error(msg);
       setMigrationResults(prev => prev.map(item => item.status === 'processing' ? { ...item, status: 'error', output: msg } : item));
     } finally {
@@ -615,7 +615,7 @@ export default function SysInitPage() {
     }
   };
 
-  // â”€â”€ SQL EDITOR HANDLER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── SQL EDITOR HANDLER ────────────────────────────────────────────────
   const handleSqlUnlock = () => {
     if (sqlPinInput === '43619835') {
       setSqlPinUnlocked(true);
@@ -666,7 +666,7 @@ export default function SysInitPage() {
         { headers: { 'x-setup-pin': pin, 'x-sql-pin': '43619835' } }
       );
       setSqlResult(res.data);
-      // salvar no histÃ³rico
+      // salvar no histórico
       setSqlHistory(prev => {
         const updated = [queryToRun, ...prev.filter(q => q !== queryToRun)].slice(0, 20);
         localStorage.setItem('7bar_sql_history', JSON.stringify(updated));
@@ -720,7 +720,7 @@ export default function SysInitPage() {
   };
 
   const handleDeleteRow = async (tableName: string, rowId: string) => {
-    if (!confirm(`ATENÃ‡ÃƒO: Deseja realmente EXCLUIR o registro "${rowId}" da tabela "${tableName}"?`)) return;
+    if (!confirm(`ATENÇÃO: Deseja realmente EXCLUIR o registro "${rowId}" da tabela "${tableName}"?`)) return;
     setUpdatingRowId(rowId);
     try {
       const q = `DELETE FROM ${tableName} WHERE id = '${rowId}'`;
@@ -730,7 +730,7 @@ export default function SysInitPage() {
         { sql: q, tenantId: sqlSelectedDb.tenantId, useHeart: sqlSelectedDb.useHeart },
         { headers: { 'x-setup-pin': pin, 'x-sql-pin': '43619835' } }
       );
-      toast.success(`Registro excluÃ­do com sucesso!`);
+      toast.success(`Registro excluído com sucesso!`);
       await handleExecuteSql(sqlQuery);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Erro ao excluir registro.');
@@ -755,14 +755,14 @@ export default function SysInitPage() {
       setEditingCell(null);
       await handleExecuteSql(sqlQuery);
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erro ao salvar alteraÃ§Ã£o.');
+      toast.error(err.response?.data?.message || 'Erro ao salvar alteração.');
     }
   };
 
   const handleCopyValue = (val: any) => {
     if (val === null || val === undefined) return;
     navigator.clipboard.writeText(String(val));
-    toast.success('Copiado para a Ã¡rea de transferÃªncia!');
+    toast.success('Copiado para a área de transferência!');
   };
 
   const isCertExpiringSoon = (date: string | null) => {
@@ -810,7 +810,7 @@ export default function SysInitPage() {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto w-full flex-1 flex flex-col">
-        {/* â•â•â•â•â•â•â•â• PIN STEP â•â•â•â•â•â•â•â• */}
+        {/* — PIN STEP — */}
         {step === "pin" && (
           <div className={`transition-all duration-300 max-w-md mx-auto mt-20 ${pinShake ? "animate-[shake_0.4s_ease]" : ""}`}>
             <div className="p-8 rounded-3xl bg-zinc-900/70 backdrop-blur-xl border border-zinc-800 shadow-2xl">
@@ -820,7 +820,7 @@ export default function SysInitPage() {
                 </div>
                 <h1 className="text-2xl font-bold tracking-tight">Painel Central</h1>
                 <p className="text-zinc-400 text-sm mt-2 text-center">
-                  Digite o PIN de administraÃ§Ã£o para acessar o gerenciador de Tenants
+                  Digite o PIN de administração para acessar o gerenciador de Tenants
                 </p>
               </div>
               <div className="mb-6">
@@ -858,51 +858,51 @@ export default function SysInitPage() {
           </div>
         )}
 
-        {/* â•â•â•â•â•â•â•â• LIST STEP â•â•â•â•â•â•â•â• */}
+        {/* — LIST STEP — */}
         {step === "list" && (
           <div className="animate-[fadeIn_0.3s_ease] flex flex-col flex-1">
             <div className="flex justify-between items-center mb-8 mt-4">
               <div>
                 <h1 className="text-3xl font-black bg-gradient-to-r from-violet-400 to-indigo-500 bg-clip-text text-transparent">
                   {activeTab === 'tenants'
-                    ? 'GestÃ£o de Tenants'
+                    ? 'Gestão de Tenants'
                     : activeTab === 'groups'
-                    ? 'GestÃ£o de Grupos'
+                    ? 'Gestão de Grupos'
                     : activeTab === 'sql'
-                    ? 'âš¡ SQL Editor'
-                    : 'ðŸŽ¯ Leads de DemonstraÃ§Ã£o'}
+                    ? '⚡ SQL Editor'
+                    : '🎯 Leads de Demonstração'}
                 </h1>
                 <p className="text-zinc-400 mt-1">
                   {activeTab === 'tenants'
-                    ? 'Gerencie os clientes SaaS, mÃ³dulos e identidades visuais.'
+                    ? 'Gerencie os clientes SaaS, módulos e identidades visuais.'
                     : activeTab === 'groups'
                     ? 'Gerencie os grupos de lojas e redes corporativas.'
                     : activeTab === 'sql'
-                    ? 'Execute consultas, audite registros e realize alteraÃ§Ãµes diretamente nos bancos de dados.'
-                    : 'Contatos capturados atravÃ©s do ambiente de demonstraÃ§Ã£o gratuita.'}
+                    ? 'Execute consultas, audite registros e realize alterações diretamente nos bancos de dados.'
+                    : 'Contatos capturados através do ambiente de demonstração gratuita.'}
                 </p>
               </div>
               <div className="flex gap-3">
                 {activeTab === 'tenants' && (
                   <>
-                    {/* BotÃ£o de atualizar bancos â€” sempre visÃ­vel, com toggle Heart e contador de tenants */}
+                    {/* Botão de atualizar bancos — sempre visível, com toggle Heart e contador de tenants */}
                     <div className="flex items-center gap-2">
                       {/* Toggle Heart */}
                       <button
                         onClick={() => setIncludeHeart(!includeHeart)}
-                        title={includeHeart ? 'Heart incluÃ­do na migraÃ§Ã£o' : 'Incluir banco Heart na migraÃ§Ã£o'}
+                        title={includeHeart ? 'Heart incluído na migração' : 'Incluir banco Heart na migração'}
                         className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border font-bold text-sm transition-all ${
                           includeHeart
                             ? 'bg-rose-600/20 border-rose-500/50 text-rose-400 shadow-lg shadow-rose-500/10'
                             : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
                         }`}
                       >
-                        <span className="text-base leading-none">ðŸ«€</span>
+                        <span className="text-base leading-none">🫀</span>
                         <span className="hidden sm:inline">Heart</span>
                         {includeHeart && <CheckCircle2 size={13} className="text-rose-400" />}
                       </button>
 
-                      {/* BotÃ£o principal â€” habilitado se Heart ativo OU tenants selecionados */}
+                      {/* Botão principal — habilitado se Heart ativo OU tenants selecionados */}
                       <button
                         onClick={handleMigrateBancos}
                         disabled={!includeHeart && selectedTenantIds.length === 0}
@@ -945,7 +945,7 @@ export default function SysInitPage() {
               <button onClick={() => setActiveTab('groups')} className={`py-2 px-4 font-bold border-b-2 transition-colors ${activeTab === 'groups' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}>Grupos</button>
               {isDemoMode && (
                 <button onClick={() => setActiveTab('leads')} className={`py-2 px-4 font-bold border-b-2 transition-colors ${activeTab === 'leads' ? 'border-amber-500 text-amber-400' : 'border-transparent text-zinc-500 hover:text-zinc-300'} flex items-center gap-2`}>
-                  ðŸŽ¯ Leads Demo {leads.length > 0 && <span className="bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-mono">{leads.length}</span>}
+                  🎯 Leads Demo {leads.length > 0 && <span className="bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-mono">{leads.length}</span>}
                 </button>
               )}
               <button onClick={() => setActiveTab('sql')} className={`py-2 px-4 font-bold border-b-2 transition-colors ${activeTab === 'sql' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-zinc-500 hover:text-zinc-300'} flex items-center gap-1.5`}>
@@ -953,7 +953,7 @@ export default function SysInitPage() {
               </button>
             </div>
 
-            {/* â”€â”€ TENANTS TAB â”€â”€ */}
+            {/* ── TENANTS TAB ── */}
             {activeTab === 'tenants' ? (
               <>
                 {/* KPI Cards */}
@@ -1002,8 +1002,8 @@ export default function SysInitPage() {
                           <th className="px-4 py-4 font-medium">Contato</th>
                           <th className="px-4 py-4 font-medium">Status</th>
                           <th className="px-4 py-4 font-medium">Mensalidade</th>
-                          <th className="px-4 py-4 font-medium">MÃ³dulos</th>
-                          <th className="px-4 py-4 font-medium text-right">AÃ§Ãµes</th>
+                          <th className="px-4 py-4 font-medium">Módulos</th>
+                          <th className="px-4 py-4 font-medium text-right">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-800/50">
@@ -1052,7 +1052,7 @@ export default function SysInitPage() {
                                       )}
                                     </div>
                                   ) : (
-                                    <span className="text-zinc-600 text-xs">â€”</span>
+                                    <span className="text-zinc-600 text-xs">—</span>
                                   )}
                                 </td>
                                 <td className="px-4 py-4">
@@ -1062,7 +1062,7 @@ export default function SysInitPage() {
                                     t.status === 'suspended' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                                     'bg-red-500/10 text-red-400 border-red-500/20'
                                   }`}>
-                                    {t.status === 'active' ? 'Ativo' : t.status === 'paused' ? 'â¸ Pausado' : t.status === 'suspended' ? 'Suspenso' : 'Inativo'}
+                                    {t.status === 'active' ? 'Ativo' : t.status === 'paused' ? '— Pausado' : t.status === 'suspended' ? 'Suspenso' : 'Inativo'}
                                   </span>
                                 </td>
                                 <td className="px-4 py-4">
@@ -1112,7 +1112,7 @@ export default function SysInitPage() {
                       <tr>
                         <th className="px-6 py-4 font-medium">Nome do Grupo</th>
                         <th className="px-6 py-4 font-medium">Membros</th>
-                        <th className="px-6 py-4 font-medium text-right">AÃ§Ãµes</th>
+                        <th className="px-6 py-4 font-medium text-right">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/50">
@@ -1138,7 +1138,7 @@ export default function SysInitPage() {
                 </div>
               </div>
             ) : activeTab === 'sql' ? (
-              /* â”€â”€ SQL EDITOR TAB â”€â”€ */
+              /* ── SQL EDITOR TAB ── */
               <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 {!sqlPinUnlocked ? (
                   /* PIN GATE */
@@ -1155,7 +1155,7 @@ export default function SysInitPage() {
                         value={sqlPinInput}
                         onChange={e => { setSqlPinInput(e.target.value); setSqlPinError(''); }}
                         onKeyDown={e => e.key === 'Enter' && handleSqlUnlock()}
-                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                        placeholder="••••••••"
                         className="w-full p-4 bg-zinc-950 border border-zinc-700 rounded-2xl text-white text-center font-mono text-2xl tracking-[0.5em] focus:border-emerald-500 outline-none mb-3 placeholder:tracking-normal placeholder:text-2xl"
                         autoFocus
                         maxLength={12}
@@ -1171,25 +1171,25 @@ export default function SysInitPage() {
                     </div>
                   </div>
                 ) : (
-                  /* SQL EDITOR UI â€” layout tipo DBeaver */
+                  /* SQL EDITOR UI — layout tipo DBeaver */
                   <div className="flex-1 flex gap-0 min-h-0 overflow-hidden rounded-2xl border border-zinc-800">
 
-                    {/* â”€â”€ SIDEBAR: Seletor de Banco + Tabelas + Atalhos â”€â”€ */}
+                    {/* ── SIDEBAR: Seletor de Banco + Tabelas + Atalhos ── */}
                     <div className="w-64 shrink-0 bg-zinc-950 border-r border-zinc-800 flex flex-col overflow-hidden">
                       {/* Seletor de Banco */}
                       <div className="p-3 border-b border-zinc-800">
-                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">ConexÃ£o do Banco</p>
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Conexão do Banco</p>
                         <select
                           value={sqlSelectedDb.useHeart ? '__heart__' : (sqlSelectedDb.tenantId || '__heart__')}
                           onChange={e => {
                             const val = e.target.value;
                             let newDb: { tenantId?: string; useHeart?: boolean; label: string };
                             if (val === '__heart__') {
-                              newDb = { useHeart: true, label: 'ðŸ«€ Heart (master)' };
+                              newDb = { useHeart: true, label: '🫀 Heart (master)' };
                               setSqlQuery('SELECT * FROM tenants LIMIT 10');
                             } else {
                               const t = tenants.find(item => item.id === val);
-                              newDb = { tenantId: t?.id, useHeart: false, label: `ðŸ“¦ ${t?.name || t?.nomeFantasia || t?.databaseName} (${t?.databaseName})` };
+                              newDb = { tenantId: t?.id, useHeart: false, label: `▪ ${t?.name || t?.nomeFantasia || t?.databaseName} (${t?.databaseName})` };
                               setSqlQuery('SELECT id, status, operatorId, openingTime, closingTime, openingValue, closingValue FROM cash_registers ORDER BY openingTime DESC LIMIT 20');
                             }
                             setSqlSelectedDb(newDb);
@@ -1199,14 +1199,14 @@ export default function SysInitPage() {
                           }}
                           className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-xl px-2.5 py-2 text-xs font-mono focus:border-emerald-500 outline-none"
                         >
-                          <option value="__heart__">ðŸ«€ Heart (master)</option>
+                          <option value="__heart__">🫀 Heart (master)</option>
                           {tenants.map(t => (
-                            <option key={t.id} value={t.id}>ðŸ“¦ {t.name || t.nomeFantasia || t.databaseName} ({t.databaseName})</option>
+                            <option key={t.id} value={t.id}>▪ {t.name || t.nomeFantasia || t.databaseName} ({t.databaseName})</option>
                           ))}
                         </select>
                       </div>
 
-                      {/* Header de Tabelas com botÃ£o de refresh */}
+                      {/* Header de Tabelas com botão de refresh */}
                       <div className="px-3 py-2 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/30">
                         <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
                           <Database size={12} className="text-emerald-400" />
@@ -1218,11 +1218,11 @@ export default function SysInitPage() {
                           title="Atualizar lista de tabelas"
                           className="text-xs text-zinc-500 hover:text-emerald-400 p-1 hover:bg-zinc-800 rounded transition"
                         >
-                          {sqlLoadingTables ? <Loader2 className="animate-spin" size={13} /> : 'ðŸ”„'}
+                          {sqlLoadingTables ? <Loader2 className="animate-spin" size={13} /> : '🔄'}
                         </button>
                       </div>
 
-                      {/* Lista de tabelas (clicÃ¡veis) */}
+                      {/* Lista de tabelas (clicáveis) */}
                       <div className="flex-1 overflow-y-auto custom-scrollbar p-2 min-h-0">
                         {sqlLoadingTables ? (
                           <div className="flex items-center justify-center py-8 text-zinc-600 gap-2 text-xs">
@@ -1240,7 +1240,7 @@ export default function SysInitPage() {
                                 }}
                                 className="w-full text-left px-2.5 py-1.5 text-xs font-mono text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-lg transition flex items-center gap-2 group"
                               >
-                                <span className="text-zinc-600 group-hover:text-emerald-400 text-[10px]">â–¶</span>
+                                <span className="text-zinc-600 group-hover:text-emerald-400 text-[10px]">•</span>
                                 <span className="truncate">{tableName}</span>
                               </button>
                             ))}
@@ -1258,16 +1258,16 @@ export default function SysInitPage() {
                         )}
                       </div>
 
-                      {/* Atalhos rÃ¡pidos contextuais */}
+                      {/* Atalhos rápidos contextuais */}
                       <div className="p-2.5 border-t border-zinc-800 max-h-48 overflow-y-auto custom-scrollbar">
-                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5 px-1">Atalhos Ãšteis</p>
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5 px-1">Atalhos Úteis</p>
                         <div className="space-y-0.5">
                           {sqlSelectedDb.useHeart ? (
                             <>
                               {[
-                                { label: 'ðŸ«€ Tenants cadastrados', q: 'SELECT id, name, database_name, status, mensalidade_vencimento, mensalidade_valor FROM tenants ORDER BY name' },
-                                { label: 'ðŸ‘¥ UsuÃ¡rios Master', q: 'SELECT id, email, name, role, tenantId, createdAt FROM users ORDER BY createdAt DESC LIMIT 30' },
-                                { label: 'ðŸ”— IntegraÃ§Ãµes Hub', q: 'SELECT * FROM tenant_integrations LIMIT 50' },
+                                { label: '🫀 Tenants cadastrados', q: 'SELECT id, name, database_name, status, mensalidade_vencimento, mensalidade_valor FROM tenants ORDER BY name' },
+                                { label: '👥 Usuários Master', q: 'SELECT id, email, name, role, tenantId, createdAt FROM users ORDER BY createdAt DESC LIMIT 30' },
+                                { label: '🔍— Integrações Hub', q: 'SELECT * FROM tenant_integrations LIMIT 50' },
                               ].map(item => (
                                 <button
                                   key={item.label}
@@ -1281,15 +1281,15 @@ export default function SysInitPage() {
                           ) : (
                             <>
                               {[
-                                { label: 'ðŸ“‹ Caixas (Todos)', q: 'SELECT id, code, status, operatorId, openingTime, closingTime, openingValue, closingValue FROM cash_registers ORDER BY openingTime DESC LIMIT 20' },
-                                { label: 'ðŸ”“ Caixas Abertos', q: "SELECT id, code, status, operatorId, openingTime, openingValue FROM cash_registers WHERE status = 'open' ORDER BY openingTime DESC LIMIT 20" },
-                                { label: 'ðŸ’° Vendas Recentes', q: 'SELECT id, code, total, status, source, createdAt FROM sales ORDER BY createdAt DESC LIMIT 30' },
-                                { label: 'ðŸ“¦ Produtos do CatÃ¡logo', q: 'SELECT id, shortCode, name, barcode, priceSell, stock, active FROM products ORDER BY name LIMIT 50' },
-                                { label: 'ðŸš¨ Estoque Baixo/Zerado', q: 'SELECT id, shortCode, name, stock, minStock, priceSell FROM products WHERE stock <= COALESCE(minStock, 5) ORDER BY stock ASC LIMIT 50' },
-                                { label: 'ðŸ‘¥ Operadores da Loja', q: 'SELECT id, name, active, isManager FROM operators ORDER BY name' },
-                                { label: 'ðŸ’³ Formas de Pagamento', q: 'SELECT id, name, tPag, active FROM tenant_payment_methods' },
-                                { label: 'ðŸ”’ Fechar Caixa Aberto', q: "UPDATE cash_registers SET status = 'closed', closingTime = NOW() WHERE id = 'COLOQUE_O_ID_AQUI'" },
-                                { label: 'âŒ Cancelar Venda', q: "UPDATE sales SET status = 'cancelled', cancelledAt = NOW(), cancelReason = 'Cancelamento administrativo' WHERE id = 'COLOQUE_O_ID_AQUI'" },
+                                { label: '📋 Caixas (Todos)', q: 'SELECT id, code, status, operatorId, openingTime, closingTime, openingValue, closingValue FROM cash_registers ORDER BY openingTime DESC LIMIT 20' },
+                                { label: '🔍“ Caixas Abertos', q: "SELECT id, code, status, operatorId, openingTime, openingValue FROM cash_registers WHERE status = 'open' ORDER BY openingTime DESC LIMIT 20" },
+                                { label: '💰 Vendas Recentes', q: 'SELECT id, code, total, status, source, createdAt FROM sales ORDER BY createdAt DESC LIMIT 30' },
+                                { label: '▪ Produtos do Catálogo', q: 'SELECT id, shortCode, name, barcode, priceSell, stock, active FROM products ORDER BY name LIMIT 50' },
+                                { label: '▪ Estoque Baixo/Zerado', q: 'SELECT id, shortCode, name, stock, minStock, priceSell FROM products WHERE stock <= COALESCE(minStock, 5) ORDER BY stock ASC LIMIT 50' },
+                                { label: '👥 Operadores da Loja', q: 'SELECT id, name, active, isManager FROM operators ORDER BY name' },
+                                { label: '💳 Formas de Pagamento', q: 'SELECT id, name, tPag, active FROM tenant_payment_methods' },
+                                { label: '🔒 Fechar Caixa Aberto', q: "UPDATE cash_registers SET status = 'closed', closingTime = NOW() WHERE id = 'COLOQUE_O_ID_AQUI'" },
+                                { label: '— Cancelar Venda', q: "UPDATE sales SET status = 'cancelled', cancelledAt = NOW(), cancelReason = 'Cancelamento administrativo' WHERE id = 'COLOQUE_O_ID_AQUI'" },
                               ].map(item => (
                                 <button
                                   key={item.label}
@@ -1305,7 +1305,7 @@ export default function SysInitPage() {
                       </div>
                     </div>
 
-                    {/* â”€â”€ MAIN AREA: Editor + Resultados â”€â”€ */}
+                    {/* ── MAIN AREA: Editor + Resultados ── */}
                     <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-zinc-950">
 
                       {/* Barra superior com banco ativo + executar */}
@@ -1362,11 +1362,11 @@ export default function SysInitPage() {
                             {sqlResult.type === 'query'
                               ? `${sqlResult.rowCount} linha${sqlResult.rowCount !== 1 ? 's' : ''} retornada${sqlResult.rowCount !== 1 ? 's' : ''}`
                               : `${sqlResult.rowsAffected} linha${sqlResult.rowsAffected !== 1 ? 's' : ''} afetada${sqlResult.rowsAffected !== 1 ? 's' : ''}`}
-                            {sqlResult.limited && <span className="text-amber-400 font-normal ml-1">âš  limitado a 500 registros</span>}
+                            {sqlResult.limited && <span className="text-amber-400 font-normal ml-1">⚠️ limitado a 500 registros</span>}
                           </span>
                         )}
                         {sqlError && !sqlLoading && (
-                          <span className="flex items-center gap-2 text-xs text-red-400 font-medium"><AlertCircle size={13} /> Erro na execuÃ§Ã£o</span>
+                          <span className="flex items-center gap-2 text-xs text-red-400 font-medium"><AlertCircle size={13} /> Erro na execução</span>
                         )}
                         {!sqlLoading && !sqlResult && !sqlError && (
                           <span className="text-xs text-zinc-600">Pronto para executar.</span>
@@ -1387,7 +1387,7 @@ export default function SysInitPage() {
                           </div>
                         )}
 
-                        {/* Tabela com dados e aÃ§Ãµes interativas */}
+                        {/* Tabela com dados e ações interativas */}
                         {sqlResult?.type === 'query' && sqlResult.columns.length > 0 && sqlResult.rowCount > 0 && (() => {
                           const currentTableName = /FROM\s+([a-zA-Z0-9_]+)/i.exec(sqlQuery)?.[1] || '';
                           const idColIndex = sqlResult.columns.findIndex((col: string) => col.toLowerCase() === 'id');
@@ -1400,7 +1400,7 @@ export default function SysInitPage() {
                                 <div className="px-4 py-1.5 bg-zinc-900/60 border-b border-zinc-800 text-[11px] text-zinc-400 flex items-center justify-between">
                                   <span className="flex items-center gap-1.5 text-zinc-400">
                                     <Sparkles size={12} className="text-emerald-400" />
-                                    Tabela <span className="font-mono text-emerald-400 font-bold">{currentTableName}</span> identificada â€” DÃª <strong className="text-white">duplo clique</strong> em qualquer cÃ©lula para editar direto no banco.
+                                    Tabela <span className="font-mono text-emerald-400 font-bold">{currentTableName}</span> identificada — Dê <strong className="text-white">duplo clique</strong> em qualquer célula para editar direto no banco.
                                   </span>
                                 </div>
                               )}
@@ -1410,7 +1410,7 @@ export default function SysInitPage() {
                                     <th className="px-3 py-2.5 text-zinc-500 font-bold border-r border-zinc-800 w-10 text-center">#</th>
                                     {hasId && (
                                       <th className="px-3 py-2.5 text-amber-400/90 font-bold border-r border-zinc-800 bg-zinc-900">
-                                        AÃ§Ãµes
+                                        Ações
                                       </th>
                                     )}
                                     {sqlResult.columns.map((col: string) => (
@@ -1430,11 +1430,11 @@ export default function SysInitPage() {
                                       <tr key={ri} className={`border-b border-zinc-800/40 hover:bg-zinc-800/40 transition ${ri % 2 === 0 ? '' : 'bg-zinc-900/30'}`}>
                                         <td className="px-3 py-2 text-zinc-600 border-r border-zinc-800 text-center select-none">{ri + 1}</td>
 
-                                        {/* Coluna de AÃ§Ãµes RÃ¡pidas */}
+                                        {/* Coluna de Ações Rápidas */}
                                         {hasId && (
                                           <td className="px-2.5 py-1.5 border-r border-zinc-800/50 bg-zinc-950/40">
                                             <div className="flex items-center gap-1.5">
-                                              {/* BotÃ£o Fechar Caixa (se status == open) */}
+                                              {/* Botão Fechar Caixa (se status == open) */}
                                               {currentTableName === 'cash_registers' && statusVal === 'open' && (
                                                 <button
                                                   onClick={() => handleCloseCashRegister(rowId)}
@@ -1447,7 +1447,7 @@ export default function SysInitPage() {
                                                 </button>
                                               )}
 
-                                              {/* BotÃ£o Cancelar Venda (se completed) */}
+                                              {/* Botão Cancelar Venda (se completed) */}
                                               {currentTableName === 'sales' && statusVal === 'completed' && (
                                                 <button
                                                   onClick={() => handleCancelSale(rowId)}
@@ -1460,7 +1460,7 @@ export default function SysInitPage() {
                                                 </button>
                                               )}
 
-                                              {/* BotÃ£o Gerar UPDATE no editor */}
+                                              {/* Botão Gerar UPDATE no editor */}
                                               <button
                                                 onClick={() => {
                                                   const setClauses = sqlResult.columns
@@ -1480,7 +1480,7 @@ export default function SysInitPage() {
                                                 <Edit2 size={12} />
                                               </button>
 
-                                              {/* BotÃ£o Excluir Linha */}
+                                              {/* Botão Excluir Linha */}
                                               <button
                                                 onClick={() => handleDeleteRow(currentTableName, rowId)}
                                                 disabled={isRowUpdating}
@@ -1493,7 +1493,7 @@ export default function SysInitPage() {
                                           </td>
                                         )}
 
-                                        {/* CÃ©lulas de Dados */}
+                                        {/* Células de Dados */}
                                         {row.map((cell: any, ci: number) => {
                                           const colName = sqlResult.columns[ci];
                                           const isEditing = editingCell?.rowIndex === ri && editingCell?.column === colName;
@@ -1520,7 +1520,7 @@ export default function SysInitPage() {
                                                   <button
                                                     onClick={() => handleSaveInlineEdit(currentTableName)}
                                                     className="p-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded transition"
-                                                    title="Salvar alteraÃ§Ã£o (Enter)"
+                                                    title="Salvar alteração (Enter)"
                                                   >
                                                     <Check size={12} />
                                                   </button>
@@ -1598,7 +1598,7 @@ export default function SysInitPage() {
                               <CheckCircle2 className="text-zinc-500" size={24} />
                             </div>
                             <p className="text-zinc-300 font-bold text-sm">Nenhum registro encontrado</p>
-                            <p className="text-zinc-500 text-xs mt-1">A consulta foi executada com sucesso em {sqlResult.durationMs}ms, mas nÃ£o retornou nenhuma linha.</p>
+                            <p className="text-zinc-500 text-xs mt-1">A consulta foi executada com sucesso em {sqlResult.durationMs}ms, mas não retornou nenhuma linha.</p>
                           </div>
                         )}
 
@@ -1613,10 +1613,10 @@ export default function SysInitPage() {
                           </div>
                         )}
 
-                        {/* HistÃ³rico recente quando nÃ£o hÃ¡ resultado */}
+                        {/* Histórico recente quando não há resultado */}
                         {!sqlResult && !sqlError && !sqlLoading && sqlHistory.length > 0 && (
                           <div className="p-4">
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2.5 flex items-center gap-2"><History size={11} /> HistÃ³rico de Consultas</p>
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2.5 flex items-center gap-2"><History size={11} /> Histórico de Consultas</p>
                             <div className="space-y-1">
                               {sqlHistory.map((q, i) => (
                                 <div key={i} className="flex items-center gap-3 group px-2 py-1.5 rounded-lg hover:bg-zinc-800/50 transition">
@@ -1632,7 +1632,7 @@ export default function SysInitPage() {
                           <div className="flex flex-col items-center justify-center h-full py-16 text-center">
                             <Terminal className="text-zinc-800 mb-3" size={40} />
                             <p className="text-zinc-500 text-sm">Selecione uma tabela ou atalho na barra lateral para consultar.</p>
-                            <p className="text-zinc-700 text-xs mt-1">VocÃª tambÃ©m pode digitar comandos SQL diretamente no editor.</p>
+                            <p className="text-zinc-700 text-xs mt-1">Você também pode digitar comandos SQL diretamente no editor.</p>
                           </div>
                         )}
                       </div>
@@ -1641,14 +1641,14 @@ export default function SysInitPage() {
                 )}
               </div>
             ) : (
-              /* Leads Tab â€” mantido igual */
+              /* Leads Tab — mantido igual */
               <div className="flex-1 flex flex-col gap-6 overflow-hidden">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
-                    { label: 'Total Leads', value: leads.length, icon: 'ðŸŽ¯', color: 'text-amber-400', filter: '' },
-                    { label: 'Em DemonstraÃ§Ã£o', value: leads.filter(l => l.status === 'EM_DEMO').length, icon: 'âš¡', color: 'text-blue-400', filter: 'EM_DEMO' },
-                    { label: 'Convertidos', value: leads.filter(l => l.status === 'CONVERTIDO').length, icon: 'âœ…', color: 'text-emerald-400', filter: 'CONVERTIDO' },
-                    { label: 'Contatados', value: leads.filter(l => l.status === 'CONTATADO').length, icon: 'ðŸ’¬', color: 'text-purple-400', filter: 'CONTATADO' },
+                    { label: 'Total Leads', value: leads.length, icon: '🎯', color: 'text-amber-400', filter: '' },
+                    { label: 'Em Demonstração', value: leads.filter(l => l.status === 'EM_DEMO').length, icon: '⚡', color: 'text-blue-400', filter: 'EM_DEMO' },
+                    { label: 'Convertidos', value: leads.filter(l => l.status === 'CONVERTIDO').length, icon: '✅', color: 'text-emerald-400', filter: 'CONVERTIDO' },
+                    { label: 'Contatados', value: leads.filter(l => l.status === 'CONTATADO').length, icon: '💬', color: 'text-purple-400', filter: 'CONTATADO' },
                   ].map(card => (
                     <div key={card.label} className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 flex items-center gap-4">
                       <div className="p-3 bg-zinc-800/50 rounded-xl font-bold text-lg">{card.icon}</div>
@@ -1676,7 +1676,7 @@ export default function SysInitPage() {
                           <th className="px-6 py-4 font-medium">Nome</th>
                           <th className="px-6 py-4 font-medium">WhatsApp</th>
                           <th className="px-6 py-4 font-medium">Status</th>
-                          <th className="px-6 py-4 font-medium text-right">AÃ§Ã£o</th>
+                          <th className="px-6 py-4 font-medium text-right">Ação</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-800/50">
@@ -1701,17 +1701,17 @@ export default function SysInitPage() {
                                 <td className="px-6 py-4 font-mono text-zinc-300">{l.whatsapp}</td>
                                 <td className="px-6 py-4">
                                   <select value={l.status} onChange={(e) => updateLeadStatus(l.id, e.target.value)} className={`text-xs font-bold px-2.5 py-1 rounded-full border bg-zinc-950 focus:outline-none cursor-pointer ${statusColors[l.status] || 'bg-zinc-800 text-zinc-300'}`}>
-                                    <option value="NOVO">ðŸ”µ Novo</option>
-                                    <option value="EM_DEMO">ðŸŸ¡ Em Demo</option>
-                                    <option value="CONTATADO">ðŸŸ£ Contatado</option>
-                                    <option value="CONVERTIDO">ðŸŸ¢ Convertido</option>
-                                    <option value="DESCARTADO">âšª Descartado</option>
+                                    <option value="NOVO">🔍µ Novo</option>
+                                    <option value="EM_DEMO">▪ Em Demo</option>
+                                    <option value="CONTATADO">▪ Contatado</option>
+                                    <option value="CONVERTIDO">▪ Convertido</option>
+                                    <option value="DESCARTADO">— Descartado</option>
                                   </select>
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                   {cleanPhone && (
-                                    <a href={`https://wa.me/55${cleanPhone}?text=OlÃ¡%20${encodeURIComponent(l.name)},%20vi%20que%20vocÃª%20experimentou%20o%20PDV!`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm">
-                                      Chamar no WhatsApp ðŸ’¬
+                                    <a href={`https://wa.me/55${cleanPhone}?text=Olá%20${encodeURIComponent(l.name)},%20vi%20que%20você%20experimentou%20o%20PDV!`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm">
+                                      Chamar no WhatsApp 💬
                                     </a>
                                   )}
                                 </td>
@@ -1728,15 +1728,15 @@ export default function SysInitPage() {
           </div>
         )}
 
-        {/* â•â•â•â•â•â•â•â• BACKUPS STEP â•â•â•â•â•â•â•â• */}
+        {/* — BACKUPS STEP — */}
         {step === "backups" && (
           <div className="max-w-4xl mx-auto mt-10 animate-[fadeIn_0.3s_ease] w-full">
             <button onClick={() => setStep("list")} className="mb-4 text-zinc-400 hover:text-white flex items-center gap-2 text-sm"><ArrowRight className="rotate-180" size={16} /> Voltar para lista</button>
             <div className="bg-zinc-900/70 backdrop-blur-xl border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col p-6">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold flex items-center gap-3"><Database className="text-blue-500" /> GestÃ£o de Backups</h2>
-                  <p className="text-xs text-zinc-400 mt-1">Gere e restaure cÃ³pias de seguranÃ§a. Backups mais antigos que 7 dias sÃ£o excluÃ­dos automaticamente.</p>
+                  <h2 className="text-2xl font-bold flex items-center gap-3"><Database className="text-blue-500" /> Gestão de Backups</h2>
+                  <p className="text-xs text-zinc-400 mt-1">Gere e restaure cópias de segurança. Backups mais antigos que 7 dias são excluídos automaticamente.</p>
                 </div>
                 <div className="flex gap-2">
                   <button disabled={downloadingAll} onClick={async () => {
@@ -1768,7 +1768,7 @@ export default function SysInitPage() {
               </div>
 
               <div className="bg-zinc-800/40 border border-zinc-700/50 rounded-2xl p-4 mb-6 flex items-center justify-between">
-                <div><h3 className="font-bold text-white mb-1">Rotina AutomÃ¡tica DiÃ¡ria</h3><p className="text-xs text-zinc-400">Gere um backup geral automaticamente num horÃ¡rio fixo.</p></div>
+                <div><h3 className="font-bold text-white mb-1">Rotina Automática Diária</h3><p className="text-xs text-zinc-400">Gere um backup geral automaticamente num horário fixo.</p></div>
                 <div className="flex items-center gap-4">
                   {backupSchedule.enabled && (
                     <input type="time" value={backupSchedule.time} onChange={(e) => setBackupSchedule({ ...backupSchedule, time: e.target.value })} className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500" />
@@ -1788,7 +1788,7 @@ export default function SysInitPage() {
                   {backupSchedule.enabled && (
                     <button onClick={async () => {
                       setSavingSchedule(true);
-                      try { const pin = pinDigits.join(''); await api.post('/sys-init/backups/schedule', backupSchedule, { headers: { 'x-setup-pin': pin } }); toast.success("HorÃ¡rio salvo!"); }
+                      try { const pin = pinDigits.join(''); await api.post('/sys-init/backups/schedule', backupSchedule, { headers: { 'x-setup-pin': pin } }); toast.success("Horário salvo!"); }
                       catch (e) { toast.error("Erro ao salvar"); } finally { setSavingSchedule(false); }
                     }} className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition">Salvar Hora</button>
                   )}
@@ -1820,7 +1820,7 @@ export default function SysInitPage() {
                               <th className="px-6 py-3 font-medium">Arquivo</th>
                               <th className="px-6 py-3 font-medium">Tamanho</th>
                               <th className="px-6 py-3 font-medium">Data</th>
-                              <th className="px-6 py-3 font-medium text-right">AÃ§Ãµes</th>
+                              <th className="px-6 py-3 font-medium text-right">Ações</th>
                             </tr></thead>
                             <tbody className="divide-y divide-zinc-800/50">
                               {group.files.map((file: any, j: number) => (
@@ -1837,7 +1837,7 @@ export default function SysInitPage() {
                                         } catch (e) { toast.error("Erro ao fazer download"); }
                                       }} className="p-1.5 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition" title="Download"><Upload size={16} className="rotate-180" /></button>
                                       <button onClick={async () => {
-                                        if (!window.confirm(`âš ï¸ Restaurar o backup? Os dados atuais serÃ£o substituÃ­dos irrevogavelmente.`)) return;
+                                        if (!window.confirm(`⚠️ï¸ Restaurar o backup? Os dados atuais serão substituídos irrevogavelmente.`)) return;
                                         try { const pin = pinDigits.join(''); await api.post(`/sys-init/backups/restore/${file.path}`, {}, { headers: { 'x-setup-pin': pin } }); toast.success("Backup restaurado!"); }
                                         catch (e: any) { toast.error(e.response?.data?.message || "Erro ao restaurar backup"); }
                                       }} className="p-1.5 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition" title="Restaurar"><ArrowRight size={16} /></button>
@@ -1862,7 +1862,7 @@ export default function SysInitPage() {
           </div>
         )}
 
-        {/* â•â•â•â•â•â•â•â• CREATE STEP â•â•â•â•â•â•â•â• */}
+        {/* — CREATE STEP — */}
         {step === "create" && (
           <div className="max-w-md mx-auto mt-20 animate-[fadeIn_0.4s_ease]">
             <button onClick={() => setStep("list")} className="mb-4 text-zinc-400 hover:text-white flex items-center gap-2 text-sm"><ArrowRight className="rotate-180" size={16} /> Voltar para lista</button>
@@ -1889,7 +1889,7 @@ export default function SysInitPage() {
                   <button type="button" onClick={() => setSeedProducts(!seedProducts)} className={`transition-colors ${seedProducts ? 'text-emerald-500' : 'text-zinc-600'}`}>
                     {seedProducts ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
                   </button>
-                  <div><p className="text-sm font-semibold text-zinc-200">Produtos Base</p><p className="text-xs text-zinc-500">Popular banco de dados com produtos padrÃ£o.</p></div>
+                  <div><p className="text-sm font-semibold text-zinc-200">Produtos Base</p><p className="text-xs text-zinc-500">Popular banco de dados com produtos padrão.</p></div>
                 </div>
                 {formError && <div className="text-red-400 text-sm">{formError}</div>}
                 <button type="submit" disabled={formLoading} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl mt-4">
@@ -1900,7 +1900,7 @@ export default function SysInitPage() {
           </div>
         )}
 
-        {/* â•â•â•â•â•â•â•â• EDIT STEP â•â•â•â•â•â•â•â• */}
+        {/* — EDIT STEP — */}
         {step === "edit" && editingTenant && (
           <div className="max-w-2xl mx-auto mt-10 animate-[fadeIn_0.3s_ease] w-full">
             <button onClick={() => setStep("list")} className="mb-4 text-zinc-400 hover:text-white flex items-center gap-2 text-sm"><ArrowRight className="rotate-180" size={16} /> Voltar para lista</button>
@@ -1929,11 +1929,11 @@ export default function SysInitPage() {
               <div className="flex border-b border-zinc-800 bg-zinc-950/50 overflow-x-auto">
                 {[
                   { id: 'identidade', label: 'Identidade', icon: Building2 },
-                  { id: 'modulos', label: 'MÃ³dulos', icon: Settings },
+                  { id: 'modulos', label: 'Módulos', icon: Settings },
                   { id: 'fiscal', label: 'Fiscal', icon: FileText },
                   { id: 'financeiro', label: 'Financeiro', icon: CreditCard },
-                  { id: 'integracoes', label: 'IntegraÃ§Ãµes', icon: ArrowRight },
-                  { id: 'usuarios', label: 'UsuÃ¡rios', icon: Users },
+                  { id: 'integracoes', label: 'Integrações', icon: ArrowRight },
+                  { id: 'usuarios', label: 'Usuários', icon: Users },
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -1946,7 +1946,7 @@ export default function SysInitPage() {
                           const pin = pinDigits.join('');
                           const res = await api.get(`/tenants/setup/${editingTenant.id}/users`, { headers: { 'x-setup-pin': pin } });
                           setTenantUsers(res.data);
-                        } catch (e) { toast.error("Erro ao carregar usuÃ¡rios"); }
+                        } catch (e) { toast.error("Erro ao carregar usuários"); }
                         finally { setLoadingUsers(false); }
                       }
                       if (tab.id === 'financeiro') {
@@ -1982,7 +1982,7 @@ export default function SysInitPage() {
                             <Upload size={16} /> Fazer Upload
                             <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files && setLogoFile(e.target.files[0])} />
                           </label>
-                          <p className="text-xs text-zinc-500 mt-2">Recomendado: PNG ou SVG transparente, proporÃ§Ã£o horizontal.</p>
+                          <p className="text-xs text-zinc-500 mt-2">Recomendado: PNG ou SVG transparente, proporção horizontal.</p>
                         </div>
                       </div>
                     </div>
@@ -1994,10 +1994,10 @@ export default function SysInitPage() {
                       <div>
                         <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block">Status</label>
                         <select value={editingTenant.status} onChange={e => setEditingTenant({...editingTenant, status: e.target.value})} className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:border-violet-500 outline-none">
-                          <option value="active">âœ… Ativo</option>
-                          <option value="paused">â¸ Pausado (retorna em breve)</option>
-                          <option value="suspended">âš ï¸ Suspenso (inadimplente)</option>
-                          <option value="inactive">âŒ Inativo</option>
+                          <option value="active">✅ Ativo</option>
+                          <option value="paused">— Pausado (retorna em breve)</option>
+                          <option value="suspended">⚠️ï¸ Suspenso (inadimplente)</option>
+                          <option value="inactive">— Inativo</option>
                         </select>
                       </div>
                     </div>
@@ -2023,25 +2023,25 @@ export default function SysInitPage() {
                       </div>
                     </div>
 
-                    {/* ObservaÃ§Ãµes */}
+                    {/* Observações */}
                     <div>
-                      <label className="text-xs text-zinc-500 mb-1 block flex items-center gap-1.5"><Info size={12} /> ObservaÃ§Ãµes Internas</label>
+                      <label className="text-xs text-zinc-500 mb-1 block flex items-center gap-1.5"><Info size={12} /> Observações Internas</label>
                       <textarea rows={3} placeholder="Notas sobre o cliente, acordos especiais, etc..." value={editingTenant.observacoes || ''} onChange={e => setEditingTenant({...editingTenant, observacoes: e.target.value})} className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white focus:border-violet-500 outline-none resize-none text-sm" />
                     </div>
                   </div>
                 )}
 
-                {/* TAB: MÃ³dulos */}
+                {/* TAB: Módulos */}
                 {editTab === 'modulos' && (
                   <div className="space-y-4">
                     <p className="text-zinc-400 text-sm mb-4">Habilite ou desabilite os recursos (Feature Flags) para este cliente.</p>
                     {[
-                      { id: 'nfce', title: 'NFC-e / EmissÃ£o Fiscal', desc: 'Permite a emissÃ£o de cupons fiscais eletrÃ´nicos (NFC-e).', badge: MODULE_BADGES.nfce },
-                      { id: 'importacaoXml', title: 'Entrada por XML (Upload Manual)', desc: 'Permite a importaÃ§Ã£o manual de arquivos XML de NF-e.', badge: MODULE_BADGES.importacaoXml },
-                      { id: 'estoque', title: 'Estoque', desc: 'MÃ³dulo completo de controle de produtos e inventÃ¡rio.', badge: MODULE_BADGES.estoque },
-                      { id: 'dashboardMobile', title: 'Dashboard Mobile', desc: 'Acesso ao painel resumido em dispositivos mÃ³veis.', badge: MODULE_BADGES.dashboardMobile },
-                      { id: 'comandas', title: 'Comandas & Mesas', desc: 'Permite o lanÃ§amento, abertura e consumo em comandas/mesas.', badge: MODULE_BADGES.comandas },
-                      { id: 'vitrineDigital', title: 'ðŸ“º Vitrine Digital TV', desc: 'Exibe promoÃ§Ãµes e produtos em uma TV/tela secundÃ¡ria via URL pÃºblica.', badge: MODULE_BADGES.vitrineDigital },
+                      { id: 'nfce', title: 'NFC-e / Emissão Fiscal', desc: 'Permite a emissão de cupons fiscais eletrÃ´nicos (NFC-e).', badge: MODULE_BADGES.nfce },
+                      { id: 'importacaoXml', title: 'Entrada por XML (Upload Manual)', desc: 'Permite a importação manual de arquivos XML de NF-e.', badge: MODULE_BADGES.importacaoXml },
+                      { id: 'estoque', title: 'Estoque', desc: 'Módulo completo de controle de produtos e inventário.', badge: MODULE_BADGES.estoque },
+                      { id: 'dashboardMobile', title: 'Dashboard Mobile', desc: 'Acesso ao painel resumido em dispositivos móveis.', badge: MODULE_BADGES.dashboardMobile },
+                      { id: 'comandas', title: 'Comandas & Mesas', desc: 'Permite o lançamento, abertura e consumo em comandas/mesas.', badge: MODULE_BADGES.comandas },
+                      { id: 'vitrineDigital', title: '▪ Vitrine Digital TV', desc: 'Exibe promoções e produtos em uma TV/tela secundária via URL pública.', badge: MODULE_BADGES.vitrineDigital },
                       { id: 'restaurante', title: '🍽️ Modo Restaurante / Garçom', desc: 'Ativa a interface dedicada para garçons criarem e gerenciarem comandas sem precisar abrir caixa. Acesso via /garcom.', badge: MODULE_BADGES.restaurante },
                     ].map(item => (
                       <div key={item.id} className="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-800 rounded-xl hover:border-zinc-700 transition">
@@ -2063,13 +2063,13 @@ export default function SysInitPage() {
                 {/* TAB: Fiscal */}
                 {editTab === 'fiscal' && (
                   <div className="space-y-5">
-                    <p className="text-sm text-zinc-400 border-b border-zinc-800 pb-3">Estes dados serÃ£o injetados no motor fiscal.</p>
+                    <p className="text-sm text-zinc-400 border-b border-zinc-800 pb-3">Estes dados serão injetados no motor fiscal.</p>
                     <div className="grid grid-cols-2 gap-4">
                       <div><label className="text-xs text-zinc-400 uppercase">CNPJ</label><input type="text" value={editingTenant.cnpj || ''} onChange={e => setEditingTenant({...editingTenant, cnpj: e.target.value})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm mt-1" /></div>
                       <div><label className="text-xs text-zinc-400 uppercase">Ambiente NFC-e</label>
                         <select value={editingTenant.nfceAmbiente || 2} onChange={e => setEditingTenant({...editingTenant, nfceAmbiente: Number(e.target.value)})} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white text-sm mt-1">
-                          <option value={1}>1 - ProduÃ§Ã£o</option>
-                          <option value={2}>2 - HomologaÃ§Ã£o</option>
+                          <option value={1}>1 - Produção</option>
+                          <option value={2}>2 - Homologação</option>
                         </select>
                       </div>
                     </div>
@@ -2089,23 +2089,23 @@ export default function SysInitPage() {
                       return (
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           <div className="bg-violet-500/5 border border-violet-500/15 rounded-2xl p-3 text-center">
-                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-1">Cliente hÃ¡</p>
-                            <p className="text-xl font-black text-violet-300">{mesesConosco ?? 'â€”'}</p>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-1">Cliente há</p>
+                            <p className="text-xl font-black text-violet-300">{mesesConosco ?? '—'}</p>
                             <p className="text-[10px] text-zinc-600">meses</p>
                           </div>
                           <div className="bg-emerald-500/5 border border-emerald-500/15 rounded-2xl p-3 text-center">
                             <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-1">Total pago</p>
-                            <p className="text-lg font-black text-emerald-300">{totalPago > 0 ? `R$ ${totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'â€”'}</p>
+                            <p className="text-lg font-black text-emerald-300">{totalPago > 0 ? `R$ ${totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}</p>
                             <p className="text-[10px] text-zinc-600">{paymentHistory.length} pagamentos</p>
                           </div>
                           <div className="bg-blue-500/5 border border-blue-500/15 rounded-2xl p-3 text-center">
-                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-1">MÃ©dia mensal</p>
-                            <p className="text-lg font-black text-blue-300">{mesesConosco && totalPago > 0 ? `R$ ${(totalPago / mesesConosco).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'â€”'}</p>
-                            <p className="text-[10px] text-zinc-600">por mÃªs</p>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-1">Média mensal</p>
+                            <p className="text-lg font-black text-blue-300">{mesesConosco && totalPago > 0 ? `R$ ${(totalPago / mesesConosco).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}</p>
+                            <p className="text-[10px] text-zinc-600">por mês</p>
                           </div>
                           <div className="bg-zinc-800/60 border border-zinc-700/40 rounded-2xl p-3 text-center">
-                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-1">Ãšltimo pag.</p>
-                            <p className="text-sm font-black text-zinc-300">{ultimoPag ? new Date(ultimoPag.createdAt).toLocaleDateString('pt-BR') : 'â€”'}</p>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-1">Último pag.</p>
+                            <p className="text-sm font-black text-zinc-300">{ultimoPag ? new Date(ultimoPag.createdAt).toLocaleDateString('pt-BR') : '—'}</p>
                             <p className="text-[10px] text-zinc-600">{ultimoPag ? `R$ ${Number(ultimoPag.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Nenhum'}</p>
                           </div>
                         </div>
@@ -2114,7 +2114,7 @@ export default function SysInitPage() {
 
                     {/* Valor e Vencimento */}
                     <div>
-                      <p className="text-sm text-zinc-400 mb-4">Configure o valor e a data do prÃ³ximo vencimento da mensalidade.</p>
+                      <p className="text-sm text-zinc-400 mb-4">Configure o valor e a data do próximo vencimento da mensalidade.</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block font-bold">Valor da Mensalidade (R$)</label>
@@ -2124,7 +2124,7 @@ export default function SysInitPage() {
                           </div>
                         </div>
                         <div>
-                          <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block font-bold">PrÃ³ximo Vencimento</label>
+                          <label className="text-xs text-zinc-400 uppercase tracking-wider mb-1.5 block font-bold">Próximo Vencimento</label>
                           <input type="date"
                             value={editingTenant.mensalidadeVencimento ? new Date(editingTenant.mensalidadeVencimento).toISOString().split('T')[0] : ''}
                             onChange={e => setEditingTenant({...editingTenant, mensalidadeVencimento: e.target.value ? parseDateLocal(e.target.value).toISOString() : null})}
@@ -2132,9 +2132,9 @@ export default function SysInitPage() {
                         </div>
                       </div>
 
-                      {/* Atalhos RÃ¡pidos */}
+                      {/* Atalhos Rápidos */}
                       <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-4 mt-4 space-y-2">
-                        <span className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider block">Definir Vencimento RÃ¡pido:</span>
+                        <span className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider block">Definir Vencimento Rápido:</span>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {[
                             { label: '+30 Dias', action: () => { const d = new Date(); d.setDate(d.getDate() + 30); return d; } },
@@ -2154,16 +2154,16 @@ export default function SysInitPage() {
                     <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4">
                       <h3 className="font-bold text-emerald-400 mb-3 flex items-center gap-2"><DollarSign size={16} /> Registrar Pagamento Recebido</h3>
                       <div className="space-y-3">
-                        <input type="text" placeholder="ObservaÃ§Ã£o (opcional, ex: Pix recebido)" value={paymentObservacao} onChange={e => setPaymentObservacao(e.target.value)} className="w-full p-3 bg-zinc-950 border border-zinc-700 rounded-xl text-white text-sm focus:border-emerald-500 outline-none" />
+                        <input type="text" placeholder="Observação (opcional, ex: Pix recebido)" value={paymentObservacao} onChange={e => setPaymentObservacao(e.target.value)} className="w-full p-3 bg-zinc-950 border border-zinc-700 rounded-xl text-white text-sm focus:border-emerald-500 outline-none" />
                         <button disabled={registeringPayment} onClick={() => handleRegistrarPagamento(editingTenant.id, paymentObservacao)} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
-                          {registeringPayment ? <Loader2 className="animate-spin" size={18} /> : <><DollarSign size={18} /> Confirmar Pagamento & AvanÃ§ar Vencimento</>}
+                          {registeringPayment ? <Loader2 className="animate-spin" size={18} /> : <><DollarSign size={18} /> Confirmar Pagamento & Avançar Vencimento</>}
                         </button>
                       </div>
                     </div>
 
-                    {/* HistÃ³rico */}
+                    {/* Histórico */}
                     <div>
-                      <h3 className="font-bold text-zinc-300 mb-3 flex items-center gap-2"><History size={16} /> HistÃ³rico de Pagamentos</h3>
+                      <h3 className="font-bold text-zinc-300 mb-3 flex items-center gap-2"><History size={16} /> Histórico de Pagamentos</h3>
                       {loadingPaymentHistory ? (
                         <div className="text-center py-6 text-zinc-500"><Loader2 className="animate-spin inline-block" /></div>
                       ) : paymentHistory.length === 0 ? (
@@ -2181,7 +2181,7 @@ export default function SysInitPage() {
                               </div>
                               <div className="text-right">
                                 <p className="text-xs text-zinc-400 font-mono">{new Date(log.createdAt).toLocaleDateString('pt-BR')}</p>
-                                <p className="text-[10px] text-zinc-600">â†’ venc: {new Date(log.vencimentoApos).toLocaleDateString('pt-BR')}</p>
+                                <p className="text-[10px] text-zinc-600">→ venc: {new Date(log.vencimentoApos).toLocaleDateString('pt-BR')}</p>
                               </div>
                             </div>
                           ))}
@@ -2191,12 +2191,12 @@ export default function SysInitPage() {
                   </div>
                 )}
 
-                {/* TAB: IntegraÃ§Ãµes */}
+                {/* TAB: Integrações */}
                 {editTab === 'integracoes' && (
                   <div className="space-y-4">
                     {!selectedIntegration ? (
                       <>
-                        <p className="text-sm text-zinc-400 mb-2">Selecione o provedor para configurar a integraÃ§Ã£o deste cliente.</p>
+                        <p className="text-sm text-zinc-400 mb-2">Selecione o provedor para configurar a integração deste cliente.</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <button onClick={async () => {
                             const existing = editingTenant?.tenantIntegrations?.find((i: any) => i.provider === 'ifood');
@@ -2213,11 +2213,11 @@ export default function SysInitPage() {
                             setSelectedIntegration('ifood');
                           }} className="bg-zinc-950 border border-zinc-800 hover:border-red-500/50 rounded-2xl p-5 flex items-center gap-4 transition-colors group text-left">
                             <div className="w-14 h-14 bg-red-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg group-hover:scale-105 transition-transform">iFood</div>
-                            <div><h3 className="font-bold text-white">IntegraÃ§Ã£o iFood</h3><p className="text-xs text-zinc-400 mt-1">Conectar ao portal do parceiro</p></div>
+                            <div><h3 className="font-bold text-white">Integração iFood</h3><p className="text-xs text-zinc-400 mt-1">Conectar ao portal do parceiro</p></div>
                           </button>
                           <div className="bg-zinc-950/50 border border-zinc-800/50 rounded-2xl p-5 flex items-center gap-4 opacity-50 cursor-not-allowed">
                             <div className="w-14 h-14 bg-orange-500 rounded-xl flex items-center justify-center font-bold text-white shadow-lg">Rappi</div>
-                            <div><h3 className="font-bold text-white">IntegraÃ§Ã£o Rappi</h3><p className="text-xs text-zinc-400 mt-1">Em breve</p></div>
+                            <div><h3 className="font-bold text-white">Integração Rappi</h3><p className="text-xs text-zinc-400 mt-1">Em breve</p></div>
                           </div>
                         </div>
                       </>
@@ -2226,7 +2226,7 @@ export default function SysInitPage() {
                         <div className="flex items-center gap-4 mb-4">
                           <button onClick={() => setSelectedIntegration(null)} className="p-2 bg-zinc-900 hover:bg-zinc-800 rounded-lg text-zinc-400 transition-colors"><ArrowRight className="rotate-180" size={20} /></button>
                           <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg">iFood</div>
-                          <div><h3 className="font-bold text-white text-lg">IntegraÃ§Ã£o iFood</h3><p className="text-xs text-zinc-400">Insira as chaves de API do cliente</p></div>
+                          <div><h3 className="font-bold text-white text-lg">Integração iFood</h3><p className="text-xs text-zinc-400">Insira as chaves de API do cliente</p></div>
                         </div>
                         <div className="space-y-3">
                           <div><label className="text-xs text-zinc-400 uppercase tracking-wider mb-1 block">Client ID</label><input type="text" value={integrationCreds.clientId} onChange={e => setIntegrationCreds({...integrationCreds, clientId: e.target.value})} placeholder="Cole o Client ID" className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white focus:border-red-500 outline-none text-sm" /></div>
@@ -2241,7 +2241,7 @@ export default function SysInitPage() {
                   </div>
                 )}
 
-                {/* TAB: UsuÃ¡rios */}
+                {/* TAB: Usuários */}
                 {editTab === 'usuarios' && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -2251,17 +2251,17 @@ export default function SysInitPage() {
                         className="px-4 py-2 text-xs font-bold bg-violet-600 hover:bg-violet-500 text-white rounded-xl transition flex items-center gap-1.5"
                       >
                         {showCreateUser ? <X size={14} /> : <UserPlus size={14} />}
-                        {showCreateUser ? 'Cancelar' : 'Novo UsuÃ¡rio'}
+                        {showCreateUser ? 'Cancelar' : 'Novo Usuário'}
                       </button>
                     </div>
 
                     {showCreateUser && (
                       <div className="bg-zinc-950 border border-violet-500/30 rounded-xl p-4 space-y-3 animate-[fadeIn_0.2s_ease]">
-                        <h4 className="text-sm font-bold text-violet-400 flex items-center gap-2"><UserPlus size={14} /> Criar Novo UsuÃ¡rio</h4>
+                        <h4 className="text-sm font-bold text-violet-400 flex items-center gap-2"><UserPlus size={14} /> Criar Novo Usuário</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
                             <label className="text-xs text-zinc-500 uppercase tracking-wider mb-1 block">Nome</label>
-                            <input type="text" placeholder="Ex: JoÃ£o Estoquista" value={newUserForm.name} onChange={e => setNewUserForm({...newUserForm, name: e.target.value})} className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white text-sm focus:border-violet-500 outline-none" />
+                            <input type="text" placeholder="Ex: João Estoquista" value={newUserForm.name} onChange={e => setNewUserForm({...newUserForm, name: e.target.value})} className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white text-sm focus:border-violet-500 outline-none" />
                           </div>
                           <div>
                             <label className="text-xs text-zinc-500 uppercase tracking-wider mb-1 block">Email (Login)</label>
@@ -2274,16 +2274,16 @@ export default function SysInitPage() {
                           <div>
                             <label className="text-xs text-zinc-500 uppercase tracking-wider mb-1 block">Perfil de Acesso</label>
                             <select value={newUserForm.role} onChange={e => setNewUserForm({...newUserForm, role: e.target.value})} className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white text-sm focus:border-violet-500 outline-none">
-                              <option value="operator">ðŸ–¥ï¸ Operador (Caixa PDV)</option>
-                              <option value="stockist">ðŸ“¦ Estoquista (CatÃ¡logo & Estoque)</option>
-                              <option value="admin">ðŸ‘‘ Administrador (Acesso Total)</option>
+                              <option value="operator">▪ Operador (Caixa PDV)</option>
+                              <option value="stockist">▪ Estoquista (Catálogo & Estoque)</option>
+                              <option value="admin">👍‘ Administrador (Acesso Total)</option>
                             </select>
                           </div>
                         </div>
                         <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-3 text-[11px] text-zinc-500 space-y-1">
-                          {newUserForm.role === 'stockist' && <p>ðŸ“¦ <strong className="text-blue-400">Estoquista</strong>: Acessa somente CatÃ¡logo, Estoque, Categorias, Entrada e EdiÃ§Ã£o em Massa. Sem acesso ao PDV, Analytics ou Financeiro. NÃ£o pode alterar preÃ§o de venda.</p>}
-                          {newUserForm.role === 'operator' && <p>ðŸ–¥ï¸ <strong className="text-zinc-300">Operador</strong>: Acessa o PDV (frente de caixa). NÃ£o acessa o Dashboard administrativo.</p>}
-                          {newUserForm.role === 'admin' && <p>ðŸ‘‘ <strong className="text-violet-400">Administrador</strong>: Acesso total ao PDV e Dashboard (Analytics, Estoque, Financeiro, ConfiguraÃ§Ãµes).</p>}
+                          {newUserForm.role === 'stockist' && <p>▪ <strong className="text-blue-400">Estoquista</strong>: Acessa somente Catálogo, Estoque, Categorias, Entrada e Edição em Massa. Sem acesso ao PDV, Analytics ou Financeiro. Não pode alterar preço de venda.</p>}
+                          {newUserForm.role === 'operator' && <p>▪ <strong className="text-zinc-300">Operador</strong>: Acessa o PDV (frente de caixa). Não acessa o Dashboard administrativo.</p>}
+                          {newUserForm.role === 'admin' && <p>👍‘ <strong className="text-violet-400">Administrador</strong>: Acesso total ao PDV e Dashboard (Analytics, Estoque, Financeiro, Configurações).</p>}
                         </div>
                         <button
                           disabled={editLoading || !newUserForm.name || !newUserForm.email || !newUserForm.password}
@@ -2292,21 +2292,21 @@ export default function SysInitPage() {
                               setEditLoading(true);
                               const pinSetup = pinDigits.join('');
                               await api.post(`/tenants/setup/${editingTenant.id}/users`, newUserForm, { headers: { 'x-setup-pin': pinSetup } });
-                              toast.success(`UsuÃ¡rio ${newUserForm.name} criado com sucesso!`);
+                              toast.success(`Usuário ${newUserForm.name} criado com sucesso!`);
                               setShowCreateUser(false);
                               setNewUserForm({ name: '', email: '', password: '', role: 'operator' });
-                              // Recarregar lista de usuÃ¡rios
+                              // Recarregar lista de usuários
                               const { data: users } = await api.get(`/tenants/setup/${editingTenant.id}/users`, { headers: { 'x-setup-pin': pinSetup } });
                               setTenantUsers(users);
                             } catch (e: any) {
-                              toast.error(e.response?.data?.message || 'Erro ao criar usuÃ¡rio');
+                              toast.error(e.response?.data?.message || 'Erro ao criar usuário');
                             } finally {
                               setEditLoading(false);
                             }
                           }}
                           className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl transition-colors text-sm"
                         >
-                          {editLoading ? 'Criando...' : 'Criar UsuÃ¡rio'}
+                          {editLoading ? 'Criando...' : 'Criar Usuário'}
                         </button>
                       </div>
                     )}
@@ -2314,7 +2314,7 @@ export default function SysInitPage() {
                     {loadingUsers ? (
                       <div className="text-center py-10 text-zinc-500"><Loader2 className="animate-spin inline-block mx-auto" size={24} /></div>
                     ) : tenantUsers.length === 0 ? (
-                      <div className="text-center py-10 text-zinc-500">Nenhum usuÃ¡rio encontrado.</div>
+                      <div className="text-center py-10 text-zinc-500">Nenhum usuário encontrado.</div>
                     ) : (
                       <div className="space-y-3">
                         {tenantUsers.map(user => (
@@ -2322,7 +2322,7 @@ export default function SysInitPage() {
                             <div>
                               <p className="font-bold text-zinc-200 flex items-center gap-2">
                                 {user.name}
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full border ${user.role === 'admin' ? 'bg-violet-900/30 text-violet-400 border-violet-800' : user.role === 'stockist' ? 'bg-blue-900/30 text-blue-400 border-blue-800' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}>{user.role === 'stockist' ? 'ðŸ“¦ estoquista' : user.role}</span>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full border ${user.role === 'admin' ? 'bg-violet-900/30 text-violet-400 border-violet-800' : user.role === 'stockist' ? 'bg-blue-900/30 text-blue-400 border-blue-800' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}>{user.role === 'stockist' ? '▪ estoquista' : user.role}</span>
                                 {!user.active && <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-900/30 text-red-400 border border-red-800">Inativo</span>}
                               </p>
                               <p className="text-xs text-zinc-500">{user.email}</p>
@@ -2357,14 +2357,14 @@ export default function SysInitPage() {
               <div className="p-6 border-t border-zinc-800 bg-zinc-900/50 flex justify-end gap-3">
                 <button onClick={() => setStep("list")} className="px-5 py-2.5 rounded-xl font-medium text-zinc-400 hover:text-white transition">Cancelar</button>
                 <button onClick={handleSaveEdit} disabled={editLoading} className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition">
-                  {editLoading ? <Loader2 className="animate-spin" size={18} /> : 'Salvar AlteraÃ§Ãµes'}
+                  {editLoading ? <Loader2 className="animate-spin" size={18} /> : 'Salvar Alterações'}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* â•â•â•â•â•â•â•â• SUCCESS STEP â•â•â•â•â•â•â•â• */}
+        {/* — SUCCESS STEP — */}
         {step === "success" && successData && (
           <div className="max-w-md mx-auto mt-20 animate-[fadeIn_0.5s_ease] text-center">
             <div className="p-8 rounded-3xl bg-zinc-900/70 backdrop-blur-xl border border-zinc-800 shadow-2xl">
@@ -2376,13 +2376,13 @@ export default function SysInitPage() {
           </div>
         )}
 
-        {/* MODAL MIGRAÃ‡ÃƒO */}
+        {/* MODAL MIGRAÇÃO */}
         {migrationModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-[fadeIn_0.2s_ease]">
             <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
               <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/40">
                 <div>
-                  <h2 className="text-xl font-bold flex items-center gap-2 text-violet-400"><Database size={20} /> MigraÃ§Ã£o de Bancos de Dados</h2>
+                  <h2 className="text-xl font-bold flex items-center gap-2 text-violet-400"><Database size={20} /> Migração de Bancos de Dados</h2>
                   <p className="text-xs text-zinc-500 mt-1">
                     {includeHeart
                       ? `Atualizando ${migrationResults.length} banco(s): Heart (master) + tenants selecionados`
@@ -2495,12 +2495,12 @@ export default function SysInitPage() {
                   </form>
                 </div>
                 <div className="space-y-4">
-                  <h3 className="font-bold text-zinc-200 border-b border-zinc-800 pb-2">UsuÃ¡rios ProprietÃ¡rios</h3>
+                  <h3 className="font-bold text-zinc-200 border-b border-zinc-800 pb-2">Usuários Proprietários</h3>
                   <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
                     {loadingGroupUsers ? (
                       <div className="text-center py-4 text-zinc-500"><Loader2 className="animate-spin inline-block mx-auto" size={18} /></div>
                     ) : groupUsers.length === 0 ? (
-                      <p className="text-zinc-500 text-sm italic">Nenhum usuÃ¡rio proprietÃ¡rio.</p>
+                      <p className="text-zinc-500 text-sm italic">Nenhum usuário proprietário.</p>
                     ) : (
                       groupUsers.map((u: any) => (
                         <div key={u.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex justify-between items-center">
@@ -2510,12 +2510,12 @@ export default function SysInitPage() {
                     )}
                   </div>
                   <form onSubmit={handleAddGroupUser} className="bg-zinc-950/50 p-4 border border-zinc-800 rounded-xl space-y-3 mt-4">
-                    <h4 className="text-sm font-bold text-zinc-300">Novo UsuÃ¡rio do Grupo</h4>
+                    <h4 className="text-sm font-bold text-zinc-300">Novo Usuário do Grupo</h4>
                     <input required type="text" value={newUserName} onChange={e => setNewUserName(e.target.value)} placeholder="Nome" className="w-full p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm focus:border-violet-500 outline-none" />
                     <input required type="email" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} placeholder="Email" className="w-full p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm focus:border-violet-500 outline-none" />
                     <input required type="password" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} placeholder="Senha" className="w-full p-2.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm focus:border-violet-500 outline-none" />
                     <button type="submit" disabled={addingUser} className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-bold py-2.5 rounded-lg transition">
-                      {addingUser ? <Loader2 className="animate-spin mx-auto" size={18} /> : "Criar UsuÃ¡rio"}
+                      {addingUser ? <Loader2 className="animate-spin mx-auto" size={18} /> : "Criar Usuário"}
                     </button>
                   </form>
                 </div>

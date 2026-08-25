@@ -21,11 +21,15 @@ export class ProductsController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('search') search?: string,
+    @Query('includeInactive') includeInactive?: string,
+    @Query('status') status?: string,
   ) {
     return this.productsService.findAll(
       Number(page || 1), 
       Number(limit || 50),
       search,
+      includeInactive === 'true' || status === 'all' || status === 'inactive',
+      status,
     );
   }
 

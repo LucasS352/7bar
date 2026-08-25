@@ -17,7 +17,11 @@ export class ComandasService {
   async findAll(status: string = 'open') {
     const prisma = await this.getPrisma();
     const whereClause: any = {};
-    if (status !== 'all') {
+
+    if (status === 'open') {
+      // Default: busca todas as comandas ativas no salão (open e waiting_payment)
+      whereClause.status = { in: ['open', 'waiting_payment'] };
+    } else if (status !== 'all') {
       whereClause.status = status;
     }
 
@@ -35,6 +39,12 @@ export class ComandasService {
                 barcode: true,
               },
             },
+            createdBy: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
           orderBy: { createdAt: 'desc' },
         },
@@ -45,7 +55,7 @@ export class ComandasService {
             createdAt: true,
           },
         },
-        waiter: {
+        responsibleWaiter: {
           select: {
             id: true,
             name: true,
@@ -67,11 +77,17 @@ export class ComandasService {
         items: {
           include: {
             product: true,
+            createdBy: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
           orderBy: { createdAt: 'desc' },
         },
         sale: true,
-        waiter: {
+        responsibleWaiter: {
           select: {
             id: true,
             name: true,
@@ -88,24 +104,32 @@ export class ComandasService {
     return comanda;
   }
 
-  async create(data: { number: string; customerName?: string; notes?: string; waiterId?: string }) {
+  async create(data: {
+    number: string;
+    customerName?: string;
+    notes?: string;
+    responsibleWaiterId?: string;
+    waiterId?: string;
+  }) {
     const prisma = await this.getPrisma();
 
     if (!data.number || data.number.trim() === '') {
       throw new BadRequestException('O número ou identificador da comanda é obrigatório.');
     }
 
-    // Verificar se já existe uma comanda aberta com o mesmo número
-    const existingOpen = await (prisma as any).comanda.findFirst({
+    // Verificar se já existe uma comanda ativa (open ou waiting_payment) com o mesmo número
+    const existingActive = await (prisma as any).comanda.findFirst({
       where: {
         number: data.number.trim(),
-        status: 'open',
+        status: { in: ['open', 'waiting_payment'] },
       },
     });
 
-    if (existingOpen) {
+    if (existingActive) {
       throw new BadRequestException(`Já existe uma comanda/mesa aberta com a identificação "${data.number}".`);
     }
+
+    const responsibleWaiterId = data.responsibleWaiterId || data.waiterId || null;
 
     const createData: any = {
       number: data.number.trim(),
@@ -113,20 +137,14 @@ export class ComandasService {
       notes: data.notes?.trim() || null,
       status: 'open',
       total: 0,
+      responsibleWaiterId,
     };
-
-    // Vincular garçom se informado (Módulo Restaurante — campo opcional)
-    if (data.waiterId) {
-      try {
-        createData.waiterId = data.waiterId;
-      } catch { /* ignora se coluna ainda não existe */ }
-    }
 
     const comanda = await (prisma as any).comanda.create({
       data: createData,
       include: {
         items: { include: { product: true } },
-        waiter: { select: { id: true, name: true, jobTitle: true } },
+        responsibleWaiter: { select: { id: true, name: true, jobTitle: true } },
       },
     });
 
@@ -135,7 +153,7 @@ export class ComandasService {
 
   async addItems(
     comandaId: string,
-    items: Array<{ productId: string; quantity: number; unitPrice?: number; notes?: string }>,
+    items: Array<{ productId: string; quantity: number; unitPrice?: number; notes?: string; createdById?: string }>,
   ) {
     const prisma = await this.getPrisma();
     const comanda = await (prisma as any).comanda.findUnique({
@@ -144,6 +162,10 @@ export class ComandasService {
 
     if (!comanda) {
       throw new NotFoundException('Comanda não encontrada.');
+    }
+
+    if (comanda.status === 'waiting_payment') {
+      throw new BadRequestException('Comanda aguardando fechamento no caixa. Reabra a comanda para realizar novos lançamentos.');
     }
 
     if (comanda.status !== 'open') {
@@ -175,6 +197,7 @@ export class ComandasService {
           unitPrice,
           totalPrice,
           notes: item.notes || null,
+          createdById: item.createdById || null,
         },
       });
     }
@@ -191,7 +214,15 @@ export class ComandasService {
       where: { id: comandaId },
     });
 
-    if (!comanda || comanda.status !== 'open') {
+    if (!comanda) {
+      throw new NotFoundException('Comanda não encontrada.');
+    }
+
+    if (comanda.status === 'waiting_payment') {
+      throw new BadRequestException('Comanda aguardando fechamento no caixa. Reabra a comanda para remover itens.');
+    }
+
+    if (comanda.status !== 'open') {
       throw new BadRequestException('Comanda inválida ou já encerrada.');
     }
 
@@ -200,6 +231,64 @@ export class ComandasService {
     });
 
     await this.recalculateTotal(comandaId);
+    return this.findOne(comandaId);
+  }
+
+  async requestPayment(comandaId: string) {
+    const prisma = await this.getPrisma();
+    const comanda = await (prisma as any).comanda.findUnique({
+      where: { id: comandaId },
+      include: { items: true },
+    });
+
+    if (!comanda) {
+      throw new NotFoundException('Comanda não encontrada.');
+    }
+
+    // Idempotência: se já estiver em waiting_payment, retorna com sucesso HTTP 200
+    if (comanda.status === 'waiting_payment') {
+      return this.findOne(comandaId);
+    }
+
+    if (comanda.status !== 'open') {
+      throw new BadRequestException('Apenas comandas abertas podem solicitar fechamento.');
+    }
+
+    if (!comanda.items || comanda.items.length === 0) {
+      throw new BadRequestException('Não é possível solicitar fechamento de uma comanda sem itens lançados.');
+    }
+
+    await (prisma as any).comanda.update({
+      where: { id: comandaId },
+      data: {
+        status: 'waiting_payment',
+      },
+    });
+
+    return this.findOne(comandaId);
+  }
+
+  async reopen(comandaId: string) {
+    const prisma = await this.getPrisma();
+    const comanda = await (prisma as any).comanda.findUnique({
+      where: { id: comandaId },
+    });
+
+    if (!comanda) {
+      throw new NotFoundException('Comanda não encontrada.');
+    }
+
+    if (comanda.status !== 'waiting_payment') {
+      throw new BadRequestException('Apenas comandas aguardando pagamento podem ser reabertas.');
+    }
+
+    await (prisma as any).comanda.update({
+      where: { id: comandaId },
+      data: {
+        status: 'open',
+      },
+    });
+
     return this.findOne(comandaId);
   }
 
@@ -213,6 +302,12 @@ export class ComandasService {
       throw new NotFoundException('Comanda não encontrada.');
     }
 
+    // Idempotência se já estiver fechada
+    if (comanda.status === 'closed') {
+      return comanda;
+    }
+
+    // Permite fechar tanto comanda open quanto waiting_payment (retrocompatibilidade)
     const updated = await (prisma as any).comanda.update({
       where: { id: comandaId },
       data: {
@@ -251,3 +346,4 @@ export class ComandasService {
     });
   }
 }
+

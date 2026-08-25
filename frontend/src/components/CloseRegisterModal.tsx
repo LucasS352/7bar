@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { FileText, Loader2, X, AlertOctagon, Receipt, Trash2, EyeOff, Edit2, KeyRound, Unlock, ShieldCheck } from 'lucide-react';
+import { FileText, Loader2, X, AlertOctagon, Receipt, Trash2, EyeOff, Edit2, KeyRound, Unlock, ShieldCheck, SlidersHorizontal, Sparkles, CheckCircle2, RotateCcw, Calculator } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useShift } from '@/contexts/ShiftContext';
 import { EditPaymentModal } from './EditPaymentModal';
@@ -40,6 +40,14 @@ export function CloseRegisterModal({
   const [unlockModalOpen, setUnlockModalOpen] = useState(false);
   const [cashierPinInput, setCashierPinInput] = useState('');
   const [verifyingCashierPin, setVerifyingCashierPin] = useState(false);
+
+  // Estados de Correção Opcional de Recebimentos Digitais
+  const [adjustModalOpen, setAdjustModalOpen] = useState(false);
+  const [adjustCredit, setAdjustCredit] = useState('');
+  const [adjustDebit, setAdjustDebit] = useState('');
+  const [adjustPix, setAdjustPix] = useState('');
+  const [adjustCustom, setAdjustCustom] = useState<Record<string, string>>({});
+  const [adjustNotes, setAdjustNotes] = useState('');
 
   const { user } = useAuthStore();
   const { operator } = useShift();
@@ -157,14 +165,50 @@ export function CloseRegisterModal({
     setIsUnlockedByPin(false);
     setUnlockModalOpen(false);
     setCashierPinInput('');
+    setAdjustModalOpen(false);
     api.get(`/cash-registers/${registerId}/report?_t=${Date.now()}`)
       .then(res => {
         setData(res.data);
         setClosingValue(res.data.report.expectedDinheiro);
+        const cDetails = res.data.register?.closingDetails || res.data.report?.closingDetails;
+        if (cDetails) {
+          setAdjustCredit(cDetails.declaredCredit != null ? String(cDetails.declaredCredit) : '');
+          setAdjustDebit(cDetails.declaredDebit != null ? String(cDetails.declaredDebit) : '');
+          setAdjustPix(cDetails.declaredPix != null ? String(cDetails.declaredPix) : '');
+          setAdjustCustom(cDetails.declaredCustom || {});
+          setAdjustNotes(cDetails.notes || '');
+        } else {
+          setAdjustCredit('');
+          setAdjustDebit('');
+          setAdjustPix('');
+          setAdjustCustom({});
+          setAdjustNotes('');
+        }
       })
       .catch(() => toast.error('Falha ao gerar relatório detalhado'))
       .finally(() => setLoading(false));
   }, [isOpen, registerId]);
+
+  // Cálculos reativos de recebimentos digitais declarados vs sistema
+  const hasDigitalAdjustments = Boolean(
+    adjustCredit !== '' ||
+    adjustDebit !== '' ||
+    adjustPix !== '' ||
+    Object.keys(adjustCustom).length > 0 ||
+    adjustNotes.trim()
+  );
+
+  const declaredCreditVal = adjustCredit !== '' ? parseFloat(adjustCredit) || 0 : Number(data?.report?.totalCredito || 0);
+  const declaredDebitVal = adjustDebit !== '' ? parseFloat(adjustDebit) || 0 : Number(data?.report?.totalDebito || 0);
+  const declaredPixVal = adjustPix !== '' ? parseFloat(adjustPix) || 0 : Number(data?.report?.totalPix || 0);
+
+  const computedTotalDigital = declaredCreditVal + declaredDebitVal + declaredPixVal +
+    (data?.report?.customMethods || []).reduce((acc: number, cm: any) => {
+      const v = adjustCustom[cm.method] !== undefined ? parseFloat(adjustCustom[cm.method]) || 0 : Number(cm.total || 0);
+      return acc + v;
+    }, 0);
+
+  const computedTotalVendas = Number(data?.report?.totalDinheiro || 0) + computedTotalDigital;
 
   if (!isOpen) return null;
   if (!mounted) return null;
@@ -188,11 +232,31 @@ export function CloseRegisterModal({
     setStep(2);
   };
 
+  const buildClosingDetailsPayload = () => {
+    if (!hasDigitalAdjustments) return null;
+    return {
+      declaredCredit: adjustCredit !== '' ? parseFloat(adjustCredit) || 0 : Number(data.report.totalCredito || 0),
+      declaredDebit: adjustDebit !== '' ? parseFloat(adjustDebit) || 0 : Number(data.report.totalDebito || 0),
+      declaredPix: adjustPix !== '' ? parseFloat(adjustPix) || 0 : Number(data.report.totalPix || 0),
+      declaredCustom: adjustCustom,
+      totalVendasOriginal: Number(data.report.totalVendas || 0),
+      totalVendasAjustado: computedTotalVendas,
+      diffDigital: computedTotalVendas - Number(data.report.totalVendas || 0),
+      notes: adjustNotes.trim(),
+      adjustedAt: new Date().toISOString(),
+      adjustedBy: user?.name || operator?.name || 'Operador',
+    };
+  };
+
   // Fecha o caixa de verdade (chamado apenas no passo 2)
   const handleClose = async () => {
     setSubmitting(true);
     try {
-      const payload = canSeeTotals ? { closingValue } : { closingValue: null };
+      const closingDetails = buildClosingDetailsPayload();
+      const payload = {
+        closingValue: canSeeTotals ? closingValue : null,
+        closingDetails,
+      };
       await api.post(`/cash-registers/${registerId}/close`, payload);
       toast.success('Caixa encerrado formalmente. Bom descanso!');
       onClose(true);
@@ -206,7 +270,11 @@ export function CloseRegisterModal({
   const handleAudit = async () => {
     setSubmitting(true);
     try {
-      await api.patch(`/cash-registers/${registerId}/audit`, { closingValue });
+      const closingDetails = buildClosingDetailsPayload();
+      await api.patch(`/cash-registers/${registerId}/audit`, {
+        closingValue,
+        closingDetails,
+      });
       toast.success('Auditoria salva com sucesso!');
       onClose(true);
     } catch (e: any) {
@@ -324,31 +392,88 @@ export function CloseRegisterModal({
                   )}
                   
                   <div className="space-y-2 p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800 text-sm">
-                    <p className="text-zinc-500 font-bold uppercase text-[10px] tracking-widest mb-3">Recebimentos Digitais (Em Conta)</p>
-                    <div className="flex justify-between text-indigo-400">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-zinc-500 font-bold uppercase text-[10px] tracking-widest">Recebimentos Digitais (Em Conta)</p>
+                      {canSeeTotals && (
+                        <button
+                          type="button"
+                          onClick={() => setAdjustModalOpen(true)}
+                          className="flex items-center gap-1.5 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 px-2.5 py-1 rounded-xl transition cursor-pointer"
+                          title="Corrigir valores reais apurados na maquininha / extrato"
+                        >
+                          <SlidersHorizontal size={12} />
+                          {hasDigitalAdjustments ? 'Ajustado (Editar)' : 'Corrigir Valores'}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex justify-between items-center text-indigo-400">
                       <span>Cartão de Crédito</span>
-                      <span className="font-bold">{renderMoney(data.report.totalCredito || 0)}</span>
-                    </div>
-                    <div className="flex justify-between text-sky-400">
-                      <span>Cartão de Débito</span>
-                      <span className="font-bold">{renderMoney(data.report.totalDebito || 0)}</span>
-                    </div>
-                    <div className="flex justify-between text-teal-400">
-                      <span>Transferências (Pix)</span>
-                      <span className="font-bold">{renderMoney(data.report.totalPix || 0)}</span>
-                    </div>
-                    {(data.report.customMethods || []).map((cm: any) => (
-                      <div key={cm.method} className="flex justify-between text-purple-400">
-                        <span>{cm.label}</span>
-                        <span className="font-bold">{renderMoney(cm.total || 0)}</span>
+                      <div className="text-right">
+                        <span className="font-bold">{renderMoney(adjustCredit !== '' ? parseFloat(adjustCredit) || 0 : data.report.totalCredito || 0)}</span>
+                        {adjustCredit !== '' && canSeeTotals && (
+                          <span className="text-[10px] text-zinc-500 block">Sistema: R$ {Number(data.report.totalCredito || 0).toFixed(2)}</span>
+                        )}
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="flex justify-between items-center text-sky-400">
+                      <span>Cartão de Débito</span>
+                      <div className="text-right">
+                        <span className="font-bold">{renderMoney(adjustDebit !== '' ? parseFloat(adjustDebit) || 0 : data.report.totalDebito || 0)}</span>
+                        {adjustDebit !== '' && canSeeTotals && (
+                          <span className="text-[10px] text-zinc-500 block">Sistema: R$ {Number(data.report.totalDebito || 0).toFixed(2)}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-teal-400">
+                      <span>Transferências (Pix)</span>
+                      <div className="text-right">
+                        <span className="font-bold">{renderMoney(adjustPix !== '' ? parseFloat(adjustPix) || 0 : data.report.totalPix || 0)}</span>
+                        {adjustPix !== '' && canSeeTotals && (
+                          <span className="text-[10px] text-zinc-500 block">Sistema: R$ {Number(data.report.totalPix || 0).toFixed(2)}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {(data.report.customMethods || []).map((cm: any) => {
+                      const customVal = adjustCustom[cm.method] !== undefined ? parseFloat(adjustCustom[cm.method]) || 0 : Number(cm.total || 0);
+                      return (
+                        <div key={cm.method} className="flex justify-between items-center text-purple-400">
+                          <span>{cm.label}</span>
+                          <div className="text-right">
+                            <span className="font-bold">{renderMoney(customVal)}</span>
+                            {adjustCustom[cm.method] !== undefined && canSeeTotals && (
+                              <span className="text-[10px] text-zinc-500 block">Sistema: R$ {Number(cm.total || 0).toFixed(2)}</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {hasDigitalAdjustments && adjustNotes && (
+                      <div className="pt-2 border-t border-zinc-800 text-[11px] text-amber-400/90 italic">
+                        Obs: {adjustNotes}
+                      </div>
+                    )}
                   </div>
 
                   {canSeeTotals && (
                     <div className="flex justify-between p-4 bg-zinc-800/20 text-white rounded-2xl border border-zinc-700/50 mt-4">
-                      <span className="text-zinc-300">Faturamento Bruto <span className="text-xs text-zinc-500 block">Todas transações da sessão</span></span>
-                      <span className="font-black text-xl self-center">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
+                      <div>
+                        <span className="text-zinc-300 font-bold block">Faturamento Bruto</span>
+                        <span className="text-xs text-zinc-500 block">
+                          {hasDigitalAdjustments ? (
+                            <span className="text-amber-400 font-medium">Ajustado (Sistema: R$ {Number(data.report.totalVendas || 0).toFixed(2)})</span>
+                          ) : (
+                            'Todas transações da sessão'
+                          )}
+                        </span>
+                      </div>
+                      <span className="font-black text-xl self-center text-emerald-400">
+                        R$ {computedTotalVendas.toFixed(2)}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -673,30 +798,60 @@ export function CloseRegisterModal({
 
                 {/* Recebimentos Digitais */}
                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-2.5">
-                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Recebimentos Digitais</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Recebimentos Digitais</p>
+                    {hasDigitalAdjustments && (
+                      <span className="text-[9px] font-bold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                        Valores Ajustados
+                      </span>
+                    )}
+                  </div>
 
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-zinc-400">Crédito</span>
-                    <span className="text-zinc-300 font-medium">{renderMoney(data.report.totalCredito || 0)}</span>
+                    <div className="text-right">
+                      <span className="text-zinc-300 font-medium">{renderMoney(adjustCredit !== '' ? parseFloat(adjustCredit) || 0 : data.report.totalCredito || 0)}</span>
+                      {adjustCredit !== '' && canSeeTotals && (
+                        <span className="text-[10px] text-zinc-500 block">Sistema: R$ {Number(data.report.totalCredito || 0).toFixed(2)}</span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-zinc-400">Débito</span>
-                    <span className="text-zinc-300 font-medium">{renderMoney(data.report.totalDebito || 0)}</span>
+                    <div className="text-right">
+                      <span className="text-zinc-300 font-medium">{renderMoney(adjustDebit !== '' ? parseFloat(adjustDebit) || 0 : data.report.totalDebito || 0)}</span>
+                      {adjustDebit !== '' && canSeeTotals && (
+                        <span className="text-[10px] text-zinc-500 block">Sistema: R$ {Number(data.report.totalDebito || 0).toFixed(2)}</span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-zinc-400">Pix</span>
-                    <span className="text-zinc-300 font-medium">{renderMoney(data.report.totalPix || 0)}</span>
-                  </div>
-                  {(data.report.customMethods || []).map((cm: any) => (
-                    <div key={cm.method} className="flex justify-between items-center text-xs">
-                      <span className="text-zinc-400">{cm.label}</span>
-                      <span className="text-zinc-300 font-medium">{renderMoney(cm.total || 0)}</span>
+                    <div className="text-right">
+                      <span className="text-zinc-300 font-medium">{renderMoney(adjustPix !== '' ? parseFloat(adjustPix) || 0 : data.report.totalPix || 0)}</span>
+                      {adjustPix !== '' && canSeeTotals && (
+                        <span className="text-[10px] text-zinc-500 block">Sistema: R$ {Number(data.report.totalPix || 0).toFixed(2)}</span>
+                      )}
                     </div>
-                  ))}
+                  </div>
+                  {(data.report.customMethods || []).map((cm: any) => {
+                    const customVal = adjustCustom[cm.method] !== undefined ? parseFloat(adjustCustom[cm.method]) || 0 : Number(cm.total || 0);
+                    return (
+                      <div key={cm.method} className="flex justify-between items-center text-xs">
+                        <span className="text-zinc-400">{cm.label}</span>
+                        <div className="text-right">
+                          <span className="text-zinc-300 font-medium">{renderMoney(customVal)}</span>
+                          {adjustCustom[cm.method] !== undefined && canSeeTotals && (
+                            <span className="text-[10px] text-zinc-500 block">Sistema: R$ {Number(cm.total || 0).toFixed(2)}</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                   <div className="border-t border-zinc-800 pt-2.5 mt-2.5 flex justify-between items-center">
                     <span className="text-zinc-400 text-xs font-bold">Total Digital</span>
                     <span className="text-white font-bold text-sm">
-                      {renderMoney(Number(data.report.totalCredito || 0) + Number(data.report.totalDebito || 0) + Number(data.report.totalPix || 0) + (data.report.customMethods || []).reduce((a: number, m: any) => a + Number(m.total || 0), 0))}
+                      {renderMoney(computedTotalDigital)}
                     </span>
                   </div>
                 </div>
@@ -705,8 +860,13 @@ export function CloseRegisterModal({
               {/* Resumo total - Apenas para Admins */}
               {isAdmin && (
                 <div className="flex justify-between items-center bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
-                  <span className="text-zinc-400 text-xs font-bold uppercase">Faturamento do Turno</span>
-                  <span className="text-white font-bold text-lg">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
+                  <div>
+                    <span className="text-zinc-400 text-xs font-bold uppercase block">Faturamento do Turno</span>
+                    {hasDigitalAdjustments && (
+                      <span className="text-[10px] text-amber-400/80 block">Original do Sistema: R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
+                    )}
+                  </div>
+                  <span className="text-emerald-400 font-black text-xl">R$ {computedTotalVendas.toFixed(2)}</span>
                 </div>
               )}
 
@@ -859,6 +1019,185 @@ export function CloseRegisterModal({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Modal de Ajuste/Conferência Opcional de Recebimentos Digitais ═══ */}
+      {adjustModalOpen && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            
+            {/* Header */}
+            <div className="p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/60 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 text-amber-400">
+                  <SlidersHorizontal size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Conferência de Recebimentos Digitais</h3>
+                  <p className="text-xs text-zinc-400">Ajuste opcional com base na maquininha / extrato</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAdjustModalOpen(false)}
+                className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+              <div className="p-3.5 bg-zinc-900/80 border border-zinc-800 rounded-2xl text-xs text-zinc-300 space-y-1">
+                <p className="font-semibold text-zinc-200 flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-amber-400" />
+                  Como funciona a correção de valores?
+                </p>
+                <p className="text-zinc-400 leading-relaxed">
+                  Caso algum pagamento tenha sido lançado no método incorreto pelo operador no PDV, você pode declarar os valores reais apurados. O faturamento e os relatórios do caixa refletirão os valores reais declarados.
+                </p>
+              </div>
+
+              {/* Cartão de Crédito */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <label className="font-bold text-indigo-400">Cartão de Crédito Real</label>
+                  <span className="text-zinc-500">Sistema: R$ {Number(data.report.totalCredito || 0).toFixed(2)}</span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">R$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={adjustCredit}
+                    onChange={e => setAdjustCredit(e.target.value)}
+                    placeholder={Number(data.report.totalCredito || 0).toFixed(2)}
+                    className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-500 rounded-xl py-2.5 pl-10 pr-4 text-white font-bold text-base outline-none transition"
+                  />
+                </div>
+              </div>
+
+              {/* Cartão de Débito */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <label className="font-bold text-sky-400">Cartão de Débito Real</label>
+                  <span className="text-zinc-500">Sistema: R$ {Number(data.report.totalDebito || 0).toFixed(2)}</span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">R$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={adjustDebit}
+                    onChange={e => setAdjustDebit(e.target.value)}
+                    placeholder={Number(data.report.totalDebito || 0).toFixed(2)}
+                    className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-500 rounded-xl py-2.5 pl-10 pr-4 text-white font-bold text-base outline-none transition"
+                  />
+                </div>
+              </div>
+
+              {/* Pix */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <label className="font-bold text-teal-400">Transferências (Pix) Real</label>
+                  <span className="text-zinc-500">Sistema: R$ {Number(data.report.totalPix || 0).toFixed(2)}</span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">R$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={adjustPix}
+                    onChange={e => setAdjustPix(e.target.value)}
+                    placeholder={Number(data.report.totalPix || 0).toFixed(2)}
+                    className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-500 rounded-xl py-2.5 pl-10 pr-4 text-white font-bold text-base outline-none transition"
+                  />
+                </div>
+              </div>
+
+              {/* Métodos Customizados */}
+              {(data.report.customMethods || []).map((cm: any) => (
+                <div key={cm.method} className="space-y-1.5">
+                  <div className="flex justify-between items-center text-xs">
+                    <label className="font-bold text-purple-400">{cm.label} Real</label>
+                    <span className="text-zinc-500">Sistema: R$ {Number(cm.total || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">R$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={adjustCustom[cm.method] ?? ''}
+                      onChange={e => setAdjustCustom({ ...adjustCustom, [cm.method]: e.target.value })}
+                      placeholder={Number(cm.total || 0).toFixed(2)}
+                      className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-500 rounded-xl py-2.5 pl-10 pr-4 text-white font-bold text-base outline-none transition"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Observação / Justificativa */}
+              <div className="space-y-1.5 pt-2">
+                <label className="text-xs font-bold text-zinc-400 block">Justificativa / Observação (Opcional)</label>
+                <input
+                  value={adjustNotes}
+                  onChange={e => setAdjustNotes(e.target.value)}
+                  placeholder="Ex: Diferença de R$ 1,50 decorrente de erro na seleção de cartão no PDV"
+                  className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-500 rounded-xl px-4 py-2.5 text-xs text-white outline-none transition placeholder:text-zinc-600"
+                />
+              </div>
+
+              {/* Card Resumo do Impacto */}
+              <div className="p-4 bg-zinc-900/90 border border-zinc-800 rounded-2xl space-y-2">
+                <div className="flex justify-between text-xs text-zinc-400">
+                  <span>Faturamento Original (Sistema):</span>
+                  <span className="font-semibold text-zinc-200">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-zinc-400">Variação Total (Diferença):</span>
+                  <span className={`font-bold ${computedTotalVendas - Number(data.report.totalVendas || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {computedTotalVendas - Number(data.report.totalVendas || 0) >= 0 ? '+' : ''} R$ {(computedTotalVendas - Number(data.report.totalVendas || 0)).toFixed(2)}
+                  </span>
+                </div>
+                <div className="border-t border-zinc-800 pt-2 flex justify-between items-center">
+                  <span className="text-sm font-bold text-white">Faturamento Real Declarado:</span>
+                  <span className="text-lg font-black text-emerald-400">R$ {computedTotalVendas.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-5 border-t border-zinc-800 flex gap-3 shrink-0 bg-zinc-900/40">
+              <button
+                type="button"
+                onClick={() => {
+                  setAdjustCredit('');
+                  setAdjustDebit('');
+                  setAdjustPix('');
+                  setAdjustCustom({});
+                  setAdjustNotes('');
+                  toast.info('Valores restaurados para o padrão original do sistema.');
+                }}
+                className="py-3 px-4 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white transition font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
+                title="Limpar e usar valores originais"
+              >
+                <RotateCcw size={14} /> Restaurar Padrão
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAdjustModalOpen(false);
+                  if (hasDigitalAdjustments) {
+                    toast.success('Valores digitais ajustados aplicados com sucesso!');
+                  }
+                }}
+                className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold transition active:scale-95 text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer"
+              >
+                <CheckCircle2 size={16} /> Aplicar Ajustes
+              </button>
+            </div>
           </div>
         </div>
       )}

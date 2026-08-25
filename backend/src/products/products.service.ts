@@ -234,11 +234,11 @@ export class ProductsService {
   }
 
 
-  async findAll(page = 1, limit = 50, search?: string) {
+  async findAll(page = 1, limit = 50, search?: string, includeInactive = false, status?: string) {
     const { tenantId } = this.tenantContext.get();
 
-    // Cache somente para listagens sem busca
-    if (!search) {
+    // Cache somente para listagens sem busca e ativos padrão
+    if (!search && !includeInactive && (!status || status === 'active')) {
       const cacheKey = `${tenantId}_p_${page}_l_${limit}`;
       const cached = this.catalogCache.get(cacheKey);
       if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
@@ -250,7 +250,15 @@ export class ProductsService {
     const skip = (page - 1) * limit;
 
     // ── Montar filtro de busca ─────────────────────────────────────────────
-    const whereClause: any = { active: true };
+    const whereClause: any = {};
+    if (status === 'inactive') {
+      whereClause.active = false;
+    } else if (status === 'all' || includeInactive) {
+      // Traz ativos e inativos
+    } else {
+      whereClause.active = true;
+    }
+
     if (search && search.trim().length > 0) {
       const term = search.trim();
       whereClause.OR = [
@@ -295,8 +303,8 @@ export class ProductsService {
       },
     };
 
-    // Salvar no cache apenas listagens sem busca
-    if (!search) {
+    // Salvar no cache apenas listagens sem busca e padrão ativo
+    if (!search && !includeInactive && (!status || status === 'active')) {
       const cacheKey = `${tenantId}_p_${page}_l_${limit}`;
       this.catalogCache.set(cacheKey, { data: result, timestamp: Date.now() });
     }
@@ -342,7 +350,20 @@ export class ProductsService {
 
     const existing = await prisma.product.findFirst({ where: { name: sanitized.name } });
     if (existing) {
+      if (!existing.active) {
+        throw new ConflictException(`Já existe um produto inativo com o nome "${sanitized.name}". Filtre por "Inativos" no catálogo para visualizá-lo ou reativá-lo.`);
+      }
       throw new ConflictException(`Já existe um produto com o nome "${sanitized.name}". Verifique o catálogo.`);
+    }
+
+    if (sanitized.barcode) {
+      const existingBarcode = await prisma.product.findFirst({ where: { barcode: sanitized.barcode } });
+      if (existingBarcode) {
+        if (!existingBarcode.active) {
+          throw new ConflictException(`O código de barras "${sanitized.barcode}" já pertence ao produto inativo "${existingBarcode.name}". Filtre por "Inativos" para reativá-lo.`);
+        }
+        throw new ConflictException(`O código de barras "${sanitized.barcode}" já pertence ao produto "${existingBarcode.name}".`);
+      }
     }
 
     if (!sanitized.shortCode) {

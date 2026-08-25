@@ -55,23 +55,39 @@ export class CashRegistersService {
     }
   }
 
-  async closeRegister(id: string, closingValue: number | null) {
+  async closeRegister(id: string, closingValue: number | null, closingDetails?: any) {
     const prisma = await this.getPrisma();
+    const serializedDetails = closingDetails !== undefined
+      ? (typeof closingDetails === 'string' ? closingDetails : JSON.stringify(closingDetails))
+      : undefined;
+
     return prisma.cashRegister.update({
       where: { id },
-      data: { closingValue, closingTime: new Date(), status: 'closed' }
+      data: {
+        closingValue,
+        closingTime: new Date(),
+        status: 'closed',
+        ...(serializedDetails !== undefined ? { closingDetails: serializedDetails } : {})
+      }
     });
   }
 
-  async auditRegister(id: string, closingValue: number) {
+  async auditRegister(id: string, closingValue: number, closingDetails?: any) {
     const prisma = await this.getPrisma();
     const register = await prisma.cashRegister.findUnique({ where: { id } });
     if (!register || register.status !== 'closed') {
       throw new BadRequestException('Caixa não encontrado ou não está fechado');
     }
+    const serializedDetails = closingDetails !== undefined
+      ? (typeof closingDetails === 'string' ? closingDetails : JSON.stringify(closingDetails))
+      : undefined;
+
     return prisma.cashRegister.update({
       where: { id },
-      data: { closingValue }
+      data: {
+        closingValue,
+        ...(serializedDetails !== undefined ? { closingDetails: serializedDetails } : {})
+      }
     });
   }
 
@@ -101,7 +117,38 @@ export class CashRegistersService {
 
   async findAll() {
     const prisma = await this.getPrisma();
-    return prisma.cashRegister.findMany({ orderBy: { openingTime: 'desc' } });
+    const registers = await prisma.cashRegister.findMany({
+      orderBy: { openingTime: 'desc' },
+      include: {
+        operator: { select: { id: true, name: true, isManager: true } },
+        sales: {
+          where: { NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
+          select: { total: true }
+        }
+      }
+    });
+
+    return registers.map(reg => {
+      let totalSales = reg.sales.reduce((acc, s) => acc + Number(s.total || 0), 0);
+      let closingDetailsParsed: any = null;
+      if (reg.closingDetails) {
+        try {
+          closingDetailsParsed = typeof reg.closingDetails === 'string' ? JSON.parse(reg.closingDetails) : reg.closingDetails;
+          if (closingDetailsParsed?.totalVendasAjustado != null) {
+            totalSales = Number(closingDetailsParsed.totalVendasAjustado);
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      const { sales, ...rest } = reg;
+      return {
+        ...rest,
+        totalSales,
+        closingDetails: closingDetailsParsed,
+      };
+    });
   }
 
   async getReport(id: string) {
@@ -179,8 +226,20 @@ export class CashRegistersService {
       total: val.total.toNumber(),
     }));
 
+    let closingDetailsParsed: any = null;
+    if (register.closingDetails) {
+      try {
+        closingDetailsParsed = typeof register.closingDetails === 'string' ? JSON.parse(register.closingDetails) : register.closingDetails;
+      } catch {
+        closingDetailsParsed = null;
+      }
+    }
+
     return {
-      register,
+      register: {
+        ...register,
+        closingDetails: closingDetailsParsed,
+      },
       report: {
         totalDinheiro: totalDinheiro.toNumber(),
         totalPix: totalPix.toNumber(),
@@ -195,7 +254,8 @@ export class CashRegistersService {
         countSales: sales.filter(s => s.status !== 'cancelled').length,
         expectedDinheiro: expectedDinheiro.toNumber(),
         salesDetails: sales,
-        movements
+        movements,
+        closingDetails: closingDetailsParsed,
       }
     };
   }

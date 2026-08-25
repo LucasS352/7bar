@@ -1,7 +1,7 @@
 {
   "name": "7bar - Ponto de Venda",
   "short_name": "7bar POS",
-  "description": "PDV SaaS para Adegas e Distribuidoras. Suporte completo offline.",
+  "description": "PDV SaaS completo para Restaurantes, Bares, Adegas e Varejo.",
   "theme_color": "#0a0a0a",
   "background_color": "#09090b",
   "display": "standalone",

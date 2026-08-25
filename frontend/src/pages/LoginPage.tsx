@@ -105,7 +105,7 @@ export function LoginPage() {
           <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/30 border border-blue-400/30">
             <ShoppingCart size={32} className="text-white" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Adega PDV</h1>
+          <h1 className="text-3xl font-bold tracking-tight">PDV</h1>
           <p className="text-zinc-300 mt-2 text-sm">Sistema de Ponto de Venda</p>
         </div>
 

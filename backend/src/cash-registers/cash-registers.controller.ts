@@ -19,13 +19,21 @@ export class CashRegistersController {
   }
 
   @Post(':id/close')
-  close(@Param('id') id: string, @Body('closingValue') closingValue: number | null) {
-    return this.cashRegistersService.closeRegister(id, closingValue);
+  close(
+    @Param('id') id: string,
+    @Body('closingValue') closingValue: number | null,
+    @Body('closingDetails') closingDetails?: any,
+  ) {
+    return this.cashRegistersService.closeRegister(id, closingValue, closingDetails);
   }
 
   @Patch(':id/audit')
-  audit(@Param('id') id: string, @Body('closingValue') closingValue: number) {
-    return this.cashRegistersService.auditRegister(id, closingValue);
+  audit(
+    @Param('id') id: string,
+    @Body('closingValue') closingValue: number,
+    @Body('closingDetails') closingDetails?: any,
+  ) {
+    return this.cashRegistersService.auditRegister(id, closingValue, closingDetails);
   }
 
   @Post(':id/movement')

@@ -13,7 +13,16 @@ export class ComandasController {
   }
 
   @Post()
-  async create(@Body() body: { number: string; customerName?: string; notes?: string; waiterId?: string }) {
+  async create(
+    @Body()
+    body: {
+      number: string;
+      customerName?: string;
+      notes?: string;
+      responsibleWaiterId?: string;
+      waiterId?: string;
+    },
+  ) {
     return this.comandasService.create(body);
   }
 
@@ -25,7 +34,16 @@ export class ComandasController {
   @Post(':id/items')
   async addItems(
     @Param('id') id: string,
-    @Body() body: { items: Array<{ productId: string; quantity: number; unitPrice?: number; notes?: string }> },
+    @Body()
+    body: {
+      items: Array<{
+        productId: string;
+        quantity: number;
+        unitPrice?: number;
+        notes?: string;
+        createdById?: string;
+      }>;
+    },
   ) {
     return this.comandasService.addItems(id, body.items);
   }
@@ -33,6 +51,16 @@ export class ComandasController {
   @Delete(':id/items/:itemId')
   async removeItem(@Param('id') id: string, @Param('itemId') itemId: string) {
     return this.comandasService.removeItem(id, itemId);
+  }
+
+  @Post(':id/request-payment')
+  async requestPayment(@Param('id') id: string) {
+    return this.comandasService.requestPayment(id);
+  }
+
+  @Post(':id/reopen')
+  async reopen(@Param('id') id: string) {
+    return this.comandasService.reopen(id);
   }
 
   @Post(':id/close')
@@ -45,3 +73,4 @@ export class ComandasController {
     return this.comandasService.cancelComanda(id);
   }
 }
+

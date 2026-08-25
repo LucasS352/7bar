@@ -192,10 +192,11 @@ model Operator {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sales         Sale[]
-  cashRegisters CashRegister[]
-  consumptions  OperatorConsumption[] @relation("OperatorConsumptions")
-  comandasAsWaiter Comanda[]          @relation("ComandaWaiter") // Módulo Restaurante
+  sales               Sale[]
+  cashRegisters       CashRegister[]
+  consumptions        OperatorConsumption[] @relation("OperatorConsumptions")
+  comandasResponsible Comanda[]             @relation("ComandaResponsibleWaiter") // Módulo Restaurante V1
+  comandaItemsCreated ComandaItem[]         @relation("ComandaItemCreatedBy")     // Auditoria de Itens V2
 
   @@map("operators")
 }
@@ -398,6 +399,7 @@ model CashRegister {
   closingTime  DateTime?
   openingValue Decimal   @default(0) @db.Decimal(10, 2)
   closingValue Decimal?  @db.Decimal(10, 2)
+  closingDetails String? @db.Text // JSON com auditoria detalhada e valores digitais corrigidos/declarados
   status       String    @default("open") // open, closed
 
   movements CashMovement[]
@@ -846,41 +848,47 @@ model FiscalFailedJob {
 //  Comanda — Comanda de Consumo / Mesas (Módulo Ativável)
 // ------------------------------------------------------------
 model Comanda {
-  id           String        @id @default(uuid())
-  number       String        // Ex: "01", "12", "Mesa 05", "Sinuca 1"
-  customerName String?       // Identificador / Nome do cliente (ex: "João Sinuca")
-  status       String        @default("open") // open, closed, cancelled
-  total        Decimal       @default(0) @db.Decimal(10, 2)
-  notes        String?
+  id                  String        @id @default(uuid())
+  number              String        // Ex: "01", "12", "Mesa 05", "Sinuca 1"
+  customerName        String?       // Identificador / Nome do cliente (ex: "João Sinuca")
+  status              String        @default("open") // open, waiting_payment, closed, cancelled
+  total               Decimal       @default(0) @db.Decimal(10, 2)
+  notes               String?
 
-  waiterId     String?       // Garçom responsável pela comanda (Módulo Restaurante)
-  waiter       Operator?     @relation("ComandaWaiter", fields: [waiterId], references: [id])
+  responsibleWaiterId String?       // Garçom responsável pela comanda (Módulo Restaurante)
+  responsibleWaiter   Operator?     @relation("ComandaResponsibleWaiter", fields: [responsibleWaiterId], references: [id])
 
-  items        ComandaItem[]
+  items               ComandaItem[]
 
-  saleId       String?       // Venda gerada no fechamento
-  sale         Sale?         @relation(fields: [saleId], references: [id])
+  saleId              String?       // Venda gerada no fechamento
+  sale                Sale?         @relation(fields: [saleId], references: [id])
 
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   @@index([status])
-  @@index([waiterId])
+  @@index([responsibleWaiterId])
   @@map("comandas")
 }
 
 model ComandaItem {
-  id         String   @id @default(uuid())
-  comandaId  String
-  comanda    Comanda  @relation(fields: [comandaId], references: [id], onDelete: Cascade)
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id])
-  quantity   Decimal  @db.Decimal(10, 3)
-  unitPrice  Decimal  @db.Decimal(10, 2)
-  totalPrice Decimal  @db.Decimal(10, 2)
-  notes      String?
-  createdAt  DateTime @default(now())
+  id          String    @id @default(uuid())
+  comandaId   String
+  comanda     Comanda   @relation(fields: [comandaId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  quantity    Decimal   @db.Decimal(10, 3)
+  unitPrice   Decimal   @db.Decimal(10, 2)
+  totalPrice  Decimal   @db.Decimal(10, 2)
+  notes       String?
 
+  createdById String?   // Garçom/Operador que adicionou o item (Auditoria V2)
+  createdBy   Operator? @relation("ComandaItemCreatedBy", fields: [createdById], references: [id])
+
+  createdAt   DateTime  @default(now())
+
+  @@index([comandaId])
+  @@index([createdById])
   @@map("comanda_items")
 }
 

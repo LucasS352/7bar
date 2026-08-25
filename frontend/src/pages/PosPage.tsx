@@ -107,12 +107,19 @@ function PosPageContent() {
       const res = await api.get('/v1/comandas?status=open');
       const newList: any[] = res.data || [];
       setOpenComandas(prev => {
-        // Detectar se chegou nova comanda desde o último polling
-        const prevIds = new Set(prev.map((c: any) => c.id));
-        const hasNew = newList.some(c => !prevIds.has(c.id));
-        if (hasNew && prev.length > 0) {
+        const prevMap = new Map(prev.map((c: any) => [c.id, c.status]));
+        // Dispara beep e badge somente na TRANSIÇÃO de estado:
+        // 1. Nova comanda que não existia antes (se prev já tinha dados)
+        // 2. Comanda que transitou de open -> waiting_payment
+        const hasTransition = newList.some(c => {
+          const prevStatus = prevMap.get(c.id);
+          const isNewComanda = !prevStatus && prev.length > 0;
+          const isRequestedPayment = prevStatus === 'open' && c.status === 'waiting_payment';
+          return isNewComanda || isRequestedPayment;
+        });
+
+        if (hasTransition) {
           setNewComandaBadge(true);
-          // Beep sonoro discreto via Web Audio API
           try {
             const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
             const osc = ctx.createOscillator();
@@ -1318,13 +1325,21 @@ function PosPageContent() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto custom-scrollbar p-1">
-                  {openComandas
+                  {[...openComandas]
+                    .sort((a, b) => {
+                      const aWaiting = a.status === 'waiting_payment';
+                      const bWaiting = b.status === 'waiting_payment';
+                      if (aWaiting && !bWaiting) return -1;
+                      if (!aWaiting && bWaiting) return 1;
+                      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+                    })
                     .filter(c => 
                       c.number.toLowerCase().includes(comandaSearch.toLowerCase()) || 
                       (c.customerName && c.customerName.toLowerCase().includes(comandaSearch.toLowerCase()))
                     )
                     .map(c => {
                       const isSelected = selectedComandaId === c.id;
+                      const isWaiting = c.status === 'waiting_payment';
                       return (
                         <div
                           key={c.id}
@@ -1332,22 +1347,42 @@ function PosPageContent() {
                           className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden ${
                             isSelected
                               ? 'bg-amber-500/20 border-amber-500 ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10'
-                              : 'bg-emerald-950/40 border-emerald-500/40 hover:border-emerald-400 hover:bg-emerald-900/30'
+                              : isWaiting
+                                ? 'bg-orange-950/40 border-orange-500/60 ring-1 ring-orange-500/40 hover:border-orange-400 hover:bg-orange-900/40 shadow-md shadow-orange-500/10'
+                                : 'bg-emerald-950/40 border-emerald-500/40 hover:border-emerald-400 hover:bg-emerald-900/30'
                           }`}
                         >
-                          {/* Header Card com Sinalizador Verde */}
+                          {/* Header Card com Sinalizador */}
                           <div className="flex justify-between items-center mb-1.5">
                             <div className="flex items-center gap-1.5 min-w-0">
-                              <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${isSelected ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}`} />
+                              <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                                isSelected
+                                  ? 'bg-amber-400'
+                                  : isWaiting
+                                    ? 'bg-orange-400 animate-ping'
+                                    : 'bg-emerald-400 animate-pulse'
+                              }`} />
                               <span className="font-black text-white text-sm truncate">#{c.number}</span>
                             </div>
-                            <span className="text-[10px] text-zinc-400 font-mono shrink-0">{c.items?.length || 0}i</span>
+                            {isWaiting ? (
+                              <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/40 shrink-0">
+                                Caixa
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-zinc-400 font-mono shrink-0">{c.items?.length || 0}i</span>
+                            )}
                           </div>
 
                           {/* Consumo Total */}
                           <div className="mt-2 text-right">
                             <span className="text-[9px] text-zinc-400 block font-bold uppercase tracking-wider">Consumo</span>
-                            <span className={`text-xs sm:text-sm font-black font-mono ${isSelected ? 'text-amber-400' : 'text-emerald-400'}`}>
+                            <span className={`text-xs sm:text-sm font-black font-mono ${
+                              isSelected
+                                ? 'text-amber-400'
+                                : isWaiting
+                                  ? 'text-orange-400'
+                                  : 'text-emerald-400'
+                            }`}>
                               R$ {Number(c.total || 0).toFixed(2)}
                             </span>
                           </div>
