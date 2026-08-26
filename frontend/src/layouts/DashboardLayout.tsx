@@ -334,14 +334,6 @@ export function DashboardLayout() {
                 <p className="px-3 text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1.5">Estoque & Compras</p>
                 <div className="space-y-1">
                   <NavLink
-                    to="/dashboard/inventory"
-                    onClick={() => setIsMobileDrawerOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800/60"
-                  >
-                    <Package size={17} className="shrink-0" />
-                    <span>Catálogo de Produtos</span>
-                  </NavLink>
-                  <NavLink
                     to="/dashboard/inventory/purchases"
                     onClick={() => setIsMobileDrawerOpen(false)}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800/60"
