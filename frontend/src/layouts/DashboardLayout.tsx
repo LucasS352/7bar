@@ -79,11 +79,8 @@ export function DashboardLayout() {
         { name: 'Cons. Colaborador', to: '/dashboard/comandas',         icon: Users }
       ]),
       { name: 'Contas a Pagar',     to: '/dashboard/finance/payables',      icon: Banknote },
-      ...(modules?.vitrineDigital === true ? [
-        { name: 'Vitrine Digital',  to: '/dashboard/vitrine',               icon: Tv2 }
-      ] : []),
       ...(modules?.restaurante === true ? [
-        { name: '🍽️ Modo Garçom',  to: '/garcom',                           icon: UtensilsCrossed }
+        { name: 'Modo Garçom',      to: '/garcom',                           icon: UtensilsCrossed }
       ] : []),
     ] : []),
   ];
@@ -212,6 +209,19 @@ export function DashboardLayout() {
               </NavLink>
             ))}
           </div>
+          {!isStockist && modules?.vitrineDigital === true && (
+            <div className="pt-4 pb-1">
+              <p className={`text-xs font-bold text-sky-500 uppercase tracking-widest mb-2 flex items-center gap-2 ${isCollapsed ? 'justify-center' : 'px-4'}`}>
+                <Tv2 size={12} />{!isCollapsed && <span>Vitrine Digital</span>}
+              </p>
+              <NavLink to="/dashboard/vitrine" title={isCollapsed ? 'Vitrine Digital' : ''}
+                className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm ${isCollapsed ? 'justify-center' : ''} ${isActive ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
+              >
+                <Tv2 size={17} className="shrink-0 text-sky-400" />
+                {!isCollapsed && <span className="font-semibold whitespace-nowrap">Painel Vitrine TV</span>}
+              </NavLink>
+            </div>
+          )}
           <div className="pt-4 pb-1">
             <p className={`text-xs font-bold text-zinc-600 uppercase tracking-widest mb-2 flex items-center gap-2 ${isCollapsed ? 'justify-center' : 'px-4'}`}>
               <Settings size={12} />{!isCollapsed && <span>Configurações</span>}
@@ -333,14 +343,6 @@ export function DashboardLayout() {
               <div>
                 <p className="px-3 text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1.5">Estoque & Compras</p>
                 <div className="space-y-1">
-                  <NavLink
-                    to="/dashboard/inventory/purchases"
-                    onClick={() => setIsMobileDrawerOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800/60"
-                  >
-                    <Package size={17} className="shrink-0 text-emerald-400" />
-                    <span>Lançamento de Produtos</span>
-                  </NavLink>
                   {inventoryToolItems.map(item => (
                     <NavLink
                       key={item.to}
