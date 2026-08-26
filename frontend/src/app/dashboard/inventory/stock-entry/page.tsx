@@ -3,7 +3,8 @@ import { useState, useEffect, useCallback, useDeferredValue, useMemo } from 'rea
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, PackagePlus, Search, Loader2, Plus, CheckCircle2, AlertTriangle, CalendarClock } from 'lucide-react';
+import { ArrowLeft, PackagePlus, Search, Loader2, Plus, CheckCircle2, AlertTriangle, CalendarClock, Package } from 'lucide-react';
+import ManagePackagingsModal, { PackagingItem } from '@/components/ManagePackagingsModal';
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -25,6 +26,8 @@ interface StockRow {
   lotNumber: string;
   expiresAt: string;
   supplierId: string;
+  unitName?: string;
+  unitMultiplier?: number;
   saving: boolean;
   saved: boolean;
 }
@@ -38,23 +41,38 @@ export default function StockEntryPage() {
   const [loading,    setLoading]    = useState(true);
   const [suppliers,  setSuppliers]  = useState<{ id: string; name: string }[]>([]);
 
+  // Embalagens cadastradas
+  const [packagings, setPackagings] = useState<PackagingItem[]>([]);
+  const [showPackagingsModal, setShowPackagingsModal] = useState(false);
+
   // Verifica se o módulo de validade está ativo
   const [expiryEnabled, setExpiryEnabled] = useState(false);
+
+  const fetchPackagings = useCallback(async () => {
+    try {
+      const { data } = await api.get('/purchase-orders/packagings/all');
+      setPackagings(data || []);
+    } catch {
+      // silently ignore
+    }
+  }, []);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const [prodRes, supRes, settingsRes] = await Promise.all([
+      const [prodRes, supRes, settingsRes, packRes] = await Promise.all([
         api.get('/products?limit=2000'),
         api.get('/suppliers'),
         api.get('/products/settings'),
+        api.get('/purchase-orders/packagings/all').catch(() => ({ data: [] })),
       ]);
       const list = (prodRes.data as any)?.data ?? prodRes.data ?? [];
       setProducts((list as Product[]).filter(p => p !== null));
       setSuppliers(supRes.data || []);
       setExpiryEnabled(settingsRes.data?.enableExpiryControl ?? false);
+      setPackagings(packRes.data || []);
     } catch {
-      toast.error('Erro ao carregar produtos.');
+      toast.error('Erro ao carregar dados de entrada de estoque.');
     } finally {
       setLoading(false);
     }
@@ -94,6 +112,8 @@ export default function StockEntryPage() {
       lotNumber: suggestedLot,
       expiresAt: '',
       supplierId: '',
+      unitName: 'UN',
+      unitMultiplier: 1,
       saving: false,
       saved: false,
     }]);
@@ -102,6 +122,10 @@ export default function StockEntryPage() {
 
   const updateQty = (productId: string, qty: string) => {
     setRows(prev => prev.map(r => r.product.id === productId ? { ...r, qty, saved: false } : r));
+  };
+
+  const updatePackaging = (productId: string, unitName: string, unitMultiplier: number) => {
+    setRows(prev => prev.map(r => r.product.id === productId ? { ...r, unitName, unitMultiplier, saved: false } : r));
   };
 
   const updateCostPrice = (productId: string, costPrice: string) => {
@@ -116,16 +140,19 @@ export default function StockEntryPage() {
     setRows(prev => prev.filter(r => r.product.id !== productId));
   };
 
-  /** Confirma a entrada de um item específico */
+  /** Confirma a entrada de um item específico com suporte à conversão de embalagem */
   const confirmEntry = async (productId: string) => {
     const row = rows.find(r => r.product.id === productId);
     if (!row) return;
 
-    const qty = parseInt(row.qty, 10);
-    if (!qty || qty <= 0) {
+    const rawQty = parseInt(row.qty, 10);
+    if (!rawQty || rawQty <= 0) {
       toast.error('Informe uma quantidade válida (número inteiro maior que zero).');
       return;
     }
+
+    const multiplier = Number(row.unitMultiplier) || 1;
+    const totalQty = rawQty * multiplier;
 
     const costNum = parseFloat(row.costPrice);
     if (isNaN(costNum) || costNum < 0) {
@@ -136,16 +163,21 @@ export default function StockEntryPage() {
     setRows(prev => prev.map(r => r.product.id === productId ? { ...r, saving: true } : r));
 
     try {
+      const reason = multiplier > 1
+        ? `Entrada de Estoque — Reposição (${rawQty}x ${row.unitName || 'Embalagem'} = ${totalQty} un)`
+        : 'Entrada de Estoque — Reposição via App';
+
       await api.post(`/products/add-stock/${productId}`, {
-        quantity: qty,
+        quantity: totalQty,
         costPrice: costNum,
-        reason: 'Entrada de Estoque — Reposição via App',
+        reason,
         ...(expiryEnabled && row.lotNumber    ? { lotNumber: row.lotNumber }  : {}),
         ...(expiryEnabled && row.expiresAt    ? { expiresAt: row.expiresAt }  : {}),
         ...(expiryEnabled && row.supplierId   ? { supplierId: row.supplierId } : {}),
       });
 
-      toast.success(`+${qty} unidades adicionadas a "${row.product.name}"!`);
+      const packLabel = multiplier > 1 ? ` (${rawQty}x ${row.unitName})` : '';
+      toast.success(`+${totalQty} unidades adicionadas a "${row.product.name}"!${packLabel}`);
 
       setRows(prev => prev.map(r =>
         r.product.id === productId
@@ -156,7 +188,7 @@ export default function StockEntryPage() {
               qty: '', 
               product: { 
                 ...r.product, 
-                stock: Number(r.product.stock) + qty,
+                stock: Number(r.product.stock) + totalQty,
                 priceCost: costNum
               } 
             }
@@ -165,7 +197,7 @@ export default function StockEntryPage() {
 
       // Atualiza o estoque local e custo imediatamente
       setProducts(prev => prev.map(p =>
-        p.id === productId ? { ...p, stock: Number(p.stock) + qty, priceCost: costNum } : p
+        p.id === productId ? { ...p, stock: Number(p.stock) + totalQty, priceCost: costNum } : p
       ));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -192,7 +224,7 @@ export default function StockEntryPage() {
     <div className="space-y-6 animate-in fade-in duration-500 max-w-5xl mx-auto">
 
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <Link to="/dashboard/inventory" className="text-zinc-500 hover:text-blue-400 flex items-center gap-2 text-sm font-semibold mb-2 transition-colors">
             <ArrowLeft size={16} /> Voltar ao Catálogo
@@ -205,14 +237,25 @@ export default function StockEntryPage() {
           </p>
         </div>
 
-        {rows.some(r => parseFloat(r.qty) > 0 && !r.saved) && (
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap sm:flex-nowrap">
           <button
-            onClick={confirmAll}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95"
+            onClick={() => setShowPackagingsModal(true)}
+            className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-xl font-bold transition border border-zinc-700 text-sm whitespace-nowrap flex items-center gap-2 shadow-sm cursor-pointer active:scale-95"
+            title="Gerenciar formatos de embalagem (fardo, caixa, etc.)"
           >
-            <CheckCircle2 size={20} /> Confirmar Todos
+            <Package size={17} className="text-zinc-400" />
+            <span>Gerenciar Embalagens</span>
           </button>
-        )}
+
+          {rows.some(r => parseFloat(r.qty) > 0 && !r.saved) && (
+            <button
+              onClick={confirmAll}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95 text-sm whitespace-nowrap cursor-pointer"
+            >
+              <CheckCircle2 size={18} /> Confirmar Todos
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Busca de produtos */}
@@ -309,12 +352,42 @@ export default function StockEntryPage() {
                   </button>
                 </div>
 
-                {/* Inputs de Entrada (Quantidade, Custo e Validade) */}
+                {/* Inputs de Entrada (Embalagem, Quantidade, Custo e Validade) */}
                 <div className="flex flex-col gap-3 w-full lg:flex-1 bg-zinc-900/30 lg:bg-transparent p-3 lg:p-0 rounded-xl">
-                  <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 lg:gap-4">
-                    {/* Campo de quantidade */}
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-2 flex-1 min-w-[120px]">
-                      <label className="text-zinc-500 text-xs lg:text-sm font-semibold whitespace-nowrap">Qtd. a Adicionar:</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 items-end gap-3 lg:gap-4">
+                    {/* Seletor de Embalagem */}
+                    <div className="flex flex-col gap-1.5 min-w-0">
+                      <label className="text-zinc-500 text-xs font-semibold whitespace-nowrap">Embalagem:</label>
+                      <select
+                        value={`${row.unitName || 'UN'}|${row.unitMultiplier || 1}`}
+                        onChange={e => {
+                          const [name, multiplier] = e.target.value.split('|');
+                          updatePackaging(row.product.id, name, Number(multiplier));
+                        }}
+                        disabled={row.saving || row.saved}
+                        className="w-full bg-zinc-950 border border-zinc-700 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-xs font-medium text-white outline-none transition-colors disabled:opacity-50"
+                      >
+                        <option value="UN|1">Unidade (1 {row.product.unit || 'un'})</option>
+                        {packagings.map(p => (
+                          <option key={p.id} value={`${p.name}|${p.multiplier}`}>
+                            {p.name} ({p.multiplier} un)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Campo de quantidade com indicador de conversão */}
+                    <div className="flex flex-col gap-1.5 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <label className="text-zinc-500 text-xs font-semibold whitespace-nowrap">
+                          Qtd ({row.unitMultiplier && row.unitMultiplier > 1 ? 'Embalagem' : 'Unidades'}):
+                        </label>
+                        {row.unitMultiplier && row.unitMultiplier > 1 && row.qty && parseInt(row.qty, 10) > 0 && (
+                          <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded animate-in fade-in duration-200 truncate">
+                            = {parseInt(row.qty, 10) * row.unitMultiplier} un
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="number"
                         min="1"
@@ -327,14 +400,14 @@ export default function StockEntryPage() {
                         }}
                         onKeyDown={e => e.key === 'Enter' && confirmEntry(row.product.id)}
                         disabled={row.saving || row.saved}
-                        className="w-full lg:w-24 bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 rounded-xl px-2 py-2 text-emerald-400 font-black text-lg text-center focus:outline-none transition-colors disabled:opacity-50"
+                        className="w-full bg-zinc-950 border-2 border-zinc-700 focus:border-emerald-500 rounded-xl px-2 py-2 text-emerald-400 font-black text-lg text-center focus:outline-none transition-colors disabled:opacity-50"
                       />
                     </div>
 
                     {/* Campo de custo de aquisição */}
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-2 flex-1 min-w-[120px]">
-                      <label className="text-zinc-500 text-xs lg:text-sm font-semibold whitespace-nowrap">Custo Unitário:</label>
-                      <div className="relative w-full lg:w-28">
+                    <div className="flex flex-col gap-1.5 min-w-0">
+                      <label className="text-zinc-500 text-xs font-semibold whitespace-nowrap">Custo Unitário:</label>
+                      <div className="relative w-full">
                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-bold">R$</span>
                         <input
                           type="number"
@@ -413,7 +486,7 @@ export default function StockEntryPage() {
                     <button
                       onClick={() => confirmEntry(row.product.id)}
                       disabled={row.saving || !row.qty || parseInt(row.qty, 10) <= 0}
-                      className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-3 lg:py-2 rounded-xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap w-full lg:w-auto"
+                      className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-3 lg:py-2 rounded-xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap w-full lg:w-auto cursor-pointer"
                     >
                       {row.saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
                       Confirmar
@@ -423,7 +496,7 @@ export default function StockEntryPage() {
                   {/* Remover linha (Desktop) */}
                   <button
                     onClick={() => removeRow(row.product.id)}
-                    className="hidden lg:block text-zinc-600 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-500/10 shrink-0"
+                    className="hidden lg:block text-zinc-600 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-500/10 shrink-0 cursor-pointer"
                     title="Remover da lista"
                   >
                     <AlertTriangle size={18} />
@@ -440,6 +513,13 @@ export default function StockEntryPage() {
           <p className="text-sm mt-1 opacity-70">Você pode adicionar vários produtos antes de confirmar.</p>
         </div>
       )}
+
+      {/* Modal Gerenciar Embalagens */}
+      <ManagePackagingsModal
+        isOpen={showPackagingsModal}
+        onClose={() => setShowPackagingsModal(false)}
+        onPackagingsChange={fetchPackagings}
+      />
     </div>
   );
 }

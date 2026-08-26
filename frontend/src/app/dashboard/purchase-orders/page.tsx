@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Check, Clock, X, Phone, Save, Trash, Edit2, Copy, Package } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import ManagePackagingsModal from '@/components/ManagePackagingsModal';
 
 export default function PurchaseOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -14,8 +15,6 @@ export default function PurchaseOrdersPage() {
   const [orderItems, setOrderItems] = useState<any[]>([]);
   const [packagings, setPackagings] = useState<any[]>([]);
   const [showPackagingsModal, setShowPackagingsModal] = useState(false);
-  const [newPackName, setNewPackName] = useState('');
-  const [newPackMultiplier, setNewPackMultiplier] = useState(1);
   
   // Receive Order State
   const [showReceiveModal, setShowReceiveModal] = useState(false);
@@ -114,28 +113,6 @@ export default function PurchaseOrdersPage() {
       fetchOrders();
     } catch {
       toast.error('Erro ao criar pedido.');
-    }
-  };
-
-  const handleCreatePackaging = async () => {
-    try {
-      await api.post('/purchase-orders/packagings', { name: newPackName, multiplier: newPackMultiplier });
-      setNewPackName('');
-      setNewPackMultiplier(1);
-      fetchPackagings();
-      toast.success('Embalagem cadastrada!');
-    } catch (err) {
-      toast.error('Erro ao criar embalagem.');
-    }
-  };
-
-  const handleDeletePackaging = async (id: string) => {
-    try {
-      await api.delete(`/purchase-orders/packagings/${id}`);
-      fetchPackagings();
-      toast.success('Embalagem removida!');
-    } catch (err) {
-      toast.error('Erro ao remover embalagem.');
     }
   };
 
@@ -615,61 +592,11 @@ export default function PurchaseOrdersPage() {
       </div>
 
       {/* MODAL GERENCIAR EMBALAGENS */}
-      {showPackagingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl flex flex-col">
-            <div className="p-5 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/80 backdrop-blur-sm z-10 sticky top-0">
-              <h2 className="font-bold text-white">Gerenciar Embalagens</h2>
-              <button onClick={() => setShowPackagingsModal(false)} className="text-zinc-500 hover:text-white"><X size={18} /></button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  placeholder="Nome (ex: Fardo c/ 6)" 
-                  value={newPackName}
-                  onChange={e => setNewPackName(e.target.value)}
-                  className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none"
-                />
-                <input 
-                  type="number" 
-                  min="2"
-                  placeholder="Und (ex: 6)" 
-                  value={newPackMultiplier || ''}
-                  onChange={e => setNewPackMultiplier(Number(e.target.value))}
-                  className="w-24 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none text-center"
-                />
-                <button 
-                  onClick={handleCreatePackaging}
-                  disabled={!newPackName || newPackMultiplier < 2}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 rounded-lg font-bold disabled:opacity-50"
-                >
-                  <Plus size={18} />
-                </button>
-              </div>
-
-              <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                {packagings.length === 0 ? (
-                  <p className="text-zinc-500 text-sm text-center py-4">Nenhuma embalagem cadastrada.</p>
-                ) : packagings.map(p => (
-                  <div key={p.id} className="flex justify-between items-center bg-zinc-950 border border-zinc-800 p-3 rounded-lg">
-                    <div>
-                      <strong className="block text-sm text-white">{p.name}</strong>
-                      <span className="text-xs text-zinc-500">{p.multiplier} unidades</span>
-                    </div>
-                    <button 
-                      onClick={() => handleDeletePackaging(p.id)}
-                      className="text-red-500 hover:text-red-400 p-2"
-                    >
-                      <Trash size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ManagePackagingsModal
+        isOpen={showPackagingsModal}
+        onClose={() => setShowPackagingsModal(false)}
+        onPackagingsChange={fetchPackagings}
+      />
 
       {/* MODAL NOVO PEDIDO */}
       {showNewModal && (

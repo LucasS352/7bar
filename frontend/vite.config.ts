@@ -21,8 +21,8 @@ export default defineConfig({
 
       // Ponto de entrada do manifest
       manifest: {
-        name: 'PDV Pro — Ponto de Venda',
-        short_name: 'PDV Pro',
+        name: 'PDV — Ponto de Venda',
+        short_name: 'PDV',
         description: 'Sistema de Ponto de Venda profissional com suporte offline',
         theme_color: '#0a0a0a',
         background_color: '#09090b',
@@ -33,21 +33,23 @@ export default defineConfig({
         lang: 'pt-BR',
         icons: [
           {
-            src: '/favicon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable',
-          },
-          {
             src: '/icons/icon-192x192.png',
             sizes: '192x192',
             type: 'image/png',
+            purpose: 'any',
           },
           {
             src: '/icons/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-          }
+            purpose: 'any',
+          },
+          {
+            src: '/icons/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
         categories: ['business', 'productivity'],
       },

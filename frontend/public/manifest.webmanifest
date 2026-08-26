@@ -1,11 +1,11 @@
 {
-  "name": "7bar - Ponto de Venda",
-  "short_name": "7bar POS",
+  "name": "PDV — Ponto de Venda",
+  "short_name": "PDV",
   "description": "PDV SaaS completo para Restaurantes, Bares, Adegas e Varejo.",
   "theme_color": "#0a0a0a",
   "background_color": "#09090b",
   "display": "standalone",
-  "orientation": "landscape",
+  "orientation": "any",
   "start_url": "/",
   "scope": "/",
   "lang": "pt-BR",
@@ -14,13 +14,19 @@
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
