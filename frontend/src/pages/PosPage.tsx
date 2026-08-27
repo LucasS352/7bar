@@ -23,7 +23,7 @@ import { ShiftProvider, useShift } from '@/contexts/ShiftContext';
 import {
   Search, ShoppingCart, X, LogOut, PackageOpen, Minus, Plus, Trash2,
   LayoutDashboard, FileText, ArrowDownUp, Database, Layers, UtensilsCrossed,
-  ShoppingBag, Camera, Menu, Download, UserCheck, Sparkles
+  ShoppingBag, Camera, Menu, Download, UserCheck, Sparkles, Users
 } from 'lucide-react';
 import { getFullUrl } from '@/lib/getFullUrl';
 
@@ -453,31 +453,42 @@ function PosPageContent() {
         }}
       >
         {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:flex-wrap lg:justify-between lg:items-center mb-3 lg:mb-6 gap-3 shrink-0">
-          <div className="flex justify-between items-center w-full lg:w-auto gap-2 lg:gap-4 min-h-[44px] lg:min-h-[64px]">
-            <div className="flex items-center gap-2 lg:gap-4 shrink-0">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-2 lg:mb-3 gap-2 shrink-0">
+          <div className="flex justify-between items-center w-full lg:w-auto gap-2 lg:gap-2.5 min-h-[40px] lg:min-h-[48px] shrink-0">
+            <div className="flex items-center gap-2 lg:gap-2.5 shrink-0">
               {tenantConfig === null ? (
-                 <div className="h-9 lg:h-12 w-9 lg:w-12 bg-zinc-800/50 animate-pulse rounded-xl shrink-0"></div>
+                 <div className="h-8 lg:h-10 w-8 lg:w-10 bg-zinc-800/50 animate-pulse rounded-xl shrink-0"></div>
               ) : tenantConfig?.logoUrl ? (
                 <button onClick={() => navigate('/dashboard')} className="flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform focus:outline-none" title="Voltar ao Dashboard">
-                  <img src={getFullUrl(tenantConfig.logoUrl)} alt="Logo" className="h-9 w-9 lg:h-12 lg:w-12 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]" />
+                  <img src={getFullUrl(tenantConfig.logoUrl)} alt="Logo" className="h-8 w-8 lg:h-10 lg:w-10 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]" />
                 </button>
               ) : (
-                <button onClick={() => navigate('/dashboard')} className="bg-zinc-800 border border-zinc-700 p-1.5 lg:p-2 rounded-xl flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform focus:outline-none" title="Voltar ao Dashboard">
-                  <h1 className="text-sm lg:text-2xl font-black text-white truncate max-w-[70px] lg:max-w-[100px]">
+                <button onClick={() => navigate('/dashboard')} className="bg-zinc-800 border border-zinc-700 p-1.5 rounded-xl flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform focus:outline-none" title="Voltar ao Dashboard">
+                  <h1 className="text-xs lg:text-base font-black text-white truncate max-w-[60px] lg:max-w-[80px]">
                     {tenantConfig?.nomeFantasia?.substring(0, 2) || tenantConfig?.razaoSocial?.substring(0, 2) || '7B'}
                   </h1>
                 </button>
               )}
               
-              <div className="hidden lg:flex items-center gap-3">
-                 <p className="text-emerald-400 font-medium text-xs lg:text-sm flex items-center gap-2 truncate max-w-[200px] lg:max-w-none">
+              <div className="hidden lg:flex items-center gap-2">
+                 <button
+                   type="button"
+                   onClick={() => setIsSwitchOperatorOpen(true)}
+                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 hover:border-blue-500/40 transition-all text-left group cursor-pointer active:scale-95 shadow-sm"
+                   title="Clique para trocar de operador ou caixa"
+                 >
                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"></span>
-                   <span className="truncate">Operador: {operator?.name || user?.name} {user?.tenant ? `(${user.tenant})` : ''}</span>
-                 </p>
+                   <span className="text-emerald-400 font-semibold text-xs truncate max-w-[160px] xl:max-w-[220px]">
+                     Operador: <strong className="text-white font-bold">{operator?.name || user?.name}</strong>
+                   </span>
+                   <span className="ml-0.5 text-[10px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-md group-hover:bg-blue-500/20 group-hover:border-blue-500/40 transition-colors flex items-center gap-1">
+                     <Users size={11} /> Trocar
+                   </span>
+                 </button>
+
                  {cashRegister?.id && (
-                   <span className="text-[10px] lg:text-xs bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 text-emerald-400 uppercase tracking-widest font-bold">
-                     CAIXA ABERTO
+                   <span className="text-[10px] bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 text-emerald-400 uppercase tracking-widest font-bold flex items-center gap-1 shadow-sm whitespace-nowrap">
+                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> CAIXA ABERTO
                    </span>
                  )}
               </div>
@@ -544,46 +555,46 @@ function PosPageContent() {
             </div>
           </div>
 
-          <div className="hidden lg:flex lg:flex-wrap items-center gap-2">
+          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 shrink-0">
             {/* Badge de conexão */}
             <ConnectionStatus syncState={syncState} />
 
             {/* Checkbox para selecionar quantidade */}
-            <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-zinc-800/50 text-zinc-400 hover:text-white cursor-pointer transition select-none text-sm font-semibold">
-              <input type="checkbox" checked={promptQuantity} onChange={e => setPromptQuantity(e.target.checked)} className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-950" />
+            <label className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-zinc-800/60 hover:border-zinc-700 text-zinc-400 hover:text-white cursor-pointer transition select-none text-xs font-semibold whitespace-nowrap bg-zinc-900/40">
+              <input type="checkbox" checked={promptQuantity} onChange={e => setPromptQuantity(e.target.checked)} className="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-950" />
               Selecionar Unidade
             </label>
 
             {/* Toggle Modo PC */}
-            <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-zinc-800/50 text-zinc-400 hover:text-white cursor-pointer transition select-none text-sm font-semibold">
-              <input type="checkbox" checked={forceDesktop} onChange={e => setForceDesktop(e.target.checked)} className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-950" />
+            <label className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-zinc-800/60 hover:border-zinc-700 text-zinc-400 hover:text-white cursor-pointer transition select-none text-xs font-semibold whitespace-nowrap bg-zinc-900/40">
+              <input type="checkbox" checked={forceDesktop} onChange={e => setForceDesktop(e.target.checked)} className="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-950" />
               Modo PC (Tablet)
             </label>
 
             {/* Badge de catálogo offline */}
             {isOfflineCatalog && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-400 text-xs font-medium">
-                <Database size={12} />
-                <span>Catálogo em cache</span>
+              <div className="flex items-center gap-1 px-2 py-1 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-400 text-[11px] font-medium whitespace-nowrap">
+                <Database size={11} />
+                <span>Em cache</span>
               </div>
             )}
 
             {cashRegister?.id && (
-              <button onClick={() => setIsMovementOpen(true)} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition font-semibold text-sm whitespace-nowrap">
-                <ArrowDownUp size={18} /> Sangria / Reposição
+              <button onClick={() => setIsMovementOpen(true)} className="flex items-center gap-1.5 px-2.5 py-1 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition font-semibold text-xs whitespace-nowrap cursor-pointer">
+                <ArrowDownUp size={14} /> Sangria / Reposição
               </button>
             )}
             {(user?.role === 'admin' || user?.role === 'superadmin') && (
-              <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition font-semibold">
-                <LayoutDashboard size={18} /> Dashboard
+              <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 px-2.5 py-1 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition font-semibold text-xs whitespace-nowrap cursor-pointer">
+                <LayoutDashboard size={14} /> Dashboard
               </button>
             )}
 
-            <button onClick={async () => { await refreshShift(); setIsCloseRegisterOpen(true); }} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-xl transition font-semibold text-sm whitespace-nowrap">
-              <FileText size={18} /> Relatorio de Caixa
+            <button onClick={async () => { await refreshShift(); setIsCloseRegisterOpen(true); }} className="flex items-center gap-1.5 px-2.5 py-1 text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-xl transition font-semibold text-xs whitespace-nowrap cursor-pointer">
+              <FileText size={14} /> Relatório de Caixa
             </button>
-            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition font-semibold">
-              <LogOut size={18} /> Sair
+            <button onClick={handleLogout} className="flex items-center gap-1.5 px-2.5 py-1 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition font-semibold text-xs whitespace-nowrap cursor-pointer">
+              <LogOut size={14} /> Sair
             </button>
           </div>
         </div>
@@ -1153,7 +1164,10 @@ function PosPageContent() {
       )}
 
       {isSwitchOperatorOpen && (
-        <OperatorLoginModal onSuccess={() => setIsSwitchOperatorOpen(false)} />
+        <OperatorLoginModal 
+          onSuccess={() => setIsSwitchOperatorOpen(false)} 
+          onClose={() => setIsSwitchOperatorOpen(false)}
+        />
       )}
       
       {!isShiftLoading && operator && !cashRegister && (

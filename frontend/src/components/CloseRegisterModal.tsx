@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { FileText, Loader2, X, AlertOctagon, Receipt, Trash2, EyeOff, Edit2, KeyRound, Unlock, ShieldCheck, SlidersHorizontal, Sparkles, CheckCircle2, RotateCcw, Calculator } from 'lucide-react';
+import { FileText, Loader2, X, AlertOctagon, Receipt, Trash2, EyeOff, Edit2, KeyRound, Unlock, ShieldCheck, SlidersHorizontal, Sparkles, CheckCircle2, RotateCcw, Calculator, Save } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useShift } from '@/contexts/ShiftContext';
 import { EditPaymentModal } from './EditPaymentModal';
@@ -41,13 +41,29 @@ export function CloseRegisterModal({
   const [cashierPinInput, setCashierPinInput] = useState('');
   const [verifyingCashierPin, setVerifyingCashierPin] = useState(false);
 
-  // Estados de Correção Opcional de Recebimentos Digitais
+  // Estados de Correção Opcional de Recebimentos Digitais (Confirmados/Salvos)
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [adjustCredit, setAdjustCredit] = useState('');
   const [adjustDebit, setAdjustDebit] = useState('');
   const [adjustPix, setAdjustPix] = useState('');
   const [adjustCustom, setAdjustCustom] = useState<Record<string, string>>({});
   const [adjustNotes, setAdjustNotes] = useState('');
+
+  // Estados Temporários / Rascunho (Descartados caso feche no 'X' sem salvar)
+  const [tempCredit, setTempCredit] = useState('');
+  const [tempDebit, setTempDebit] = useState('');
+  const [tempPix, setTempPix] = useState('');
+  const [tempCustom, setTempCustom] = useState<Record<string, string>>({});
+  const [tempNotes, setTempNotes] = useState('');
+
+  const openAdjustModal = () => {
+    setTempCredit(adjustCredit);
+    setTempDebit(adjustDebit);
+    setTempPix(adjustPix);
+    setTempCustom({ ...adjustCustom });
+    setTempNotes(adjustNotes);
+    setAdjustModalOpen(true);
+  };
 
   const { user } = useAuthStore();
   const { operator } = useShift();
@@ -142,15 +158,40 @@ export function CloseRegisterModal({
     }
   };
 
+  const loadReport = async (regId = registerId) => {
+    if (!regId) return;
+    try {
+      const res = await api.get(`/cash-registers/${regId}/report?_t=${Date.now()}`);
+      setData(res.data);
+      if (res.data.register?.status !== 'closed' || res.data.register?.closingValue == null) {
+        setClosingValue(res.data.report.expectedDinheiro);
+      } else {
+        setClosingValue(Number(res.data.register.closingValue || 0));
+      }
+      const cDetails = res.data.register?.closingDetails || res.data.report?.closingDetails;
+      if (cDetails) {
+        setAdjustCredit(cDetails.declaredCredit != null ? String(cDetails.declaredCredit) : '');
+        setAdjustDebit(cDetails.declaredDebit != null ? String(cDetails.declaredDebit) : '');
+        setAdjustPix(cDetails.declaredPix != null ? String(cDetails.declaredPix) : '');
+        setAdjustCustom(cDetails.declaredCustom || {});
+        setAdjustNotes(cDetails.notes || '');
+      } else {
+        setAdjustCredit('');
+        setAdjustDebit('');
+        setAdjustPix('');
+        setAdjustCustom({});
+        setAdjustNotes('');
+      }
+    } catch {
+      toast.error('Falha ao gerar relatório detalhado');
+    }
+  };
+
   const handlePaymentEdited = async () => {
     setEditingSale(null);
     setLoading(true);
     try {
-      const res = await api.get(`/cash-registers/${registerId}/report?_t=${Date.now()}`);
-      setData(res.data);
-      setClosingValue(res.data.report.expectedDinheiro);
-    } catch (e) {
-      toast.error('Erro ao recarregar auditoria.');
+      await loadReport();
     } finally {
       setLoading(false);
     }
@@ -166,27 +207,7 @@ export function CloseRegisterModal({
     setUnlockModalOpen(false);
     setCashierPinInput('');
     setAdjustModalOpen(false);
-    api.get(`/cash-registers/${registerId}/report?_t=${Date.now()}`)
-      .then(res => {
-        setData(res.data);
-        setClosingValue(res.data.report.expectedDinheiro);
-        const cDetails = res.data.register?.closingDetails || res.data.report?.closingDetails;
-        if (cDetails) {
-          setAdjustCredit(cDetails.declaredCredit != null ? String(cDetails.declaredCredit) : '');
-          setAdjustDebit(cDetails.declaredDebit != null ? String(cDetails.declaredDebit) : '');
-          setAdjustPix(cDetails.declaredPix != null ? String(cDetails.declaredPix) : '');
-          setAdjustCustom(cDetails.declaredCustom || {});
-          setAdjustNotes(cDetails.notes || '');
-        } else {
-          setAdjustCredit('');
-          setAdjustDebit('');
-          setAdjustPix('');
-          setAdjustCustom({});
-          setAdjustNotes('');
-        }
-      })
-      .catch(() => toast.error('Falha ao gerar relatório detalhado'))
-      .finally(() => setLoading(false));
+    loadReport(registerId).finally(() => setLoading(false));
   }, [isOpen, registerId]);
 
   // Cálculos reativos de recebimentos digitais declarados vs sistema
@@ -232,17 +253,49 @@ export function CloseRegisterModal({
     setStep(2);
   };
 
-  const buildClosingDetailsPayload = () => {
-    if (!hasDigitalAdjustments) return null;
+  const buildClosingDetailsPayload = (overrideFields?: {
+    credit?: string;
+    debit?: string;
+    pix?: string;
+    custom?: Record<string, string>;
+    notes?: string;
+  }) => {
+    const cred = overrideFields?.credit !== undefined ? overrideFields.credit : adjustCredit;
+    const deb = overrideFields?.debit !== undefined ? overrideFields.debit : adjustDebit;
+    const px = overrideFields?.pix !== undefined ? overrideFields.pix : adjustPix;
+    const cust = overrideFields?.custom !== undefined ? overrideFields.custom : adjustCustom;
+    const nts = overrideFields?.notes !== undefined ? overrideFields.notes : adjustNotes;
+
+    const hasAdj = Boolean(
+      cred !== '' ||
+      deb !== '' ||
+      px !== '' ||
+      Object.keys(cust).length > 0 ||
+      nts.trim()
+    );
+    if (!hasAdj) return null;
+
+    const dCred = cred !== '' ? parseFloat(cred) || 0 : Number(data?.report?.totalCredito || 0);
+    const dDeb = deb !== '' ? parseFloat(deb) || 0 : Number(data?.report?.totalDebito || 0);
+    const dPix = px !== '' ? parseFloat(px) || 0 : Number(data?.report?.totalPix || 0);
+
+    const dDigital = dCred + dDeb + dPix +
+      (data?.report?.customMethods || []).reduce((acc: number, cm: any) => {
+        const v = cust[cm.method] !== undefined ? parseFloat(cust[cm.method]) || 0 : Number(cm.total || 0);
+        return acc + v;
+      }, 0);
+
+    const totalAjustado = Number(data?.report?.totalDinheiro || 0) + dDigital;
+
     return {
-      declaredCredit: adjustCredit !== '' ? parseFloat(adjustCredit) || 0 : Number(data.report.totalCredito || 0),
-      declaredDebit: adjustDebit !== '' ? parseFloat(adjustDebit) || 0 : Number(data.report.totalDebito || 0),
-      declaredPix: adjustPix !== '' ? parseFloat(adjustPix) || 0 : Number(data.report.totalPix || 0),
-      declaredCustom: adjustCustom,
-      totalVendasOriginal: Number(data.report.totalVendas || 0),
-      totalVendasAjustado: computedTotalVendas,
-      diffDigital: computedTotalVendas - Number(data.report.totalVendas || 0),
-      notes: adjustNotes.trim(),
+      declaredCredit: dCred,
+      declaredDebit: dDeb,
+      declaredPix: dPix,
+      declaredCustom: cust,
+      totalVendasOriginal: Number(data?.report?.totalVendas || 0),
+      totalVendasAjustado: totalAjustado,
+      diffDigital: totalAjustado - Number(data?.report?.totalVendas || 0),
+      notes: nts.trim(),
       adjustedAt: new Date().toISOString(),
       adjustedBy: user?.name || operator?.name || 'Operador',
     };
@@ -267,18 +320,25 @@ export function CloseRegisterModal({
     }
   };
 
-  const handleAudit = async () => {
+  const handleAudit = async (customPayload?: any, andClose = false) => {
     setSubmitting(true);
     try {
-      const closingDetails = buildClosingDetailsPayload();
+      const closingDetails = customPayload !== undefined ? customPayload : buildClosingDetailsPayload();
+      const valToSave = data?.register?.closingValue != null ? Number(data.register.closingValue) : closingValue;
       await api.patch(`/cash-registers/${registerId}/audit`, {
-        closingValue,
+        closingValue: valToSave,
         closingDetails,
       });
-      toast.success('Auditoria salva com sucesso!');
-      onClose(true);
+      toast.success('Auditoria e ajustes salvos com sucesso!');
+      if (andClose) {
+        onClose(true);
+      } else {
+        await loadReport();
+      }
+      return true;
     } catch (e: any) {
       toast.error('Erro ao salvar auditoria');
+      return false;
     } finally {
       setSubmitting(false);
     }
@@ -397,7 +457,7 @@ export function CloseRegisterModal({
                       {canSeeTotals && (
                         <button
                           type="button"
-                          onClick={() => setAdjustModalOpen(true)}
+                          onClick={openAdjustModal}
                           className="flex items-center gap-1.5 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 px-2.5 py-1 rounded-xl transition cursor-pointer"
                           title="Corrigir valores reais apurados na maquininha / extrato"
                         >
@@ -548,12 +608,24 @@ export function CloseRegisterModal({
                 )}
                 
                 {data.register.status === 'closed' ? (
-                  <button 
-                    onClick={() => onClose(true)}
-                    className="w-full py-5 rounded-2xl font-bold bg-zinc-800 hover:bg-zinc-700 text-white transition-all flex items-center justify-center gap-2 mt-4 text-lg"
-                  >
-                    Fechar Resumo
-                  </button>
+                  <div className="flex gap-3 mt-4">
+                    {isAdmin && (
+                      <button 
+                        onClick={() => handleAudit(undefined, true)}
+                        disabled={submitting}
+                        className="flex-1 py-4 rounded-2xl font-bold bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-black transition-all flex items-center justify-center gap-2 text-base shadow-lg shadow-amber-500/20 active:scale-95 cursor-pointer"
+                      >
+                        {submitting ? <Loader2 className="animate-spin" size={18}/> : <Save size={18}/>}
+                        Salvar Auditoria
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => onClose(true)}
+                      className={`${isAdmin ? 'px-6' : 'w-full'} py-4 rounded-2xl font-bold bg-zinc-800 hover:bg-zinc-700 text-white transition-all flex items-center justify-center gap-2 text-base cursor-pointer`}
+                    >
+                      Fechar
+                    </button>
+                  </div>
                 ) : (
                   <button 
                     onClick={goToConfirmation}
@@ -1071,8 +1143,8 @@ export function CloseRegisterModal({
                   <input
                     type="number"
                     step="0.01"
-                    value={adjustCredit}
-                    onChange={e => setAdjustCredit(e.target.value)}
+                    value={tempCredit}
+                    onChange={e => setTempCredit(e.target.value)}
                     placeholder={Number(data.report.totalCredito || 0).toFixed(2)}
                     className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-500 rounded-xl py-2.5 pl-10 pr-4 text-white font-bold text-base outline-none transition"
                   />
@@ -1090,8 +1162,8 @@ export function CloseRegisterModal({
                   <input
                     type="number"
                     step="0.01"
-                    value={adjustDebit}
-                    onChange={e => setAdjustDebit(e.target.value)}
+                    value={tempDebit}
+                    onChange={e => setTempDebit(e.target.value)}
                     placeholder={Number(data.report.totalDebito || 0).toFixed(2)}
                     className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-500 rounded-xl py-2.5 pl-10 pr-4 text-white font-bold text-base outline-none transition"
                   />
@@ -1109,8 +1181,8 @@ export function CloseRegisterModal({
                   <input
                     type="number"
                     step="0.01"
-                    value={adjustPix}
-                    onChange={e => setAdjustPix(e.target.value)}
+                    value={tempPix}
+                    onChange={e => setTempPix(e.target.value)}
                     placeholder={Number(data.report.totalPix || 0).toFixed(2)}
                     className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-500 rounded-xl py-2.5 pl-10 pr-4 text-white font-bold text-base outline-none transition"
                   />
@@ -1129,8 +1201,8 @@ export function CloseRegisterModal({
                     <input
                       type="number"
                       step="0.01"
-                      value={adjustCustom[cm.method] ?? ''}
-                      onChange={e => setAdjustCustom({ ...adjustCustom, [cm.method]: e.target.value })}
+                      value={tempCustom[cm.method] ?? ''}
+                      onChange={e => setTempCustom({ ...tempCustom, [cm.method]: e.target.value })}
                       placeholder={Number(cm.total || 0).toFixed(2)}
                       className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-500 rounded-xl py-2.5 pl-10 pr-4 text-white font-bold text-base outline-none transition"
                     />
@@ -1142,60 +1214,103 @@ export function CloseRegisterModal({
               <div className="space-y-1.5 pt-2">
                 <label className="text-xs font-bold text-zinc-400 block">Justificativa / Observação (Opcional)</label>
                 <input
-                  value={adjustNotes}
-                  onChange={e => setAdjustNotes(e.target.value)}
+                  value={tempNotes}
+                  onChange={e => setTempNotes(e.target.value)}
                   placeholder="Ex: Diferença de R$ 1,50 decorrente de erro na seleção de cartão no PDV"
                   className="w-full bg-zinc-900 border border-zinc-700 focus:border-amber-500 rounded-xl px-4 py-2.5 text-xs text-white outline-none transition placeholder:text-zinc-600"
                 />
               </div>
 
-              {/* Card Resumo do Impacto */}
-              <div className="p-4 bg-zinc-900/90 border border-zinc-800 rounded-2xl space-y-2">
-                <div className="flex justify-between text-xs text-zinc-400">
-                  <span>Faturamento Original (Sistema):</span>
-                  <span className="font-semibold text-zinc-200">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-zinc-400">Variação Total (Diferença):</span>
-                  <span className={`font-bold ${computedTotalVendas - Number(data.report.totalVendas || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {computedTotalVendas - Number(data.report.totalVendas || 0) >= 0 ? '+' : ''} R$ {(computedTotalVendas - Number(data.report.totalVendas || 0)).toFixed(2)}
-                  </span>
-                </div>
-                <div className="border-t border-zinc-800 pt-2 flex justify-between items-center">
-                  <span className="text-sm font-bold text-white">Faturamento Real Declarado:</span>
-                  <span className="text-lg font-black text-emerald-400">R$ {computedTotalVendas.toFixed(2)}</span>
-                </div>
-              </div>
+              {/* Card Resumo do Impacto (Calculado em tempo real sobre o rascunho) */}
+              {(() => {
+                const tempDeclaredCreditVal = tempCredit !== '' ? parseFloat(tempCredit) || 0 : Number(data?.report?.totalCredito || 0);
+                const tempDeclaredDebitVal = tempDebit !== '' ? parseFloat(tempDebit) || 0 : Number(data?.report?.totalDebito || 0);
+                const tempDeclaredPixVal = tempPix !== '' ? parseFloat(tempPix) || 0 : Number(data?.report?.totalPix || 0);
+                const tempDigitalVal = tempDeclaredCreditVal + tempDeclaredDebitVal + tempDeclaredPixVal +
+                  (data?.report?.customMethods || []).reduce((acc: number, cm: any) => {
+                    const v = tempCustom[cm.method] !== undefined ? parseFloat(tempCustom[cm.method]) || 0 : Number(cm.total || 0);
+                    return acc + v;
+                  }, 0);
+                const tempTotalVendas = Number(data?.report?.totalDinheiro || 0) + tempDigitalVal;
+                const tempDiff = tempTotalVendas - Number(data?.report?.totalVendas || 0);
+
+                return (
+                  <div className="p-4 bg-zinc-900/90 border border-zinc-800 rounded-2xl space-y-2">
+                    <div className="flex justify-between text-xs text-zinc-400">
+                      <span>Faturamento Original (Sistema):</span>
+                      <span className="font-semibold text-zinc-200">R$ {Number(data.report.totalVendas || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span>Variação Total (Diferença):</span>
+                      <span className={`font-bold ${tempDiff >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {tempDiff >= 0 ? '+' : ''} R$ {tempDiff.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="border-t border-zinc-800 pt-2 flex justify-between items-center">
+                      <span className="text-sm font-bold text-white">Faturamento Real Declarado:</span>
+                      <span className="text-lg font-black text-emerald-400">R$ {tempTotalVendas.toFixed(2)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Footer */}
             <div className="p-5 border-t border-zinc-800 flex gap-3 shrink-0 bg-zinc-900/40">
               <button
                 type="button"
+                disabled={submitting}
                 onClick={() => {
-                  setAdjustCredit('');
-                  setAdjustDebit('');
-                  setAdjustPix('');
-                  setAdjustCustom({});
-                  setAdjustNotes('');
-                  toast.info('Valores restaurados para o padrão original do sistema.');
+                  setTempCredit('');
+                  setTempDebit('');
+                  setTempPix('');
+                  setTempCustom({});
+                  setTempNotes('');
+                  toast.info('Valores redefinidos para o padrão original. Clique em Aplicar para confirmar.');
                 }}
-                className="py-3 px-4 rounded-xl border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white transition font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
-                title="Limpar e usar valores originais"
+                className="py-3 px-4 rounded-xl border border-zinc-700 hover:bg-zinc-800 disabled:opacity-60 text-zinc-400 hover:text-white transition font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
+                title="Limpar rascunho e usar valores originais"
               >
                 <RotateCcw size={14} /> Restaurar Padrão
               </button>
               <button
                 type="button"
-                onClick={() => {
+                disabled={submitting}
+                onClick={async () => {
+                  setAdjustCredit(tempCredit);
+                  setAdjustDebit(tempDebit);
+                  setAdjustPix(tempPix);
+                  setAdjustCustom(tempCustom);
+                  setAdjustNotes(tempNotes);
                   setAdjustModalOpen(false);
-                  if (hasDigitalAdjustments) {
-                    toast.success('Valores digitais ajustados aplicados com sucesso!');
+
+                  if (data?.register?.status === 'closed') {
+                    await handleAudit({
+                      credit: tempCredit,
+                      debit: tempDebit,
+                      pix: tempPix,
+                      custom: tempCustom,
+                      notes: tempNotes,
+                    });
+                  } else {
+                    const hasAdj = Boolean(
+                      tempCredit !== '' ||
+                      tempDebit !== '' ||
+                      tempPix !== '' ||
+                      Object.keys(tempCustom).length > 0 ||
+                      tempNotes.trim()
+                    );
+                    if (hasAdj) {
+                      toast.success('Valores digitais ajustados aplicados com sucesso!');
+                    } else {
+                      toast.info('Valores originais do sistema restaurados.');
+                    }
                   }
                 }}
-                className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold transition active:scale-95 text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer"
+                className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-black font-bold transition active:scale-95 text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer"
               >
-                <CheckCircle2 size={16} /> Aplicar Ajustes
+                {submitting ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                <span>{data?.register?.status === 'closed' ? 'Salvar e Aplicar Ajustes' : 'Aplicar Ajustes'}</span>
               </button>
             </div>
           </div>

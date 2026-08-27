@@ -31,15 +31,11 @@ export default function CashRegistersHistoryPage() {
   }, []);
 
   // Update register status when modal closes
-  const handleModalClose = (closed: boolean) => {
+  const handleModalClose = () => {
     setSelectedId(null);
-    if (closed) {
-      // Refresh the list
-      setLoading(true);
-      api.get('/cash-registers')
-        .then(res => setRegisters(res.data))
-        .finally(() => setLoading(false));
-    }
+    api.get(`/cash-registers?_t=${Date.now()}`)
+      .then(res => setRegisters(res.data))
+      .catch(console.error);
   };
 
   if (loading) return <div className="flex h-full items-center justify-center"><Loader2 className="animate-spin text-blue-500" size={48} /></div>;

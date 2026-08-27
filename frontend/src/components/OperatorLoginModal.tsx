@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useShift } from '@/contexts/ShiftContext';
-import { Lock, User, Loader2, ArrowLeft, LayoutDashboard, LogOut, AlertCircle, UtensilsCrossed } from 'lucide-react';
+import { Lock, User, Loader2, ArrowLeft, LayoutDashboard, LogOut, AlertCircle, UtensilsCrossed, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 
 interface OperatorLoginModalProps {
   onSuccess: () => void;
+  onClose?: () => void;
 }
 
 interface OperatorData {
@@ -18,7 +19,7 @@ interface OperatorData {
   hasOpenRegister?: boolean;
 }
 
-export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
+export function OperatorLoginModal({ onSuccess, onClose }: OperatorLoginModalProps) {
   const [operators, setOperators] = useState<OperatorData[]>([]);
   const [loadingOps, setLoadingOps] = useState(true);
   const [hasRestaurantModule, setHasRestaurantModule] = useState(false);
@@ -86,7 +87,17 @@ export function OperatorLoginModal({ onSuccess }: OperatorLoginModalProps) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/90 backdrop-blur-md">
-      <div className="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden p-8 animate-in fade-in zoom-in-95 duration-300">
+      <div className="relative bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden p-8 animate-in fade-in zoom-in-95 duration-300">
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-6 right-6 p-2 rounded-full text-zinc-400 hover:text-white bg-zinc-800/60 hover:bg-zinc-800 transition cursor-pointer"
+            title="Cancelar e manter operador atual"
+          >
+            <X size={18} />
+          </button>
+        )}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
             <Lock className="text-blue-500" size={32} />

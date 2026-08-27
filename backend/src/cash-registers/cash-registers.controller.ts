@@ -30,7 +30,7 @@ export class CashRegistersController {
   @Patch(':id/audit')
   audit(
     @Param('id') id: string,
-    @Body('closingValue') closingValue: number,
+    @Body('closingValue') closingValue?: number,
     @Body('closingDetails') closingDetails?: any,
   ) {
     return this.cashRegistersService.auditRegister(id, closingValue, closingDetails);

@@ -347,30 +347,32 @@ export default function SalesDashboard() {
     @page { size: 80mm auto; margin: 4mm 3mm; }
     body {
       font-family: 'Courier New', Courier, monospace;
-      font-size: 11px;
-      width: 74mm;
+      font-size: 15px;
+      font-weight: normal;
+      width: 75mm;
       color: #000;
       background: #fff;
+      line-height: 1.4;
     }
     .center  { text-align: center; }
     .bold    { font-weight: bold; }
-    .divider { border-top: 1px dashed #000; margin: 5px 0; }
-    .header  { text-align: center; margin-bottom: 6px; }
-    .header .company { font-size: 14px; font-weight: bold; text-transform: uppercase; }
-    .header .subtitle { font-size: 10px; }
-    .meta { display: flex; justify-content: space-between; font-size: 10px; margin: 3px 0; }
-    .label-row { text-align: center; font-weight: bold; font-size: 12px; margin: 4px 0; letter-spacing: 1px; }
-    .item { margin: 4px 0; }
-    .item-header { display: flex; justify-content: space-between; font-weight: bold; }
-    .item-num   { min-width: 18px; }
-    .item-name  { flex: 1; margin: 0 4px; word-break: break-word; }
-    .item-total { white-space: nowrap; }
-    .item-detail { font-size: 10px; color: #555; padding-left: 22px; margin-top: 1px; }
-    .totals { margin-top: 4px; }
-    .totals-row { display: flex; justify-content: space-between; margin: 2px 0; }
-    .totals-row.grand { font-size: 14px; font-weight: bold; margin-top: 4px; }
-    .payment-row { display: flex; justify-content: space-between; margin: 2px 0; }
-    .footer { text-align: center; font-size: 10px; margin-top: 8px; line-height: 1.5; }
+    .divider { border-top: 1px dashed #000; margin: 7px 0; }
+    .header  { text-align: center; margin-bottom: 7px; }
+    .header .company { font-size: 19px; font-weight: bold; text-transform: uppercase; line-height: 1.2; }
+    .header .subtitle { font-size: 13px; font-weight: normal; margin-top: 2px; }
+    .meta { display: flex; justify-content: space-between; font-size: 13.5px; margin: 4px 0; font-weight: normal; }
+    .label-row { text-align: center; font-weight: bold; font-size: 16px; margin: 6px 0; letter-spacing: 1px; }
+    .item { margin: 6px 0; }
+    .item-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; }
+    .item-num   { min-width: 24px; font-weight: bold; }
+    .item-name  { flex: 1; margin: 0 5px; word-break: break-word; font-weight: bold; }
+    .item-total { white-space: nowrap; font-weight: bold; }
+    .item-detail { font-size: 13px; font-weight: normal; color: #000; padding-left: 26px; margin-top: 2px; }
+    .totals { margin-top: 6px; }
+    .totals-row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 15px; font-weight: normal; }
+    .totals-row.grand { font-size: 19px; font-weight: bold; margin-top: 6px; }
+    .payment-row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 15px; font-weight: normal; }
+    .footer { text-align: center; font-size: 13px; font-weight: normal; margin-top: 10px; line-height: 1.4; }
     @media print {
       html, body { width: 80mm; }
     }

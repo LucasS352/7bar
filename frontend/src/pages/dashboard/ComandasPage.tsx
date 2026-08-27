@@ -301,18 +301,23 @@ export function ComandasPage() {
         <head>
           <title>Extrato Comanda #${comanda.number}</title>
           <style>
-            body { font-family: monospace; font-size: 12px; padding: 15px; width: 280px; margin: 0 auto; }
-            h2 { text-align: center; margin: 0 0 5px 0; font-size: 16px; }
-            p { margin: 2px 0; font-size: 11px; }
-            hr { border: none; border-top: 1px dashed #000; margin: 10px 0; }
-            table { width: 100%; border-collapse: collapse; font-size: 11px; }
-            .total { font-size: 14px; font-weight: bold; text-align: right; margin-top: 10px; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            @page { size: 80mm auto; margin: 4mm 3mm; }
+            body { font-family: 'Courier New', Courier, monospace; font-size: 13px; font-weight: 600; width: 74mm; padding: 4px; margin: 0 auto; color: #000; background: #fff; line-height: 1.35; }
+            h2 { text-align: center; margin: 0 0 6px 0; font-size: 16px; font-weight: bold; }
+            p { margin: 2px 0; font-size: 11.5px; font-weight: normal; }
+            hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
+            table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 4px 0; }
+            td { padding: 3px 0; }
+            .total { font-size: 16.5px; font-weight: bold; text-align: right; margin-top: 6px; }
+            .footer-note { text-align: center; margin-top: 12px; font-size: 11px; }
+            @media print { html, body { width: 80mm; } }
           </style>
         </head>
         <body>
           <h2>EXTRATO DE CONSUMO</h2>
           <p style="text-align:center;">Comanda / Mesa: <strong>#${comanda.number}</strong></p>
-          ${comanda.customerName ? `<p style="text-align:center;">Cliente: ${comanda.customerName}</p>` : ''}
+          ${comanda.customerName ? `<p style="text-align:center;">Cliente: <strong>${comanda.customerName}</strong></p>` : ''}
           <p style="text-align:center;">Data: ${new Date(comanda.createdAt).toLocaleString('pt-BR')}</p>
           <hr />
           <table>
@@ -320,7 +325,7 @@ export function ComandasPage() {
           </table>
           <hr />
           <div class="total">TOTAL: R$ ${Number(comanda.total).toFixed(2)}</div>
-          <p style="text-align:center; margin-top: 20px; font-size: 10px;">Não é documento fiscal</p>
+          <p class="footer-note">Não é documento fiscal</p>
           <script>window.print(); setTimeout(() => window.close(), 1000);</script>
         </body>
       </html>

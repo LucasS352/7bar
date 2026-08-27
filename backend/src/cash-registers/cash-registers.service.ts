@@ -72,22 +72,27 @@ export class CashRegistersService {
     });
   }
 
-  async auditRegister(id: string, closingValue: number, closingDetails?: any) {
+  async auditRegister(id: string, closingValue?: number, closingDetails?: any) {
     const prisma = await this.getPrisma();
     const register = await prisma.cashRegister.findUnique({ where: { id } });
     if (!register || register.status !== 'closed') {
       throw new BadRequestException('Caixa não encontrado ou não está fechado');
     }
     const serializedDetails = closingDetails !== undefined
-      ? (typeof closingDetails === 'string' ? closingDetails : JSON.stringify(closingDetails))
+      ? (closingDetails === null ? null : (typeof closingDetails === 'string' ? closingDetails : JSON.stringify(closingDetails)))
       : undefined;
+
+    const dataToUpdate: any = {};
+    if (closingValue !== undefined && closingValue !== null && !isNaN(Number(closingValue))) {
+      dataToUpdate.closingValue = Number(closingValue);
+    }
+    if (serializedDetails !== undefined) {
+      dataToUpdate.closingDetails = serializedDetails;
+    }
 
     return prisma.cashRegister.update({
       where: { id },
-      data: {
-        closingValue,
-        ...(serializedDetails !== undefined ? { closingDetails: serializedDetails } : {})
-      }
+      data: dataToUpdate
     });
   }
 
