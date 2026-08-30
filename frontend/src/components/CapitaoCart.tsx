@@ -3,7 +3,7 @@ import { X, ChevronRight, Zap } from 'lucide-react';
 import { useDemoGuideStore } from '@/store/demoGuide';
 import { useDemoMissionsStore } from '@/store/demoMissions';
 
-const CAPITAO_FULL = '/demo/capitao-gelada-full.jpg';
+const CAPITAO_FULL = '/demo-assets/capitao-gelada-full.jpg';
 
 /** Partículas de névoa de gelo renderizadas em Canvas */
 function FrostCanvas({ active }: { active: boolean }) {

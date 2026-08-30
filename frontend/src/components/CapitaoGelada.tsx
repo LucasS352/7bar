@@ -6,7 +6,7 @@ import { useDemoMissionsStore } from '@/store/demoMissions';
 import { useCartStore } from '@/store/cart';
 
 // Full body character with transparent background
-const CAPITAO_FULL = '/demo/capitao-gelada-full.png';
+const CAPITAO_FULL = '/demo-assets/capitao-gelada-full.png';
 
 // ─── Humores ─────────────────────────────────────────────────────────────────
 type Mood = 'happy' | 'excited' | 'winking' | 'celebrating' | 'thinking';
