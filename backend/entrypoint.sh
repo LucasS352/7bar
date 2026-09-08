@@ -1,8 +1,8 @@
 #!/bin/sh
 
-echo "🔄 Sincronizando schema Prisma..."
-npx prisma db push --schema=prisma/schema.prisma --accept-data-loss --skip-generate || true
-npx prisma db push --schema=prisma/heart.schema.prisma --accept-data-loss --skip-generate || true
+# Nunca atualizar schemas na inicialização (nem Heart, nem tenants).
+# Atualizações são acionadas exclusivamente por Lucas no Sys-Init.
+echo "🔒 Schemas não serão atualizados na inicialização. Use o Sys-Init manualmente."
 
 # ── Modo Demo: importar demo-seed.sql se o banco demo estiver sem produtos ──
 if [ "$APP_MODE" = "demo" ] && [ -f "/app/demo-seed.sql" ]; then

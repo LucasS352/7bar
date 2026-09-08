@@ -122,6 +122,7 @@ export class DashboardService {
         });
         return {
           cashRegisterId: reg.id,
+          code: reg.code,
           operatorName: (reg as any).operator?.name ?? 'Operador',
           operatorId: reg.operatorId,
           openedAt: (reg as any).openingTime,

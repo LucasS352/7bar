@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Logger, NotFoundException, StreamableFile } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, Logger, NotFoundException, StreamableFile } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
@@ -8,6 +8,11 @@ import { Prisma } from '@prisma/client';
 import archiver = require('archiver');
 import { MailService } from '../mail/mail.service';
 import { IntegrationsService } from '../integrations/integrations.service';
+import {
+  normalizeIdempotencyKey,
+  computeSaleFingerprint,
+  isSaleIdentityConflict,
+} from './sales-idempotency.helper';
 
 /** Mapa de método de pagamento → tPag SEFAZ (Tabela 5.4) */
 const TPAG_MAP: Record<string, string> = {
@@ -21,20 +26,6 @@ const TPAG_MAP: Record<string, string> = {
 @Injectable()
 export class SalesService {
   private readonly logger = new Logger(SalesService.name);
-
-  /**
-   * Cache de idempotência: evita vendas duplicadas quando o frontend
-   * dispara múltiplas requisições com a mesma chave (Enter + Click, timeout retry, etc.)
-   * Cada entrada expira em 60 segundos.
-   */
-  private readonly idempotencyCache = new Map<string, { sale: any; expiresAt: number }>();
-
-  private cleanIdempotencyCache() {
-    const now = Date.now();
-    for (const [key, entry] of this.idempotencyCache.entries()) {
-      if (now > entry.expiresAt) this.idempotencyCache.delete(key);
-    }
-  }
 
   constructor(
     private tenantManager: TenantConnectionManager,
@@ -120,23 +111,50 @@ export class SalesService {
     return consumptions;
   }
 
+  async checkoutCapabilities() {
+    const db = await this.getPrisma();
+    try {
+      await db.sale.findFirst({ select: { requestFingerprint: true } });
+      await db.saleDeliveryJob.findFirst({ select: { id: true } });
+      return { protocol: 2 };
+    } catch (error: any) {
+      if (['P2021', 'P2022'].includes(error?.code)) return { protocol: 0 };
+      throw error;
+    }
+  }
+
   async checkout(data: any) {
-    const { userId, tenantId } = this.tenantContext.get();
+    const { userId, tenantId, databaseUrl } = this.tenantContext.get();
     let operatorId = data.operatorId || userId;
     const prisma = await this.getPrisma();
 
-    // ── IDEMPOTÊNCIA: se já processamos esta chave, devolve a venda existente ────
-    this.cleanIdempotencyCache();
-    const iKey = data.idempotencyKey as string | undefined;
-    if (iKey) {
-      const cached = this.idempotencyCache.get(`${tenantId}:${iKey}`);
-      if (cached) {
-        this.logger.warn(`[Idempotência] Requisição duplicada bloqueada. Key: ${iKey}`);
-        return cached.sale;
+    const rawKey = (data.idempotencyKey || data.localId || data.id) as string | undefined;
+    const canonicalId = normalizeIdempotencyKey(rawKey, tenantId);
+    const incomingFingerprint = computeSaleFingerprint({ ...data, operatorId });
+    const includeSale = {
+      items: { include: { modifiers: true, lotConsumptions: true } },
+      payments: true, customer: true,
+    };
+    const validateReplay = (existing: any) => {
+      // Legacy sales have no trusted fingerprint. Never bless the retry as their original.
+      if (!existing.requestFingerprint || existing.requestFingerprint !== incomingFingerprint) {
+        throw new ConflictException({
+          code: existing.requestFingerprint ? 'idempotency_conflict' : 'legacy_idempotency_review',
+          message: existing.requestFingerprint
+            ? 'Esta operação já existe com outro conteúdo. Confira a venda original.'
+            : 'Venda antiga sem identidade verificável. Confira a venda original antes de reenviar.',
+        });
       }
-    }
+      return existing;
+    };
+    const existing = await prisma.sale.findUnique({ where: { id: canonicalId }, include: includeSale });
+    if (existing) return validateReplay(existing);
 
-    const sale = await prisma.$transaction(async (tx: any) => {
+    let allProductIdsToSync: string[] = [];
+    let sale: any;
+
+    try {
+      sale = await prisma.$transaction(async (tx: any) => {
       let subtotal = new Prisma.Decimal(0);
 
       // ─── Flag de movimentação de estoque (Ajuste Fiscal pode desabilitar) ───
@@ -147,14 +165,29 @@ export class SalesService {
       const isConsumption = !!data.consumedByOperatorId;
       const isAjusteFiscal = saleSource === 'ajuste_fiscal';
 
-      if (!isConsumption && !isAjusteFiscal && !data.cashRegisterId) {
-        throw new BadRequestException('Não é possível realizar venda: Caixa não informado.');
+      let targetCashRegisterId = data.cashRegisterId;
+
+      if (!isConsumption && !isAjusteFiscal && !targetCashRegisterId) {
+        // Se não veio cashRegisterId na requisição, busca o caixa aberto DO OPERADOR ATUAL
+        if (operatorId) {
+          const openReg = await tx.cashRegister.findFirst({
+            where: { status: 'open', operatorId },
+            orderBy: { openingTime: 'desc' },
+          });
+          if (openReg) {
+            targetCashRegisterId = openReg.id;
+          }
+        }
+
+        if (!targetCashRegisterId) {
+          throw new BadRequestException('Não é possível realizar venda: O operador atual não possui um caixa aberto. Abra o caixa primeiro.');
+        }
       }
 
       let cashRegister: any = null;
-      if (data.cashRegisterId) {
+      if (targetCashRegisterId) {
         cashRegister = await tx.cashRegister.findUnique({
-          where: { id: data.cashRegisterId }
+          where: { id: targetCashRegisterId }
         });
 
         if (!cashRegister || cashRegister.status !== 'open') {
@@ -166,13 +199,87 @@ export class SalesService {
       const allowNegativeStock = tenantSettings?.allowNegativeStock ?? false;
 
       // ─── 1. Validar estoque e montar snapshot fiscal de cada item ───────────
-      const productIds = data.items.map((item: any) => item.productId);
-      
-      const modifierComponentIds = data.items
+
+      // ─── Suporte a Comanda: se comandaId presente, travar e buscar itens do banco ────
+      let comandaToClose: any = null;
+      if (data.comandaId) {
+        // Bloqueio atômico contra concorrência: tenta transitar de open/waiting_payment para 'closed'
+        // Em MySQL, updateMany obtém lock exclusivo de linha. Se outro terminal já fechou ou está fechando, count será 0.
+        const lockResult = await tx.comanda.updateMany({
+          where: {
+            id: data.comandaId,
+            status: { in: ['open', 'waiting_payment'] },
+          },
+          data: {
+            status: 'closed',
+          },
+        });
+
+        if (lockResult.count === 0) {
+          const current = await tx.comanda.findUnique({
+            where: { id: data.comandaId },
+            select: { status: true },
+          });
+          if (!current) {
+            throw new BadRequestException(`Comanda ${data.comandaId} não encontrada.`);
+          }
+          throw new BadRequestException(
+            `Esta comanda já foi finalizada (status: "${current.status}") ou está sendo processada por outro terminal.`,
+          );
+        }
+
+        comandaToClose = await tx.comanda.findUnique({
+          where: { id: data.comandaId },
+          include: {
+            items: {
+              include: {
+                modifiers: { include: { componentProduct: true } },
+                product: {
+                  include: {
+                    grupoTributacao: true,
+                    category: { include: { grupoTributacao: true } },
+                    modifierGroups: { include: { options: true } },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+
+        // Detectar compostos legados sem modifiers — exigir resolução manual
+        for (const ci of comandaToClose.items) {
+          if (!ci.stockDeducted && ci.product.isComposite) {
+            throw new BadRequestException(
+              `O item composto "${ci.product.name}" foi lançado antes do suporte a compostos em comandas. ` +
+              `Remova-o da comanda e relance selecionando os ingredientes para continuar.`,
+            );
+          }
+        }
+      }
+
+      // Quando há comanda: apenas extraItems passam pelo fluxo normal de estoque
+      // Quando não há comanda: todos os data.items passam pelo fluxo normal
+      const itemsForProcessing: any[] = data.comandaId
+        ? [...(data.extraItems || [])]
+        : [...(data.items || []), ...(data.extraItems || [])];
+
+      const productIds = itemsForProcessing.map((item: any) => item.productId);
+
+      const modifierComponentIds = itemsForProcessing
          .filter((i: any) => i.modifiers && i.modifiers.length > 0)
          .flatMap((i: any) => i.modifiers.map((m: any) => m.componentProductId));
 
-      const allProductIds = Array.from(new Set([...productIds, ...modifierComponentIds]));
+      // Incluir também os produtos da comanda no productMap para resolução fiscal e FIFO
+      const comandaProductIds = data.comandaId
+        ? (comandaToClose?.items || []).flatMap((ci: any) => [
+            ci.productId,
+            ...ci.modifiers.map((m: any) => m.componentProductId),
+          ])
+        : [];
+
+      const allProductIds = Array.from(new Set([...productIds, ...modifierComponentIds, ...comandaProductIds]));
+      allProductIdsToSync = allProductIds;
 
       const productsInDb = await tx.product.findMany({
         where: { id: { in: allProductIds } },
@@ -195,12 +302,21 @@ export class SalesService {
 
       const inventoryLogsToCreate: any[] = [];
 
-      for (const item of data.items) {
+      // Calcular subtotal: itens da comanda (preço do banco) + itensForProcessing (balcão)
+      if (data.comandaId && comandaToClose) {
+        // Subtotal dos itens da comanda vem do snapshot do banco
+        for (const ci of comandaToClose.items) {
+          subtotal = subtotal.add(new Prisma.Decimal(ci.totalPrice));
+        }
+      }
+      // Subtotal dos itens normais/extras
+      for (const item of itemsForProcessing) {
         const qty = Number(item.quantity);
         const priceUnit = new Prisma.Decimal(item.priceUnit);
         const itemSubtotal = priceUnit.mul(new Prisma.Decimal(qty)).toDecimalPlaces(2);
         subtotal = subtotal.add(itemSubtotal);
       }
+
 
       const discount = new Prisma.Decimal(data.discount || 0);
       let total = subtotal.sub(discount);
@@ -314,10 +430,12 @@ export class SalesService {
 
       const sale = await tx.sale.create({
         data: {
+          id:             canonicalId,
+          requestFingerprint: incomingFingerprint,
           code:           nextSaleCode,
           customerId:     data.customerId || null,
           operatorId,
-          cashRegisterId: data.cashRegisterId || null,
+          cashRegisterId: targetCashRegisterId || null,
           source:         saleSource,
           subtotal,
           discount,
@@ -336,13 +454,136 @@ export class SalesService {
         }
       });
 
-      for (const item of data.items) {
+      // ─── Processar itens da COMANDA (stockDeducted=true: sem baixa, apenas FIFO para custeio) ──
+      if (data.comandaId && comandaToClose) {
+        for (const ci of comandaToClose.items) {
+          const product = ci.product;
+          const qty = Number(ci.quantity);
+          const itemModifiersDataToCreate: any[] = [];
+          const itemLotConsumptions: any[] = [];
+          let totalCostOfLots = new Prisma.Decimal(0);
+
+          await tx.product.update({
+            where: { id: product.id },
+            data: { salesCount: { increment: qty } },
+          });
+
+          if (product.isComposite && ci.modifiers && ci.modifiers.length > 0) {
+            // Composto com snapshot — consumir FIFO dos ingredientes para custeio
+            for (const mod of ci.modifiers) {
+              const componentProduct = productMap.get(mod.componentProductId) as any || mod.componentProduct;
+              if (!componentProduct) continue;
+
+              // Custeio FIFO — NÃO altera product.stock (já foi feito no addItems)
+              const ingredientConsumptions = await this.consumeLotsFIFO(
+                tx, componentProduct.id, Number(mod.consumedQuantity), componentProduct.priceCost,
+              );
+              for (const cons of ingredientConsumptions) {
+                itemLotConsumptions.push({ lotId: cons.lotId, quantity: cons.quantity, costPrice: cons.costPrice });
+                totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
+              }
+
+              itemModifiersDataToCreate.push({
+                componentProductId: componentProduct.id,
+                name: mod.name,
+                quantity: new Prisma.Decimal(mod.consumedQuantity),
+                priceAdjustment: new Prisma.Decimal(mod.priceAdjustment),
+              });
+            }
+          } else if (!product.isComposite) {
+            // Simples com stockDeducted=true — só FIFO para custeio
+            if (ci.stockDeducted && shouldMoveStock) {
+              const lotConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost);
+              for (const cons of lotConsumptions) {
+                itemLotConsumptions.push({ lotId: cons.lotId, quantity: cons.quantity, costPrice: cons.costPrice });
+                totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
+              }
+            } else if (!ci.stockDeducted && shouldMoveStock) {
+              // Simples legado (stockDeducted=false): baixa normal + FIFO
+              if (!allowNegativeStock) {
+                const result = await tx.product.updateMany({
+                  where: { id: product.id, stock: { gte: new Prisma.Decimal(qty) } },
+                  data: { stock: { decrement: new Prisma.Decimal(qty) } },
+                });
+                if (result.count === 0) {
+                  throw new BadRequestException(`Estoque insuficiente para "${product.name}" na comanda.`);
+                }
+              } else {
+                await tx.product.update({
+                  where: { id: product.id },
+                  data: { stock: { decrement: new Prisma.Decimal(qty) } },
+                });
+              }
+              inventoryLogsToCreate.push({
+                productId: product.id,
+                type: 'SALE',
+                quantity: qty,
+                reason: `Venda PDV (Comanda #${comandaToClose.number})`,
+              });
+              const lotConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost);
+              for (const cons of lotConsumptions) {
+                itemLotConsumptions.push({ lotId: cons.lotId, quantity: cons.quantity, costPrice: cons.costPrice });
+                totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
+              }
+            }
+          }
+
+          const gt = product.grupoTributacao || product.category?.grupoTributacao;
+          const priceCostFinal = qty > 0 ? totalCostOfLots.div(new Prisma.Decimal(qty)) : new Prisma.Decimal(0);
+
+          const saleItem = await tx.saleItem.create({
+            data: {
+              saleId:      sale.id,
+              productId:   product.id,
+              productName: product.name,
+              unit:        product.unit || 'UN',
+              quantity:    qty,
+              priceUnit:   new Prisma.Decimal(ci.unitPrice),
+              discount:    0,
+              subtotal:    new Prisma.Decimal(ci.totalPrice),
+              ncm:         product.ncm   ?? null,
+              cest:        product.cest  ?? null,
+              cfop:        gt?.cfop      ?? '5102',
+              origem:      product.origem ?? 0,
+              csosn:       gt?.csosn     ?? null,
+              cstIcms:     gt?.cstIcms   ?? null,
+              aliqIcms:    Number(gt?.aliqIcms ?? 0),
+              valorIcms:   0,
+              cstPis:      gt?.cstPis    ?? '99',
+              aliqPis:     Number(gt?.aliqPis ?? 0),
+              valorPis:    0,
+              cstCofins:   gt?.cstCofins ?? '99',
+              aliqCofins:  Number(gt?.aliqCofins ?? 0),
+              valorCofins: 0,
+              priceCost:   priceCostFinal,
+              ...(itemModifiersDataToCreate.length > 0 ? {
+                modifiers: { create: itemModifiersDataToCreate },
+              } : {}),
+              ...(itemLotConsumptions.length > 0 ? {
+                lotConsumptions: {
+                  create: itemLotConsumptions.map(lc => ({ lotId: lc.lotId, quantity: lc.quantity })),
+                },
+              } : {}),
+            },
+          });
+          void saleItem; // usado acima com create — referência evita lint
+        }
+
+        // Fechar comanda atomicamente na mesma transação
+        await tx.comanda.update({
+          where: { id: data.comandaId },
+          data: { status: 'closed', saleId: sale.id },
+        });
+      }
+
+      for (const item of itemsForProcessing) {
         const product = productMap.get(item.productId) as any;
         if (!product) {
           throw new BadRequestException(`Produto ${item.productId} não encontrado no banco de dados.`);
         }
 
         const qty = Number(item.quantity);
+
         const itemModifiersDataToCreate: any[] = [];
         const itemLotConsumptions: any[] = [];
         let totalCostOfLots = new Prisma.Decimal(0);
@@ -550,36 +791,36 @@ export class SalesService {
         }
       });
 
-      if (emitirNfce) {
-        const { tenantId, databaseUrl } = this.tenantContext.get();
-        setTimeout(() => this.dispararNfce(tenantId, databaseUrl, fullSale), 500);
+      // These intents cannot disappear between the sale commit and a process restart.
+      const jobs = [
+        ...(fullSale.emitirNfce ? [{ kind: 'NFCE', payload: '{}' }] : []),
+        ...(allProductIdsToSync.length ? [{ kind: 'STOCK', payload: JSON.stringify({ productIds: allProductIdsToSync }) }] : []),
+      ];
+      for (const job of jobs) {
+        await tx.saleDeliveryJob.create({ data: { saleId: fullSale.id, ...job } });
       }
-
-      // ─── Disparar sincronização de estoque no iFood (se ativada) ───────────
-      if (allProductIds.length > 0) {
-        const { tenantId } = this.tenantContext.get();
-        setTimeout(() => this.integrationsService.syncProductStock(tenantId, allProductIds), 500);
-      }
-
       return fullSale;
+    }, {
+      timeout: 25000,
     });
-
-    try {
-      this.productsService.invalidateCache(tenantId);
-    } catch (err) {
-      this.logger.error(`Erro ao invalidar cache de produtos do tenant ${tenantId}: ${err.message}`);
+  } catch (err: any) {
+    // Rollback has finished. A matching committed winner is the only success condition.
+    if (isSaleIdentityConflict(err) || err?.code === 'P2034' || err instanceof BadRequestException) {
+      const winner = await prisma.sale.findUnique({ where: { id: canonicalId }, include: includeSale });
+      if (winner) return validateReplay(winner);
     }
-
-    // ── Grava no cache de idempotência (60s) para bloquear duplicatas tardias ──
-    if (iKey) {
-      this.idempotencyCache.set(`${tenantId}:${iKey}`, {
-        sale,
-        expiresAt: Date.now() + 60_000,
-      });
-    }
-
-    return sale;
+    throw err;
   }
+
+  // The durable worker, not an in-memory timer, delivers fiscal/integration jobs.
+  try {
+    this.productsService.invalidateCache(tenantId);
+  } catch (err) {
+    this.logger.error(`Erro ao invalidar cache de produtos do tenant ${tenantId}: ${err.message}`);
+  }
+
+  return sale;
+}
 
   /**
    * Dispara a emissão NFC-e de forma assíncrona após a venda ser salva ou via CRON.
@@ -1220,6 +1461,21 @@ export class SalesService {
         throw new BadRequestException('Não é possível editar pagamentos de uma venda cancelada.');
       }
 
+      if (sale.cashRegisterId) {
+        const reg = await tx.cashRegister.findUnique({
+          where: { id: sale.cashRegisterId },
+          select: { id: true, status: true, closingValue: true }
+        });
+
+        if (!reg) {
+          throw new NotFoundException('Caixa vinculado à venda não encontrado.');
+        }
+
+        if (reg.status === 'closed' && reg.closingValue != null) {
+          throw new BadRequestException('Pagamentos de caixas já auditados não podem ser alterados.');
+        }
+      }
+
       const totalNewPayments = payments.reduce((acc, p) => acc + Number(p.value), 0);
       const saleTotal = Number(sale.total);
 
@@ -1583,4 +1839,3 @@ export class SalesService {
     };
   }
 }
-

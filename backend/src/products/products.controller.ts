@@ -3,6 +3,7 @@ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ProductsService, TenantSettingsDto } from './products.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { BULK_IMAGE_MAX_BYTES, BULK_IMAGE_MAX_FILES } from './bulk-images.helper';
 
 interface AuthUser {
   tenantId: string;
@@ -66,13 +67,16 @@ export class ProductsController {
   }
 
   @Post('bulk-images')
-  @UseInterceptors(FilesInterceptor('files', 300))
+  @UseInterceptors(FilesInterceptor('files', BULK_IMAGE_MAX_FILES, {
+    limits: { fileSize: BULK_IMAGE_MAX_BYTES, files: BULK_IMAGE_MAX_FILES, fields: 1, fieldSize: 16 * 1024 },
+  }))
   async bulkImageUpload(
     @UploadedFiles() files: Express.Multer.File[],
     @Request() req: any,
+    @Body('manifest') manifest?: string,
   ) {
     if (!files || files.length === 0) throw new BadRequestException('Nenhum arquivo enviado.');
-    return this.productsService.bulkImageUpload(req.user.tenantId, files);
+    return this.productsService.bulkImageUpload(req.user.tenantId, files, manifest);
   }
 
   @Post('bulk')

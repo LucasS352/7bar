@@ -40,11 +40,13 @@ import { GarcomPage } from './pages/GarcomPage';
 
 // Stores
 import { useAuthStore } from './store/auth';
+import { ShiftProvider } from './contexts/ShiftContext';
 
 // Estilos globais
 import './app/globals.css';
 import { TermsAcceptanceModal } from './components/TermsAcceptanceModal';
 import { OverduePaymentBanner } from './components/OverduePaymentBanner';
+import { NetworkStatusBanner } from './components/NetworkStatusBanner';
 
 // ── PWA Service Worker ──────────────────────────────────────────────────────
 // O vite-plugin-pwa injeta automaticamente o registro do SW.
@@ -62,6 +64,20 @@ const updateSW = registerSW({
   },
 });
 
+import { recordTelemetry } from './lib/telemetry';
+
+// Emite telemetria com a versão/script do Service Worker ativo
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then((reg) => {
+    const swFileName = reg.active?.scriptURL ? reg.active.scriptURL.split('/').pop() : 'sw.js';
+    const swVersionId = `pwa-v1.3.0#${swFileName}`;
+    recordTelemetry({
+      type: 'sw_version',
+      path: swVersionId,
+    });
+  }).catch(() => {});
+}
+
 // Verifica por atualizações sempre que o usuário retorna ao app (troca de aba, desbloqueia celular, etc.)
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
@@ -76,7 +92,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { token, user } = useAuthStore();
   if (!token) return <Navigate to={IS_DEMO ? '/demo' : '/login'} replace />;
   if (user?.role === 'stockist') return <Navigate to="/dashboard/inventory" replace />;
-  return <><OverduePaymentBanner />{children}</>;
+  return <><NetworkStatusBanner /><OverduePaymentBanner />{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
@@ -91,7 +107,8 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <ShiftProvider>
+        <Routes>
         {/* Rotas públicas */}
         <Route path="/login" element={IS_DEMO ? <Navigate to="/demo" replace /> : <LoginPage />} />
         <Route path="/demo" element={<DemoRegisterPage />} />
@@ -172,7 +189,8 @@ function App() {
           }
         }} 
       />
-      <TermsAcceptanceModal />
+        <TermsAcceptanceModal />
+      </ShiftProvider>
     </BrowserRouter>
   );
 }

@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Body, Param, UseGuards, Query } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, UseGuards, Query, Request } from '@nestjs/common';
 import { CashRegistersService } from './cash-registers.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -22,18 +22,35 @@ export class CashRegistersController {
   close(
     @Param('id') id: string,
     @Body('closingValue') closingValue: number | null,
-    @Body('closingDetails') closingDetails?: any,
+    @Body('closingDetails') closingDetails: any,
+    @Request() req: any,
   ) {
-    return this.cashRegistersService.closeRegister(id, closingValue, closingDetails);
+    const opToken = req.headers['x-operator-token'];
+    const pinToken = req.headers['x-pin-auth-token'];
+    return this.cashRegistersService.closeRegister(id, closingValue, closingDetails, opToken, pinToken, req.user);
   }
 
   @Patch(':id/audit')
   audit(
     @Param('id') id: string,
-    @Body('closingValue') closingValue?: number,
-    @Body('closingDetails') closingDetails?: any,
+    @Body('closingValue') closingValue: number,
+    @Body('closingDetails') closingDetails: any,
+    @Request() req: any,
   ) {
-    return this.cashRegistersService.auditRegister(id, closingValue, closingDetails);
+    const opToken = req.headers['x-operator-token'];
+    const pinToken = req.headers['x-pin-auth-token'];
+    return this.cashRegistersService.auditRegister(id, closingValue, closingDetails, opToken, pinToken, req.user);
+  }
+
+  @Patch(':id/conference')
+  saveConference(
+    @Param('id') id: string,
+    @Body('conferenceDetails') conferenceDetails: any,
+    @Request() req: any,
+  ) {
+    const opToken = req.headers['x-operator-token'];
+    const pinToken = req.headers['x-pin-auth-token'];
+    return this.cashRegistersService.saveConference(id, conferenceDetails, opToken, pinToken, req.user);
   }
 
   @Post(':id/movement')

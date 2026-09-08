@@ -1,8 +1,9 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, UseGuards, Param, Res,
-  UnauthorizedException, Request, UseInterceptors,
+  UnauthorizedException, ForbiddenException, Request, UseInterceptors,
   UploadedFile, BadRequestException, NotFoundException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import { createReadStream, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -13,7 +14,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('tenants')
 export class TenantsController {
-  constructor(private readonly tenantsService: TenantsService) {}
+  constructor(
+    private readonly tenantsService: TenantsService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Get()
@@ -235,10 +239,29 @@ export class TenantsController {
    */
   @UseGuards(JwtAuthGuard)
   @Post('me/verify-cashier-pin')
-  async verifyCashierPin(@Request() req: any, @Body() body: { pin: string }) {
-    const valid = await this.tenantsService.verifyCashierPin(req.user.tenantId, body.pin);
-    if (!valid) throw new UnauthorizedException('PIN do Caixa incorreto.');
-    return { valid: true };
+  async verifyCashierPin(@Request() req: any, @Body() body: { pin: string; registerId: string }) {
+    if (!body.registerId || typeof body.registerId !== 'string' || !body.registerId.trim()) {
+      throw new BadRequestException('registerId é obrigatório para validação de PIN do Caixa.');
+    }
+
+    const result = await this.tenantsService.verifyCashierPin(req.user.tenantId, body.pin);
+    if (!result.authorized) {
+      throw new ForbiddenException('PIN do Caixa incorreto.');
+    }
+
+    const pinAuthToken = this.jwtService.sign(
+      {
+        type: 'pin_auth',
+        authType: result.authType,
+        managerOpId: result.managerOpId,
+        managerName: result.managerName,
+        registerId: body.registerId,
+        tenantId: req.user.tenantId,
+      },
+      { expiresIn: '30m' }
+    );
+
+    return { valid: true, pinAuthToken };
   }
 
   @UseGuards(JwtAuthGuard)

@@ -42,12 +42,22 @@ export class AuthService {
     }
 
     if (await bcrypt.compare(pin, operator.pin)) {
+      const operatorToken = this.jwtService.sign(
+        {
+          type: 'op',
+          opId: operator.id,
+          tenantId,
+        },
+        { expiresIn: '30m' }
+      );
+
       return {
         id: operator.id,
         name: operator.name,
         role: 'operator',
         isManager: Boolean(operator.isManager),
         jobTitle: operator.jobTitle ?? null,
+        operatorToken,
       };
     }
     throw new UnauthorizedException('PIN incorreto.');

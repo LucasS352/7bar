@@ -43,6 +43,7 @@ function SupplierSelector({ product, suppliers, onToggle }: { product: Product, 
   const [isOpen, setIsOpen] = useState(false);
   const [openUpwards, setOpenUpwards] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+  const [searchTerm, setSearchTerm] = useState('');
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const linkedCount = product.supplierProducts?.length || 0;
@@ -56,7 +57,12 @@ function SupplierSelector({ product, suppliers, onToggle }: { product: Product, 
         setIsOpen(false);
       }
     };
-    const handleScroll = () => { if (isOpen) setIsOpen(false); };
+    const handleScroll = (event: Event) => {
+      if (dropdownRef.current && event.target instanceof Node && dropdownRef.current.contains(event.target)) {
+        return;
+      }
+      if (isOpen) setIsOpen(false);
+    };
     
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
@@ -74,15 +80,22 @@ function SupplierSelector({ product, suppliers, onToggle }: { product: Product, 
       const spaceBelow = window.innerHeight - rect.bottom;
       const willOpenUpwards = spaceBelow < 300;
       setOpenUpwards(willOpenUpwards);
+      const clampedLeft = Math.max(140, Math.min(window.innerWidth - 140, rect.left + rect.width / 2));
       setDropdownPos({
         top: willOpenUpwards ? rect.top - 8 : rect.bottom + 8,
-        left: rect.left + rect.width / 2
+        left: clampedLeft
       });
+      setSearchTerm('');
     }
     setIsOpen(!isOpen);
   };
 
   const linkedSuppliers = suppliers.filter(s => product.supplierProducts?.some(sp => sp.supplierId === s.id));
+
+  const filteredSuppliers = useMemo(() => {
+    if (!searchTerm.trim()) return suppliers;
+    return suppliers.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [suppliers, searchTerm]);
 
   return (
     <div className="flex items-center justify-center gap-2">
@@ -117,22 +130,47 @@ function SupplierSelector({ product, suppliers, onToggle }: { product: Product, 
       {isOpen && typeof document !== 'undefined' && createPortal(
         <div 
           ref={dropdownRef}
-          className="fixed z-[9999] w-56 rounded-xl bg-zinc-800 border border-zinc-700 shadow-xl text-left"
+          className="fixed z-[9999] w-64 rounded-xl bg-zinc-800 border border-zinc-700 shadow-2xl text-left flex flex-col overflow-hidden"
           style={{ 
             left: dropdownPos.left, 
             top: dropdownPos.top,
             transform: `translate(-50%, ${openUpwards ? '-100%' : '0'})`
           }}
+          onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-2 max-h-60 overflow-y-auto custom-scrollbar">
-            <div className="flex justify-between items-center mb-2 px-2 pt-1">
-              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Fornecedores</span>
-              <button onClick={() => setIsOpen(false)} className="text-zinc-500 hover:text-white p-1 rounded-md hover:bg-zinc-700"><X size={14} /></button>
+          <div className="p-2.5 border-b border-zinc-700/60 bg-zinc-800">
+            <div className="flex justify-between items-center mb-1.5 px-1">
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                Fornecedores ({suppliers.length})
+              </span>
+              <button 
+                type="button"
+                onClick={() => setIsOpen(false)} 
+                className="text-zinc-500 hover:text-white p-1 rounded-md hover:bg-zinc-700 transition-colors"
+              >
+                <X size={14} />
+              </button>
             </div>
-            {suppliers.length === 0 ? (
-              <div className="text-xs text-zinc-500 p-2 text-center">Nenhum fornecedor cadastrado</div>
+            {suppliers.length > 5 && (
+              <div className="relative mt-1">
+                <input
+                  type="text"
+                  placeholder="Buscar fornecedor..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                  autoFocus
+                />
+              </div>
+            )}
+          </div>
+          <div className="p-2 max-h-60 overflow-y-auto overscroll-contain custom-scrollbar">
+            {filteredSuppliers.length === 0 ? (
+              <div className="text-xs text-zinc-500 p-2 text-center">
+                {suppliers.length === 0 ? 'Nenhum fornecedor cadastrado' : 'Nenhum fornecedor encontrado'}
+              </div>
             ) : (
-              suppliers.map(s => {
+              filteredSuppliers.map(s => {
                 const isLinked = product.supplierProducts?.some(sp => sp.supplierId === s.id) || false;
                 return (
                   <label key={s.id} className="flex items-center gap-3 p-2 hover:bg-zinc-700 rounded-lg cursor-pointer text-sm text-zinc-200 transition-colors">
@@ -140,9 +178,9 @@ function SupplierSelector({ product, suppliers, onToggle }: { product: Product, 
                       type="checkbox"
                       checked={isLinked}
                       onChange={() => onToggle(s.id, isLinked)}
-                      className="rounded border-zinc-600 bg-zinc-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-800 w-4 h-4"
+                      className="rounded border-zinc-600 bg-zinc-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-800 w-4 h-4 cursor-pointer"
                     />
-                    <span className="truncate flex-1">{s.name}</span>
+                    <span className="truncate flex-1 select-none">{s.name}</span>
                   </label>
                 );
               })

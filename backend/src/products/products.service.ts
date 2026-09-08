@@ -3,6 +3,7 @@ import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { IntegrationsService } from '../integrations/integrations.service';
+import { bulkImageIdentities, BulkImageIdentity } from './bulk-images.helper';
 
 // ── DTOs internos (evitar `any`) ─────────────────────────────────────────────
 
@@ -1048,7 +1049,8 @@ export class ProductsService {
       .trim();
   }
 
-  async bulkImageUpload(tenantId: string, files: Express.Multer.File[]) {
+  async bulkImageUpload(tenantId: string, files: Express.Multer.File[], manifest?: string) {
+    const identities = bulkImageIdentities(files, manifest);
     const prisma = await this.getPrisma();
 
     // Buscar todos os produtos ativos do tenant
@@ -1058,35 +1060,41 @@ export class ProductsService {
     });
 
     // Criar mapa: nome normalizado → produto
-    const productMap = new Map<string, { id: string; name: string; imageUrl: string | null }>();
+    const productMap = new Map<string, typeof allProducts>();
     for (const p of allProducts) {
-      productMap.set(this.normalizeForMatch(p.name), p);
+      const key = this.normalizeForMatch(p.name);
+      if (key) productMap.set(key, [...(productMap.get(key) || []), p]);
     }
 
-    const matched: { fileName: string; productId: string; productName: string; imageUrl: string }[] = [];
-    const notFound: { fileName: string }[] = [];
-    const errors: { fileName: string; error: string }[] = [];
+    const matched: (BulkImageIdentity & { productId: string; productName: string; imageUrl: string })[] = [];
+    const notFound: BulkImageIdentity[] = [];
+    const errors: (BulkImageIdentity & { error: string })[] = [];
 
-    for (const file of files) {
+    for (const [index, file] of files.entries()) {
+      const identity = identities[index];
       // Extrai nome do arquivo sem extensão
-      const fileNameWithoutExt = file.originalname.replace(/\.[^/.]+$/, '');
+      const fileNameWithoutExt = identity.fileName.replace(/\.[^/.]+$/, '');
       const normalizedFileName = this.normalizeForMatch(fileNameWithoutExt);
 
       // Tenta match exato primeiro
-      let product = productMap.get(normalizedFileName);
+      let candidates = productMap.get(normalizedFileName) || [];
 
       // Se não encontrou exato, tenta match parcial (contém)
-      if (!product) {
+      if (!candidates.length && normalizedFileName) {
         for (const [key, val] of productMap.entries()) {
           if (key.includes(normalizedFileName) || normalizedFileName.includes(key)) {
-            product = val;
-            break;
+            candidates.push(...val);
           }
         }
       }
 
+      if (candidates.length > 1) {
+        errors.push({ ...identity, error: 'Nome ambíguo: mais de um produto corresponde. Use o nome completo e único do produto.' });
+        continue;
+      }
+      const product = candidates[0];
       if (!product) {
-        notFound.push({ fileName: file.originalname });
+        notFound.push(identity);
         continue;
       }
 
@@ -1108,13 +1116,13 @@ export class ProductsService {
         });
 
         matched.push({
-          fileName: file.originalname,
+          ...identity,
           productId: product.id,
           productName: product.name,
           imageUrl,
         });
       } catch (err: any) {
-        errors.push({ fileName: file.originalname, error: err?.message || 'Erro desconhecido' });
+        errors.push({ ...identity, error: err?.message || 'Erro desconhecido' });
       }
     }
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
@@ -9,6 +9,7 @@ export interface JwtPayload {
   tenantId: string;
   role: string;
   groupId?: string | null;
+  type?: string;
 }
 
 /**
@@ -34,6 +35,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * IMPORTANTE: `sub` é o userId — todos os controllers devem usar `user.sub`.
    */
   async validate(payload: JwtPayload): Promise<JwtPayload> {
+    // RFC 8725: rejeitar tokens com finalidade diferente da sessão da loja
+    if (payload.type) {
+      throw new UnauthorizedException('Token inválido para autenticação da loja');
+    }
+
     return {
       sub: payload.sub,
       email: payload.email,

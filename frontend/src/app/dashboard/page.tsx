@@ -22,6 +22,7 @@ import { FileText, FileSpreadsheet } from 'lucide-react';
 
 type RegisterSummary = {
   cashRegisterId: string;
+  code?: number;
   operatorName: string;
   operatorId: string;
   openedAt: string;
@@ -715,7 +716,7 @@ export default function SalesDashboard() {
               </div>
               <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
                 <DollarSign size={20} className="text-emerald-400" />
-                <span>Caixa {idx + 1}</span>
+                <span>Caixa #{reg.code ?? (idx + 1)}</span>
               </div>
               <div>
                 <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">

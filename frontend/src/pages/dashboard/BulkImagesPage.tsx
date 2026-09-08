@@ -1,17 +1,13 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, ImageIcon, CheckCircle, XCircle, AlertCircle, Loader2, FolderOpen, Zap, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { IMAGE_BATCH_BYTES, IMAGE_PAGE_SIZE, imageFormData, uploadImageBatches, type ImageUploadItem } from '@/lib/bulk-images';
+import { useAuthStore } from '@/store/auth';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-interface FilePreviewItem {
-  file: File;
-  preview: string;
-  status: 'pending' | 'uploading' | 'success' | 'error' | 'no-match';
-  productName?: string;
-  errorMsg?: string;
-}
+type FilePreviewItem = ImageUploadItem;
 
 interface BulkResult {
   total: number;
@@ -19,7 +15,7 @@ interface BulkResult {
   notFound: number;
   errors: number;
   details: {
-    matched: { fileName: string; productId: string; productName: string; imageUrl: string }[];
+    matched: { fileName: string }[];
     notFound: { fileName: string }[];
     errors: { fileName: string; error: string }[];
   };
@@ -27,14 +23,14 @@ interface BulkResult {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function normalizeForMatch(str: string): string {
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+function ImageThumbnail({ file }: { file: File }) {
+  const [url, setUrl] = useState('');
+  useEffect(() => {
+    const preview = URL.createObjectURL(file);
+    setUrl(preview);
+    return () => URL.revokeObjectURL(preview);
+  }, [file]);
+  return url ? <img src={url} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" /> : null;
 }
 
 function fileNameWithoutExt(name: string): string {
@@ -48,28 +44,50 @@ export default function BulkImagesPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<BulkResult | null>(null);
+  const [hasResult, setHasResult] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const folderRef = useRef<HTMLInputElement>(null);
+  const uploadingRef = useRef(false);
+  const uploadController = useRef<AbortController | null>(null);
+  const [page, setPage] = useState(0);
+  useEffect(() => () => uploadController.current?.abort(), []);
+  const result: BulkResult | null = hasResult ? {
+    total: files.length,
+    matched: files.filter(f => f.status === 'success').length,
+    notFound: files.filter(f => f.status === 'no-match').length,
+    errors: files.filter(f => f.status === 'error').length,
+    details: {
+      matched: files.filter(f => f.status === 'success').map(f => ({ fileName: f.file.name })),
+      notFound: files.filter(f => f.status === 'no-match').map(f => ({ fileName: f.file.name })),
+      errors: files.filter(f => f.status === 'error').map(f => ({ fileName: f.file.name, error: f.errorMsg || 'Erro no envio' })),
+    },
+  } : null;
 
   // Adiciona arquivos à lista
   const addFiles = useCallback((newFiles: FileList | File[]) => {
-    const arr = Array.from(newFiles).filter(f => f.type.startsWith('image/'));
+    if (uploadingRef.current) return;
+    const arr = Array.from(newFiles).filter(f => ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(f.type));
     if (arr.length === 0) {
       toast.error('Selecione apenas arquivos de imagem (jpg, png, webp...)');
       return;
     }
     const items: FilePreviewItem[] = arr.map(file => ({
+      id: crypto.randomUUID(),
       file,
-      preview: URL.createObjectURL(file),
-      status: 'pending',
+      status: file.size > IMAGE_BATCH_BYTES ? 'error' : 'pending',
+      errorMsg: file.size > IMAGE_BATCH_BYTES ? 'Imagem maior que 5 MB. Reduza o tamanho antes de enviar.' : undefined,
     }));
     setFiles(prev => {
       // Evitar duplicatas pelo nome
       const existing = new Set(prev.map(f => f.file.name));
-      return [...prev, ...items.filter(i => !existing.has(i.file.name))];
+      return [...prev, ...items.filter(i => {
+        if (existing.has(i.file.name)) return false;
+        existing.add(i.file.name);
+        return true;
+      })];
     });
-    setResult(null);
+    setHasResult(false);
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -87,76 +105,69 @@ export default function BulkImagesPage() {
   };
 
   const removeFile = (name: string) => {
+    if (uploadingRef.current) return;
     setFiles(prev => {
-      const item = prev.find(f => f.file.name === name);
-      if (item) URL.revokeObjectURL(item.preview);
       return prev.filter(f => f.file.name !== name);
     });
   };
 
   const reset = () => {
-    files.forEach(f => URL.revokeObjectURL(f.preview));
+    if (uploadingRef.current) return;
     setFiles([]);
-    setResult(null);
+    setHasResult(false);
+    setPage(0);
     setProgress(0);
     setIsUploading(false);
   };
 
   // Upload em massa
   const handleUpload = async () => {
-    if (files.length === 0) return;
+    const pending = files.filter(f => f.status === 'pending');
+    if (!pending.length || uploadingRef.current) return;
+    const originalUser = useAuthStore.getState().user;
+    if (!originalUser?.tenant) {
+      toast.error('Confirme sua sessão e loja antes de enviar imagens.');
+      return;
+    }
+    uploadingRef.current = true;
+    const controller = new AbortController();
+    uploadController.current = controller;
     setIsUploading(true);
     setProgress(0);
-    setResult(null);
+    setHasResult(false);
 
     try {
-      const formData = new FormData();
-      files.forEach(item => formData.append('files', item.file));
-
-      // Atualiza status para "uploading"
-      setFiles(prev => prev.map(f => ({ ...f, status: 'uploading' })));
-
-      const res = await api.post('/products/bulk-images', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (e) => {
-          if (e.total) setProgress(Math.round((e.loaded / e.total) * 100));
-        },
-      });
-
-      const data: BulkResult = res.data;
-      setResult(data);
-
-      // Atualiza status visual de cada arquivo
-      const matchedSet = new Set(data.details.matched.map(m => m.fileName));
-      const errorSet = new Map(data.details.errors.map(e => [e.fileName, e.error]));
-      const notFoundSet = new Set(data.details.notFound.map(n => n.fileName));
-
-      setFiles(prev => prev.map(f => {
-        if (matchedSet.has(f.file.name)) {
-          const match = data.details.matched.find(m => m.fileName === f.file.name)!;
-          return { ...f, status: 'success', productName: match.productName };
+      const complete = await uploadImageBatches(pending, async batch => {
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser?.id !== originalUser.id || currentUser?.tenant !== originalUser.tenant) {
+          throw { response: { data: { message: 'A sessão ou loja mudou. Este lote não foi enviado.' } } };
         }
-        if (errorSet.has(f.file.name)) {
-          return { ...f, status: 'error', errorMsg: errorSet.get(f.file.name) };
-        }
-        if (notFoundSet.has(f.file.name)) {
-          return { ...f, status: 'no-match' };
-        }
-        return f;
-      }));
-
-      if (data.matched > 0) {
-        toast.success(`${data.matched} produto(s) atualizado(s) com sucesso!`);
+        const config = {
+          signal: controller.signal,
+          timeout: 120_000,
+          expectedTenantId: originalUser.tenant,
+        };
+        const response = await api.post('/products/bulk-images', imageFormData(batch), config);
+        return response.data;
+      }, outcomes => {
+        const byId = new Map(outcomes.map(item => [item.id, item]));
+        setFiles(prev => prev.map(item => byId.get(item.id) || item));
+      }, count => setProgress(Math.round(count / pending.length * 100)), controller.signal);
+      if (!controller.signal.aborted) {
+        setHasResult(true);
+        if (complete) toast.success('Processamento concluído. Confira os resultados de cada imagem.');
+        else toast.warning('Envio interrompido. Confira o lote sem confirmação; os próximos arquivos continuam pendentes.');
       }
-      if (data.notFound > 0) {
-        toast.warning(`${data.notFound} imagem(ns) sem produto correspondente.`);
+    } catch {
+      if (!controller.signal.aborted) {
+        toast.error('Não foi possível preparar o envio. Os arquivos foram preservados.');
       }
-    } catch (err: any) {
-      toast.error('Erro ao fazer upload: ' + (err?.response?.data?.message || err?.message || 'Erro desconhecido'));
-      setFiles(prev => prev.map(f => ({ ...f, status: 'error', errorMsg: 'Falha no upload' })));
     } finally {
-      setIsUploading(false);
-      setProgress(100);
+      uploadingRef.current = false;
+      if (!controller.signal.aborted) {
+        setIsUploading(false);
+        uploadController.current = null;
+      }
     }
   };
 
@@ -180,6 +191,8 @@ export default function BulkImagesPage() {
   const successCount = files.filter(f => f.status === 'success').length;
   const noMatchCount = files.filter(f => f.status === 'no-match').length;
   const errorCount = files.filter(f => f.status === 'error').length;
+  const pageCount = Math.max(1, Math.ceil(files.length / IMAGE_PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-[fadeIn_0.3s_ease]">
@@ -200,6 +213,7 @@ export default function BulkImagesPage() {
         {files.length > 0 && (
           <button
             onClick={reset}
+            disabled={isUploading}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800 transition-all"
           >
             <RefreshCw size={16} /> Limpar tudo
@@ -216,7 +230,8 @@ export default function BulkImagesPage() {
           <span className="text-zinc-200 font-semibold">Como funciona:</span> nomeie cada imagem igual ao produto
           (ex: <code className="text-violet-400 bg-zinc-800 px-1.5 py-0.5 rounded-md text-xs">Coca-Cola 350ml.jpg</code>).
           O sistema ignora acentos, maiúsculas e caracteres especiais para fazer o match.
-          Você pode selecionar centenas de arquivos de uma vez.
+          Você pode selecionar centenas de arquivos de uma vez. Enviamos em lotes pequenos, sem sobrecarregar o computador.
+          Máximo de 5 MB por imagem. Nomes ambíguos não são vinculados automaticamente.
         </div>
       </div>
 
@@ -225,7 +240,7 @@ export default function BulkImagesPage() {
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => { if (!uploadingRef.current) inputRef.current?.click(); }}
         className={`relative border-2 border-dashed rounded-3xl p-12 text-center cursor-pointer transition-all duration-300
           ${isDragging
             ? 'border-violet-500 bg-violet-500/10 scale-[1.01]'
@@ -235,8 +250,9 @@ export default function BulkImagesPage() {
         <input
           ref={inputRef}
           type="file"
+          disabled={isUploading}
           multiple
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp,image/gif"
           className="hidden"
           onChange={handleFileInput}
         />
@@ -250,16 +266,26 @@ export default function BulkImagesPage() {
         <p className="text-zinc-500 text-sm">
           JPG, PNG, WEBP, GIF — múltiplos arquivos simultaneamente
         </p>
+        <input ref={folderRef} type="file" multiple disabled={isUploading} className="hidden"
+          {...({ webkitdirectory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
+          onChange={handleFileInput} />
+        <button type="button" disabled={isUploading}
+          onClick={e => { e.stopPropagation(); if (!uploadingRef.current) folderRef.current?.click(); }}
+          className="mt-4 px-4 py-2 rounded-xl border border-zinc-600 text-zinc-200 disabled:opacity-50">
+          Selecionar pasta de imagens
+        </button>
+        <p className="text-zinc-500 text-xs mt-2">Importa as imagens da pasta; não cria sincronização automática. Arquivos de outros tipos são ignorados.</p>
       </div>
 
       {/* Estatísticas rápidas */}
       {files.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { label: 'Total', value: files.length, color: 'blue', icon: ImageIcon },
             { label: 'Pendentes', value: pendingCount, color: 'zinc', icon: Upload },
             { label: 'Vinculados', value: successCount, color: 'emerald', icon: CheckCircle },
             { label: 'Sem match', value: noMatchCount, color: 'amber', icon: AlertCircle },
+            { label: 'Erros', value: errorCount, color: 'red', icon: XCircle },
           ].map(({ label, value, color, icon: Icon }) => (
             <div key={label} className={`bg-zinc-900/60 border border-${color}-500/20 rounded-2xl p-4 text-center`}>
               <p className={`text-2xl font-black text-${color}-400`}>{value}</p>
@@ -275,7 +301,7 @@ export default function BulkImagesPage() {
           <div className="flex justify-between text-sm text-zinc-400">
             <span className="flex items-center gap-2">
               <Loader2 size={14} className="animate-spin text-violet-400" />
-              Enviando imagens...
+              Processando lotes — aguarde a confirmação do servidor...
             </span>
             <span className="font-bold text-violet-400">{progress}%</span>
           </div>
@@ -307,6 +333,7 @@ export default function BulkImagesPage() {
                 <p className="text-sm text-zinc-500">
                   {result.notFound > 0 && `${result.notFound} sem match · `}
                   {result.errors > 0 && `${result.errors} com erro`}
+                  {pendingCount > 0 && ` · ${pendingCount} ainda não enviadas`}
                 </p>
               </div>
             </div>
@@ -319,12 +346,12 @@ export default function BulkImagesPage() {
           </div>
 
           {showDetails && (
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-3 max-h-48 overflow-y-auto">
               {result.details.notFound.length > 0 && (
                 <div>
                   <p className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">Sem correspondência</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {result.details.notFound.map(n => (
+                    {result.details.notFound.slice(0, IMAGE_PAGE_SIZE).map(n => (
                       <span key={n.fileName} className="text-xs bg-amber-500/10 border border-amber-500/20 text-amber-300 px-2 py-0.5 rounded-lg">
                         {n.fileName}
                       </span>
@@ -336,7 +363,7 @@ export default function BulkImagesPage() {
                 <div>
                   <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-1">Erros</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {result.details.errors.map(e => (
+                    {result.details.errors.slice(0, IMAGE_PAGE_SIZE).map(e => (
                       <span key={e.fileName} className="text-xs bg-red-500/10 border border-red-500/20 text-red-300 px-2 py-0.5 rounded-lg">
                         {e.fileName}: {e.error}
                       </span>
@@ -344,6 +371,7 @@ export default function BulkImagesPage() {
                   </div>
                 </div>
               )}
+              <p className="text-xs text-zinc-500">Resumo limitado a 20 nomes por categoria. Consulte todos os resultados na lista paginada abaixo.</p>
             </div>
           )}
         </div>
@@ -357,14 +385,14 @@ export default function BulkImagesPage() {
           </div>
 
           <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
-            {files.map(item => (
+            {files.slice(currentPage * IMAGE_PAGE_SIZE, (currentPage + 1) * IMAGE_PAGE_SIZE).map(item => (
               <div
-                key={item.file.name}
+                key={item.id}
                 className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${statusBg(item.status)}`}
               >
                 {/* Thumbnail */}
                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-800 shrink-0 border border-zinc-700">
-                  <img src={item.preview} alt="" className="w-full h-full object-cover" />
+                  <ImageThumbnail file={item.file} />
                 </div>
 
                 {/* Info */}
@@ -387,7 +415,7 @@ export default function BulkImagesPage() {
                 {/* Status */}
                 <div className="flex items-center gap-2 shrink-0">
                   {statusIcon(item.status)}
-                  {item.status === 'pending' && !isUploading && (
+                  {!isUploading && (
                     <button
                       onClick={() => removeFile(item.file.name)}
                       className="text-zinc-600 hover:text-red-400 transition-colors"
@@ -399,26 +427,31 @@ export default function BulkImagesPage() {
               </div>
             ))}
           </div>
+          <div className="flex items-center justify-between text-sm text-zinc-400">
+            <button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)} className="px-3 py-2 disabled:opacity-30">Anterior</button>
+            <span>Página {currentPage + 1} de {pageCount} · até 20 miniaturas por página</span>
+            <button disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)} className="px-3 py-2 disabled:opacity-30">Próxima</button>
+          </div>
         </div>
       )}
 
       {/* Botão Upload */}
-      {files.length > 0 && !result && (
+      {(pendingCount > 0 || isUploading) && (
         <div className="sticky bottom-0 bg-zinc-950/90 backdrop-blur-md py-4 border-t border-zinc-800 -mx-3 px-3 md:-mx-8 md:px-8">
           <button
             onClick={handleUpload}
-            disabled={isUploading || files.length === 0}
+            disabled={isUploading || pendingCount === 0}
             className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 shadow-lg shadow-violet-500/20 text-lg"
           >
             {isUploading ? (
               <>
                 <Loader2 size={22} className="animate-spin" />
-                Enviando {files.length} imagem(ns)...
+                Processando imagens em lotes...
               </>
             ) : (
               <>
                 <Upload size={22} />
-                Enviar {files.length} imagem(ns) e vincular aos produtos
+                Enviar {pendingCount} imagem(ns) pendente(s) e vincular aos produtos
               </>
             )}
           </button>

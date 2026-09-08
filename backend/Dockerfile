@@ -14,7 +14,7 @@ COPY . .
 RUN npx prisma generate --schema=prisma/schema.prisma
 RUN npx prisma generate --schema=prisma/heart.schema.prisma
 
-RUN npm run build
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
 # ---- Production ----
 FROM node:20-alpine AS production

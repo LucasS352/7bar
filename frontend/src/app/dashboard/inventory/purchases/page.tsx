@@ -36,6 +36,7 @@ interface Row {
   imageUrl: string;
   volumeUnit: string;
   volumeCapacity: string;
+  isComposite: boolean;
 }
 
 function makeRow(overrides?: Partial<Row>): Row {
@@ -44,6 +45,7 @@ function makeRow(overrides?: Partial<Row>): Row {
     shortCode: '', barcode: '', name: '', priceCost: '', priceSell: '',
     stockToAdd: '', categoryId: '', grupoTributacaoId: '', ncm: '', cest: '',
     origem: 0, imageUrl: '', volumeUnit: '', volumeCapacity: '',
+    isComposite: false,
     ...overrides,
   };
 }
@@ -288,39 +290,132 @@ export default function MassEntryPage() {
     e.target.value = '';
     const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
 
+    const norm = (str: unknown) =>
+      String(str ?? '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const isCompostoValue = (val: unknown) => {
+      const s = norm(val);
+      return s === 'sim' || s === 's' || s === 'true' || s === '1' || s === 'composto' || s === 'combo' || s === 'kit' || s === 'yes' || s === 'y';
+    };
+
     const processRows = (rawRows: unknown[][]) => {
-      const validRows = rawRows
+      if (!rawRows || rawRows.length === 0) {
+        toast.warning('Planilha vazia.');
+        return;
+      }
+
+      // Verifica se a primeira linha é cabeçalho
+      const firstRow = rawRows[0] || [];
+      const hasHeader = firstRow.some((cell) => {
+        const s = norm(cell);
+        return ['nome', 'produto', 'mercadoria', 'preco', 'venda', 'categoria', 'estoque', 'composto'].some(k => s.includes(k));
+      });
+
+      let nameIdx = 0;
+      let priceIdx = 1;
+      let catIdx = 2;
+      let stockIdx = 3;
+      let barcodeIdx = 4;
+      let ncmIdx = 5;
+      let cestIdx = 6;
+      let origemIdx = 7;
+      let costIdx = 8;
+      let grupoIdx = 9;
+      let compostoIdx = 10;
+
+      let dataRows = rawRows;
+
+      if (hasHeader) {
+        const findCol = (keywords: string[], exclude?: string[]) =>
+          firstRow.findIndex((cell) => {
+            const s = norm(cell);
+            if (exclude && exclude.some(ex => s.includes(ex))) return false;
+            return keywords.some(k => s.includes(k));
+          });
+
+        const fName = findCol(['nome', 'produto', 'mercadoria', 'descricao', 'item']);
+        const fPrice = findCol(['venda', 'preco de venda', 'preco venda', 'valor venda', 'preco', 'valor'], ['custo']);
+        const fCat = findCol(['categoria', 'cat', 'departamento']);
+        const fStock = findCol(['estoque', 'qtd', 'quantidade', 'saldo']);
+        const fBarcode = findCol(['barras', 'barcode', 'ean', 'gtin', 'cod barras']);
+        const fNcm = findCol(['ncm']);
+        const fCest = findCol(['cest']);
+        const fOrigem = findCol(['origem']);
+        const fCost = findCol(['custo', 'preco de custo', 'preco custo', 'valor custo']);
+        const fGrupo = findCol(['grupo fiscal', 'tributacao', 'tributaria', 'fiscal', 'perfil']);
+        const fComposto = findCol(['composto', 'combo', 'kit', 'receita', 'iscomposite', 'tipo']);
+
+        if (fName !== -1) nameIdx = fName;
+        if (fPrice !== -1) priceIdx = fPrice;
+        if (fCat !== -1) catIdx = fCat;
+        if (fStock !== -1) stockIdx = fStock;
+        if (fBarcode !== -1) barcodeIdx = fBarcode;
+        if (fNcm !== -1) ncmIdx = fNcm;
+        if (fCest !== -1) cestIdx = fCest;
+        if (fOrigem !== -1) origemIdx = fOrigem;
+        if (fCost !== -1) costIdx = fCost;
+        if (fGrupo !== -1) grupoIdx = fGrupo;
+        if (fComposto !== -1) compostoIdx = fComposto;
+
+        dataRows = rawRows.slice(1);
+      }
+
+      const validRows = dataRows
         .filter(cols => Array.isArray(cols) && cols.length >= 2)
         .map((cols) => {
-          const name = String(cols[0] ?? '').trim();
-          const rawPriceVal = cols[1];
+          const name = String(cols[nameIdx] ?? '').trim();
+          const rawPriceVal = cols[priceIdx];
           let priceSell: string;
           if (typeof rawPriceVal === 'number') priceSell = rawPriceVal.toString();
           else priceSell = String(rawPriceVal ?? '').trim().replace(',', '.');
           if (!name || priceSell === '' || isNaN(parseFloat(priceSell)) || parseFloat(priceSell) <= 0) return null;
-          const catName = String(cols[2] ?? '').trim();
-          const stock = String(cols[3] ?? '').trim();
-          const barcode = String(cols[4] ?? '').trim();
-          const ncm = String(cols[5] ?? '').trim();
-          const cest = String(cols[6] ?? '').trim();
-          const origemStr = String(cols[7] ?? '0').trim();
-          const rawCost = cols[8];
+
+          const catName = String(cols[catIdx] ?? '').trim();
+          const stock = String(cols[stockIdx] ?? '').trim();
+          const barcode = String(cols[barcodeIdx] ?? '').trim();
+          const ncm = String(cols[ncmIdx] ?? '').trim();
+          const cest = String(cols[cestIdx] ?? '').trim();
+          const origemStr = String(cols[origemIdx] ?? '0').trim();
+          const rawCost = cols[costIdx];
           const priceCost = typeof rawCost === 'number' ? rawCost.toString() : String(rawCost ?? '').replace(',', '.');
-          const grupoNome = String(cols[9] ?? '').trim();
+          const grupoNome = String(cols[grupoIdx] ?? '').trim();
+          const isComposite = isCompostoValue(cols[compostoIdx]);
+
           const cat = categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
           const grupo = grupos.find(g => g.nome.toLowerCase() === grupoNome.toLowerCase());
           return {
             id: Date.now() + Math.random(),
-            shortCode: '', barcode, name, priceCost, priceSell,
-            stockToAdd: stock, categoryId: cat?.id || (categories[0]?.id || ''),
+            shortCode: '',
+            barcode,
+            name,
+            priceCost,
+            priceSell,
+            stockToAdd: isComposite ? '' : stock,
+            categoryId: cat?.id || (categories[0]?.id || ''),
             grupoTributacaoId: grupo?.id || (grupos[0]?.id || ''),
-            ncm, cest, origem: parseInt(origemStr) || 0, imageUrl: '', volumeUnit: '', volumeCapacity: '',
+            ncm,
+            cest,
+            origem: parseInt(origemStr) || 0,
+            imageUrl: '',
+            volumeUnit: '',
+            volumeCapacity: '',
+            isComposite,
           };
         })
         .filter(Boolean) as Row[];
+
       if (validRows.length === 0) { toast.warning('Nenhuma linha válida encontrada na planilha.'); return; }
       setRows(validRows);
-      toast.success(`${validRows.length} linhas importadas da planilha!`);
+      const compostosCount = validRows.filter(r => r.isComposite).length;
+      if (compostosCount > 0) {
+        toast.success(`${validRows.length} linhas importadas (${compostosCount} produtos compostos)!`);
+      } else {
+        toast.success(`${validRows.length} linhas importadas da planilha!`);
+      }
     };
 
     if (isExcel) {
@@ -329,11 +424,14 @@ export default function MassEntryPage() {
       const wb = XLSX.read(buffer, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const data: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      processRows(data.slice(1));
+      processRows(data);
     } else {
       const text = await file.text();
-      const lines = text.split('\n').slice(1);
-      const data = lines.map(l => l.split(','));
+      const commaCount = (text.match(/,/g) || []).length;
+      const semiCount = (text.match(/;/g) || []).length;
+      const delimiter = semiCount > commaCount ? ';' : ',';
+      const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+      const data = lines.map(l => l.split(delimiter));
       processRows(data);
     }
   };
@@ -348,13 +446,14 @@ export default function MassEntryPage() {
         shortCode: r.shortCode.trim() || undefined,
         priceSell: parseFloat(r.priceSell) || 0,
         priceCost: parseFloat(r.priceCost) || 0,
-        stockToAdd: parseFloat(r.stockToAdd) || 0,
+        stockToAdd: r.isComposite ? 0 : (parseFloat(r.stockToAdd) || 0),
         categoryId: r.categoryId || undefined,
         grupoTributacaoId: r.grupoTributacaoId || undefined,
         ncm: r.ncm || undefined,
         cest: r.cest || undefined,
         origem: r.origem,
         imageUrl: r.imageUrl || undefined,
+        isComposite: r.isComposite ?? false,
         volumeUnit: r.volumeUnit || null,
         volumeCapacity: r.volumeCapacity ? parseFloat(r.volumeCapacity) : null,
       }));
@@ -418,7 +517,7 @@ export default function MassEntryPage() {
               <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileUpload} />
             </label>
             {/* Tooltip Excel */}
-            <div className="absolute right-0 sm:right-full top-full sm:top-0 sm:mr-3 mt-2 sm:mt-0 w-[300px] sm:w-[340px] bg-white border border-zinc-300 rounded-xl shadow-2xl overflow-hidden opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
+            <div className="absolute right-0 sm:right-full top-full sm:top-0 sm:mr-3 mt-2 sm:mt-0 w-[300px] sm:w-[380px] bg-white border border-zinc-300 rounded-xl shadow-2xl overflow-hidden opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50">
               <div className="bg-[#217346] px-3 py-2 flex items-center gap-2">
                 <svg viewBox="0 0 20 20" className="w-4 h-4 fill-white" xmlns="http://www.w3.org/2000/svg"><path d="M2 2h16v16H2z" fill="none"/><path d="M11 2v7h7V2h-7zm0 9v7h7v-7h-7zM2 2v7h7V2H2zm0 9v7h7v-7H2z" fill="white" opacity=".3"/><text x="3" y="14" fontSize="10" fontWeight="bold" fill="white">XLS</text></svg>
                 <span className="text-white text-xs font-bold">Formato da Planilha</span>
@@ -427,20 +526,24 @@ export default function MassEntryPage() {
                 <thead>
                   <tr>
                     <th className="w-8 bg-[#f2f2f2] border border-[#d0d0d0] text-[#666] text-center py-1"></th>
-                    <th className="bg-[#f2f2f2] border border-[#d0d0d0] text-[#444] text-center py-1 font-bold w-1/2">A</th>
-                    <th className="bg-[#f2f2f2] border border-[#d0d0d0] text-[#444] text-center py-1 font-bold w-1/2">B</th>
+                    <th className="bg-[#f2f2f2] border border-[#d0d0d0] text-[#444] text-center py-1 font-bold">A</th>
+                    <th className="bg-[#f2f2f2] border border-[#d0d0d0] text-[#444] text-center py-1 font-bold">B</th>
+                    <th className="bg-[#f2f2f2] border border-[#d0d0d0] text-[#444] text-center py-1 font-bold">...</th>
+                    <th className="bg-[#f2f2f2] border border-[#d0d0d0] text-[#444] text-center py-1 font-bold">K (ou Composto)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    ['1', 'Nome do Produto', 'Preço', true],
-                    ['2', 'Coca-Cola 2L', '12.00', false],
-                    ['3', 'Heineken 350ml', '7.50', false],
-                  ].map(([num, colA, colB, isHeader]) => (
+                    ['1', 'Nome do Produto', 'Preço', '...', 'Composto', true],
+                    ['2', 'Coca-Cola 2L', '12.00', '...', 'Não', false],
+                    ['3', 'Combo Gin Tropical', '35.00', '...', 'Sim', false],
+                  ].map(([num, colA, colB, colDots, colComp, isHeader]) => (
                     <tr key={String(num)} className={isHeader as any ? 'bg-[#e2efda]' : 'bg-white hover:bg-[#f5f5f5]'}>
                       <td className="bg-[#f2f2f2] border border-[#d0d0d0] text-[#888] text-center py-1 px-1 font-bold">{num}</td>
                       <td className={`border border-[#d0d0d0] px-2 py-1 ${isHeader ? 'font-bold text-[#1f6a35]' : 'text-[#222]'}`}>{colA}</td>
                       <td className={`border border-[#d0d0d0] px-2 py-1 text-right ${isHeader ? 'font-bold text-[#1f6a35]' : 'text-[#222]'}`}>{colB}</td>
+                      <td className="border border-[#d0d0d0] px-2 py-1 text-center text-zinc-400">{colDots}</td>
+                      <td className={`border border-[#d0d0d0] px-2 py-1 text-center ${isHeader ? 'font-bold text-[#1f6a35]' : colComp === 'Sim' ? 'text-purple-600 font-bold' : 'text-[#222]'}`}>{colComp}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -448,7 +551,8 @@ export default function MassEntryPage() {
               <div className="bg-amber-50 border-t border-amber-200 px-3 py-2 flex items-start gap-2">
                 <AlertTriangle size={13} className="text-amber-600 shrink-0 mt-0.5" />
                 <p className="text-[10px] text-amber-800 leading-snug">
-                  <strong>Apenas colunas A (Nome) e B (Preço) são obrigatórias.</strong><br />
+                  <strong>Apenas Nome e Preço são obrigatórios.</strong><br />
+                  Para combos/kits, adicione a coluna <strong>Composto</strong> com <strong>Sim</strong>.<br />
                   Aceita <strong>.xlsx</strong> e <strong>.csv</strong> diretamente.
                 </p>
               </div>
@@ -489,6 +593,7 @@ export default function MassEntryPage() {
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-center w-[140px]">Fracionado</th>
                 {!isStockist && <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">Venda (R$)</th>}
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[11%]">Categoria</th>
+                <th className="px-3 py-3 font-bold uppercase tracking-widest text-center w-[85px]">Tipo</th>
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">Estoque</th>
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[130px]">Cód. Barras</th>
                 <th className="px-3 py-3 font-bold uppercase tracking-widest text-left w-[90px]">NCM</th>
@@ -561,9 +666,30 @@ export default function MassEntryPage() {
                     </select>
                   </td>
 
+                  <td className="px-3 py-2 text-center w-[85px]">
+                    <button
+                      type="button"
+                      onClick={() => updateRow(row.id, 'isComposite', !row.isComposite)}
+                      title={row.isComposite ? 'Clique para mudar para Simples' : 'Clique para mudar para Composto'}
+                      className={`w-full py-1.5 px-2 rounded-lg text-xs font-bold transition-all border ${
+                        row.isComposite
+                          ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-sm shadow-purple-500/10 hover:bg-purple-500/30'
+                          : 'bg-zinc-950/40 text-zinc-500 border-zinc-800 hover:text-zinc-300 hover:border-zinc-700'
+                      }`}
+                    >
+                      {row.isComposite ? 'Composto' : 'Simples'}
+                    </button>
+                  </td>
+
                   <td className="px-3 py-2 w-[90px]">
-                    <input type="number" placeholder="Qtd" value={row.stockToAdd} onChange={e => updateRow(row.id, 'stockToAdd', e.target.value)}
-                      className="w-full bg-zinc-950 flex border-2 border-zinc-800 rounded-lg px-3 py-2 text-sm text-blue-400 font-black focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition-colors" />
+                    {row.isComposite ? (
+                      <div className="w-full bg-zinc-950/40 border border-zinc-800/60 rounded-lg px-3 py-2 text-xs text-zinc-500 font-bold text-center select-none" title="Produto composto baixa estoque dos ingredientes">
+                        —
+                      </div>
+                    ) : (
+                      <input type="number" placeholder="Qtd" value={row.stockToAdd} onChange={e => updateRow(row.id, 'stockToAdd', e.target.value)}
+                        className="w-full bg-zinc-950 flex border-2 border-zinc-800 rounded-lg px-3 py-2 text-sm text-blue-400 font-black focus:outline-none focus:border-blue-500 focus:bg-zinc-900 transition-colors" />
+                    )}
                   </td>
 
                   <td className="px-3 py-2 w-[130px]">
@@ -654,6 +780,19 @@ export default function MassEntryPage() {
 
               <div className="flex-1 min-w-0">
                 <NameAutocomplete value={row.name} onChange={v => updateRow(row.id, 'name', v)} onSelect={p => handleSelectSuggestion(row.id, p)} suggestions={catalog} loading={catalogLoading} />
+                <div className="mt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => updateRow(row.id, 'isComposite', !row.isComposite)}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded transition-colors border ${
+                      row.isComposite
+                        ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-sm shadow-purple-500/10'
+                        : 'bg-zinc-800/60 text-zinc-500 border-zinc-700/60 hover:text-zinc-300'
+                    }`}
+                  >
+                    {row.isComposite ? '✦ Composto' : 'Simples'}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
@@ -676,8 +815,14 @@ export default function MassEntryPage() {
               )}
               <div>
                 <label className="text-[9px] font-bold text-blue-400 uppercase tracking-wider block mb-1">Estoque</label>
-                <input type="number" inputMode="decimal" placeholder="Qtd" value={row.stockToAdd} onChange={e => updateRow(row.id, 'stockToAdd', e.target.value)}
-                  className="w-full text-center bg-zinc-950 border border-blue-500/30 rounded-lg px-1 py-2.5 text-sm text-blue-400 font-black focus:outline-none focus:border-blue-400 transition-colors" />
+                {row.isComposite ? (
+                  <div className="w-full text-center bg-zinc-950/60 border border-zinc-800 rounded-lg px-1 py-2.5 text-sm text-zinc-500 font-bold select-none" title="Produto composto baixa estoque dos ingredientes">
+                    —
+                  </div>
+                ) : (
+                  <input type="number" inputMode="decimal" placeholder="Qtd" value={row.stockToAdd} onChange={e => updateRow(row.id, 'stockToAdd', e.target.value)}
+                    className="w-full text-center bg-zinc-950 border border-blue-500/30 rounded-lg px-1 py-2.5 text-sm text-blue-400 font-black focus:outline-none focus:border-blue-400 transition-colors" />
+                )}
               </div>
               <div>
                 <label className="text-[9px] font-bold text-rose-400 uppercase tracking-wider block mb-1">Custo R$</label>

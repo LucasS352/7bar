@@ -6,12 +6,12 @@ export class IfoodService {
   private readonly logger = new Logger(IfoodService.name);
   private readonly IFOOD_API_URL = 'https://merchant-api.ifood.com.br';
 
-  async authenticate(clientId: string, clientSecret: string): Promise<string | null> {
+  async authenticate(clientId: string, clientSecret: string, timeout = 0): Promise<string | null> {
     try {
       const response = await axios.post(
         `${this.IFOOD_API_URL}/authentication/v1.0/oauth/token`,
         `grantType=client_credentials&clientId=${clientId}&clientSecret=${clientSecret}`,
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+        { timeout, headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
       );
       return response.data.accessToken;
     } catch (error: any) {
@@ -182,7 +182,7 @@ export class IfoodService {
     return { synced, errors, skipped };
   }
 
-  async updateInventory(token: string, merchantId: string, updates: { externalCode: string, stock: number }[]) {
+  async updateInventory(token: string, merchantId: string, updates: { externalCode: string, stock: number }[], strict = false) {
     try {
       if (!updates.length) return true;
 
@@ -200,19 +200,22 @@ export class IfoodService {
                 productId: u.externalCode,
                 amount: Math.floor(u.stock) // Sempre inteiro
               },
-              { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+                { timeout: strict ? 10_000 : 0, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
             );
           } catch (e: any) {
-            this.logger.warn(`Erro ao atualizar estoque do item ${u.externalCode}: ${e.response?.data?.message || e.message}`);
+              this.logger.warn(`Erro ao atualizar estoque do item ${u.externalCode}: ${e.response?.data?.message || e.message}`);
+              if (strict) throw e;
           }
         });
 
-        await Promise.allSettled(promises);
+          const results = await Promise.allSettled(promises);
+          if (strict && results.some(result => result.status === 'rejected')) throw new Error('Sincronização parcial do estoque iFood');
       }
       
       return true;
     } catch (e: any) {
-      this.logger.error(`Erro fatal ao atualizar estoque no iFood: ${e.message}`);
+        this.logger.error(`Erro fatal ao atualizar estoque no iFood: ${e.message}`);
+        if (strict) throw e;
       return false;
     }
   }

@@ -3,7 +3,7 @@ import { LazyImage } from '@/components/LazyImage';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { useCartStore, type Product, type CartItemModifier } from '@/store/cart';
-import { api } from '@/lib/api';
+import { api, apiGet } from '@/lib/api';
 import { toast } from 'sonner';
 import { updateProductsCache, getCachedProducts } from '@/lib/db';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -19,24 +19,25 @@ import { ExportXmlModal } from '@/components/ExportXmlModal';
 import { DemoBanner } from '@/components/DemoBanner';
 import { CapitaoGelada } from '@/components/CapitaoGelada';
 import { useDemoGuideStore } from '@/store/demoGuide';
-import { ShiftProvider, useShift } from '@/contexts/ShiftContext';
+import { useShift } from '@/contexts/ShiftContext';
 import {
   Search, ShoppingCart, X, LogOut, PackageOpen, Minus, Plus, Trash2,
   LayoutDashboard, FileText, ArrowDownUp, Database, Layers, UtensilsCrossed,
-  ShoppingBag, Camera, Menu, Download, UserCheck, Sparkles, Users
+  ShoppingBag, Camera, Menu, Download, UserCheck, Sparkles, Users, Loader2
 } from 'lucide-react';
 import { getFullUrl } from '@/lib/getFullUrl';
 
 function PosPageContent() {
   const navigate = useNavigate();
   const { token, user, logout } = useAuthStore();
-  const { items, total, addItem, updateQuantity, removeItem, clearCart, setActiveComanda } = useCartStore();
+  const { items, total, addItem, updateQuantity, removeItem, clearCart, setActiveComanda, activeComandaId, activeComandaNumber } = useCartStore();
 
   const syncState = useOfflineSync();
 
   const [products,           setProducts]           = useState<Product[]>([]);
   const [search,             setSearch]             = useState('');
   const [isPaymentOpen,      setIsPaymentOpen]      = useState(false);
+  const [initialOpenComanda, setInitialOpenComanda] = useState(false);
   const [isCloseRegisterOpen,setIsCloseRegisterOpen]= useState(false);
   const [isMobileCartOpen,   setIsMobileCartOpen]   = useState(false);
   const [isCameraScannerOpen,setIsCameraScannerOpen]= useState(false);
@@ -63,7 +64,17 @@ function PosPageContent() {
   const [productToSetQuantity,setProductToSetQuantity]= useState<Product | null>(null);
   const [tempQuantity,        setTempQuantity]        = useState<number>(1);
   const productRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const { operator, cashRegister, isLoading: isShiftLoading, logoutOperator, refreshShift } = useShift();
+  const {
+    operator,
+    cashRegister,
+    registerStatus,
+    isUnconfirmedCache,
+    isLoading: isShiftLoading,
+    needsOperatorReauth,
+    logoutOperator,
+    refreshShift,
+  } = useShift();
+
 
   // Sincroniza abertura de modais com o Capitão Gelada no modo Demo
   useEffect(() => {
@@ -101,10 +112,13 @@ function PosPageContent() {
 
   const isComandasEnabled = modules?.comandas === true;
 
-  const fetchOpenComandas = useCallback(async () => {
+  const fetchOpenComandas = useCallback(async (signal?: AbortSignal) => {
     setLoadingComandas(true);
     try {
-      const res = await api.get('/v1/comandas?status=open');
+      const res = await apiGet('/v1/comandas?status=open', {
+        signal,
+        headers: { 'X-Silent-Poll': 'true' },
+      });
       const newList: any[] = res.data || [];
       setOpenComandas(prev => {
         const prevMap = new Map(prev.map((c: any) => [c.id, c.status]));
@@ -135,22 +149,53 @@ function PosPageContent() {
         }
         return newList;
       });
-    } catch (err) {
-      console.error(err);
+    } catch {
+      // Silenciado — erros de polling nunca quebram a interface
     } finally {
       setLoadingComandas(false);
     }
   }, []);
 
   useEffect(() => {
-    if (isComandasEnabled) {
-      fetchOpenComandas();
-      const interval = setInterval(fetchOpenComandas, 15000);
-      return () => clearInterval(interval);
-    }
-  }, [isComandasEnabled, isComandasModalOpen, fetchOpenComandas]);
+    if (!isComandasEnabled) return;
+
+    // ── Polling sequencial seguro de comandas (15s) ────────────────────────
+    // Inicia imediatamente com a primeira busca, sem criar consulta paralela.
+    // Flag destroyed impede atualização após desmonte.
+    let destroyed = false;
+    let comandaAbortController: AbortController | null = null;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const runPoll = async () => {
+      if (destroyed) return;
+
+      if (!navigator.onLine || document.hidden) {
+        pollTimer = setTimeout(runPoll, 15_000);
+        return;
+      }
+
+      comandaAbortController = new AbortController();
+      try {
+        await fetchOpenComandas(comandaAbortController.signal);
+      } finally {
+        if (!destroyed) {
+          pollTimer = setTimeout(runPoll, 15_000);
+        }
+      }
+    };
+
+    // Execução sequencial: busca inicial imediata
+    void runPoll();
+
+    return () => {
+      destroyed = true;
+      if (pollTimer) clearTimeout(pollTimer);
+      comandaAbortController?.abort();
+    };
+  }, [isComandasEnabled, fetchOpenComandas]);
 
   const handleChargeComandaFromPos = (comanda: any) => {
+
     if (!comanda.items || comanda.items.length === 0) {
       toast.error('Esta comanda está vazia.');
       return;
@@ -168,14 +213,26 @@ function PosPageContent() {
             stock: item.product.stock || 0,
             barcode: item.product.barcode || null,
             shortCode: item.product.shortCode || null,
+            isComposite: item.product.isComposite,
           },
-          Number(item.quantity)
+          Number(item.quantity),
+          item.modifiers?.map((m: any) => ({
+            groupId: m.optionId,
+            groupName: 'Ingrediente',
+            optionId: m.optionId,
+            optionName: m.name,
+            componentProductId: m.componentProductId,
+            quantity: Number(m.consumedQuantity),
+            priceAdjustment: Number(m.priceAdjustment),
+          })),
+          true // fromComanda: true
         );
       }
     });
 
     toast.info(`Comanda #${comanda.number} carregada! Finalizando pagamento...`);
     setIsComandasModalOpen(false);
+    setInitialOpenComanda(false);
     setIsPaymentOpen(true);
   };
 
@@ -248,9 +305,9 @@ function PosPageContent() {
   useEffect(() => {
     if (token) {
       api.get(`/tenants/me?_t=${Date.now()}`).then(res => setTenantConfig(res.data)).catch(console.error);
-      api.get('/categories').then(res => setCategories(res.data || [])).catch(console.error);
     }
   }, [token]);
+
 
   const handleCameraScan = (scannedCode: string) => {
     const clean = scannedCode.trim().toLowerCase();
@@ -270,7 +327,7 @@ function PosPageContent() {
   };
 
 
-  useEffect(() => {
+  const loadProducts = useCallback(() => {
     if (!token) { navigate('/login'); return; }
 
     setIsLoading(true);
@@ -350,13 +407,39 @@ function PosPageContent() {
   }, [token, navigate, syncState.isOnline]);
 
   useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === 'F12' || e.key === '*') && items.length > 0) { e.preventDefault(); setIsPaymentOpen(true); }
-      if (e.key === 'Escape') setIsPaymentOpen(false);
+      // F1: Atalho direto para Comanda / Mesa
+      if (e.key === 'F1') {
+        e.preventDefault();
+        if (isComandasEnabled) {
+          if (items.length > 0) {
+            setInitialOpenComanda(true);
+            setIsPaymentOpen(true);
+          } else {
+            setIsComandasModalOpen(true);
+          }
+        }
+        return;
+      }
+
+      if ((e.key === 'F12' || e.key === '*') && items.length > 0) { 
+        e.preventDefault(); 
+        setInitialOpenComanda(false);
+        setIsPaymentOpen(true); 
+      }
+      if (e.key === 'Escape') {
+        setIsPaymentOpen(false);
+        setInitialOpenComanda(false);
+        setIsComandasModalOpen(false);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [items]);
+  }, [items, isComandasEnabled]);
 
   const handleLogout = () => {
     logoutOperator();
@@ -756,7 +839,18 @@ function PosPageContent() {
                   )}
                   <div className="flex-1 flex justify-between items-start">
                     <div className="flex-1 pr-3">
-                      <div className="font-bold text-lg text-zinc-100 line-clamp-2 leading-tight">{item.name}</div>
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                        <span className="font-bold text-lg text-zinc-100 line-clamp-2 leading-tight">{item.name}</span>
+                        {item.fromComanda ? (
+                          <span className="bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0">
+                            Mesa #{activeComandaNumber}
+                          </span>
+                        ) : activeComandaId ? (
+                          <span className="bg-sky-500/15 border border-sky-500/30 text-sky-400 text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0">
+                            Extra Balcão
+                          </span>
+                        ) : null}
+                      </div>
                       {item.modifiers && item.modifiers.length > 0 && (
                         <div className="mt-1 space-y-0.5">
                           {item.modifiers.map((mod, idx) => (
@@ -773,11 +867,47 @@ function PosPageContent() {
                   </div>
                 </div>
                 <div className="flex justify-between items-center bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 mt-1">
-                  <button onClick={() => updateQuantity(item.cartKey, item.quantity - 1)} className="p-4 lg:p-3 hover:bg-zinc-800 text-zinc-400 hover:text-white transition active:scale-95"><Minus size={22} /></button>
+                  <button
+                    onClick={() => {
+                      if (item.fromComanda) {
+                        toast.info(`Item da Comanda #${activeComandaNumber}. O estoque já foi baixado. Para cancelar ou remover, utilize a tela de Comandas ou Modo Garçom.`);
+                        return;
+                      }
+                      updateQuantity(item.cartKey, item.quantity - 1);
+                    }}
+                    className={`p-4 lg:p-3 hover:bg-zinc-800 transition active:scale-95 ${item.fromComanda ? 'text-zinc-600' : 'text-zinc-400 hover:text-white'}`}
+                    title={item.fromComanda ? "Item de Comanda — alteração no Salão/Comandas" : "Diminuir"}
+                  >
+                    <Minus size={22} />
+                  </button>
                   <span className="font-black text-2xl w-16 text-center text-white">{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item.cartKey, item.quantity + 1)} className="p-4 lg:p-3 hover:bg-zinc-800 text-zinc-400 hover:text-white transition active:scale-95"><Plus size={22} /></button>
+                  <button
+                    onClick={() => {
+                      if (item.fromComanda) {
+                        toast.info(`Item da Comanda #${activeComandaNumber}. Para adicionar novas unidades na comanda, use o Salão / Garçom.`);
+                        return;
+                      }
+                      updateQuantity(item.cartKey, item.quantity + 1);
+                    }}
+                    className={`p-4 lg:p-3 hover:bg-zinc-800 transition active:scale-95 ${item.fromComanda ? 'text-zinc-600' : 'text-zinc-400 hover:text-white'}`}
+                    title={item.fromComanda ? "Item de Comanda — inclusão no Salão/Garçom" : "Aumentar"}
+                  >
+                    <Plus size={22} />
+                  </button>
                   <div className="w-px h-8 bg-zinc-800 mx-2"></div>
-                  <button onClick={() => removeItem(item.cartKey)} className="p-4 lg:p-3 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition flex-1 flex justify-center active:scale-95"><Trash2 size={22} /></button>
+                  <button
+                    onClick={() => {
+                      if (item.fromComanda) {
+                        toast.info(`Item da Comanda #${activeComandaNumber}. O estoque já foi baixado. Para cancelar ou remover, utilize a tela de Comandas ou Modo Garçom.`);
+                        return;
+                      }
+                      removeItem(item.cartKey);
+                    }}
+                    className={`p-4 lg:p-3 transition flex-1 flex justify-center active:scale-95 ${item.fromComanda ? 'text-zinc-600' : 'hover:bg-red-500/10 text-zinc-500 hover:text-red-400'}`}
+                    title={item.fromComanda ? `Item de Comanda #${activeComandaNumber}` : "Remover Item"}
+                  >
+                    <Trash2 size={22} />
+                  </button>
                 </div>
               </div>
             ))
@@ -788,10 +918,20 @@ function PosPageContent() {
           {isComandasEnabled && (
             <button
               type="button"
-              onClick={() => setIsComandasModalOpen(true)}
+              onClick={() => {
+                if (items.length > 0) {
+                  setInitialOpenComanda(true);
+                  setIsPaymentOpen(true);
+                } else {
+                  setIsComandasModalOpen(true);
+                }
+              }}
               className="w-full mb-4 flex items-center justify-center gap-2 py-3 px-4 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl transition font-bold text-sm cursor-pointer shadow-sm shadow-amber-500/10 active:scale-95"
+              title="Atalho: F1"
             >
-              <UtensilsCrossed size={18} /> Comandas & Mesas Abertas
+              <UtensilsCrossed size={18} />
+              <span className="hidden lg:inline bg-amber-500/20 text-amber-300 text-[10px] font-mono px-1.5 py-0.5 rounded border border-amber-500/30 font-bold">F1</span>
+              {items.length > 0 ? 'Lançar em Comanda / Mesa' : 'Comandas & Mesas Abertas'}
             </button>
           )}
 
@@ -800,8 +940,15 @@ function PosPageContent() {
             <span className="text-4xl font-black text-white">R$ {total.toFixed(2)}</span>
           </div>
           <button
-            disabled={totalItemsCount === 0}
-            onClick={() => setIsPaymentOpen(true)}
+            disabled={totalItemsCount === 0 || !cashRegister || isShiftLoading}
+            onClick={() => {
+              if (!cashRegister) {
+                toast.error('Nenhum caixa aberto para realizar vendas. Abra o caixa primeiro.');
+                return;
+              }
+              setInitialOpenComanda(false);
+              setIsPaymentOpen(true);
+            }}
             className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-bold py-4 lg:py-5 px-6 rounded-xl lg:rounded-2xl text-xl transition-all shadow-lg active:scale-95 flex justify-between items-center group overflow-hidden relative"
           >
             <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
@@ -897,7 +1044,7 @@ function PosPageContent() {
 
                     {/* Botão COBRAR */}
                     <button
-                      onClick={e => { e.stopPropagation(); setIsPaymentOpen(true); }}
+                      onClick={e => { e.stopPropagation(); setInitialOpenComanda(false); setIsPaymentOpen(true); }}
                       className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm py-2.5 px-5 rounded-xl shadow-lg active:scale-95 transition-transform shrink-0"
                     >
                       COBRAR
@@ -960,7 +1107,18 @@ function PosPageContent() {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm text-white line-clamp-2 leading-tight">{item.name}</div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-sm text-white line-clamp-2 leading-tight">{item.name}</span>
+                        {item.fromComanda ? (
+                          <span className="bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-bold px-1.5 py-0.2 rounded shrink-0">
+                            #{activeComandaNumber}
+                          </span>
+                        ) : activeComandaId ? (
+                          <span className="bg-sky-500/15 border border-sky-500/30 text-sky-400 text-[9px] font-bold px-1.5 py-0.2 rounded shrink-0">
+                            Extra
+                          </span>
+                        ) : null}
+                      </div>
                       {item.modifiers && item.modifiers.length > 0 && (
                         <div className="text-[10px] text-indigo-400 font-medium mt-0.5 line-clamp-1">
                           {item.modifiers.map((m: any) => m.optionName).join(', ')}
@@ -974,15 +1132,27 @@ function PosPageContent() {
                     {/* Controles de quantidade com hitboxes confortáveis */}
                     <div className="flex items-center gap-1 shrink-0 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
                       <button
-                        onClick={() => updateQuantity(item.cartKey, item.quantity - 1)}
-                        className="w-8 h-8 flex items-center justify-center bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg transition active:scale-90"
+                        onClick={() => {
+                          if (item.fromComanda) {
+                            toast.info(`Item da Comanda #${activeComandaNumber}. O estoque já foi baixado. Para alterar ou remover, utilize a tela de Comandas.`);
+                            return;
+                          }
+                          updateQuantity(item.cartKey, item.quantity - 1);
+                        }}
+                        className={`w-8 h-8 flex items-center justify-center bg-zinc-900 rounded-lg transition active:scale-90 ${item.fromComanda ? 'text-zinc-600' : 'hover:bg-zinc-800 text-zinc-300 hover:text-white'}`}
                       >
                         <Minus size={14} />
                       </button>
                       <span className="font-bold text-sm text-white w-7 text-center">{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.cartKey, item.quantity + 1)}
-                        className="w-8 h-8 flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition active:scale-90"
+                        onClick={() => {
+                          if (item.fromComanda) {
+                            toast.info(`Item da Comanda #${activeComandaNumber}. Para adicionar mais unidades na comanda, use o Salão / Garçom.`);
+                            return;
+                          }
+                          updateQuantity(item.cartKey, item.quantity + 1);
+                        }}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg transition active:scale-90 ${item.fromComanda ? 'bg-zinc-900 text-zinc-600' : 'bg-blue-600 hover:bg-blue-500 text-white'}`}
                       >
                         <Plus size={14} />
                       </button>
@@ -990,9 +1160,15 @@ function PosPageContent() {
 
                     {/* Remover */}
                     <button
-                      onClick={() => removeItem(item.cartKey)}
-                      className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-red-400 bg-zinc-950 hover:bg-red-500/10 border border-zinc-800 rounded-xl transition shrink-0 active:scale-90"
-                      title="Remover Item"
+                      onClick={() => {
+                        if (item.fromComanda) {
+                          toast.info(`Item da Comanda #${activeComandaNumber}. O estoque já foi baixado. Para cancelar ou remover, utilize a tela de Comandas.`);
+                          return;
+                        }
+                        removeItem(item.cartKey);
+                      }}
+                      className={`w-9 h-9 flex items-center justify-center bg-zinc-950 border border-zinc-800 rounded-xl transition shrink-0 active:scale-90 ${item.fromComanda ? 'text-zinc-700' : 'text-zinc-500 hover:text-red-400 hover:bg-red-500/10'}`}
+                      title={item.fromComanda ? `Item de Comanda #${activeComandaNumber}` : "Remover Item"}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -1002,13 +1178,37 @@ function PosPageContent() {
 
               {/* Footer com total e cobrar */}
               <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-950">
+                {isComandasEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (items.length > 0) {
+                        setInitialOpenComanda(true);
+                        setIsPaymentOpen(true);
+                      } else {
+                        setIsComandasModalOpen(true);
+                      }
+                    }}
+                    className="w-full mb-3 flex items-center justify-center gap-2 py-3 px-4 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl transition font-bold text-sm cursor-pointer active:scale-95"
+                  >
+                    <UtensilsCrossed size={16} />
+                    {items.length > 0 ? 'Lançar em Comanda / Mesa' : 'Comandas & Mesas Abertas'}
+                  </button>
+                )}
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-zinc-400 font-medium">Total</span>
                   <span className="text-2xl font-black text-white">R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
                 <button
-                  disabled={totalItemsCount === 0}
-                  onClick={() => setIsPaymentOpen(true)}
+                  disabled={totalItemsCount === 0 || !cashRegister || isShiftLoading}
+                  onClick={() => {
+                    if (!cashRegister) {
+                      toast.error('Nenhum caixa aberto para realizar vendas. Abra o caixa primeiro.');
+                      return;
+                    }
+                    setInitialOpenComanda(false);
+                    setIsPaymentOpen(true);
+                  }}
                   className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-black py-4 px-4 rounded-2xl text-lg transition-all shadow-lg active:scale-95 flex justify-center items-center gap-2 cursor-pointer"
                 >
                   <ShoppingCart size={20} />
@@ -1159,8 +1359,11 @@ function PosPageContent() {
       )}
 
       {/* Modais de Operador e Turno */}
-      {!isShiftLoading && !operator && (
-        <OperatorLoginModal onSuccess={() => {}} />
+      {(!operator || needsOperatorReauth) && (
+        <OperatorLoginModal 
+          onSuccess={() => {}} 
+          isReauth={needsOperatorReauth}
+        />
       )}
 
       {isSwitchOperatorOpen && (
@@ -1170,9 +1373,26 @@ function PosPageContent() {
         />
       )}
       
-      {!isShiftLoading && operator && !cashRegister && (
+      {/* Abertura de Caixa: SOMENTE quando o operador estiver logado e o servidor CONFIRMAR expressamente que NÃO há caixa aberto */}
+      {operator && !cashRegister && registerStatus === 'closed_confirmed' && (
         <OpenShiftModal onSuccess={() => {}} />
       )}
+
+
+      {/* Aviso em caso de falha de conexão na verificação do caixa (impede indução a abertura de caixa duplicado) */}
+      {registerStatus === 'query_failed' && operator && !cashRegister && (
+        <div className="fixed bottom-5 right-5 bg-amber-950/95 border border-amber-600/80 text-amber-200 px-4 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-3 text-sm backdrop-blur-md">
+          <span className="font-medium">⚠️ Instabilidade ao consultar o caixa do operador.</span>
+          <button
+            onClick={() => void refreshShift(operator.id)}
+            className="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition shadow"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
+
 
       {/* Modais Secundários */}
       {isCloseRegisterOpen && (
@@ -1204,8 +1424,10 @@ function PosPageContent() {
 
       <PaymentModal
         isOpen={isPaymentOpen}
+        initialOpenComanda={initialOpenComanda}
         onClose={() => {
           setIsPaymentOpen(false);
+          setInitialOpenComanda(false);
           setSheetExpanded(false);
           if (!('ontouchstart' in window)) {
             let checks = 0;
@@ -1220,6 +1442,7 @@ function PosPageContent() {
         isOnline={syncState.isOnline}
         onPendingCountChange={syncState.syncNow}
         tenantConfig={tenantConfig}
+        onSuccess={loadProducts}
       />
       {cashRegister?.id && (
         <CashMovementModal
@@ -1463,11 +1686,7 @@ function PosPageContent() {
 }
 
 export function PosPage() {
-  return (
-    <ShiftProvider>
-      <PosPageContent />
-    </ShiftProvider>
-  );
+  return <PosPageContent />;
 }
 
 

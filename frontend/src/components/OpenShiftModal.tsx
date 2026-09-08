@@ -9,7 +9,7 @@ interface OpenShiftModalProps {
 }
 
 export function OpenShiftModal({ onSuccess }: OpenShiftModalProps) {
-  const { operator, refreshShift, logoutOperator } = useShift();
+  const { operator, refreshShift, logoutOperator, setCashRegister } = useShift();
   const [openingValue, setOpeningValue] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -26,15 +26,17 @@ export function OpenShiftModal({ onSuccess }: OpenShiftModalProps) {
 
     setLoading(true);
     try {
-      await api.post('/cash-registers/open', { openingValue: val, operatorId: operator.id });
+      const res = await api.post('/cash-registers/open', { openingValue: val, operatorId: operator.id });
       toast.success('Caixa aberto com sucesso!');
-      // Passa o operatorId EXPLICITAMENTE para evitar closure stale
+      if (res.data) {
+        setCashRegister(res.data);
+        localStorage.setItem(`pdvpro_cached_register_${operator.id}`, JSON.stringify(res.data));
+      }
       await refreshShift(operator.id);
       onSuccess();
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Erro ao abrir caixa.';
       toast.error(msg);
-      // Mesmo no erro, atualiza o estado com o ID correto
       await refreshShift(operator.id);
     } finally {
       setLoading(false);

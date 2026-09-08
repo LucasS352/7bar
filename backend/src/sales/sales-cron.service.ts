@@ -44,6 +44,7 @@ export class SalesCronService {
             where: {
               emitirNfce: true,
               nfceStatus: 'pendente',
+              deliveryJobs: { none: { kind: 'NFCE' } },
             },
             include: {
               items: true,

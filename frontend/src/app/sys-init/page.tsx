@@ -9,8 +9,12 @@ import {
   AlertCircle, ArrowRight, Eye, EyeOff, Search, Edit, Image as ImageIcon,
   Settings, ToggleLeft, ToggleRight, AlertTriangle, Upload, X, Terminal,
   ChevronDown, ChevronRight, Trash2, DollarSign, Users, Plus, Phone, FileText,
-  Clock, CreditCard, History, Info, Copy, Check, Edit2, LockKeyhole, Sparkles, UserPlus
+  Clock, CreditCard, History, Info, Copy, Check, Edit2, LockKeyhole, Sparkles, UserPlus,
+  Activity
 } from "lucide-react";
+import { exportTelemetry, clearTelemetry } from "@/lib/telemetry";
+import { db } from "@/lib/db";
+
 
 const PIN_LENGTH = 10;
 
@@ -108,6 +112,43 @@ export default function SysInitPage() {
   const [leads, setLeads] = useState<any[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(false);
   const [leadStatusFilter, setLeadStatusFilter] = useState("");
+
+  // ── TELEMETRIA LOCAL ───────────────────────────────────────────────────
+  const [telemetryCount, setTelemetryCount] = useState<number>(0);
+  const refreshTelemetryCount = useCallback(async () => {
+    try {
+      const count = await db.telemetry_events?.count();
+      setTelemetryCount(count || 0);
+    } catch { /* silencioso */ }
+  }, []);
+
+  const handleExportTelemetry = async () => {
+    try {
+      const events = await exportTelemetry();
+      if (events.length === 0) {
+        toast.info("Nenhum evento de telemetria registrado neste navegador.");
+        return;
+      }
+      const blob = new Blob([JSON.stringify(events, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `telemetria-7bar-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${events.length} evento(s) de telemetria exportado(s)!`);
+    } catch {
+      toast.error("Erro ao exportar telemetria.");
+    }
+  };
+
+  const handleClearTelemetry = async () => {
+    if (!window.confirm("Deseja limpar todos os registros locais de telemetria deste navegador?")) return;
+    await clearTelemetry();
+    await refreshTelemetryCount();
+    toast.success("Telemetria local limpa com sucesso.");
+  };
+
 
   const loadLeads = async () => {
     if (!isDemoMode) return;
@@ -279,6 +320,7 @@ export default function SysInitPage() {
 
   const loadTenants = async () => {
     setLoadingTenants(true);
+    void refreshTelemetryCount();
     try {
       const pin = pinDigits.join('');
       const res = await api.get('/tenants/setup/list', { headers: { 'x-setup-pin': pin } });
@@ -921,9 +963,27 @@ export default function SysInitPage() {
                     <button onClick={() => { setStep("backups"); loadBackups(); }} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-blue-500/20">
                       <Database size={18} /> Gerenciar Backups
                     </button>
+                    <button
+                      onClick={handleExportTelemetry}
+                      className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition"
+                      title="Exportar registros de oscilação de rede e encerramento de sessão gravados neste navegador"
+                    >
+                      <Activity size={18} className="text-amber-400" />
+                      Telemetria ({telemetryCount})
+                    </button>
+                    {telemetryCount > 0 && (
+                      <button
+                        onClick={handleClearTelemetry}
+                        className="bg-zinc-800 hover:bg-red-950/40 border border-zinc-700 hover:border-red-800/60 text-zinc-400 hover:text-red-300 px-3 py-2.5 rounded-xl transition"
+                        title="Limpar telemetria local"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                     <button onClick={() => setStep("create")} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
                       <Building2 size={18} /> Novo Tenant
                     </button>
+
                   </>
                 )}
                 {activeTab === 'groups' && (

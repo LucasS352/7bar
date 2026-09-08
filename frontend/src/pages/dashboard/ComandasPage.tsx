@@ -9,6 +9,8 @@ import {
   ChevronRight, Calendar, DollarSign, X, Loader2, ArrowLeft, RefreshCw,
   UtensilsCrossed, Printer, ShoppingBag, Receipt, Clock
 } from 'lucide-react';
+import { CompositeModifierModal } from '@/components/CompositeModifierModal';
+
 
 interface OperatorConsumption {
   id: string;
@@ -45,7 +47,22 @@ interface Product {
   barcode?: string | null;
   shortCode?: string | null;
   active: boolean;
+  isComposite?: boolean;
+  modifierGroups?: Array<{
+    id: string;
+    name: string;
+    minSelected: number;
+    maxSelected: number;
+    options: Array<{
+      id: string;
+      name: string;
+      componentProductId: string;
+      quantity: number;
+      priceAdjustment: number;
+    }>;
+  }>;
 }
+
 
 interface ComandaItem {
   id: string;
@@ -104,6 +121,9 @@ export function ComandasPage() {
   const [addingQuantity, setAddingQuantity] = useState(1);
   const [addingItem, setAddingItem] = useState(false);
   const [productSearch, setProductSearch] = useState('');
+  // Produto composto aguardando seleção de modificadores para lançamento em comanda
+  const [compositeProductForComanda, setCompositeProductForComanda] = useState<Product | null>(null);
+
 
   // ── ESTADOS DE CONSUMO DE FUNCIONÁRIOS ────────────────────────────────────
   const [operators, setOperators] = useState<OperatorConsumption[]>([]);
@@ -224,10 +244,38 @@ export function ComandasPage() {
       toast.error('Selecione um produto.');
       return;
     }
+
+    const product = products.find(p => p.id === addingProductId);
+    if (!product) {
+      toast.error('Produto não encontrado.');
+      return;
+    }
+
+    // Produto composto → abrir modal de seleção de adicionais
+    if (product.isComposite && product.modifierGroups && product.modifierGroups.length > 0) {
+      setCompositeProductForComanda(product);
+      return;
+    }
+
+    // Produto simples → lançar direto
+    await doAddItemToComanda(product, addingQuantity, []);
+  };
+
+  // Função interna que efetivamente lança o item (simples ou composto após modal)
+  const doAddItemToComanda = async (
+    product: Product,
+    quantity: number,
+    modifiers: Array<{ optionId: string }>,
+  ) => {
+    if (!selectedComanda) return;
     setAddingItem(true);
     try {
       await api.post(`/v1/comandas/${selectedComanda.id}/items`, {
-        items: [{ productId: addingProductId, quantity: Number(addingQuantity) }]
+        items: [{
+          productId: product.id,
+          quantity,
+          ...(modifiers.length > 0 ? { modifiers } : {}),
+        }],
       });
       toast.success('Item adicionado à comanda!');
       setAddingProductId('');
@@ -241,6 +289,8 @@ export function ComandasPage() {
       setAddingItem(false);
     }
   };
+
+
 
   // Remover Item da Comanda
   const handleRemoveComandaItem = async (itemId: string) => {
@@ -274,8 +324,19 @@ export function ComandasPage() {
             stock: item.product.stock || 0,
             barcode: item.product.barcode || null,
             shortCode: item.product.shortCode || null,
+            isComposite: item.product.isComposite,
           },
-          Number(item.quantity)
+          Number(item.quantity),
+          (item as any).modifiers?.map((m: any) => ({
+            groupId: m.optionId,
+            groupName: 'Ingrediente',
+            optionId: m.optionId,
+            optionName: m.name,
+            componentProductId: m.componentProductId,
+            quantity: Number(m.consumedQuantity),
+            priceAdjustment: Number(m.priceAdjustment),
+          })),
+          true // fromComanda: true
         );
       }
     });
@@ -1090,6 +1151,19 @@ export function ComandasPage() {
           </div>
         </div>
       )}
+
+      {/* ═══ Modal: Compostos — Seleção de Adicionais ══════════════════════════ */}
+      <CompositeModifierModal
+        product={compositeProductForComanda as any}
+        isOpen={!!compositeProductForComanda}
+        onClose={() => setCompositeProductForComanda(null)}
+        onConfirm={(_product, selectedModifiers) => {
+          const modifiers = selectedModifiers.map(({ option }) => ({ optionId: option.id }));
+          const product = compositeProductForComanda!;
+          setCompositeProductForComanda(null);
+          doAddItemToComanda(product, addingQuantity, modifiers);
+        }}
+      />
 
     </div>
   );

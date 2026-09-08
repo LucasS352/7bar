@@ -8,6 +8,11 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class SalesController {
   constructor(private readonly salesService: SalesService) {}
 
+  @Get('checkout-capabilities')
+  checkoutCapabilities() {
+    return this.salesService.checkoutCapabilities();
+  }
+
   @Post('checkout')
   checkout(@Body() body: any) {
     return this.salesService.checkout(body);
@@ -118,4 +123,3 @@ export class SalesController {
     return this.salesService.updatePayments(id, payments);
   }
 }
-

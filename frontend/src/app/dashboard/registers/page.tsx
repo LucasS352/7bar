@@ -59,6 +59,8 @@ export default function CashRegistersHistoryPage() {
             <thead className="bg-zinc-950 text-zinc-400 text-sm">
               <tr>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-left">Status</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-left">Caixa</th>
+                <th className="px-6 py-4 font-semibold uppercase tracking-wider text-left">Operador</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-left">Abertura</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-left">Fechamento</th>
                 <th className="px-6 py-4 font-semibold uppercase tracking-wider text-right">Fundo (Início)</th>
@@ -78,6 +80,12 @@ export default function CashRegistersHistoryPage() {
                     ) : (
                        <span className="flex items-center gap-2 text-zinc-500 font-bold text-[11px] bg-zinc-800 px-2.5 py-1 rounded-full border border-zinc-700 w-fit tracking-wider"><XCircle size={14}/> FECHADO</span>
                     )}
+                  </td>
+                  <td className="px-6 py-5 whitespace-nowrap font-bold text-white">
+                    #{reg.code ?? '--'}
+                  </td>
+                  <td className="px-6 py-5 whitespace-nowrap text-zinc-300 font-medium">
+                    {reg.operator?.name || 'Administrador'}
                   </td>
                   <td className="px-6 py-5 text-zinc-300 font-medium whitespace-nowrap">
                     {new Date(reg.openingTime).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' }).replace(',', ' -')}

@@ -9,7 +9,9 @@ import {
   BellRing, Unlock
 } from 'lucide-react';
 import { CameraBarcodeScannerModal } from '@/components/CameraBarcodeScannerModal';
+import { CompositeModifierModal } from '@/components/CompositeModifierModal';
 import { createPortal } from 'react-dom';
+
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -55,7 +57,22 @@ interface Product {
   shortCode?: string;
   stock?: number;
   imageUrl?: string | null;
+  isComposite?: boolean;
+  modifierGroups?: Array<{
+    id: string;
+    name: string;
+    minSelected: number;
+    maxSelected: number;
+    options: Array<{
+      id: string;
+      name: string;
+      componentProductId: string;
+      quantity: number;
+      priceAdjustment: number;
+    }>;
+  }>;
 }
+
 
 // ─── Utilitários ─────────────────────────────────────────────────────────────
 
@@ -124,6 +141,9 @@ export function GarcomPage() {
   const [itemNotes, setItemNotes] = useState('');
   const [addingItem, setAddingItem] = useState(false);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
+  // Produto composto aguardando seleção de modificadores para lançamento em comanda
+  const [compositeProductForComanda, setCompositeProductForComanda] = useState<Product | null>(null);
+
 
   // Ações de estado de comanda
   const [actionLoading, setActionLoading] = useState(false);
@@ -301,27 +321,52 @@ export function GarcomPage() {
   // ── Adicionar item ────────────────────────────────────────────────────────
   async function handleAddItem() {
     if (!selectedComanda || !selectedProduct) return;
+
+    // Produto composto com grupos de adicionais → abrir modal de seleção
+    if (
+      selectedProduct.isComposite &&
+      selectedProduct.modifierGroups &&
+      selectedProduct.modifierGroups.length > 0
+    ) {
+      setCompositeProductForComanda(selectedProduct);
+      return; // aguarda confirmação do modal
+    }
+
+    // Produto simples → lançar direto
+    await doAddItem(selectedProduct, itemQty, itemNotes, []);
+  }
+
+  // Função interna que efetivamente lança o item na comanda
+  async function doAddItem(
+    product: Product,
+    qty: number,
+    notes: string,
+    modifiers: Array<{ optionId: string }>,
+  ) {
+    if (!selectedComanda) return;
     setAddingItem(true);
     try {
       const res = await api.post(`/v1/comandas/${selectedComanda.id}/items`, {
         items: [{
-          productId: selectedProduct.id,
-          quantity: itemQty,
-          notes: itemNotes || undefined,
+          productId: product.id,
+          quantity: qty,
+          notes: notes || undefined,
           createdById: waiter?.id,
+          ...(modifiers.length > 0 ? { modifiers } : {}),
         }],
       });
       setSelectedComanda(res.data);
       setComandas(prev => prev.map(c => c.id === res.data.id ? res.data : c));
       setSelectedProduct(null); setItemQty(1); setItemNotes(''); setProductSearch('');
       toast.dismiss();
-      toast.success(`${selectedProduct.name} lançado!`, { duration: 1200 });
+      toast.success(`${product.name} lançado!`, { duration: 1200 });
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Erro ao lançar item.');
     } finally {
       setAddingItem(false);
     }
   }
+
 
   // ── Remover item ──────────────────────────────────────────────────────────
   async function handleRemoveItem(itemId: string) {
@@ -1083,6 +1128,18 @@ export function GarcomPage() {
           onDetected={handleBarcodeScan}
         />
       )}
+
+      {/* ═══ Modal: Compostos — Seleção de Adicionais ══════════════════════ */}
+      <CompositeModifierModal
+        product={compositeProductForComanda as any}
+        isOpen={!!compositeProductForComanda}
+        onClose={() => setCompositeProductForComanda(null)}
+        onConfirm={(product, selectedModifiers) => {
+          const modifiers = selectedModifiers.map(({ option }) => ({ optionId: option.id }));
+          doAddItem(compositeProductForComanda!, itemQty, itemNotes, modifiers);
+          setCompositeProductForComanda(null);
+        }}
+      />
     </div>
   );
 }

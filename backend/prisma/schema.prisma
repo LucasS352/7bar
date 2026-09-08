@@ -156,6 +156,7 @@ model Product {
   purchaseOrderItems  PurchaseOrderItem[]
   nfeEntradaItens     NfeEntradaItem[]
   comandaItems        ComandaItem[]
+  comandaItemModifiers ComandaItemModifier[] @relation("ComandaItemModifierComponent")
 
   @@map("products")
 }
@@ -223,6 +224,8 @@ model OperatorConsumption {
 // ------------------------------------------------------------
 model Sale {
   id             String        @id @default(uuid())
+  requestFingerprint String?    @db.VarChar(80)
+  deliveryJobs   SaleDeliveryJob[]
   customerId     String?
   customer       Customer?     @relation(fields: [customerId], references: [id])
   operatorId     String?       // ID do colaborador
@@ -278,6 +281,27 @@ model Sale {
   @@index([code])
   @@index([createdAt])
   @@map("sales")
+}
+
+// Transactional outbox: jobs are committed together with the sale.
+model SaleDeliveryJob {
+  id          String   @id @default(uuid())
+  saleId      String
+  sale        Sale     @relation(fields: [saleId], references: [id])
+  kind        String
+  payload     String   @db.LongText
+  status      String   @default("PENDING")
+  attempts    Int      @default(0)
+  availableAt DateTime @default(now())
+  claimedAt   DateTime?
+  claimToken  String?
+  lastError   String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([saleId, kind])
+  @@index([status, availableAt])
+  @@map("sale_delivery_jobs")
 }
 
 // ------------------------------------------------------------
@@ -402,12 +426,38 @@ model CashRegister {
   closingDetails String? @db.Text // JSON com auditoria detalhada e valores digitais corrigidos/declarados
   status       String    @default("open") // open, closed
 
-  movements CashMovement[]
-  sales     Sale[]
+  conferenceDetails    String?   @db.Text // JSON de rascunho de conferência enquanto o caixa estiver aberto
+  conferenceSavedAt    DateTime?          // Data/hora da última conferência salva
+  conferenceSystemSnap String?   @db.Text // Snapshot dos totais do sistema na conferência (para detecção de divergência/stale)
+
+  movements           CashMovement[]
+  sales               Sale[]
+  conferenceRevisions CashRegisterConferenceRevision[]
 
   @@index([code])
   @@index([status])
   @@map("cash_registers")
+}
+
+// ------------------------------------------------------------
+//  CashRegisterConferenceRevision — histórico de conferências e auditorias
+// ------------------------------------------------------------
+model CashRegisterConferenceRevision {
+  id                 String       @id @default(uuid())
+  cashRegisterId     String
+  cashRegister       CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
+  details            String       @db.Text // JSON dos valores declarados/conferidos
+  systemSnap         String?      @db.Text // Snapshot dos totais do sistema no momento
+  savedByUserId      String?
+  savedByOpId        String?
+  savedByOpName      String?
+  pinAuthType        String?      // 'cashier_pin' | 'manager_pin' | null
+  pinAuthManagerId   String?
+  pinAuthManagerName String?
+  savedAt            DateTime     @default(now())
+
+  @@index([cashRegisterId])
+  @@map("cash_register_conference_revisions")
 }
 
 // ------------------------------------------------------------
@@ -881,15 +931,40 @@ model ComandaItem {
   unitPrice   Decimal   @db.Decimal(10, 2)
   totalPrice  Decimal   @db.Decimal(10, 2)
   notes       String?
+  stockDeducted Boolean @default(false)  // Se true: product.stock já foi debitado no lançamento da comanda
 
   createdById String?   // Garçom/Operador que adicionou o item (Auditoria V2)
   createdBy   Operator? @relation("ComandaItemCreatedBy", fields: [createdById], references: [id])
+
+  modifiers   ComandaItemModifier[]
 
   createdAt   DateTime  @default(now())
 
   @@index([comandaId])
   @@index([createdById])
   @@map("comanda_items")
+}
+
+// ------------------------------------------------------------
+//  ComandaItemModifier — snapshot imutável dos ingredientes consumidos
+//  por item composto lançado em comanda. Usado para baixa, estorno
+//  e custeio FIFO sem recalcular pela configuração atual do produto.
+// ------------------------------------------------------------
+model ComandaItemModifier {
+  id                 String      @id @default(uuid())
+  comandaItemId      String
+  comandaItem        ComandaItem @relation(fields: [comandaItemId], references: [id], onDelete: Cascade)
+
+  optionId           String      // ID da ProductModifierOption (auditoria)
+  componentProductId String
+  componentProduct   Product     @relation("ComandaItemModifierComponent", fields: [componentProductId], references: [id])
+
+  name               String      // Snapshot do nome da opção no momento do lançamento
+  consumedQuantity   Decimal     @db.Decimal(10, 3)  // Pré-calculado: itemQty × (option.qty / volumeCapacity ∥ 1)
+  priceAdjustment    Decimal     @db.Decimal(10, 2)  // Snapshot do ajuste de preço
+
+  @@index([comandaItemId])
+  @@map("comanda_item_modifiers")
 }
 
 // ------------------------------------------------------------

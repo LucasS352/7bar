@@ -6,7 +6,10 @@ import { api } from '@/lib/api';
 import { useDemoMissionsStore } from '@/store/demoMissions';
 import { toast } from 'sonner';
 import { saveOfflineSale } from '@/lib/db';
-import type { OfflineSaleItemSnapshot, OfflineSalePayment } from '@/lib/db';
+import type { OfflineSale, OfflineSalePayment } from '@/lib/db';
+import { submitDurableCheckout } from '@/lib/durable-checkout';
+import { withSaleOperationLock } from '@/lib/sale-operation-lock';
+import { sendCheckout } from '@/lib/checkout-api';
 import {
   CreditCard, Banknote, QrCode, X, Loader2, Plus, Trash2, Delete,
   ShoppingBag, Receipt, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, User, WifiOff, Tag, Lock, Printer, Settings2, UtensilsCrossed, Search
@@ -35,10 +38,23 @@ interface PaymentModalProps {
   isOnline: boolean;
   onPendingCountChange?: () => void;
   tenantConfig?: any;
+  onSuccess?: () => void;
+  initialOpenComanda?: boolean;
 }
 
-export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, tenantConfig }: PaymentModalProps) {
-  const { total, items, clearCart, addItem, activeComandaId, activeComandaNumber, setActiveComanda } = useCartStore();
+export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, tenantConfig, onSuccess, initialOpenComanda }: PaymentModalProps) {
+  const {
+    total,
+    items,
+    clearCart,
+    addItem,
+    activeComandaId,
+    activeComandaNumber,
+    setActiveComanda,
+    cartOperationId,
+    getOrCreateOperationId,
+    setOperationLocked,
+  } = useCartStore();
   const { user } = useAuthStore();
   const { cashRegister, operator } = useShift();
 
@@ -90,8 +106,8 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
   // ── Mutex anti-duplicação (useRef é síncrono — imune a race condition de state) ──
   const isSubmittingRef = useRef(false);
-  // ── Chave de idempotência: gerada 1x por abertura do modal ─────────────────
-  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+  // ── Chave canônica de idempotência: estável e vinculada ao ciclo do carrinho atual ──
+  const operationId = cartOperationId || getOrCreateOperationId();
 
   // --- Desconto via PIN ---
   const [discountModalOpen, setDiscountModalOpen] = useState(false);
@@ -123,7 +139,9 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     }
   };
 
-  const handleOpenComandaPicker = () => {
+  const comandaInputRef = useRef<HTMLInputElement>(null);
+
+  const handleOpenComandaPicker = useCallback(() => {
     if (items.length === 0) {
       toast.error('O carrinho está vazio.');
       return;
@@ -134,7 +152,55 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     setComandaSearch('');
     setSelectedComandaId('new');
     setComandasModalOpen(true);
-  };
+  }, [items.length]);
+
+  // Se aberto com a flag initialOpenComanda (acionada pelo F1 direto do PDV)
+  useEffect(() => {
+    if (isOpen && initialOpenComanda) {
+      handleOpenComandaPicker();
+    }
+  }, [isOpen, initialOpenComanda, handleOpenComandaPicker]);
+
+  // Foco automático e seleção no input de comanda ao abrir o modal
+  useEffect(() => {
+    if (comandasModalOpen && selectedComandaId === 'new') {
+      const timer = setTimeout(() => {
+        comandaInputRef.current?.focus();
+        comandaInputRef.current?.select();
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [comandasModalOpen, selectedComandaId]);
+
+  // Atalhos de teclado no modal de pagamento (F1 para comanda, Escape para fechar submodal)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleModalKeyDown = (e: KeyboardEvent) => {
+      // Se submodal de comandas estiver aberto
+      if (comandasModalOpen) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          setComandasModalOpen(false);
+          return;
+        }
+        return;
+      }
+
+      // Atalho F1: abrir Lançar em Comanda direto
+      if (e.key === 'F1') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (modules?.comandas === true && items.length > 0) {
+          handleOpenComandaPicker();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleModalKeyDown, true);
+    return () => window.removeEventListener('keydown', handleModalKeyDown, true);
+  }, [isOpen, comandasModalOpen, items.length, modules?.comandas, handleOpenComandaPicker]);
 
   const handleConfirmLaunchComanda = async () => {
     if (items.length === 0) return;
@@ -162,6 +228,9 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         productId: i.id,
         quantity: i.quantity,
         unitPrice: i.effectivePriceSell ?? i.priceSell,
+        modifiers: i.modifiers && i.modifiers.length > 0
+          ? i.modifiers.map(m => ({ optionId: m.optionId }))
+          : undefined,
       }));
 
       await api.post(`/v1/comandas/${comandaIdToUse}/items`, { items: itemsPayload });
@@ -169,6 +238,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
       toast.success('Itens lançados na comanda com sucesso!');
       clearCart();
       setComandasModalOpen(false);
+      onSuccess?.();
       onClose();
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Erro ao lançar itens na comanda.';
@@ -196,8 +266,19 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
             stock: item.product.stock || 0,
             barcode: item.product.barcode || null,
             shortCode: item.product.shortCode || null,
+            isComposite: item.product.isComposite,
           },
-          Number(item.quantity)
+          Number(item.quantity),
+          item.modifiers?.map((m: any) => ({
+            groupId: m.optionId,
+            groupName: 'Ingrediente',
+            optionId: m.optionId,
+            optionName: m.name,
+            componentProductId: m.componentProductId,
+            quantity: Number(m.consumedQuantity),
+            priceAdjustment: Number(m.priceAdjustment),
+          })),
+          true // fromComanda: true
         );
       }
     });
@@ -432,13 +513,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     }
   }, [method, customMethods, items]);
 
-  // Gera nova chave de idempotência cada vez que o modal abre
-  useEffect(() => {
-    if (isOpen) {
-      setIdempotencyKey(crypto.randomUUID());
-      isSubmittingRef.current = false;
-    }
-  }, [isOpen]);
+  // Reopening the modal must not replace the operation identity or release an active sender.
 
   useEffect(() => {
     if (isOpen && (saleResult || savedOffline) && !nfcePolling) {
@@ -519,19 +594,61 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
   useEffect(() => {
     if (!nfcePolling || !saleResult?.id) return;
+
+    // ── Polling sequencial seguro do status NFC-e ──────────────────────────
+    // Usa mesmo padrão: destroyed flag + AbortController.
+    // X-Silent-Poll: 401 aqui não derruba sessão.
+    let destroyed = false;
+    let isFinished = false;
+    let nfceAbortController: AbortController | null = null;
     let attempts = 0;
-    const interval = setInterval(async () => {
+
+    const pollNfce = async () => {
+      if (destroyed || isFinished) return;
       attempts++;
+
+      nfceAbortController = new AbortController();
       try {
-        const res = await api.get(`/sales/${saleResult.id}/nfce-status`);
-        const status: NfceStatus = res.data.nfceStatus as NfceStatus;
-        setSaleResult(prev => ({ ...prev, ...res.data }));
-        if (status === 'autorizada' || status === 'rejeitada' || status === 'nao_emitida' || attempts >= 15) {
-          clearInterval(interval); setNfcePolling(false);
+        const res = await api.get(`/sales/${saleResult.id}/nfce-status`, {
+          timeout: 10_000,
+          signal: nfceAbortController.signal,
+          headers: { 'X-Silent-Poll': 'true' },
+        });
+        if (!destroyed && !isFinished) {
+          const status: NfceStatus = res.data.nfceStatus as NfceStatus;
+          setSaleResult(prev => ({ ...prev, ...res.data }));
+          if (status === 'autorizada' || status === 'rejeitada' || status === 'nao_emitida') {
+            isFinished = true;
+            setNfcePolling(false);
+            return; // encerra o ciclo
+          }
         }
-      } catch { /* continua */ }
-    }, 2000);
-    return () => clearInterval(interval);
+      } catch {
+        // Silenciado — polling fiscal nunca derruba sessão
+      } finally {
+        if (!destroyed && !isFinished) {
+          if (attempts < 15) {
+            setTimeout(pollNfce, 2_000);
+          } else {
+            // Esgotou orçamento de tentativas (ex: oscilação de rede ou SEFAZ lenta)
+            isFinished = true;
+            setNfcePolling(false);
+            toast.warning(
+              'Não foi possível confirmar o status da NFC-e em tempo real. A venda foi registrada e a nota pode ser consultada no Gestor Fiscal.',
+              { duration: 6000 }
+            );
+          }
+        }
+      }
+    };
+
+    pollNfce();
+    return () => {
+      destroyed = true;
+      isFinished = true;
+      nfceAbortController?.abort();
+    };
+
   }, [nfcePolling, saleResult?.id]);
 
   const handleAddPayment = () => {
@@ -550,69 +667,11 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
   // ── Salva venda offline no IndexedDB (OFFLINE_CONTINGENCY) ──────────────
   const handleSaveOffline = async () => {
-    const selectedCustom = customMethods.find(cm => cm.id === method);
-    if (selectedCustom?.hasVariablePricing) {
+    if (customMethods.find(cm => cm.id === method)?.hasVariablePricing) {
       toast.error('Preços Variáveis não são suportados no modo Offline.');
       return;
     }
-    if (remaining > 0) { toast.error(`Falta R$ ${remaining.toFixed(2)} para finalizar.`); return; }
-    setLoading(true);
-    try {
-      // Monta snapshot fiscal dos itens a partir do carrinho
-      // (dados fiscais completos viriam do cache — aqui usamos defaults seguros)
-      const saleItems: OfflineSaleItemSnapshot[] = items.map(item => ({
-        productId:   item.id,
-        productName: item.name,
-        unit:        'UN',
-        quantity:    item.quantity,
-        priceUnit:   Number(item.priceSell),
-        discount:    0,
-        subtotal:    item.subtotal,
-        // Snapshot fiscal — será completado pelo backend no sync
-        ncm: null, cest: null, cfop: '5102', origem: 0,
-        csosn: null, cstIcms: null,
-        aliqIcms: 0, valorIcms: 0,
-        cstPis: '99', aliqPis: 0, valorPis: 0,
-        cstCofins: '99', aliqCofins: 0, valorCofins: 0,
-      }));
-
-      const salePayments: OfflineSalePayment[] = payments.map(p => ({
-        method: p.method as OfflineSalePayment['method'],
-        tPag:   TPAG_MAP[p.method] ?? '99',
-        value:  p.value,
-        troco:  Math.max(0, p.given - p.value),
-      }));
-
-      const subtotal = items.reduce((acc, i) => acc + i.subtotal, 0);
-      const discount = 0;
-
-      await saveOfflineSale({
-        localId:     Math.random().toString(36).substring(2) + Date.now().toString(36),
-        createdAt:   new Date().toISOString(),
-        operatorId:  operator?.id ?? user?.id ?? 'unknown',
-        tenantId:    user?.tenant ?? 'unknown',
-        cashRegisterId: cashRegister?.id,
-        subtotal,
-        discount,
-        total,
-        items:       saleItems,
-        payments:    salePayments,
-        customerCpf:  customerCpf || undefined,
-        customerName: customerName || undefined,
-        emitirNfce:  false,
-        syncStatus:  'PENDING',
-      });
-
-      clearCart();
-      setSavedOffline(true);
-      toast.success('Venda salva localmente! Será sincronizada ao reconectar.', { duration: 5000 });
-      onPendingCountChange?.();
-    } catch (err) {
-      toast.error('Erro ao salvar venda offline.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    await handleConfirm('simple', true);
   };
 
   const handleVerifyDiscountPin = async () => {
@@ -643,7 +702,15 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     toast.success(`Desconto de R$ ${val.toFixed(2)} aplicado!`);
   };
 
-  const handleConfirm = async (mode: PayMode) => {
+  const handleConfirm = async (mode: PayMode, offlineOnly = false) => {
+    const releaseOwnCart = () => {
+      const cart = useCartStore.getState();
+      if (cart.cartOperationId === operationId && cart.scope === `7bar-cart-v2:${user?.tenant}:${operator?.id}`) cart.setOperationLocked(false);
+    };
+    const clearOwnCart = () => {
+      const cart = useCartStore.getState();
+      if (cart.cartOperationId === operationId && cart.scope === `7bar-cart-v2:${user?.tenant}:${operator?.id}`) cart.clearCart();
+    };
     const selectedCustom = customMethods.find(cm => cm.id === method);
     const isVariablePricingActive = selectedCustom?.hasVariablePricing;
 
@@ -674,6 +741,11 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
       return;
     }
 
+    if (!isConsumo && !cashRegister?.id) {
+      toast.error('Nenhum caixa aberto detectado. Abra ou selecione um caixa antes de finalizar a venda.');
+      return;
+    }
+
     // ── MUTEX: bloqueia qualquer segundo disparo antes do React atualizar o estado ──
     if (isSubmittingRef.current) {
       console.warn('[PaymentModal] handleConfirm bloqueado — já está em processamento.');
@@ -682,15 +754,10 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     isSubmittingRef.current = true;
 
     setLoading(true);
+    setOperationLocked(true);
     const actualMode = isConsumo ? 'simple' : (isNfceEnabled ? mode : 'simple');
     setPayMode(actualMode);
     try {
-      if (isVariablePricingActive) {
-        api.put(`/payment-methods/${method}/prices`, {
-          prices: Object.entries(variablePrices).map(([productId, price]) => ({ productId, price }))
-        }).catch(console.error); // Executa em background
-      }
-
       const body = {
         items: items.map(i => ({ 
           productId: i.id, 
@@ -711,21 +778,115 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         operatorId: operator?.id ?? user?.id,
         consumedByOperatorId: isConsumo ? selectedOperatorId : undefined,
         emitirNfce: isConsumo ? false : (actualMode === 'nfce'),
-        idempotencyKey, // Chave única por tentativa — backend rejeita duplicata
+        idempotencyKey: operationId, // Chave canônica estável do ciclo atual do carrinho
+        // Quando há comanda ativa, separa os itens extras adicionados no balcão para baixa normal
+        ...(activeComandaId ? {
+          comandaId: activeComandaId,
+          extraItems: items
+            .filter(i => !i.fromComanda)
+            .map(i => ({
+              productId: i.id,
+              quantity: i.quantity,
+              priceUnit: isVariablePricingActive
+                ? (variablePrices[i.id] ?? Number(i.priceSell))
+                : (i.effectivePriceSell ?? i.priceSell),
+              modifiers: i.modifiers && i.modifiers.length > 0
+                ? i.modifiers.map(m => ({
+                    optionId: m.optionId,
+                    componentProductId: m.componentProductId,
+                  }))
+                : undefined,
+            })),
+        } : {}),
         ...(actualMode === 'nfce' ? { customerCpf: customerCpf || undefined, customerName: customerName || undefined } : {}),
       };
-      const res = await api.post('/sales/checkout', body);
 
-      if (activeComandaId) {
-        try {
-          await api.post(`/v1/comandas/${activeComandaId}/close`, { saleId: res.data.id });
-          toast.success(`Comanda #${activeComandaNumber || ''} encerrada e removida das abertas!`);
-        } catch (comandaErr) {
-          console.error('Erro ao encerrar comanda:', comandaErr);
-        }
+      // ── PERSISTÊNCIA DURÁVEL ANTES DO PRIMEIRO POST ─────────────────────────
+      // A operação fica imutável no IndexedDB com chave e snapshot completo antes do envio
+      const localSale = {
+        localId:        operationId,
+        idempotencyKey: operationId,
+        createdAt:      new Date().toISOString(),
+        operatorId:     operator?.id ?? user?.id ?? 'unknown',
+        tenantId:       user?.tenant ?? 'unknown',
+        cashRegisterId: cashRegister?.id,
+        comandaId:      activeComandaId || undefined,
+        consumedByOperatorId: isConsumo ? selectedOperatorId : undefined,
+        subtotal:       items.reduce((acc, i) => acc + i.subtotal, 0),
+        discount:       discountValue,
+        total,
+        items:          items.map(item => ({
+          productId:   item.id,
+          productName: item.name,
+          unit:        'UN',
+          quantity:    item.quantity,
+          priceUnit:   Number(item.priceSell),
+          discount:    0,
+          subtotal:    item.subtotal,
+          ncm: null, cest: null, cfop: '5102', origem: 0,
+          csosn: null, cstIcms: null,
+          aliqIcms: 0, valorIcms: 0,
+          cstPis: '99', aliqPis: 0, valorPis: 0,
+          cstCofins: '99', aliqCofins: 0, valorCofins: 0,
+          modifiers: item.modifiers ? item.modifiers.map(m => ({
+            optionId: m.optionId,
+            componentProductId: m.componentProductId,
+            name: m.optionName,
+            quantity: m.quantity,
+            priceAdjustment: m.priceAdjustment,
+          })) : undefined,
+          fromComanda: item.fromComanda,
+        })),
+        payments:       finalPayments.map(p => ({
+          method: p.method as OfflineSalePayment['method'],
+          label:  p.label,
+          tPag:   TPAG_MAP[p.method] ?? '99',
+          value:  p.value,
+          troco:  Math.max(0, p.given - p.value),
+        })),
+        customerCpf:    customerCpf || undefined,
+        customerName:   customerName || undefined,
+        emitirNfce:     false,
+        rawPayload:     body,
+        syncStatus:     'SYNCING',
+      } satisfies Omit<OfflineSale, 'id'>;
+
+      if (offlineOnly) {
+        await withSaleOperationLock(localSale.tenantId, operationId, () => saveOfflineSale({ ...localSale, syncStatus: 'PENDING' }));
+        releaseOwnCart();
+        clearOwnCart();
+        setSavedOffline(true);
+        toast.success('Pedido salvo neste dispositivo. A confirmação do servidor está pendente.');
+        onPendingCountChange?.();
+        return;
       }
 
-      setSaleResult(res.data); clearCart();
+      const outcome = await submitDurableCheckout(localSale, () => sendCheckout(body, localSale.tenantId, localSale.operatorId));
+      releaseOwnCart();
+      if (outcome.kind === 'review') {
+        toast.error(outcome.message || 'Operação exige conferência. Não reenvie como outra venda.');
+        return;
+      }
+      if (outcome.kind === 'pending') {
+        clearOwnCart();
+        setSavedOffline(true);
+        toast.warning('Pedido preservado. Resultado do servidor ainda não confirmado; acompanhe as pendências.');
+        onPendingCountChange?.();
+        return;
+      }
+      const res = { data: outcome.data };
+      if (isVariablePricingActive) {
+        api.put(`/payment-methods/${method}/prices`, {
+          prices: Object.entries(variablePrices).map(([productId, price]) => ({ productId, price }))
+        }).catch(console.error); // Executa em background
+      }
+
+
+
+      releaseOwnCart();
+      setSaleResult(res.data);
+      clearOwnCart();
+      onSuccess?.();
       useDemoMissionsStore.getState().completeMission('saleCompleted');
       if (actualMode === 'nfce') { toast.info('NFC-e em processamento...', { duration: 3000 }); setNfcePolling(true); }
       else toast.success('Venda finalizada!', { duration: 1500 });
@@ -734,8 +895,10 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         setTimeout(() => printReceipt(res.data), 300);
       }
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erro ao finalizar venda.';
-      toast.error(msg);
+      // Storage/lock/local failures are NOT successful contingency.
+      // Keep all inputs so the operator can fix storage or inspect the existing operation.
+      releaseOwnCart();
+      toast.error((err as Error)?.message || 'Não foi possível preservar a operação. O carrinho foi mantido.');
     } finally {
       setLoading(false);
       isSubmittingRef.current = false;
@@ -898,10 +1061,11 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                     </div>
                     <h3 className="text-2xl font-bold text-white">Venda Concluída!</h3>
                     <p className="text-zinc-400 text-sm">
-                      {saleResult.nfceMotivoRejeicao?.includes('SNF') || saleResult.nfceMotivoRejeicao?.includes('sem nota')
+                      {(saleResult as any)?.nfceMotivoRejeicao?.includes('SNF') || (saleResult as any)?.nfceMotivoRejeicao?.includes('sem nota')
                         ? 'Venda finalizada com sucesso (Produtos sem nota fiscal).'
                         : 'Venda finalizada com sucesso.'}
                     </p>
+
                     {change > 0 && (
                       <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
                         <p className="text-emerald-400 font-bold text-xl">Troco: R$ {change.toFixed(2)}</p>
@@ -955,8 +1119,11 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                 type="button"
                 onClick={handleOpenComandaPicker}
                 className="flex items-center justify-center gap-2 px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold rounded-xl text-xs sm:text-sm transition active:scale-95 cursor-pointer shadow-sm shadow-amber-500/10"
+                title="Atalho: F1"
               >
-                <UtensilsCrossed size={16} /> Lançar em Comanda / Mesa
+                <UtensilsCrossed size={16} />
+                <span className="hidden sm:inline bg-amber-500/20 text-amber-300 text-[10px] font-mono px-1.5 py-0.5 rounded border border-amber-500/30 font-bold">F1</span>
+                Lançar em Comanda / Mesa
               </button>
             )}
             <button onClick={onClose} className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full transition text-zinc-400 hover:text-white"><X size={20} /></button>
@@ -1257,10 +1424,19 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                   <div>
                     <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1">Identificação da Comanda / Mesa *</label>
                     <input
+                      ref={comandaInputRef}
                       type="text"
                       placeholder="Ex: 01, Mesa 05, Sinuca 1, Marcos..."
                       value={newComandaNumber}
                       onChange={e => setNewComandaNumber(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (!launchingComanda) {
+                            handleConfirmLaunchComanda();
+                          }
+                        }
+                      }}
                       className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white font-bold placeholder-zinc-600 focus:outline-none focus:border-amber-500"
                       autoFocus
                     />
@@ -1403,6 +1579,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
               >
                 {launchingComanda ? <Loader2 className="animate-spin" size={16} /> : <UtensilsCrossed size={16} />}
                 Confirmar Lançamento
+                <span className="hidden sm:inline bg-black/20 text-zinc-900 text-[10px] font-mono px-1.5 py-0.5 rounded font-bold">Enter</span>
               </button>
             </div>
 

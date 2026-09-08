@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { FileText, Loader2, X, AlertOctagon, Receipt, Trash2, EyeOff, Edit2, KeyRound, Unlock, ShieldCheck, SlidersHorizontal, Sparkles, CheckCircle2, RotateCcw, Calculator, Save } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useShift } from '@/contexts/ShiftContext';
+import { usePinAuthStore } from '@/store/pinAuth';
 import { EditPaymentModal } from './EditPaymentModal';
 
 // Mapa de IDs de métodos padrão → nome legível para exibição na auditoria
@@ -92,9 +93,16 @@ export function CloseRegisterModal({
       toast.error('Informe o PIN do Caixa (mínimo 4 dígitos).');
       return;
     }
+    if (!registerId) {
+      toast.error('Caixa não selecionado para validação de PIN.');
+      return;
+    }
     setVerifyingCashierPin(true);
     try {
-      await api.post('/tenants/me/verify-cashier-pin', { pin: cashierPinInput });
+      const res = await api.post('/tenants/me/verify-cashier-pin', { pin: cashierPinInput, registerId });
+      if (res.data?.pinAuthToken) {
+        usePinAuthStore.getState().setPinAuth(res.data.pinAuthToken);
+      }
       setIsUnlockedByPin(true);
       setUnlockModalOpen(false);
       setCashierPinInput('');
@@ -106,6 +114,28 @@ export function CloseRegisterModal({
       setVerifyingCashierPin(false);
     }
   };
+
+  // Quando o token de autorização do PIN expira, oculta os valores e reabre o prompt de PIN
+  useEffect(() => {
+    const handlePinAuthExpired = () => {
+      setIsUnlockedByPin(false);
+      setUnlockModalOpen(true);
+      toast.error('Sua autorização por PIN expirou. Digite o PIN novamente para continuar.');
+    };
+
+    window.addEventListener('pin-auth-expired', handlePinAuthExpired);
+    return () => {
+      window.removeEventListener('pin-auth-expired', handlePinAuthExpired);
+    };
+  }, []);
+
+  // Limpa autorização por PIN quando o modal de fechamento é fechado ou ao trocar de caixa
+  useEffect(() => {
+    if (!isOpen) {
+      setIsUnlockedByPin(false);
+      usePinAuthStore.getState().clearPinAuth();
+    }
+  }, [isOpen, registerId]);
 
   const renderMoney = (
     val: number | string | undefined | null,
@@ -158,29 +188,41 @@ export function CloseRegisterModal({
     }
   };
 
-  const loadReport = async (regId = registerId) => {
+  const loadReport = async (regId = registerId, preserveInputs = false) => {
     if (!regId) return;
     try {
       const res = await api.get(`/cash-registers/${regId}/report?_t=${Date.now()}`);
       setData(res.data);
-      if (res.data.register?.status !== 'closed' || res.data.register?.closingValue == null) {
-        setClosingValue(res.data.report.expectedDinheiro);
-      } else {
-        setClosingValue(Number(res.data.register.closingValue || 0));
-      }
-      const cDetails = res.data.register?.closingDetails || res.data.report?.closingDetails;
-      if (cDetails) {
-        setAdjustCredit(cDetails.declaredCredit != null ? String(cDetails.declaredCredit) : '');
-        setAdjustDebit(cDetails.declaredDebit != null ? String(cDetails.declaredDebit) : '');
-        setAdjustPix(cDetails.declaredPix != null ? String(cDetails.declaredPix) : '');
-        setAdjustCustom(cDetails.declaredCustom || {});
-        setAdjustNotes(cDetails.notes || '');
-      } else {
-        setAdjustCredit('');
-        setAdjustDebit('');
-        setAdjustPix('');
-        setAdjustCustom({});
-        setAdjustNotes('');
+
+      if (!preserveInputs) {
+        if (res.data.register?.status !== 'closed' || res.data.register?.closingValue == null) {
+          setClosingValue(res.data.report?.expectedDinheiro ?? 0);
+        } else {
+          setClosingValue(Number(res.data.register.closingValue || 0));
+        }
+
+        const cDetailsRaw = res.data.register?.closingDetails || res.data.conferenceDetails || res.data.report?.closingDetails || res.data.report?.conferenceDetails;
+        if (cDetailsRaw) {
+          try {
+            const cDetails = typeof cDetailsRaw === 'string' ? JSON.parse(cDetailsRaw) : cDetailsRaw;
+            setAdjustCredit(cDetails.declaredCredit != null ? String(cDetails.declaredCredit) : '');
+            setAdjustDebit(cDetails.declaredDebit != null ? String(cDetails.declaredDebit) : '');
+            setAdjustPix(cDetails.declaredPix != null ? String(cDetails.declaredPix) : '');
+            setAdjustCustom(cDetails.declaredCustom || {});
+            setAdjustNotes(cDetails.notes || '');
+            if (cDetails.declaredCash != null && (res.data.register?.status !== 'closed' || res.data.register?.closingValue == null)) {
+              setClosingValue(Number(cDetails.declaredCash));
+            }
+          } catch {
+            // fallback se não for JSON válido
+          }
+        } else {
+          setAdjustCredit('');
+          setAdjustDebit('');
+          setAdjustPix('');
+          setAdjustCustom({});
+          setAdjustNotes('');
+        }
       }
     } catch {
       toast.error('Falha ao gerar relatório detalhado');
@@ -259,46 +301,73 @@ export function CloseRegisterModal({
     pix?: string;
     custom?: Record<string, string>;
     notes?: string;
+    cash?: number;
   }) => {
     const cred = overrideFields?.credit !== undefined ? overrideFields.credit : adjustCredit;
     const deb = overrideFields?.debit !== undefined ? overrideFields.debit : adjustDebit;
     const px = overrideFields?.pix !== undefined ? overrideFields.pix : adjustPix;
     const cust = overrideFields?.custom !== undefined ? overrideFields.custom : adjustCustom;
     const nts = overrideFields?.notes !== undefined ? overrideFields.notes : adjustNotes;
-
-    const hasAdj = Boolean(
-      cred !== '' ||
-      deb !== '' ||
-      px !== '' ||
-      Object.keys(cust).length > 0 ||
-      nts.trim()
-    );
-    if (!hasAdj) return null;
+    const cashVal = overrideFields?.cash !== undefined ? overrideFields.cash : closingValue;
 
     const dCred = cred !== '' ? parseFloat(cred) || 0 : Number(data?.report?.totalCredito || 0);
     const dDeb = deb !== '' ? parseFloat(deb) || 0 : Number(data?.report?.totalDebito || 0);
     const dPix = px !== '' ? parseFloat(px) || 0 : Number(data?.report?.totalPix || 0);
 
+    const formattedCustom: Record<string, number> = {};
+    if (cust && typeof cust === 'object') {
+      for (const [k, v] of Object.entries(cust)) {
+        if (v !== '' && v !== undefined && v !== null) {
+          formattedCustom[k] = parseFloat(String(v)) || 0;
+        }
+      }
+    }
+
     const dDigital = dCred + dDeb + dPix +
       (data?.report?.customMethods || []).reduce((acc: number, cm: any) => {
-        const v = cust[cm.method] !== undefined ? parseFloat(cust[cm.method]) || 0 : Number(cm.total || 0);
+        const v = formattedCustom[cm.method] !== undefined ? formattedCustom[cm.method] : Number(cm.total || 0);
         return acc + v;
       }, 0);
 
     const totalAjustado = Number(data?.report?.totalDinheiro || 0) + dDigital;
+    const originalVendas = Number(data?.report?.totalVendas || 0);
 
     return {
+      declaredCash: cashVal,
       declaredCredit: dCred,
       declaredDebit: dDeb,
       declaredPix: dPix,
-      declaredCustom: cust,
-      totalVendasOriginal: Number(data?.report?.totalVendas || 0),
+      declaredCustom: formattedCustom,
+      totalVendasOriginal: originalVendas,
       totalVendasAjustado: totalAjustado,
-      diffDigital: totalAjustado - Number(data?.report?.totalVendas || 0),
+      diffDigital: totalAjustado - originalVendas,
       notes: nts.trim(),
       adjustedAt: new Date().toISOString(),
       adjustedBy: user?.name || operator?.name || 'Operador',
+      dataVersion: data?.dataVersion || data?.report?.dataVersion || '',
     };
+  };
+
+  const handleSaveDraft = async () => {
+    if (!registerId) return;
+    setSubmitting(true);
+    try {
+      const closingDetails = buildClosingDetailsPayload();
+      await api.patch(`/cash-registers/${registerId}/conference`, {
+        conferenceDetails: closingDetails,
+      });
+      toast.success('Rascunho de conferência salvo com sucesso!');
+      await loadReport(registerId, true);
+    } catch (err: any) {
+      if (err.response?.status === 409 || err.response?.data?.errorSource === 'version_mismatch') {
+        await loadReport(registerId, true);
+        toast.error('Novas movimentações foram registradas no caixa. Os totais do sistema foram atualizados, mas seus dados foram preservados. Revise e salve novamente.');
+      } else {
+        toast.error(err.response?.data?.message || 'Erro ao salvar rascunho de conferência');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Fecha o caixa de verdade (chamado apenas no passo 2)
@@ -313,8 +382,13 @@ export function CloseRegisterModal({
       await api.post(`/cash-registers/${registerId}/close`, payload);
       toast.success('Caixa encerrado formalmente. Bom descanso!');
       onClose(true);
-    } catch (e: any) {
-      toast.error('Erro ao fechar caixa');
+    } catch (err: any) {
+      if (err.response?.status === 409 || err.response?.data?.errorSource === 'version_mismatch') {
+        await loadReport(registerId, true);
+        toast.error('Novas vendas foram registradas durante a conferência. Os valores do sistema foram atualizados, mas suas contagens foram preservadas. Revise e confirme novamente.');
+      } else {
+        toast.error(err.response?.data?.message || 'Erro ao fechar caixa');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -323,7 +397,9 @@ export function CloseRegisterModal({
   const handleAudit = async (customPayload?: any, andClose = false) => {
     setSubmitting(true);
     try {
-      const closingDetails = customPayload !== undefined ? customPayload : buildClosingDetailsPayload();
+      const closingDetails = customPayload !== undefined 
+        ? buildClosingDetailsPayload(customPayload) 
+        : buildClosingDetailsPayload();
       const valToSave = data?.register?.closingValue != null ? Number(data.register.closingValue) : closingValue;
       await api.patch(`/cash-registers/${registerId}/audit`, {
         closingValue: valToSave,
@@ -333,11 +409,16 @@ export function CloseRegisterModal({
       if (andClose) {
         onClose(true);
       } else {
-        await loadReport();
+        await loadReport(registerId, true);
       }
       return true;
-    } catch (e: any) {
-      toast.error('Erro ao salvar auditoria');
+    } catch (err: any) {
+      if (err.response?.status === 409 || err.response?.data?.errorSource === 'version_mismatch') {
+        await loadReport(registerId, true);
+        toast.error('Novas movimentações foram registradas no caixa. Os dados do sistema foram atualizados, mas suas contagens foram preservadas. Revise e confirme novamente.');
+      } else {
+        toast.error(err.response?.data?.message || 'Erro ao salvar auditoria');
+      }
       return false;
     } finally {
       setSubmitting(false);
@@ -392,6 +473,13 @@ export function CloseRegisterModal({
                     <div className="flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl text-emerald-400 text-xs font-bold animate-in fade-in duration-200">
                       <span className="flex items-center gap-2"><ShieldCheck size={16} className="text-emerald-400" /> Auditoria Desbloqueada via PIN</span>
                       <span className="text-[10px] uppercase bg-emerald-500/20 px-2 py-0.5 rounded font-mono">Visão Completa</span>
+                    </div>
+                  )}
+
+                  {(data?.conferenceIsStale || data?.report?.conferenceIsStale) && (
+                    <div className="flex items-center gap-2.5 p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-400 text-xs font-semibold animate-in fade-in duration-200">
+                      <AlertOctagon size={16} className="shrink-0 text-amber-400" />
+                      <span>Novas vendas ou movimentações foram registradas após o último rascunho de conferência. Os dados do sistema foram atualizados.</span>
                     </div>
                   )}
 
@@ -627,12 +715,26 @@ export function CloseRegisterModal({
                     </button>
                   </div>
                 ) : (
-                  <button 
-                    onClick={goToConfirmation}
-                    className="w-full py-5 rounded-2xl font-bold bg-red-600 hover:bg-red-500 text-white transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 mt-4 text-lg"
-                  >
-                    Confirmar Gaveta e Continuar →
-                  </button>
+                  <div className="flex gap-2 mt-4">
+                    {canSeeTotals && (
+                      <button 
+                        type="button"
+                        onClick={handleSaveDraft}
+                        disabled={submitting}
+                        className="py-5 px-4 rounded-2xl font-bold bg-zinc-800 hover:bg-zinc-700 disabled:opacity-60 text-zinc-300 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer border border-zinc-700/60 shadow-md active:scale-95"
+                        title="Salvar rascunho de conferência"
+                      >
+                        {submitting ? <Loader2 className="animate-spin" size={18}/> : <Save size={18}/>}
+                        Salvar Rascunho
+                      </button>
+                    )}
+                    <button 
+                      onClick={goToConfirmation}
+                      className="flex-1 py-5 rounded-2xl font-bold bg-red-600 hover:bg-red-500 text-white transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 text-lg"
+                    >
+                      Confirmar Gaveta e Continuar →
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

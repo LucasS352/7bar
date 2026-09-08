@@ -131,7 +131,7 @@ export class IntegrationsService {
     };
   }
 
-  async syncProductStock(tenantId: string, productIds: string[]) {
+  async syncProductStock(tenantId: string, productIds: string[], throwOnError = false) {
     if (!productIds.length) return;
     try {
       const integration = await this.heartPrisma.tenantIntegration.findUnique({
@@ -151,17 +151,21 @@ export class IntegrationsService {
       });
       if (!products.length) return;
 
-      const token = await this.ifoodService.authenticate(creds.clientId, creds.clientSecret);
-      if (!token) return;
+      const token = await this.ifoodService.authenticate(creds.clientId, creds.clientSecret, throwOnError ? 10_000 : 0);
+      if (!token) {
+        if (throwOnError) throw new Error('Autenticação iFood indisponível');
+        return;
+      }
 
       const inventoryUpdates = products.map((p: any) => ({
         externalCode: p.id,
         stock: p.stock
       }));
 
-      await this.ifoodService.updateInventory(token, creds.merchantId, inventoryUpdates);
+      await this.ifoodService.updateInventory(token, creds.merchantId, inventoryUpdates, throwOnError);
     } catch (e: any) {
       console.error(`Erro ao sincronizar estoque em tempo real (iFood): ${e.message}`);
+      if (throwOnError) throw e;
     }
   }
 }

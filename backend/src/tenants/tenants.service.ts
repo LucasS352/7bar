@@ -713,7 +713,12 @@ export class TenantsService {
   }
 
   /** Verifica se o PIN informado é o PIN do Caixa ou PIN de um gerente */
-  async verifyCashierPin(tenantId: string, pin: string): Promise<boolean> {
+  async verifyCashierPin(tenantId: string, pin: string): Promise<{
+    authorized: boolean;
+    authType: 'cashier_pin' | 'manager_pin';
+    managerOpId?: string;
+    managerName?: string;
+  }> {
     const { databaseUrl } = this.tenantContext.get();
     const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
     
@@ -721,7 +726,7 @@ export class TenantsService {
     try {
       const settings = await prisma.tenantSettings.findUnique({ where: { id: 'singleton' } });
       if (settings?.cashierPin && (await bcrypt.compare(pin, settings.cashierPin))) {
-        return true;
+        return { authorized: true, authType: 'cashier_pin' };
       }
     } catch {
       // Caso a coluna ainda não exista antes da atualização do banco
@@ -734,14 +739,19 @@ export class TenantsService {
       });
       for (const mgr of managers) {
         if (mgr.pin && (await bcrypt.compare(pin, mgr.pin))) {
-          return true;
+          return {
+            authorized: true,
+            authType: 'manager_pin',
+            managerOpId: mgr.id,
+            managerName: mgr.name,
+          };
         }
       }
     } catch {
       // Ignora erro
     }
 
-    return false;
+    return { authorized: false, authType: 'cashier_pin' };
   }
 
   async deleteTenant(tenantId: string) {

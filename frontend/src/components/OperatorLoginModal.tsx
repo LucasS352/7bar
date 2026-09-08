@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/auth';
 interface OperatorLoginModalProps {
   onSuccess: () => void;
   onClose?: () => void;
+  isReauth?: boolean;
 }
 
 interface OperatorData {
@@ -19,7 +20,7 @@ interface OperatorData {
   hasOpenRegister?: boolean;
 }
 
-export function OperatorLoginModal({ onSuccess, onClose }: OperatorLoginModalProps) {
+export function OperatorLoginModal({ onSuccess, onClose, isReauth = false }: OperatorLoginModalProps) {
   const [operators, setOperators] = useState<OperatorData[]>([]);
   const [loadingOps, setLoadingOps] = useState(true);
   const [hasRestaurantModule, setHasRestaurantModule] = useState(false);
@@ -29,7 +30,7 @@ export function OperatorLoginModal({ onSuccess, onClose }: OperatorLoginModalPro
   const [loadingLogin, setLoadingLogin] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  const { setOperator } = useShift();
+  const { operator, setOperator } = useShift();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,12 +38,18 @@ export function OperatorLoginModal({ onSuccess, onClose }: OperatorLoginModalPro
     // isManager=true, jobTitle 'Gerente' ou 'Caixa', ou sem função definida (legado)
     const CAN_OPEN_REGISTER = ['Gerente', 'Caixa'];
     api.get('/operators')
-      .then(res => setOperators(
-        res.data.filter((u: any) =>
+      .then(res => {
+        const ops = res.data.filter((u: any) =>
           u.active &&
           (u.isManager || !u.jobTitle || CAN_OPEN_REGISTER.includes(u.jobTitle))
-        )
-      ))
+        );
+        setOperators(ops);
+        // Em reautenticação (F5 ou token expirado), pré-seleciona automaticamente o operador já logado
+        if (isReauth && operator?.id) {
+          const matched = ops.find((o: any) => o.id === operator.id);
+          if (matched) setSelectedOp(matched);
+        }
+      })
       .catch(() => toast.error('Erro ao carregar operadores.'))
       .finally(() => setLoadingOps(false));
 
@@ -55,7 +62,7 @@ export function OperatorLoginModal({ onSuccess, onClose }: OperatorLoginModalPro
         }
       })
       .catch(() => {});
-  }, []);
+  }, [isReauth, operator?.id]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,8 +72,9 @@ export function OperatorLoginModal({ onSuccess, onClose }: OperatorLoginModalPro
     setErrorMessage(null);
     try {
       const res = await api.post('/auth/operator-login', { operatorId: selectedOp.id, pin });
-      setOperator(res.data);
-      toast.success(`Bem-vindo, ${res.data.name}!`);
+      const { operatorToken, ...operatorData } = res.data;
+      setOperator(operatorData, operatorToken);
+      toast.success(isReauth ? 'Reautenticação concluída com sucesso!' : `Bem-vindo, ${res.data.name}!`);
       onSuccess();
     } catch (err: any) {
       const msg = 'Senha incorreta. Ao esquecer, contate o administrador.';
@@ -88,7 +96,7 @@ export function OperatorLoginModal({ onSuccess, onClose }: OperatorLoginModalPro
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/90 backdrop-blur-md">
       <div className="relative bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden p-8 animate-in fade-in zoom-in-95 duration-300">
-        {onClose && (
+        {!isReauth && onClose && (
           <button
             type="button"
             onClick={onClose}
@@ -102,8 +110,14 @@ export function OperatorLoginModal({ onSuccess, onClose }: OperatorLoginModalPro
           <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
             <Lock className="text-blue-500" size={32} />
           </div>
-          <h2 className="text-2xl font-black text-white tracking-tight">Seleção de Operador</h2>
-          <p className="text-zinc-400 mt-2">Escolha seu perfil e informe seu PIN para acessar o PDV.</p>
+          <h2 className="text-2xl font-black text-white tracking-tight">
+            {isReauth ? 'Reautenticação do Operador' : 'Seleção de Operador'}
+          </h2>
+          <p className="text-zinc-400 mt-2">
+            {isReauth
+              ? 'Sua credencial de segurança expirou ou a página foi recarregada. Confirme seu PIN para continuar.'
+              : 'Escolha seu perfil e informe seu PIN para acessar o PDV.'}
+          </p>
         </div>
 
         {loadingOps ? (
@@ -142,7 +156,7 @@ export function OperatorLoginModal({ onSuccess, onClose }: OperatorLoginModalPro
               onClick={() => { setSelectedOp(null); setPin(''); setErrorMessage(null); }}
               className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm font-semibold mb-4"
             >
-              <ArrowLeft size={16} /> Voltar aos operadores
+              <ArrowLeft size={16} /> {isReauth ? 'Entrar com outro operador' : 'Voltar aos operadores'}
             </button>
             
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 text-center">

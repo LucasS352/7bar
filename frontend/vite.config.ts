@@ -63,12 +63,14 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
 
         runtimeCaching: [
-          // ── Network First: API crítica (produtos, caixa) ─────────────────
-          // Tenta a rede primeiro; se falhar, serve do cache
+          // ── Network First: Catálogo de Produtos ─────────────────────────
+          // Tenta a rede primeiro; se falhar, serve do cache.
+          // NOTA: /api/cash-registers NÃO deve ser interceptado pelo Workbox de forma transparente
+          // para evitar que um snapshot antigo seja confundido com confirmação em tempo real pelo servidor.
+          // O fallback offline do caixa é gerenciado de forma determinística pelo ShiftContext via localStorage.
           {
             urlPattern: ({ url }) =>
-              url.pathname.startsWith('/api/products') ||
-              url.pathname.startsWith('/api/cash-registers'),
+              url.pathname.startsWith('/api/products'),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'pdvpro-api-critical',
