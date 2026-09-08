@@ -20,3 +20,5 @@ clear-operator-id.js
 update-all-tenants.js
 google-credentials.json
 uploads/
+image-packages/
+backups/

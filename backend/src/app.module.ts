@@ -29,6 +29,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { BackupsModule } from './backups/backups.module';
 import { DemoModule } from './demo/demo.module';
+import { ImageMaintenanceModule } from './maintenance/image-maintenance.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { DemoModule } from './demo/demo.module';
     PrismaModule,
     AuthModule,
     ProductsModule,
+    ImageMaintenanceModule,
     CategoriesModule,
     CustomersModule,
     TenantsModule,

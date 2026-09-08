@@ -218,7 +218,7 @@ export default function MassEntryPage() {
       const res = await api.post('/products/upload', formDataObj, { headers: { 'Content-Type': 'multipart/form-data' } });
       setRows(r => r.map(cr => cr.id === rowId ? { ...cr, imageUrl: res.data.imageUrl } : cr));
       toast.success('Foto carregada!');
-    } catch { toast.error('Erro ao enviar a foto.'); }
+    } catch (err: any) { toast.error(String(err?.response?.data?.message || 'Erro ao enviar a foto.')); }
     finally { setRowUploadingIds(prev => ({ ...prev, [rowId]: false })); setActiveUploadRowId(null); }
   };
 

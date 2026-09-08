@@ -63,6 +63,23 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
 
         runtimeCaching: [
+          // Product images have immutable IDs. Keep their cache separate from JSON.
+          // 300 entries x 200 KiB bounds stored payload to ~59 MiB (plus overhead).
+          // Old multi-megabyte originals are never added to this dedicated SW cache.
+          {
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && /^\/api\/products\/uploads\/images\/[^/]+$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'pdvpro-product-images-v1',
+              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 30, purgeOnQuotaError: true },
+              plugins: [{
+                cacheWillUpdate: async ({ response }) => {
+                  const size = Number(response.headers.get('content-length'));
+                  return response.status === 200 && size > 0 && size <= 200 * 1024 ? response : null;
+                },
+              }],
+            },
+          },
           // ── Network First: Catálogo de Produtos ─────────────────────────
           // Tenta a rede primeiro; se falhar, serve do cache.
           // NOTA: /api/cash-registers NÃO deve ser interceptado pelo Workbox de forma transparente
@@ -70,7 +87,8 @@ export default defineConfig({
           // O fallback offline do caixa é gerenciado de forma determinística pelo ShiftContext via localStorage.
           {
             urlPattern: ({ url }) =>
-              url.pathname.startsWith('/api/products'),
+              (url.pathname === '/api/products' || url.pathname.startsWith('/api/products/')) &&
+              !url.pathname.startsWith('/api/products/uploads/'),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'pdvpro-api-critical',

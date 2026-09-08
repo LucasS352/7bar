@@ -118,8 +118,8 @@ export default function MassEditPage() {
       const newUrl = res.data.imageUrl || res.data.url;
       updateField(id, 'imageUrl', newUrl);
       toast.success('Foto do produto atualizada!');
-    } catch (err) {
-      toast.error('Erro ao enviar a imagem.');
+    } catch (err: any) {
+      toast.error(String(err?.response?.data?.message || 'Erro ao enviar a imagem.'));
     } finally {
       setUploadingId(null);
     }

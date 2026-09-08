@@ -4,6 +4,8 @@ import { ProductsService, TenantSettingsDto } from './products.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { BULK_IMAGE_MAX_BYTES, BULK_IMAGE_MAX_FILES } from './bulk-images.helper';
+import { IMAGE_INPUT_BYTES } from '../images/product-image.optimizer';
+import { ImageUploadAdmissionInterceptor } from '../images/image-upload.interceptor';
 
 interface AuthUser {
   tenantId: string;
@@ -57,7 +59,9 @@ export class ProductsController {
   }
 
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(ImageUploadAdmissionInterceptor, FileInterceptor('file', {
+    limits: { fileSize: IMAGE_INPUT_BYTES, files: 1, fields: 0 },
+  }))
   async uploadPhoto(
     @UploadedFile() file: Express.Multer.File,
     @Request() req: any,
@@ -67,7 +71,7 @@ export class ProductsController {
   }
 
   @Post('bulk-images')
-  @UseInterceptors(FilesInterceptor('files', BULK_IMAGE_MAX_FILES, {
+  @UseInterceptors(ImageUploadAdmissionInterceptor, FilesInterceptor('files', BULK_IMAGE_MAX_FILES, {
     limits: { fileSize: BULK_IMAGE_MAX_BYTES, files: BULK_IMAGE_MAX_FILES, fields: 1, fieldSize: 16 * 1024 },
   }))
   async bulkImageUpload(

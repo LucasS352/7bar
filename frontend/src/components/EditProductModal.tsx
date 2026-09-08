@@ -210,7 +210,7 @@ export function EditProductModal({
           quality,
         );
       };
-      img.onerror = reject;
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Formato não reconhecido. Exporte a foto como JPG ou PNG e tente novamente.')); };
       img.src = url;
     });
 
@@ -234,9 +234,8 @@ export function EditProductModal({
       });
       f('imageUrl', res.data.imageUrl);
       toast.success('Foto enviada com sucesso!');
-    } catch (err) {
-      console.error(err);
-      toast.error('Erro ao enviar a foto.');
+    } catch (err: any) {
+      toast.error(String(err?.response?.data?.message || err?.message || 'Erro ao enviar a foto.'));
     } finally {
       setIsUploading(false);
     }

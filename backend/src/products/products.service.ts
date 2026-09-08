@@ -4,6 +4,7 @@ import { TenantContextService } from '../prisma/tenant-context.service';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { bulkImageIdentities, BulkImageIdentity } from './bulk-images.helper';
+import { productImageOptimizer } from '../images/product-image.optimizer';
 
 // ── DTOs internos (evitar `any`) ─────────────────────────────────────────────
 
@@ -1100,10 +1101,11 @@ export class ProductsService {
 
       try {
         // Salvar imagem no banco heart (global)
+        const optimized = await productImageOptimizer.optimize(file.buffer);
         const image = await this.heartPrisma.image.create({
           data: {
-            data: Buffer.from(file.buffer),
-            mimeType: file.mimetype,
+            data: Buffer.from(optimized.data),
+            mimeType: optimized.mimeType,
           },
         });
 
@@ -1139,20 +1141,20 @@ export class ProductsService {
   }
 
   async uploadPhoto(tenantId: string, file: Express.Multer.File) {
-    const prisma = await this.getPrisma();
+    const optimized = await productImageOptimizer.optimize(file.buffer);
     
     // Salvar no banco heart (global) em vez do tenant local
     const image = await this.heartPrisma.image.create({
       data: {
-        data: Buffer.from(file.buffer),
-        mimeType: file.mimetype,
+        data: Buffer.from(optimized.data),
+        mimeType: optimized.mimeType,
       }
     });
 
     // Retorna a URL que vai ser interceptada pelo app.controller.ts
     const imageUrl = `/api/products/uploads/images/${image.id}`;
 
-    return { imageUrl };
+    return { imageUrl, bytes: optimized.data.length, width: optimized.width, height: optimized.height, optimized: true };
   }
 
   /**

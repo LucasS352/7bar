@@ -1,6 +1,7 @@
 import { Readable } from 'stream';
 import multer = require('multer');
 import { ProductsService } from './products.service';
+import { productImageOptimizer } from '../images/product-image.optimizer';
 import { bulkImageIdentities, decodeLegacyImageName, BULK_IMAGE_MAX_BYTES, BULK_IMAGE_MAX_FILES } from './bulk-images.helper';
 
 const name = 'Álcool Etílico Líquido 70° Frasco 1L.jpg';
@@ -33,6 +34,11 @@ async function multipart(wireNames: string[], metadata?: string) {
 }
 
 describe('bulk images — synthetic multipart and mocked databases only', () => {
+  beforeEach(() => jest.spyOn(productImageOptimizer, 'optimize').mockResolvedValue({
+    data: Buffer.from('optimized-webp'), mimeType: 'image/webp', width: 20, height: 20,
+    originalBytes: 1, policy: 'product-webp-800-v1',
+  }));
+  afterEach(() => jest.restoreAllMocks());
   it('round-trips accented UTF-8 names through installed Multer and matches by ID', async () => {
     const parsed = await multipart(['image-0'], manifest());
     const h = harness();
@@ -87,5 +93,18 @@ describe('bulk images — synthetic multipart and mocked databases only', () => 
     expect(result.details.errors[0].fileId).toBe('image-0');
     expect(result.details.matched[0].fileId).toBe('image-1');
     expect(result.details.notFound[0].fileId).toBe('image-2');
+  });
+  it('stores only optimized bytes in both upload paths and never falls back on codec failure', async () => {
+    const h = harness();
+    await h.service.uploadPhoto('test', file());
+    expect(h.image.create.mock.calls[0][0].data).toMatchObject({ data: Buffer.from('optimized-webp'), mimeType: 'image/webp' });
+    (productImageOptimizer.optimize as jest.Mock).mockRejectedValueOnce(new Error('invalid image'));
+    await expect(h.service.uploadPhoto('test', file())).rejects.toThrow('invalid image');
+    expect(h.image.create).toHaveBeenCalledTimes(1);
+    (productImageOptimizer.optimize as jest.Mock).mockRejectedValueOnce(new Error('invalid image'));
+    const result = await h.service.bulkImageUpload('test', [file()]);
+    expect(result.errors).toBe(1);
+    expect(h.image.create).toHaveBeenCalledTimes(1);
+    expect(h.product.update).not.toHaveBeenCalled();
   });
 });

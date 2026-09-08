@@ -62,3 +62,6 @@ mysql/master_products_backup.sql
 
 # Pasta de backups — gerada em runtime pelo sistema
 backups/
+
+# Pacotes de manutenção contêm fotos de clientes e mapeamentos privados.
+image-packages/

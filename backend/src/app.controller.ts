@@ -19,8 +19,16 @@ export class AppController {
   @Get('products/uploads/images/:id')
   async serveProductImage(@Param('id') id: string, @Res() res: Response) {
     try {
+      const etag = `"${id}"`;
+      const header = res.req?.headers?.['if-none-match'];
+      const acceptsCached = typeof header === 'string' && header.split(',').some(value => {
+        const tag = value.trim().replace(/^W\//, '');
+        return tag === etag || tag === '*';
+      });
+      // Validate existence without materializing the LongBlob on a cache hit.
       const image = await this.heartPrisma.image.findUnique({
-        where: { id }
+        where: { id },
+        ...(acceptsCached ? { select: { id: true, mimeType: true } } : {}),
       });
 
       if (!image) {
@@ -30,18 +38,20 @@ export class AppController {
       // Cache imutável: ID é UUID único por imagem — conteúdo nunca muda
       res.setHeader('Content-Type', image.mimeType);
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      res.setHeader('ETag', `"${id}"`);
+      res.setHeader('ETag', etag);
       res.setHeader('Vary', 'Accept-Encoding');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
 
       // Suporte a conditional GET (If-None-Match)
-      const ifNoneMatch = res.req?.headers?.['if-none-match'];
-      if (ifNoneMatch === `"${id}"`) {
+      if (acceptsCached) {
         return res.status(304).end();
       }
 
       res.send(image.data);
     } catch (err) {
-      res.status(404).send('Product image not found');
+      res.setHeader('Cache-Control', 'no-store');
+      if (err instanceof NotFoundException) return res.status(404).send('Product image not found');
+      return res.status(503).send('Image temporarily unavailable');
     }
   }
 }

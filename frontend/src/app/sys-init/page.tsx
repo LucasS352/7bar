@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react";
 import { api } from "@/lib/api";
 import { getFullUrl } from "@/lib/getFullUrl";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { exportTelemetry, clearTelemetry } from "@/lib/telemetry";
 import { db } from "@/lib/db";
+const ImageOptimizationPanel = lazy(() => import("@/components/ImageOptimizationPanel"));
 
 
 const PIN_LENGTH = 10;
@@ -83,6 +84,7 @@ function ModuleBadges({ modulosRaw }: { modulosRaw: any }) {
 }
 
 export default function SysInitPage() {
+  const [imageOptimizationOpen, setImageOptimizationOpen] = useState(false);
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("pin");
 
@@ -846,6 +848,11 @@ export default function SysInitPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col p-6">
+      {imageOptimizationOpen && <Suspense fallback={<div className="fixed inset-0 z-[100] bg-zinc-950 p-8">Carregando manutenção de imagens…</div>}><ImageOptimizationPanel
+        tenants={tenants.filter(t => selectedTenantIds.includes(t.id))}
+        pin={pinDigits.join('')}
+        onClose={() => setImageOptimizationOpen(false)}
+      /></Suspense>}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-violet-700 rounded-full blur-[140px] opacity-20" />
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-600 rounded-full blur-[160px] opacity-15" />
@@ -928,6 +935,11 @@ export default function SysInitPage() {
                 {activeTab === 'tenants' && (
                   <>
                     {/* Botão de atualizar bancos — sempre visível, com toggle Heart e contador de tenants */}
+                    <button disabled={selectedTenantIds.length === 0} onClick={() => setImageOptimizationOpen(true)}
+                      className="bg-cyan-900 hover:bg-cyan-800 disabled:opacity-40 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2"
+                      title="Selecionar lojas para analisar e otimizar fotos, sem atualização de schema">
+                      <ImageIcon size={18} /> Otimizar imagens
+                    </button>
                     <div className="flex items-center gap-2">
                       {/* Toggle Heart */}
                       <button

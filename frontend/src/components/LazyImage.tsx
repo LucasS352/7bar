@@ -3,13 +3,10 @@ import { useEffect, useRef, useState, memo } from 'react';
 /**
  * Componente de imagem otimizado para o PDV:
  * - Usa Intersection Observer para carregar imagens APENAS quando entram na tela
- * - Cache via Map global para não recarregar imagens já vistas na mesma sessão
+ * - Cache binário delegado ao navegador/PWA, sem Set global ilimitado
  * - Mostra placeholder de baixa qualidade (skeleton) enquanto carrega
  * - Evita múltiplas requisições para a mesma imagem
  */
-
-// Cache de URLs já carregadas na sessão (evita re-requisição ao voltar da busca)
-const loadedImages = new Set<string>();
 
 interface LazyImageProps {
   src: string;
@@ -17,22 +14,17 @@ interface LazyImageProps {
   className?: string;
 }
 
-export const LazyImage = memo(({ src, alt, className }: LazyImageProps) => {
-  const [loaded, setLoaded] = useState(() => loadedImages.has(src));
+const LazyImageContent = memo(({ src, alt, className }: LazyImageProps) => {
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
-  const [inView, setInView] = useState(() => loadedImages.has(src));
+  const [inView, setInView] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (loadedImages.has(src)) {
-      setInView(true);
-      setLoaded(true);
-      return;
-    }
-
     const el = containerRef.current;
     if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') { setInView(true); return; }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -49,7 +41,6 @@ export const LazyImage = memo(({ src, alt, className }: LazyImageProps) => {
   }, [src]);
 
   const handleLoad = () => {
-    loadedImages.add(src);
     setLoaded(true);
   };
 
@@ -83,6 +74,7 @@ export const LazyImage = memo(({ src, alt, className }: LazyImageProps) => {
           onLoad={handleLoad}
           onError={handleError}
           decoding="async"
+          loading="lazy"
           fetchPriority="low"
         />
       )}
@@ -90,4 +82,7 @@ export const LazyImage = memo(({ src, alt, className }: LazyImageProps) => {
   );
 });
 
+// A new immutable URL must reset error/loading/visibility, even for the same product.
+export const LazyImage = memo((props: LazyImageProps) => <LazyImageContent key={props.src} {...props} />);
+LazyImageContent.displayName = 'LazyImageContent';
 LazyImage.displayName = 'LazyImage';
