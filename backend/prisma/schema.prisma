@@ -738,6 +738,9 @@ model Payable {
   status      String   @default("PENDING") // PENDING, PAID, CANCELLED
   type        String   @default("VARIABLE") // FIXED, VARIABLE
   isRecurring Boolean  @default(false)
+  recurrenceId    String? @db.VarChar(36)
+  recurrenceMonth String? @db.VarChar(7) // YYYY-MM: identidade da ocorrência, mesmo se vencimento for editado
+  recurrenceDay   Int?                  // dia original (31 -> último dia em meses curtos)
   category    String?  // agua, luz, internet, aluguel, funcionario, boleto, impostos...
   
   supplierId  String?
@@ -750,6 +753,7 @@ model Payable {
   updatedAt   DateTime @updatedAt
 
   @@index([status, dueDate])
+  @@unique([recurrenceId, recurrenceMonth])
   @@map("payables")
 }
 

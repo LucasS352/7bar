@@ -10,7 +10,7 @@
  *    offline    — navigator.onLine === false
  *    recovering — probe voltou a responder; sincronização em andamento
  *
- *  Probe: GET /api — endpoint leve existente, sem auth, sem cache.
+ *  Probe: GET /api/ — endpoint leve existente, sem auth, sem cache.
  *  Debounce: 2 confirmações consecutivas para transição de estado,
  *  evitando alternância frenética do banner.
  * ============================================================
@@ -79,7 +79,9 @@ export function useNetworkStatus(): NetworkStatusState {
     const start = Date.now();
 
     try {
-      await probeAxios.get('/api', {
+      // A barra final evita o redirect automático do Nginx para HTTP/porta interna
+      // quando o TLS público termina no proxy externo (produção/homologação).
+      await probeAxios.get('/api/', {
         signal: probeAbort.current.signal,
         headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
       });

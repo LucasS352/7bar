@@ -19,7 +19,7 @@ export function AddPayableModal({ isOpen, onClose, onSaved, payableToEdit }: Add
   const [dueDate, setDueDate] = useState('');
   const [type, setType] = useState<'FIXED' | 'VARIABLE'>('FIXED');
   const [status, setStatus] = useState<'PENDING' | 'PAID'>('PENDING');
-  const [isRecurring, setIsRecurring] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(true);
   const [category, setCategory] = useState('');
   const [notes, setNotes] = useState('');
   const [supplierId, setSupplierId] = useState('');
@@ -47,7 +47,7 @@ export function AddPayableModal({ isOpen, onClose, onSaved, payableToEdit }: Add
       setDueDate(new Date().toISOString().split('T')[0]);
       setType('FIXED');
       setStatus('PENDING');
-      setIsRecurring(false);
+      setIsRecurring(true);
       setCategory('');
       setNotes('');
       setSupplierId('');
@@ -56,7 +56,8 @@ export function AddPayableModal({ isOpen, onClose, onSaved, payableToEdit }: Add
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description || !amount || !dueDate) {
+    if (loading) return;
+    if (!description.trim() || !amount || !dueDate || !Number.isFinite(Number(amount)) || Number(amount) < 0) {
       toast.error('Preencha os campos obrigatórios.');
       return;
     }
@@ -84,8 +85,8 @@ export function AddPayableModal({ isOpen, onClose, onSaved, payableToEdit }: Add
       }
       onSaved();
       onClose();
-    } catch (err) {
-      toast.error('Erro ao salvar conta.');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Erro ao salvar conta.');
     } finally {
       setLoading(false);
     }
@@ -162,7 +163,8 @@ export function AddPayableModal({ isOpen, onClose, onSaved, payableToEdit }: Add
                 </label>
                 <select
                   value={type}
-                  onChange={e => setType(e.target.value as any)}
+                  onChange={e => { setType(e.target.value as any); if (!payableToEdit) setIsRecurring(e.target.value === 'FIXED'); }}
+                  disabled={!!payableToEdit?.recurrenceId}
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 >
                   <option value="FIXED">Fixa (Mensalidade, Água, Luz)</option>
@@ -227,10 +229,25 @@ export function AddPayableModal({ isOpen, onClose, onSaved, payableToEdit }: Add
               <label htmlFor="isRecurring" className="text-sm font-medium text-white select-none">
                 Conta Recorrente Automática
                 <span className="block text-xs text-zinc-500 font-normal mt-0.5">
-                  Se ativado, ao baixar esta conta, o sistema criará automaticamente a do mês seguinte.
+                  {type === 'FIXED'
+                    ? 'Ao cadastrar, já cria esta conta e os dois meses seguintes como pendentes, sem esperar a baixa.'
+                    : 'Ao baixar esta conta, cria automaticamente a do mês seguinte.'}
                 </span>
               </label>
             </div>
+
+            {type === 'FIXED' && isRecurring && !payableToEdit && dueDate && <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 text-xs text-blue-200">
+              <p className="font-semibold mb-2">Vencimentos que serão criados</p>
+              <div className="flex flex-wrap gap-2">{[0, 1, 2].map(offset => {
+                const [y, m, day] = dueDate.split('-').map(Number);
+                const first = new Date(Date.UTC(y, m - 1 + offset, 1, 12));
+                const last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+                const date = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), Math.min(day, last), 12));
+                return <span key={offset} className="rounded-lg bg-blue-500/10 px-2 py-1">{date.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>;
+              })}</div>
+            </div>}
+            {payableToEdit?.recurrenceId && <p className="text-xs text-zinc-400">Valor, descrição e vencimento alteram somente esta ocorrência. Desativar a recorrência interrompe novas gerações da série, mas mantém as contas já criadas.</p>}
+            {payableToEdit && isRecurring && !payableToEdit.recurrenceId && <p className="text-xs text-amber-300">Conta sem série antecipada: mantém a recorrência ao dar baixa. A antecipação de dois meses vale para novas contas fixas cadastradas com recorrência.</p>}
 
             {/* Observações */}
             <div>
