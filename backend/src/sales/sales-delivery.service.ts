@@ -18,7 +18,8 @@ export class SalesDeliveryService {
     private readonly integrations: IntegrationsService,
   ) {}
 
-  @Cron('*/10 * * * * *')
+  // Cron pausado por decisão operacional: evita varreduras automáticas de 10s no MySQL da VPS
+  // @Cron('*/10 * * * * *')
   async deliverPending() {
     if (this.running) return;
     this.running = true;

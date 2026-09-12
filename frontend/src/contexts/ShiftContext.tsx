@@ -312,13 +312,22 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
 
     const init = async () => {
       try {
+        const token = useAuthStore.getState().token;
+        if (!token && !IS_DEMO) {
+          setOperator(null);
+          return;
+        }
+
         const savedOp = localStorage.getItem('currentOperator');
         let currentOp = savedOp ? JSON.parse(savedOp) : null;
 
         // ── Demo Mode: auto-selecionar operador se não houver ──
         if (!currentOp && IS_DEMO) {
           try {
-            const res = await apiGet('/operators');
+            const res = await apiGet('/operators', {
+              skipAuthRedirect: true,
+              headers: { 'X-Silent-Poll': 'true' },
+            } as any);
             const operators = (res.data || []).filter((u: any) => u.active);
             if (operators.length > 0) {
               currentOp = {
@@ -333,10 +342,13 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        if (currentOp) {
+        if (currentOp && token) {
           // Sincroniza dados atualizados do operador do banco
           try {
-            const opRes = await apiGet(`/operators/${currentOp.id}`);
+            const opRes = await apiGet(`/operators/${currentOp.id}`, {
+              skipAuthRedirect: true,
+              headers: { 'X-Silent-Poll': 'true' },
+            } as any);
             if (opRes.data) {
               currentOp = {
                 ...currentOp,
@@ -349,6 +361,8 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
 
           // Aplica a transição inicial do operador
           setOperator(currentOp);
+        } else if (currentOp && !token) {
+          setOperator(null);
         } else {
           setOperator(null);
         }

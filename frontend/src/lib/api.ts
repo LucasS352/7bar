@@ -13,8 +13,9 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const expected = config as any;
+  const currentOpId = useOperatorTokenStore.getState().operatorId;
   if ((expected.expectedTenantId && expected.expectedTenantId !== useAuthStore.getState().user?.tenant) ||
-      (expected.expectedOperatorId && expected.expectedOperatorId !== useOperatorTokenStore.getState().operatorId)) {
+      (expected.expectedOperatorId && currentOpId && expected.expectedOperatorId !== currentOpId)) {
     return Promise.reject(new axios.CanceledError('Loja ou operador mudou antes do envio. Pedido preservado.'));
   }
   (config as any).__startTime = Date.now();
@@ -136,7 +137,9 @@ api.interceptors.response.use(
         });
         recordTelemetry({ type: 'session_ended', sessionEndReason: 'received_401_interactive' });
         useAuthStore.getState().logout();
-        window.location.href = '/login';
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       }
     }
 

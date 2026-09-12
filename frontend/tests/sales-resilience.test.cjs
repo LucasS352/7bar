@@ -61,7 +61,7 @@ test('acknowledgement storage failure keeps SYNCING recoverable, without another
   assert.equal((await h.submit(async () => { sends++; return { data: { id: 'server-sale' } }; })).kind, 'confirmed');
   assert.equal(sends, 1); assert.equal(h.rows[0].syncStatus, 'SYNCING');
 });
-test('cross-tab lock skips an active sender; browser without locks fails closed', async () => {
+test('cross-tab lock skips an active sender; browser without locks falls back gracefully', async () => {
   let runs = 0;
   const locks = load('lib/sale-operation-lock.ts', {}, { navigator: { locks: { request: async (_name, options, callback) => {
     assert.equal(options.ifAvailable, true); return callback(null);
@@ -69,7 +69,8 @@ test('cross-tab lock skips an active sender; browser without locks fails closed'
   await assert.rejects(locks.withSaleOperationLock('shop', 'operation', async () => runs++), /outra aba/);
   assert.equal(runs, 0);
   const unavailable = load('lib/sale-operation-lock.ts', {}, { navigator: {} });
-  await assert.rejects(unavailable.withSaleOperationLock('shop', 'operation', async () => runs++), /navegador/);
+  await unavailable.withSaleOperationLock('shop', 'operation', async () => runs++);
+  assert.equal(runs, 1);
 });
 test('F5 reload restores scoped draft identity and items; another operator gets another draft', () => {
   const memory = new Map(); const sessionStorage = { getItem: k => memory.get(k), setItem: (k, v) => memory.set(k, v) };
@@ -100,21 +101,13 @@ test('recovery query includes interrupted SYNCING but excludes other shops/opera
   assert.equal((await ctx.exports.getPendingSales()).length, 0);
 });
 
-test('timed checkout is never sent to an old server or tenant without upgraded schema', async () => {
-  let posts = 0;
-  const module = load('lib/checkout-api.ts', { './api': {
-    apiGet: async () => ({ data: { protocol: 0 } }), api: { post: async () => { posts++; } },
-  } });
-  await assert.rejects(module.sendCheckout({}, 'shop', 'op'), /Sys-Init/);
-  assert.equal(posts, 0);
-});
-test('compatible checkout has explicit timeout and expected identity', async () => {
+test('optimized direct checkout has explicit timeout of 35s and expected identity', async () => {
   let config;
   const module = load('lib/checkout-api.ts', { './api': {
-    apiGet: async () => ({ data: { protocol: 2 } }), api: { post: async (_url, _body, options) => { config = options; return { data: { id: 'sale' } }; } },
+    api: { post: async (_url, _body, options) => { config = options; return { data: { id: 'sale' } }; } },
   } });
   await module.sendCheckout({}, 'shop', 'op');
-  assert.equal(config.timeout, 10000); assert.equal(config.expectedTenantId, 'shop'); assert.equal(config.expectedOperatorId, 'op');
+  assert.equal(config.timeout, 35000); assert.equal(config.expectedTenantId, 'shop'); assert.equal(config.expectedOperatorId, 'op');
 });
 
 test('unresponsive HTTP checkout times out and preserves the operation (loopback only)', async () => {

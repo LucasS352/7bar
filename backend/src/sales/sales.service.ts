@@ -819,6 +819,11 @@ export class SalesService {
     this.logger.error(`Erro ao invalidar cache de produtos do tenant ${tenantId}: ${err.message}`);
   }
 
+  // Disparo assíncrono direto da NFC-e quando solicitado pelo operador na venda
+  if (sale?.emitirNfce) {
+    setTimeout(() => this.dispararNfce(tenantId, databaseUrl, sale), 300);
+  }
+
   return sale;
 }
 
