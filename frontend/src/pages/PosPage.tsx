@@ -327,6 +327,11 @@ function PosPageContent() {
   };
 
 
+  // Ref estável para isOnline — evita que loadProducts seja recriado e o catálogo
+  // recarregue toda vez que o useOfflineSync re-renderiza (a cada 30s pelo ciclo recover).
+  const isOnlineRef = useRef<boolean>(syncState.isOnline);
+  isOnlineRef.current = syncState.isOnline;
+
   const loadProducts = useCallback(() => {
     if (!token) { navigate('/login'); return; }
 
@@ -355,7 +360,8 @@ function PosPageContent() {
       });
     };
 
-    if (syncState.isOnline) {
+    // Lê isOnline via ref — estável, sem criar dependência reativa no useCallback
+    if (isOnlineRef.current) {
       // Online: busca da API e atualiza cache local
       api.get('/products?limit=2000')
         .then(async res => {
@@ -404,7 +410,9 @@ function PosPageContent() {
         })
         .finally(() => setIsLoading(false));
     }
-  }, [token, navigate, syncState.isOnline]);
+  // isOnlineRef é uma ref — não vai na dependency array, sem trigger de reload do catálogo
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, navigate]);
 
   useEffect(() => {
     loadProducts();
