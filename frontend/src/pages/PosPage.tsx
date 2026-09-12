@@ -327,15 +327,12 @@ function PosPageContent() {
   };
 
 
-  // Ref estável para isOnline — evita que loadProducts seja recriado e o catálogo
-  // recarregue toda vez que o useOfflineSync re-renderiza (a cada 30s pelo ciclo recover).
+  // Ref estável para isOnline — evita que loadProducts seja recriado a cada re-render do useOfflineSync
   const isOnlineRef = useRef<boolean>(syncState.isOnline);
   isOnlineRef.current = syncState.isOnline;
 
-  const loadProducts = useCallback(() => {
+  const loadProducts = useCallback((backgroundOnly = false) => {
     if (!token) { navigate('/login'); return; }
-
-    setIsLoading(true);
 
     const PRIORITY_KEYWORDS = ['cerveja', 'heineken', 'brahma', 'skol', 'amstel', 'coca-cola', 'refrigerante', 'red bull', 'energético', 'vodka', 'gin', 'água'];
     const getScore = (name: string) => {
@@ -348,69 +345,81 @@ function PosPageContent() {
 
     const sortProducts = (list: any[]) => {
       return [...list].sort((a, b) => {
-        // 1. Prioriza pelo número REAL de vendas (maior para menor)
         const aSales = Number(a.salesCount || 0);
         const bSales = Number(b.salesCount || 0);
-        if (bSales !== aSales) {
-          return bSales - aSales;
-        }
-        // 2. Desempate: Se as vendas forem iguais (ex: tudo zerado), 
-        // prioriza pelas palavras chaves (Cerveja, refri, etc)
+        if (bSales !== aSales) return bSales - aSales;
         return getScore(b.name) - getScore(a.name);
       });
     };
 
-    // Lê isOnline via ref — estável, sem criar dependência reativa no useCallback
-    if (isOnlineRef.current) {
-      // Online: busca da API e atualiza cache local
-      api.get('/products?limit=2000')
-        .then(async res => {
-          const data = (res.data as any).data || [];
-          const sorted = sortProducts(data);
-          setProducts(sorted);
-          setVisibleCount(40); // reset ao recarregar
-          // Persiste no IndexedDB para uso offline futuro
-          await updateProductsCache(sorted.map((p: any) => ({
-            id:         p.id,
-            name:       p.name,
-            shortCode:  p.shortCode,
-            barcode:    p.barcode,
-            unit:       'UN',
-            priceSell:  Number(p.priceSell),
-            stock:      Math.round(Number(p.stock)),
-            salesCount: Number(p.salesCount || 0),
-            active:     p.active !== false,
-            categoryId: p.categoryId,
-            category:   p.category,
-            ncm:        null, cest: null, origem: 0,
-            cfop:       '5102', csosn: null, cstIcms: null,
-            aliqIcms:   0, cstPis: '99', aliqPis: 0,
-            cstCofins:  '99', aliqCofins: 0,
-            cachedAt:   Date.now(),
-            imageUrl:   p.imageUrl,
-            // ─── Produto composto / adicionais ─────────────────────────────
-            isComposite:    p.isComposite ?? false,
-            modifierGroups: p.modifierGroups ?? [],
-          })));
+    // ── PASSO 1: Exibe cache local imediatamente (zero latência de rede) ──────
+    // Só mostra spinner se não houver nada em cache para exibir.
+    if (!backgroundOnly) {
+      getCachedProducts().then(cached => {
+        if (cached.length > 0) {
+          setProducts(sortProducts(cached as unknown as Product[]));
           setOfflineCatalog(false);
-        })
-        .catch(async () => {
-          // Falhou mesmo online — tenta o cache
-          const cached = await getCachedProducts();
-          setProducts(sortProducts(cached as unknown as Product[]));
-          setOfflineCatalog(true);
-        })
-        .finally(() => setIsLoading(false));
-    } else {
-      // Offline: carrega catálogo do IndexedDB
-      getCachedProducts()
-        .then(cached => {
-          setProducts(sortProducts(cached as unknown as Product[]));
-          setOfflineCatalog(true);
-        })
-        .finally(() => setIsLoading(false));
+          setIsLoading(false); // Produtos visíveis antes mesmo de bater no servidor
+        } else {
+          setIsLoading(true); // Sem cache: mostra spinner (primeiro uso ou cache limpo)
+        }
+      }).catch(() => setIsLoading(true));
     }
-  // isOnlineRef é uma ref — não vai na dependency array, sem trigger de reload do catálogo
+
+    // ── PASSO 2: Atualiza em background a partir da API (se online) ───────────
+    if (!isOnlineRef.current) {
+      // Offline: garante que o cache já foi exibido no Passo 1
+      if (backgroundOnly) {
+        getCachedProducts()
+          .then(cached => {
+            setProducts(sortProducts(cached as unknown as Product[]));
+            setOfflineCatalog(true);
+          })
+          .finally(() => setIsLoading(false));
+      }
+      return;
+    }
+
+    api.get('/products?limit=2000')
+      .then(async res => {
+        const data = (res.data as any).data || [];
+        const sorted = sortProducts(data);
+        setProducts(sorted);
+        setVisibleCount(40);
+        setOfflineCatalog(false);
+        // Persiste no IndexedDB para próxima abertura (cache-first funcionar)
+        await updateProductsCache(sorted.map((p: any) => ({
+          id:         p.id,
+          name:       p.name,
+          shortCode:  p.shortCode,
+          barcode:    p.barcode,
+          unit:       'UN',
+          priceSell:  Number(p.priceSell),
+          stock:      Math.round(Number(p.stock)),
+          salesCount: Number(p.salesCount || 0),
+          active:     p.active !== false,
+          categoryId: p.categoryId,
+          category:   p.category,
+          ncm:        null, cest: null, origem: 0,
+          cfop:       '5102', csosn: null, cstIcms: null,
+          aliqIcms:   0, cstPis: '99', aliqPis: 0,
+          cstCofins:  '99', aliqCofins: 0,
+          cachedAt:   Date.now(),
+          imageUrl:   p.imageUrl,
+          isComposite:    p.isComposite ?? false,
+          modifierGroups: p.modifierGroups ?? [],
+        })));
+      })
+      .catch(async () => {
+        // API falhou: garante que o cache está exibido
+        const cached = await getCachedProducts();
+        if (cached.length > 0) {
+          setProducts(sortProducts(cached as unknown as Product[]));
+          setOfflineCatalog(true);
+        }
+      })
+      .finally(() => setIsLoading(false));
+  // isOnlineRef é uma ref — não vai na dependency array
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, navigate]);
 
@@ -772,9 +781,6 @@ function PosPageContent() {
                       
                       <span className="font-semibold text-[1.05rem] text-center leading-snug z-10 line-clamp-2 px-1 text-zinc-100 mt-auto">{product.name}</span>
                       <span className="text-blue-400 font-bold mt-2 text-xl z-10">R$ {Number(product.priceSell).toFixed(2)}</span>
-                      <div className="text-xs text-zinc-500 mt-2 z-10 border border-zinc-700 px-2 py-0.5 rounded-full bg-zinc-950 flex items-center gap-1 font-medium">
-                        Estoque: {Math.round(Number(product.stock))}
-                      </div>
                     </button>
                     {!product.isComposite && (
                       <div className="w-full hidden lg:flex justify-center gap-1 mt-3 z-20 lg:opacity-0 group-hover:opacity-100 transition-all lg:translate-y-2 group-hover:translate-y-0">
