@@ -5,6 +5,8 @@ import { useDemoMissionsStore } from '@/store/demoMissions';
 import { toast } from 'sonner';
 import { PackagePlus, X, Loader2, Save, DollarSign, Barcode, CheckCircle2, HelpCircle, Upload, Image, Trash2 } from 'lucide-react';
 import { ProductSearchSelect } from './ProductSearchSelect';
+import { useKdsEnabled } from '@/hooks/useKdsEnabled';
+import { ProductPreparationFields } from './ProductPreparationFields';
 import { useAuthStore } from '@/store/auth';
 
 const UNIT_OPTIONS = ['UN', 'KG', 'LT', 'CX', 'DZ', 'PCT', 'FD', 'ML', 'GR'];
@@ -21,6 +23,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
   isOpen: boolean; onClose: () => void; onSuccess: () => void;
 }) {
   const { user } = useAuthStore();
+  const kdsEnabled = useKdsEnabled();
   const isStockist = user?.role === 'stockist';
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [grupos, setGrupos] = useState<GrupoTributacao[]>([]);
@@ -119,6 +122,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
     name: '', barcode: '', unit: 'UN',
     priceCost: '', priceSell: '', stock: '', categoryId: '',
     ncm: '', cest: '', origem: 0, grupoTributacaoId: '', imageUrl: '',
+    requiresKitchen: false, requiresBar: false, preparationIngredients: '',
     isComposite: false,
     volumeUnit: '',
     volumeCapacity: '',
@@ -355,6 +359,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
         volumeUnit:        formData.volumeUnit || undefined,
         volumeCapacity:    formData.volumeCapacity ? parseFloat(formData.volumeCapacity) : undefined,
         minStock:          formData.minStock ? parseFloat(formData.minStock) : null,
+        ...(kdsEnabled ? { requiresKitchen: formData.requiresKitchen, requiresBar: formData.requiresBar, preparationIngredients: formData.preparationIngredients || null } : {}),
         modifierGroups:    formData.isComposite ? payloadGroups : undefined,
       });
       useDemoMissionsStore.getState().completeMission('productCreated');
@@ -662,6 +667,8 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
                 </div>
               )}
             </div>
+
+            {kdsEnabled && <ProductPreparationFields value={formData} onChange={value => setFormData(prev => ({ ...prev, ...value }))} />}
 
             <div className="flex items-center justify-between py-2 border-t border-zinc-800/50 mt-2">
               <span className="text-xs font-bold text-zinc-300">Produto Composto / Com adicionais</span>

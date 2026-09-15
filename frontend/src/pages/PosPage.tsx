@@ -1,3 +1,5 @@
+import { ComandaWorkspaceModal } from '@/components/ComandaWorkspaceModal';
+import { syncLoadedComanda } from '@/lib/comanda-cart';
 import { useState, useEffect, useDeferredValue, useMemo, useRef, useCallback, type TouchEvent as ReactTouchEvent } from 'react';
 import { LazyImage } from '@/components/LazyImage';
 import { useNavigate } from 'react-router-dom';
@@ -95,7 +97,6 @@ function PosPageContent() {
   const [isComandasModalOpen, setIsComandasModalOpen] = useState(false);
   const [openComandas, setOpenComandas] = useState<any[]>([]);
   const [loadingComandas, setLoadingComandas] = useState(false);
-  const [comandaSearch, setComandaSearch] = useState('');
   const [selectedComandaId, setSelectedComandaId] = useState<string | null>(null);
   const [newComandaBadge, setNewComandaBadge] = useState(false); // Badge de nova comanda
 
@@ -203,32 +204,7 @@ function PosPageContent() {
     clearCart();
     setActiveComanda(comanda.id, comanda.number);
 
-    comanda.items.forEach((item: any) => {
-      if (item.product) {
-        addItem(
-          {
-            id: item.product.id,
-            name: item.product.name,
-            priceSell: Number(item.unitPrice),
-            stock: item.product.stock || 0,
-            barcode: item.product.barcode || null,
-            shortCode: item.product.shortCode || null,
-            isComposite: item.product.isComposite,
-          },
-          Number(item.quantity),
-          item.modifiers?.map((m: any) => ({
-            groupId: m.optionId,
-            groupName: 'Ingrediente',
-            optionId: m.optionId,
-            optionName: m.name,
-            componentProductId: m.componentProductId,
-            quantity: Number(m.consumedQuantity),
-            priceAdjustment: Number(m.priceAdjustment),
-          })),
-          true // fromComanda: true
-        );
-      }
-    });
+    syncLoadedComanda(comanda);
 
     toast.info(`Comanda #${comanda.number} carregada! Finalizando pagamento...`);
     setIsComandasModalOpen(false);
@@ -429,6 +405,8 @@ function PosPageContent() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isComandasModalOpen) return;
+
       // F1: Atalho direto para Comanda / Mesa
       if (e.key === 'F1') {
         e.preventDefault();
@@ -456,7 +434,7 @@ function PosPageContent() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [items, isComandasEnabled]);
+  }, [items, isComandasEnabled, isComandasModalOpen]);
 
   const handleLogout = () => {
     logoutOperator();
@@ -1536,164 +1514,14 @@ function PosPageContent() {
         </div>
       )}
 
-      {/* Modal Direto de Comandas Abertas no Frente de Caixa (PDV) */}
       {isComandasModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-lg shadow-2xl relative text-left">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h3 className="text-xl font-black text-white flex items-center gap-2">
-                  <UtensilsCrossed className="text-amber-400" size={22} /> Comandas & Mesas Abertas
-                </h3>
-                <p className="text-xs text-zinc-400 mt-0.5">Selecione uma comanda aberta para fechar e receber no caixa.</p>
-              </div>
-              <button 
-                type="button"
-                onClick={() => setIsComandasModalOpen(false)}
-                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white p-2 rounded-xl transition"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="relative mb-2">
-                <Search size={16} className="absolute left-3 top-3 text-zinc-500" />
-                <input
-                  type="text"
-                  placeholder="Buscar por número ou identificação..."
-                  value={comandaSearch}
-                  onChange={e => setComandaSearch(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
-                />
-              </div>
-              
-              {loadingComandas ? (
-                <div className="py-12 text-center text-zinc-500 text-xs">Carregando comandas...</div>
-              ) : openComandas.length === 0 ? (
-                <div className="py-10 text-center text-zinc-500 text-xs italic bg-zinc-950/40 rounded-2xl border border-zinc-800/40">
-                  Nenhuma comanda aberta encontrada no momento.
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto custom-scrollbar p-1">
-                  {[...openComandas]
-                    .sort((a, b) => {
-                      const aWaiting = a.status === 'waiting_payment';
-                      const bWaiting = b.status === 'waiting_payment';
-                      if (aWaiting && !bWaiting) return -1;
-                      if (!aWaiting && bWaiting) return 1;
-                      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-                    })
-                    .filter(c => 
-                      c.number.toLowerCase().includes(comandaSearch.toLowerCase()) || 
-                      (c.customerName && c.customerName.toLowerCase().includes(comandaSearch.toLowerCase()))
-                    )
-                    .map(c => {
-                      const isSelected = selectedComandaId === c.id;
-                      const isWaiting = c.status === 'waiting_payment';
-                      return (
-                        <div
-                          key={c.id}
-                          onClick={() => setSelectedComandaId(c.id)}
-                          className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden ${
-                            isSelected
-                              ? 'bg-amber-500/20 border-amber-500 ring-2 ring-amber-500/50 shadow-lg shadow-amber-500/10'
-                              : isWaiting
-                                ? 'bg-orange-950/40 border-orange-500/60 ring-1 ring-orange-500/40 hover:border-orange-400 hover:bg-orange-900/40 shadow-md shadow-orange-500/10'
-                                : 'bg-emerald-950/40 border-emerald-500/40 hover:border-emerald-400 hover:bg-emerald-900/30'
-                          }`}
-                        >
-                          {/* Header Card com Sinalizador */}
-                          <div className="flex justify-between items-center mb-1.5">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                                isSelected
-                                  ? 'bg-amber-400'
-                                  : isWaiting
-                                    ? 'bg-orange-400 animate-ping'
-                                    : 'bg-emerald-400 animate-pulse'
-                              }`} />
-                              <span className="font-black text-white text-sm truncate">#{c.number}</span>
-                            </div>
-                            {isWaiting ? (
-                              <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/40 shrink-0">
-                                Caixa
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-zinc-400 font-mono shrink-0">{c.items?.length || 0}i</span>
-                            )}
-                          </div>
-
-                          {/* Consumo Total */}
-                          <div className="mt-2 text-right">
-                            <span className="text-[9px] text-zinc-400 block font-bold uppercase tracking-wider">Consumo</span>
-                            <span className={`text-xs sm:text-sm font-black font-mono ${
-                              isSelected
-                                ? 'text-amber-400'
-                                : isWaiting
-                                  ? 'text-orange-400'
-                                  : 'text-emerald-400'
-                            }`}>
-                              R$ {Number(c.total || 0).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
-
-              {/* Comanda selecionada no grid — Ação rápida de cobrança */}
-              {selectedComandaId && openComandas.some(c => c.id === selectedComandaId) && (
-                <div className="mt-3 p-3 bg-zinc-950/90 border border-amber-500/30 rounded-2xl space-y-2 animate-in fade-in duration-150">
-                  {(() => {
-                    const sel = openComandas.find(c => c.id === selectedComandaId);
-                    if (!sel) return null;
-                    return (
-                      <>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs font-bold text-amber-400">
-                            Comanda #{sel.number} Selecionada
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleChargeComandaFromPos(sel)}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-md shadow-emerald-600/20"
-                          >
-                            <ShoppingBag size={14} /> Cobrar no Caixa Agora
-                          </button>
-                        </div>
-
-                        <div className="max-h-28 overflow-y-auto space-y-1 bg-zinc-900/80 rounded-xl p-2 border border-zinc-800/50 custom-scrollbar text-xs">
-                          {sel.items && sel.items.length > 0 ? (
-                            sel.items.map((item: any) => (
-                              <div key={item.id} className="flex justify-between text-[11px] text-zinc-300">
-                                <span className="truncate max-w-[220px]">{Number(item.quantity)}x {item.product?.name || 'Produto'}</span>
-                                <span className="font-mono text-amber-400">R$ {Number(item.totalPrice).toFixed(2)}</span>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-[11px] text-zinc-500 italic">Sem itens lançados nesta comanda</p>
-                          )}
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end pt-4 border-t border-zinc-800 mt-4">
-              <button
-                type="button"
-                onClick={() => setIsComandasModalOpen(false)}
-                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2 rounded-xl font-bold transition text-xs"
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
+        <ComandaWorkspaceModal
+          selectedId={selectedComandaId}
+          onSelect={setSelectedComandaId}
+          onClose={() => setIsComandasModalOpen(false)}
+          onCharge={handleChargeComandaFromPos}
+          onUpdated={updated => setOpenComandas(list => list.map(c => c.id === updated.id ? updated : c))}
+        />
       )}
     </div>
   );

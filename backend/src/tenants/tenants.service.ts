@@ -232,7 +232,7 @@ export class TenantsService {
       } else {
         try {
           const { stdout, stderr } = await execAsync(
-            `npx prisma db push --schema="${heartSchemaPath}" --skip-generate --accept-data-loss`,
+            `npx prisma db push --schema="${heartSchemaPath}" --skip-generate`,
             {
               env: { ...process.env, DATABASE_URL_HEART: heartDbUrl },
               timeout: 120000,
@@ -269,12 +269,12 @@ export class TenantsService {
       this.logger.log(`[Migracao] Iniciando atualizacao de schema do tenant: ${tenant.name} (${tenant.databaseName})`);
       
       // Nota: removida limpeza de operatorId que fechava os caixas abertos.
-      // O db push com --accept-data-loss trata mudanças de schema sem precisar disso.
+      // Atualização de bancos existentes recusa mudanças com risco de perda de dados.
 
       // 2. Executar db push
       try {
         const prismaSchemaPath = path.resolve(process.cwd(), 'prisma', 'schema.prisma');
-        const { stdout, stderr } = await execAsync(`npx prisma db push --schema="${prismaSchemaPath}" --skip-generate --accept-data-loss`, {
+        const { stdout, stderr } = await execAsync(`npx prisma db push --schema="${prismaSchemaPath}" --skip-generate`, {
           env: {
             ...process.env,
             DATABASE_URL_TENANT: tenant.databaseUrl,

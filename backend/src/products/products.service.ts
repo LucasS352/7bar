@@ -37,6 +37,9 @@ interface ProductCreateDto {
   origem?: number;
   imageUrl?: string | null;
   isComposite?: boolean;
+  requiresKitchen?: boolean;
+  requiresBar?: boolean;
+  preparationIngredients?: string | null;
   volumeUnit?: string | null;
   volumeCapacity?: number | null;
   minStock?: number | null;
@@ -59,6 +62,9 @@ interface ProductUpdateDto {
   active?: boolean;
   imageUrl?: string | null;
   isComposite?: boolean;
+  requiresKitchen?: boolean;
+  requiresBar?: boolean;
+  preparationIngredients?: string | null;
   volumeUnit?: string | null;
   volumeCapacity?: number | null;
   minStock?: number | null;
@@ -152,6 +158,13 @@ export class ProductsService {
       data.volumeCapacity = null;
     } else if ('volumeCapacity' in data && data.volumeCapacity != null) {
       data.volumeCapacity = Number(data.volumeCapacity);
+    }
+    for (const key of ['requiresKitchen', 'requiresBar'] as const) {
+      if (data[key] !== undefined && typeof data[key] !== 'boolean') throw new BadRequestException('Destino de preparo inválido.');
+    }
+    if (data.preparationIngredients !== undefined && data.preparationIngredients !== null) {
+      if (typeof data.preparationIngredients !== 'string' || data.preparationIngredients.length > 5000) throw new BadRequestException('Ingredientes devem ter até 5000 caracteres.');
+      data.preparationIngredients = data.preparationIngredients.trim() || null;
     }
     return data;
   }
@@ -374,6 +387,7 @@ export class ProductsService {
 
     if (!sanitized.unit) sanitized.unit = 'UN';
 
+    if (data.requiresKitchen && data.requiresBar) throw new BadRequestException('Selecione apenas um destino: cozinha ou bar.');
     const isComposite = data.isComposite ?? false;
     const volumeUnit = data.volumeUnit || null;
     const volumeCapacity = data.volumeCapacity !== undefined && data.volumeCapacity !== null ? new Prisma.Decimal(data.volumeCapacity) : null;
@@ -393,6 +407,9 @@ export class ProductsService {
         cest: sanitized.cest,
         origem: sanitized.origem,
         imageUrl: sanitized.imageUrl,
+        requiresKitchen: data.requiresKitchen ?? false,
+        requiresBar: data.requiresBar ?? false,
+        preparationIngredients: sanitized.preparationIngredients ?? null,
         isComposite,
         volumeUnit,
         volumeCapacity,
@@ -449,12 +466,16 @@ export class ProductsService {
 
     const oldProduct = await prisma.product.findUnique({ where: { id } });
     if (!oldProduct) throw new NotFoundException('Produto não encontrado.');
+    if ((data.requiresKitchen ?? oldProduct.requiresKitchen) && (data.requiresBar ?? oldProduct.requiresBar)) throw new BadRequestException('Selecione apenas um destino: cozinha ou bar.');
 
     const { shortCode: _ignored, ...updateData } = sanitized as Record<string, unknown>;
     void _ignored;
 
     const updatedProduct = await prisma.$transaction(async (tx) => {
       const productPayload: any = {};
+      if (data.requiresKitchen !== undefined) productPayload.requiresKitchen = data.requiresKitchen;
+      if (data.requiresBar !== undefined) productPayload.requiresBar = data.requiresBar;
+      if (sanitized.preparationIngredients !== undefined) productPayload.preparationIngredients = sanitized.preparationIngredients;
       
       if (updateData.name !== undefined) productPayload.name = updateData.name;
       if (updateData.barcode !== undefined) productPayload.barcode = updateData.barcode;

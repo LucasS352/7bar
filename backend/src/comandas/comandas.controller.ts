@@ -42,6 +42,8 @@ export class ComandasController {
         unitPrice?: number;
         notes?: string;
         createdById?: string;
+        serveImmediately?: boolean;
+        modifiers?: Array<{ optionId: string }>;
       }>;
     },
   ) {

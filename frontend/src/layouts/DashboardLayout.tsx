@@ -79,6 +79,7 @@ export function DashboardLayout() {
         { name: 'Cons. Colaborador', to: '/dashboard/comandas',         icon: Users }
       ]),
       { name: 'Contas a Pagar',     to: '/dashboard/finance/payables',      icon: Banknote },
+      ...(modules?.kds === true ? [{ name: 'Cozinha / Bar (KDS)', to: '/kds', icon: UtensilsCrossed }] : []),
       ...(modules?.restaurante === true ? [
         { name: 'Modo Garçom',      to: '/garcom',                           icon: UtensilsCrossed }
       ] : []),

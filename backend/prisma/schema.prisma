@@ -105,6 +105,10 @@ model Category {
 //  Espelhado nos campos PRO_* do Packon identificados no Firebird
 // ------------------------------------------------------------
 model Product {
+  requiresKitchen Boolean @default(false)
+  requiresBar Boolean @default(false)
+  preparationIngredients String? @db.Text
+
   id                  String           @id @default(uuid())
   categoryId          String
   category            Category         @relation(fields: [categoryId], references: [id])
@@ -926,6 +930,14 @@ model Comanda {
 }
 
 model ComandaItem {
+  kdsDestination String?
+  kdsStatus String?
+  kdsSentAt DateTime?
+  kdsReadyAt DateTime?
+  kdsDeliveredAt DateTime?
+  serveImmediately Boolean @default(false)
+  @@index([kdsStatus, kdsSentAt])
+
   id          String    @id @default(uuid())
   comandaId   String
   comanda     Comanda   @relation(fields: [comandaId], references: [id], onDelete: Cascade)

@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { KdsService } from './kds.service';
+import { initialKds } from './kds.rules';
 import { Prisma } from '@prisma/client';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
@@ -14,6 +16,7 @@ export class ComandasService {
     private readonly tenantContext: TenantContextService,
     private readonly productsService: ProductsService,
     private readonly integrationsService: IntegrationsService,
+    private readonly kds: KdsService,
   ) {}
 
   private async getPrisma() {
@@ -168,6 +171,7 @@ export class ComandasService {
       notes?: string;
       createdById?: string;
       modifiers?: Array<{ optionId: string }>;
+      serveImmediately?: boolean;
     }>,
   ) {
     const { tenantId } = this.tenantContext.get();
@@ -193,6 +197,7 @@ export class ComandasService {
     // ── Ler configurações do tenant ──────────────────────────────────────────
     const tenantSettings = await (prisma as any).tenantSettings.findFirst();
     const allowNegativeStock: boolean = tenantSettings?.allowNegativeStock ?? false;
+    const kdsEnabled = await this.kds.enabled();
 
     // ── IDs dos produtos cujo estoque foi alterado (para sync pós-commit) ────
     const affectedProductIds = new Set<string>();
@@ -220,6 +225,7 @@ export class ComandasService {
         });
 
         if (!product) throw new NotFoundException(`Produto ID ${item.productId} não encontrado.`);
+        const kdsData = initialKds(product, kdsEnabled, item.serveImmediately);
 
         // ════════════════════════════════════════════════════════════════════
         //  PRODUTO SIMPLES
@@ -274,6 +280,7 @@ export class ComandasService {
               notes: item.notes || null,
               createdById: item.createdById || null,
               stockDeducted: true,
+              ...kdsData,
             },
           });
 
@@ -422,6 +429,7 @@ export class ComandasService {
               notes: item.notes || null,
               createdById: item.createdById || null,
               stockDeducted: true,
+              ...kdsData,
               modifiers: {
                 create: modifiersToCreate,
               },

@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useKdsEnabled } from '@/hooks/useKdsEnabled';
+import { KdsReadyOrders } from '@/components/KdsReadyOrders';
+import { KdsStatus, kdsLabels } from '@/lib/kds';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
@@ -23,6 +26,9 @@ interface WaiterOperator {
 }
 
 interface ComandaItem {
+  kdsStatus?: KdsStatus | null;
+  serveImmediately?: boolean;
+  kdsDestination?: string | null;
   id: string;
   productId: string;
   quantity: number;
@@ -49,6 +55,8 @@ interface Comanda {
 }
 
 interface Product {
+  requiresKitchen?: boolean;
+  requiresBar?: boolean;
   id: string;
   name: string;
   priceSell: number;
@@ -95,6 +103,8 @@ function normalizeText(s: string): string {
 
 export function GarcomPage() {
   const { token } = useAuthStore();
+  const kdsEnabled = useKdsEnabled();
+  const [serveImmediately, setServeImmediately] = useState(false);
 
   // Estado global do garçom
   const [waiter, setWaiter] = useState<WaiterOperator | null>(() => {
@@ -139,6 +149,7 @@ export function GarcomPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [itemQty, setItemQty] = useState(1);
   const [itemNotes, setItemNotes] = useState('');
+  useEffect(() => { setServeImmediately(false); }, [selectedProduct?.id, showAddItem]);
   const [addingItem, setAddingItem] = useState(false);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   // Produto composto aguardando seleção de modificadores para lançamento em comanda
@@ -352,6 +363,7 @@ export function GarcomPage() {
           quantity: qty,
           notes: notes || undefined,
           createdById: waiter?.id,
+          ...(kdsEnabled ? { serveImmediately: product.requiresKitchen ? false : serveImmediately } : {}),
           ...(modifiers.length > 0 ? { modifiers } : {}),
         }],
       });
@@ -487,6 +499,8 @@ export function GarcomPage() {
             )}
           </div>
         </header>
+
+        {kdsEnabled && waiter && <KdsReadyOrders onDelivered={fetchComandas} />}
 
         {/* ─── Conteúdo Principal: Grid de Mesas ────────────────────────────── */}
         {waiter && !selectedComanda ? (
@@ -664,6 +678,7 @@ export function GarcomPage() {
                           {Number(item.quantity)}x · {formatMoney(Number(item.unitPrice))}
                           {item.createdBy?.name && <span className="text-[10px] text-zinc-600 ml-1.5">(por {item.createdBy.name})</span>}
                         </p>
+                        {kdsEnabled && item.kdsStatus && <p className={`text-xs mt-1 ${item.kdsStatus === 'READY' ? 'text-emerald-400 font-bold' : 'text-zinc-400'}`}>{kdsLabels[item.kdsStatus]}{item.kdsDestination !== 'KITCHEN' && item.kdsStatus !== 'DELIVERED' ? (item.serveImmediately ? ' · Servir agora' : ' · Servir junto') : ''}</p>}
                         {item.notes && <p className="text-xs text-zinc-400 italic mt-0.5">"{item.notes}"</p>}
                       </div>
                       <span className="text-sm font-bold text-white font-mono shrink-0">{formatMoney(Number(item.totalPrice))}</span>
@@ -986,6 +1001,11 @@ export function GarcomPage() {
                   </div>
                 </div>
 
+                {kdsEnabled && !selectedProduct.requiresKitchen && <label className="flex gap-3 items-start rounded-xl border border-sky-500/25 bg-sky-500/10 p-3 text-sm text-white">
+                  <input type="checkbox" checked={serveImmediately} onChange={e => setServeImmediately(e.target.checked)} className="mt-1 h-4 w-4" />
+                  <span>Servir agora<span className="block text-xs text-sky-200/70 mt-1">Desmarcado: servir junto com a comida/porção. Se não houver comida, a entrega pode ser confirmada normalmente.</span></span>
+                </label>}
+                {kdsEnabled && (selectedProduct.requiresKitchen || selectedProduct.requiresBar) && <p className="text-xs text-amber-300">Será enviado para {selectedProduct.requiresKitchen ? 'a cozinha' : 'o bar'}.</p>}
                 <input
                   value={itemNotes}
                   onChange={e => setItemNotes(e.target.value)}
@@ -1125,7 +1145,7 @@ export function GarcomPage() {
         <CameraBarcodeScannerModal
           isOpen={showCamera}
           onClose={() => setShowCamera(false)}
-          onDetected={handleBarcodeScan}
+          onScan={handleBarcodeScan}
         />
       )}
 

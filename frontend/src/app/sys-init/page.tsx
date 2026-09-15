@@ -48,6 +48,7 @@ function parseDateLocal(dateStr: string): Date {
 }
 
 const MODULE_BADGES: Record<string, { label: string; color: string }> = {
+  kds: { label: 'KDS', color: 'bg-green-500/20 text-green-300 border-green-500/30' },
   nfce:           { label: 'NFC-e',    color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
   estoque:        { label: 'Estoque',  color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
   dashboardMobile:{ label: 'Mobile',   color: 'bg-violet-500/20 text-violet-300 border-violet-500/30' },
@@ -2114,6 +2115,7 @@ export default function SysInitPage() {
                       { id: 'dashboardMobile', title: 'Dashboard Mobile', desc: 'Acesso ao painel resumido em dispositivos móveis.', badge: MODULE_BADGES.dashboardMobile },
                       { id: 'comandas', title: 'Comandas & Mesas', desc: 'Permite o lançamento, abertura e consumo em comandas/mesas.', badge: MODULE_BADGES.comandas },
                       { id: 'vitrineDigital', title: '▪ Vitrine Digital TV', desc: 'Exibe promoções e produtos em uma TV/tela secundária via URL pública.', badge: MODULE_BADGES.vitrineDigital },
+                      { id: 'kds', title: 'KDS — Cozinha e Bar', desc: 'Ativa a produção em /kds e a retirada pelo garçom. Produtos existentes permanecem sem destino até serem configurados.', badge: MODULE_BADGES.kds },
                       { id: 'restaurante', title: '🍽️ Modo Restaurante / Garçom', desc: 'Ativa a interface dedicada para garçons criarem e gerenciarem comandas sem precisar abrir caixa. Acesso via /garcom.', badge: MODULE_BADGES.restaurante },
                     ].map(item => (
                       <div key={item.id} className="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-800 rounded-xl hover:border-zinc-700 transition">

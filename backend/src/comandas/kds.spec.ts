@@ -1,0 +1,149 @@
+import { initialKds, assertKdsTransition } from './kds.rules';
+import { KdsService } from './kds.service';
+
+describe('KDS opt-in e ciclo de produção', () => {
+  it('não envia produtos antigos nem altera lançamentos com o módulo desligado', () => {
+    expect(initialKds({}, true)).toEqual({});
+    expect(initialKds({ requiresKitchen: true }, false, false)).toEqual({});
+    expect(initialKds({}, false, true)).toEqual({});
+  });
+  it('envia cozinha e bar para seus destinos e respeita o check', () => {
+    expect(initialKds({ requiresKitchen: true }, true, true)).toMatchObject({
+      kdsDestination: 'KITCHEN',
+      kdsStatus: 'PENDING',
+      serveImmediately: false,
+    });
+    expect(initialKds({ requiresBar: true }, true, true)).toMatchObject({
+      kdsDestination: 'BAR',
+      kdsStatus: 'PENDING',
+      serveImmediately: true,
+    });
+    expect(initialKds({}, true, false)).toMatchObject({
+      kdsDestination: 'SERVICE',
+      kdsStatus: 'READY',
+      serveImmediately: false,
+    });
+    expect(initialKds({}, true, true)).toMatchObject({
+      kdsDestination: 'SERVICE',
+      kdsStatus: 'READY',
+      kdsReadyAt: expect.any(Date),
+    });
+  });
+  it('rejeita check inválido e saltos ou regressões de estado', () => {
+    expect(() => initialKds({}, true, 'false' as any)).toThrow();
+    for (const [from, to] of [
+      [null, 'READY'],
+      ['PENDING', 'DELIVERED'],
+      ['READY', 'PREPARING'],
+      ['DELIVERED', 'DELIVERED'],
+    ])
+      expect(() => assertKdsTransition(from, to!)).toThrow();
+    expect(() => assertKdsTransition('PENDING', 'PREPARING')).not.toThrow();
+    expect(() => assertKdsTransition('PREPARING', 'READY')).not.toThrow();
+    expect(() => assertKdsTransition('READY', 'DELIVERED')).not.toThrow();
+  });
+});
+
+describe('KDS isolamento e entrega', () => {
+  function setup(enabled = true) {
+    const tx = {
+      comandaItem: {
+        findMany: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        count: jest.fn().mockResolvedValue(0),
+      },
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 'c1', status: 'open' }]),
+    };
+    const client = { ...tx, $transaction: (fn: any) => fn(tx) };
+    const manager = { getTenantClient: jest.fn().mockResolvedValue(client) };
+    const context = {
+      get: () => ({ tenantId: 'tenant-a', databaseUrl: 'db-a' }),
+    };
+    const heart = {
+      tenant: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ modulos: JSON.stringify({ kds: enabled }) }),
+      },
+    };
+    const service = new KdsService(
+      heart as any,
+      manager as any,
+      context as any,
+    );
+    return { service, tx, manager };
+  }
+  const ready = {
+    id: 'i1',
+    comandaId: 'c1',
+    kdsStatus: 'READY',
+    kdsDestination: 'BAR',
+    serveImmediately: false,
+    comanda: { status: 'open' },
+  };
+  it('bloqueia leitura e escrita com módulo desativado', async () => {
+    const { service, manager } = setup(false);
+    await expect(service.tickets()).rejects.toThrow('KDS não está ativo');
+    await expect(service.update(['i1'], 'DELIVERED')).rejects.toThrow(
+      'KDS não está ativo',
+    );
+    expect(manager.getTenantClient).not.toHaveBeenCalled();
+  });
+  it('consulta somente o banco do tenant, comandas ativas e itens não entregues', async () => {
+    const { service, manager, tx } = setup();
+    await service.tickets();
+    expect(manager.getTenantClient).toHaveBeenCalledWith('tenant-a', 'db-a');
+    expect(tx.comandaItem.findMany.mock.calls[0][0].where).toEqual({
+      kdsStatus: { in: ['PENDING', 'PREPARING', 'READY'] },
+      comanda: { status: { in: ['open', 'waiting_payment'] } },
+    });
+  });
+  it('não entrega bebida junto enquanto a cozinha prepara comida', async () => {
+    const { service, tx } = setup();
+    tx.comandaItem.findMany.mockResolvedValue([ready]);
+    tx.comandaItem.count.mockResolvedValue(1);
+    await expect(service.update(['i1'], 'DELIVERED')).rejects.toThrow(
+      'Aguarde a cozinha',
+    );
+    expect(tx.comandaItem.updateMany).not.toHaveBeenCalled();
+  });
+  it('entrega imediata independe da cozinha, sem fechar comanda ou mexer no valor', async () => {
+    const { service, tx } = setup();
+    tx.comandaItem.findMany.mockResolvedValue([
+      { ...ready, serveImmediately: true },
+    ]);
+    await expect(service.update(['i1'], 'DELIVERED')).resolves.toEqual({
+      updated: 1,
+    });
+    expect(tx.comandaItem.count).not.toHaveBeenCalled();
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(tx.comandaItem.updateMany.mock.calls[0][0].data).toEqual({
+      kdsStatus: 'DELIVERED',
+      kdsDeliveredAt: expect.any(Date),
+    });
+  });
+  it('impede duplicação por concorrência e alterações em itens de comandas encerradas', async () => {
+    const { service, tx } = setup();
+    tx.comandaItem.findMany.mockResolvedValue([ready]);
+    tx.comandaItem.updateMany.mockResolvedValue({ count: 0 });
+    await expect(service.update(['i1'], 'DELIVERED')).rejects.toThrow(
+      'outra tela',
+    );
+    tx.comandaItem.findMany.mockResolvedValue([
+      { ...ready, comanda: { status: 'closed' } },
+    ]);
+    await expect(service.update(['i1'], 'DELIVERED')).rejects.toThrow(
+      'encerrada',
+    );
+  });
+  it('não aceita IDs inexistentes nem lotes duplicados', async () => {
+    const { service, tx } = setup();
+    await expect(service.update(['i1', 'i1'], 'READY')).rejects.toThrow(
+      'distintos',
+    );
+    tx.comandaItem.findMany.mockResolvedValue([]);
+    await expect(service.update(['foreign-id'], 'READY')).rejects.toThrow(
+      'não encontrado',
+    );
+  });
+});

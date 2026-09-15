@@ -4,6 +4,8 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Edit3, X, Loader2, Save, DollarSign, FileText, Tag, PackageOpen, Upload, Trash2 } from 'lucide-react';
 import { ProductSearchSelect } from './ProductSearchSelect';
+import { useKdsEnabled } from '@/hooks/useKdsEnabled';
+import { ProductPreparationFields } from './ProductPreparationFields';
 import { useAuthStore } from '@/store/auth';
 
 const UNIT_OPTIONS = ['UN', 'KG', 'LT', 'CX', 'DZ', 'PCT', 'FD', 'ML', 'GR'];
@@ -31,6 +33,9 @@ interface ProductData {
   origem?: number;
   grupoTributacaoId?: string | null;
   imageUrl?: string | null;
+  requiresKitchen?: boolean;
+  requiresBar?: boolean;
+  preparationIngredients?: string | null;
   isComposite?: boolean;
   volumeUnit?: string | null;
   volumeCapacity?: number | null;
@@ -46,6 +51,7 @@ export function EditProductModal({
   onSuccess: () => void;
 }) {
   const { user } = useAuthStore();
+  const kdsEnabled = useKdsEnabled();
   const isStockist = user?.role === 'stockist';
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [grupos, setGrupos] = useState<GrupoTributacao[]>([]);
@@ -68,6 +74,7 @@ export function EditProductModal({
     name: '', barcode: '', unit: 'UN',
     priceCost: '', priceSell: '', stock: '', categoryId: '',
     ncm: '', cest: '', origem: 0, grupoTributacaoId: '', imageUrl: '',
+    requiresKitchen: false, requiresBar: false, preparationIngredients: '',
     isComposite: false, volumeUnit: '', volumeCapacity: '', minStock: '',
   });
 
@@ -86,6 +93,9 @@ export function EditProductModal({
         origem:             product.origem         ?? 0,
         grupoTributacaoId:  product.grupoTributacaoId || '',
         imageUrl:           product.imageUrl       || '',
+        requiresKitchen: product.requiresKitchen ?? false,
+        requiresBar: product.requiresBar ?? false,
+        preparationIngredients: product.preparationIngredients || '',
         isComposite:        product.isComposite    ?? false,
         volumeUnit:         product.volumeUnit     || '',
         volumeCapacity:     product.volumeCapacity?.toString() || '',
@@ -325,6 +335,7 @@ export function EditProductModal({
         volumeUnit:         formData.volumeUnit || null,
         volumeCapacity:     formData.volumeCapacity ? parseFloat(formData.volumeCapacity) : null,
         minStock:           formData.minStock ? parseFloat(formData.minStock) : null,
+        ...(kdsEnabled ? { requiresKitchen: formData.requiresKitchen, requiresBar: formData.requiresBar, preparationIngredients: formData.preparationIngredients || null } : {}),
         modifierGroups:     formData.isComposite ? payloadGroups : [],
       });
       toast.success('Produto atualizado com sucesso!');
@@ -572,6 +583,8 @@ export function EditProductModal({
                 </div>
               )}
             </div>
+
+            {kdsEnabled && <ProductPreparationFields value={formData} onChange={value => setFormData(prev => ({ ...prev, ...value }))} />}
 
             <div className="flex items-center justify-between py-2 border-t border-zinc-800/50">
               <span className="text-xs font-bold text-zinc-300">Produto Composto / Com adicionais</span>

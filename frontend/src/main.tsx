@@ -36,6 +36,7 @@ import FiscalManagementPage from './app/dashboard/fiscal/gestao/page';
 import BulkImagesPage from './pages/dashboard/BulkImagesPage';
 import VitrinePage from './pages/dashboard/VitrinePage';
 import VitrineTvPage from './pages/VitrineTvPage';
+import { KdsPage } from './pages/KdsPage';
 import { GarcomPage } from './pages/GarcomPage';
 
 // Stores
@@ -137,6 +138,8 @@ function App() {
             </PrivateRoute>
           }
         />
+
+        <Route path="/kds" element={<PrivateRoute><KdsPage /></PrivateRoute>} />
 
         {/* Dashboard e sub-rotas */}
         <Route
