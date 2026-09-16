@@ -1,0 +1,54 @@
+import { api } from './api';
+import { db } from './db';
+import { useAuthStore } from '@/store/auth';
+
+const flights = new Map<string, Promise<any>>();
+function assertScope(tenantId: string) {
+  if (!tenantId || useAuthStore.getState().user?.tenant !== tenantId) throw new Error('A loja mudou. Reabra as comandas.');
+}
+async function excludeCharged(tenantId: string, items: any[]) {
+  const sales = await db.offline_sales.where('tenantId').equals(tenantId).toArray();
+  const charged = new Set(sales.map(s => s.comandaId).filter(Boolean));
+  return items.filter(item => !charged.has(item.id));
+}
+export async function readComandas(tenantId: string): Promise<{ items: any[]; savedAt: number; offline: boolean }> {
+  assertScope(tenantId);
+  if (flights.has(tenantId)) return flights.get(tenantId)!;
+  const request = (async () => {
+    try {
+      if (!navigator.onLine) throw Object.assign(new Error('Sem conexão'), { code: 'ERR_NETWORK' });
+      const res = await api.get('/v1/comandas?status=open', { timeout: 6000, expectedTenantId: tenantId } as any);
+      assertScope(tenantId);
+      const savedAt = Date.now();
+      await db.comandas_cache.put({ tenantId, savedAt, items: res.data });
+      return { items: await excludeCharged(tenantId, res.data), savedAt, offline: false };
+    } catch (err: any) {
+      assertScope(tenantId);
+      if (err.response && err.response.status < 500) throw err;
+      const cached = await db.comandas_cache.get(tenantId);
+      if (!cached) throw new Error('Nenhuma cópia das comandas disponível neste aparelho. Conecte o caixa antes do atendimento.');
+      return { items: await excludeCharged(tenantId, cached.items), savedAt: cached.savedAt, offline: true };
+    }
+  })();
+  flights.set(tenantId, request);
+  try { return await request; } finally { flights.delete(tenantId); }
+}
+
+export async function readComanda(tenantId: string, id: string) {
+  assertScope(tenantId);
+  const charged = await db.offline_sales.where('tenantId').equals(tenantId).filter(s => s.comandaId === id).first();
+  if (charged) throw new Error('Comanda já possui cobrança neste aparelho. Confira as pendências.');
+  try {
+    if (!navigator.onLine) throw new Error('Sem conexão');
+    const res = await api.get(`/v1/comandas/${id}`, { timeout: 6000, expectedTenantId: tenantId } as any);
+    assertScope(tenantId);
+    return { data: res.data, offline: false, savedAt: Date.now() };
+  } catch (err: any) {
+    assertScope(tenantId);
+    if (err.response && err.response.status < 500) throw err;
+    const cached = await db.comandas_cache.get(tenantId);
+    const data = cached?.items.find(c => c.id === id);
+    if (!data) throw new Error('Esta comanda não está disponível na cópia local.');
+    return { data, offline: true, savedAt: cached!.savedAt };
+  }
+}

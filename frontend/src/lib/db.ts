@@ -177,6 +177,7 @@ import type { TelemetryEvent } from './telemetry';
 // ── Definição do banco Dexie ─────────────────────────────────────────────────
 
 class SevenBarDatabase extends Dexie {
+  comandas_cache!: Table<{ tenantId: string; savedAt: number; items: any[] }, string>;
   offline_sales!:    Table<OfflineSale, number>;
   products_cache!:   Table<CachedProduct, string>;
   telemetry_events!: Table<TelemetryEvent, number>;
@@ -196,6 +197,7 @@ class SevenBarDatabase extends Dexie {
       products_cache: 'id, name, barcode, shortCode',
       telemetry_events: '++id, type, createdAt, sessionId',
     });
+    this.version(3).stores({ comandas_cache: 'tenantId' });
   }
 }
 
@@ -225,6 +227,11 @@ export async function saveOfflineSale(
     const existing = await db.offline_sales.where('localId').equals(sale.localId)
       .filter(row => row.tenantId === sale.tenantId).first();
     if (existing) throw new Error('Operação já registrada. Recupere a pendência existente; não recrie o pedido.');
+    if (sale.comandaId) {
+      const charged = await db.offline_sales.where('tenantId').equals(sale.tenantId)
+        .filter(row => row.comandaId === sale.comandaId).first();
+      if (charged) throw new Error('Esta comanda já possui cobrança registrada neste aparelho. Confira as pendências; não cobre novamente.');
+    }
     return db.offline_sales.add(sale);
   });
 }

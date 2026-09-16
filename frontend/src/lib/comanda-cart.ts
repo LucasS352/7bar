@@ -17,6 +17,7 @@ export function syncLoadedComanda(comanda: { id: string; items: any[] }) {
     shortCode: item.product?.shortCode || null,
     cartKey: `${item.productId || item.product.id}__comanda_${item.id}`,
     fromComanda: true,
+    comandaItemId: item.id,
     modifiers: item.modifiers?.map((m: any) => ({
       groupId: m.optionId,
       groupName: 'Adicional',

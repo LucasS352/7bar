@@ -96,6 +96,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   const [saleResult, setSaleResult] = useState<Record<string, unknown> | null>(null);
   const [nfcePolling, setNfcePolling] = useState(false);
   const [savedOffline, setSavedOffline] = useState(false);
+  const [savedOfflineTotal, setSavedOfflineTotal] = useState(0);
 
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 767px)');
@@ -727,6 +728,9 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         // Quando há comanda ativa, separa os itens extras adicionados no balcão para baixa normal
         ...(activeComandaId ? {
           comandaId: activeComandaId,
+          expectedComandaItems: items.filter(i => i.fromComanda).map(i => ({
+            id: i.comandaItemId, quantity: Number(i.quantity), totalPrice: Number(i.subtotal),
+          })),
           extraItems: items
             .filter(i => !i.fromComanda)
             .map(i => ({
@@ -798,6 +802,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
       if (offlineOnly) {
         await withSaleOperationLock(localSale.tenantId, operationId, () => saveOfflineSale({ ...localSale, syncStatus: 'PENDING' }));
+        setSavedOfflineTotal(localSale.total);
         releaseOwnCart();
         clearOwnCart();
         setSavedOffline(true);
@@ -813,6 +818,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         return;
       }
       if (outcome.kind === 'pending') {
+        setSavedOfflineTotal(localSale.total);
         clearOwnCart();
         setSavedOffline(true);
         toast.warning('Pedido preservado. Resultado do servidor ainda não confirmado; acompanhe as pendências.');
@@ -948,7 +954,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
             <h3 className="text-2xl font-bold text-white">Venda em Contingência!</h3>
             <p className="text-zinc-400 text-sm">Salva localmente. Será sincronizada automaticamente quando a conexão retornar.</p>
             <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
-              <p className="text-orange-400 font-bold text-xl">R$ {total.toFixed(2)}</p>
+              <p className="text-orange-400 font-bold text-xl">R$ {savedOfflineTotal.toFixed(2)}</p>
               <p className="text-orange-400/70 text-xs mt-1">OFFLINE_CONTINGENCY</p>
             </div>
           </div>

@@ -24,6 +24,7 @@ export type CartItem = Product & {
   modifiers?: CartItemModifier[];
   effectivePriceSell: number;
   fromComanda?: boolean;
+  comandaItemId?: string;
 };
 
 interface CartState {

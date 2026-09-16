@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
+import { readComandas, readComanda } from '@/lib/comandas-offline';
 import { useCartStore } from '@/store/cart';
 import { syncLoadedComanda } from '@/lib/comanda-cart';
 import { kdsLabels, type KdsStatus } from '@/lib/kds';
@@ -87,6 +89,8 @@ export function ComandaWorkspaceModal({
   onUpdated,
   launch,
 }: Props) {
+  const tenantId = useAuthStore(state => state.user?.tenant) || '';
+  const [offlineAt, setOfflineAt] = useState<number | null>(null);
   const [comandas, setComandas] = useState<Comanda[]>([]);
   const [detail, setDetail] = useState<Comanda | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,33 +125,35 @@ export function ComandaWorkspaceModal({
     const request = ++detailVersion.current;
     setDetailLoading(true);
     try {
-      const res = await api.get(`/v1/comandas/${id}`, { timeout: 10000 });
+      const res = await readComanda(tenantId, id);
       if (request === detailVersion.current && selection.current === id) {
         if (!['open', 'waiting_payment'].includes(res.data.status)) {
           setDetail(null);
           setError('Esta comanda foi encerrada. Selecione outra mesa.');
         } else {
           setDetail(res.data);
+          setOfflineAt(res.offline ? res.savedAt : null);
           setError('');
         }
       }
-    } catch {
+    } catch (err: any) {
       if (request === detailVersion.current) {
         setDetail(null);
-        setError('Não foi possível carregar os itens. Tente atualizar.');
+        setError(err.message || 'Não foi possível carregar os itens. Tente atualizar.');
       }
     } finally {
       if (request === detailVersion.current) setDetailLoading(false);
     }
-  }, []);
+  }, [tenantId]);
 
   const refresh = useCallback(async () => {
     if (mutating.current) return;
     const request = ++version.current;
     try {
-      const res = await api.get('/v1/comandas?status=open', { timeout: 10000 });
+      const res = await readComandas(tenantId);
       if (request !== version.current) return;
-      setComandas(res.data);
+      setComandas(res.items);
+      setOfflineAt(res.offline ? res.savedAt : null);
       setError('');
       const id = selection.current;
       if (id && id !== 'new') await loadDetail(id);
@@ -159,7 +165,7 @@ export function ComandaWorkspaceModal({
     } finally {
       if (request === version.current) setLoading(false);
     }
-  }, [loadDetail]);
+  }, [loadDetail, tenantId]);
   useEffect(() => {
     void refresh();
     const timer = setInterval(refresh, 15000);
@@ -238,13 +244,13 @@ export function ComandaWorkspaceModal({
     detailVersion.current++;
     try {
       if (action.kind === 'charge') {
-        const res = await api.get(`/v1/comandas/${action.comanda.id}`, {
-          timeout: 10000,
-        });
+        const res = await readComanda(tenantId, action.comanda.id);
+        if (res.offline && !window.confirm(`Sem conexão: cópia de ${new Date(res.savedAt).toLocaleString('pt-BR')}. Confira os consumos com o garçom e concentre as cobranças em um único caixa durante a queda. Continuar com estes valores?`)) return;
         if (!['open', 'waiting_payment'].includes(res.data.status))
           throw new Error('Esta comanda já foi encerrada.');
         onCharge(res.data);
       } else {
+        if (offlineAt || !navigator.onLine) throw new Error('Reconecte para alterar a comanda.');
         const res =
           action.kind === 'remove'
             ? await api.delete(
@@ -349,6 +355,7 @@ export function ComandaWorkspaceModal({
             <X size={20} />
           </button>
         </header>
+        {offlineAt && <div role="status" className="bg-amber-500/15 px-5 py-3 text-sm text-amber-200">Sem conexão · cópia de {new Date(offlineAt).toLocaleString('pt-BR')}. Valores podem estar desatualizados. Use um único caixa para cobrar durante a queda. Cobranças deste aparelho ficam nas pendências.</div>}
         {error && (
           <div
             role="alert"
@@ -619,7 +626,7 @@ export function ComandaWorkspaceModal({
                     </p>
                     <button
                       type="button"
-                      disabled={disabled || detailLoading}
+                      disabled={disabled || detailLoading || !!offlineAt}
                       onClick={() =>
                         setConfirm({ kind: 'reopen', comanda: selected })
                       }
@@ -689,6 +696,7 @@ export function ComandaWorkspaceModal({
                               aria-label={`Remover ${item.product?.name || 'item'}`}
                               disabled={
                                 disabled ||
+                                !!offlineAt ||
                                 detailLoading ||
                                 !!error ||
                                 selected.status !== 'open'
@@ -753,6 +761,7 @@ export function ComandaWorkspaceModal({
               type="button"
               disabled={
                 disabled ||
+                !!offlineAt ||
                 !!error ||
                 detailLoading ||
                 (isNew

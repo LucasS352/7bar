@@ -1,4 +1,5 @@
 import { ComandaWorkspaceModal } from '@/components/ComandaWorkspaceModal';
+import { useComandasBackup } from '@/hooks/useComandasBackup';
 import { syncLoadedComanda } from '@/lib/comanda-cart';
 import { useState, useEffect, useDeferredValue, useMemo, useRef, useCallback, type TouchEvent as ReactTouchEvent } from 'react';
 import { LazyImage } from '@/components/LazyImage';
@@ -112,6 +113,7 @@ function PosPageContent() {
   }, [tenantConfig]);
 
   const isComandasEnabled = modules?.comandas === true;
+  useComandasBackup(user?.tenant, isComandasEnabled);
 
   const fetchOpenComandas = useCallback(async (signal?: AbortSignal) => {
     setLoadingComandas(true);

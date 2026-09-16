@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { retryTransaction } from '../prisma/transaction-retry';
 import { lockProducts } from '../prisma/lock-products';
 import { releaseComandaAssets } from '../comandas/service-timer.rules';
+import { assertComandaSnapshot } from './comanda-snapshot';
 import archiver = require('archiver');
 import { MailService } from '../mail/mail.service';
 import { IntegrationsService } from '../integrations/integrations.service';
@@ -257,6 +258,7 @@ export class SalesService {
         });
 
 
+        assertComandaSnapshot(data.expectedComandaItems, comandaToClose.items);
         // Detectar compostos legados sem modifiers — exigir resolução manual
         for (const ci of comandaToClose.items) {
           if (!ci.stockDeducted && ci.product.isComposite) {
