@@ -105,6 +105,9 @@ model Category {
 //  Espelhado nos campos PRO_* do Packon identificados no Firebird
 // ------------------------------------------------------------
 model Product {
+  requiresCarvoaria Boolean @default(false)
+  serviceTimerMinutes Int?
+  assetTrackingTotal Int?
   requiresKitchen Boolean @default(false)
   requiresBar Boolean @default(false)
   preparationIngredients String? @db.Text
@@ -930,6 +933,12 @@ model Comanda {
 }
 
 model ComandaItem {
+  assetNumber Int?
+  timerStartedAt DateTime?
+  timerMinutes Int?
+  timerDueAt DateTime?
+  assetReturnedAt DateTime?
+  assetReservation ComandaAssetReservation?
   kdsDestination String?
   kdsStatus String?
   kdsSentAt DateTime?
@@ -959,6 +968,15 @@ model ComandaItem {
   @@index([comandaId])
   @@index([createdById])
   @@map("comanda_items")
+}
+
+// Reserva atual; histórico permanece no item. Número físico único na loja.
+model ComandaAssetReservation {
+  assetNumber Int @id
+  comandaItemId String @unique
+  item ComandaItem @relation(fields: [comandaItemId], references: [id], onDelete: Cascade)
+
+  @@map("comanda_asset_reservations")
 }
 
 // ------------------------------------------------------------

@@ -1,15 +1,16 @@
 import { BadRequestException } from '@nestjs/common';
 
 export function initialKds(
-  product: { requiresKitchen?: boolean; requiresBar?: boolean },
+  product: { requiresKitchen?: boolean; requiresBar?: boolean; requiresCarvoaria?: boolean },
   enabled: boolean,
   serveImmediately?: boolean,
+  carvoariaEnabled = false,
 ) {
   if (serveImmediately !== undefined && typeof serveImmediately !== 'boolean') {
     throw new BadRequestException('Servir agora deve ser verdadeiro ou falso.');
   }
-  if (!enabled) return {};
-  const destination = product.requiresKitchen
+  if (!enabled && !(carvoariaEnabled && product.requiresCarvoaria)) return {};
+  const destination = product.requiresCarvoaria && carvoariaEnabled ? 'CARVOARIA' : product.requiresKitchen
     ? 'KITCHEN'
     : product.requiresBar
       ? 'BAR'
@@ -23,7 +24,7 @@ export function initialKds(
     kdsSentAt: now,
     kdsReadyAt: !destination ? now : null,
     serveImmediately:
-      destination === 'KITCHEN' ? false : serveImmediately === true,
+      destination === 'KITCHEN' || destination === 'CARVOARIA' ? false : serveImmediately === true,
   };
 }
 

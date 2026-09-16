@@ -5,6 +5,9 @@ import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { NfceService } from '../nfce/nfce.service';
 import { ProductsService } from '../products/products.service';
 import { Prisma } from '@prisma/client';
+import { retryTransaction } from '../prisma/transaction-retry';
+import { lockProducts } from '../prisma/lock-products';
+import { releaseComandaAssets } from '../comandas/service-timer.rules';
 import archiver = require('archiver');
 import { MailService } from '../mail/mail.service';
 import { IntegrationsService } from '../integrations/integrations.service';
@@ -154,7 +157,14 @@ export class SalesService {
     let sale: any;
 
     try {
-      sale = await prisma.$transaction(async (tx: any) => {
+      sale = await retryTransaction(() => prisma.$transaction(async (tx: any) => {
+      // Serializa checkouts deste tenant antes da primeira leitura da transação.
+      // MAX(code)+1 precisa observar o commit anterior, inclusive com vários processos.
+      // A linha singleton já pertence ao schema; não altera configurações existentes.
+      await tx.$executeRaw`
+        INSERT INTO tenant_settings (id) VALUES ('singleton')
+        ON DUPLICATE KEY UPDATE id = 'singleton'
+      `;
       let subtotal = new Prisma.Decimal(0);
 
       // ─── Flag de movimentação de estoque (Ajuste Fiscal pode desabilitar) ───
@@ -280,6 +290,8 @@ export class SalesService {
 
       const allProductIds = Array.from(new Set([...productIds, ...modifierComponentIds, ...comandaProductIds]));
       allProductIdsToSync = allProductIds;
+
+      await lockProducts(tx, allProductIds);
 
       const productsInDb = await tx.product.findMany({
         where: { id: { in: allProductIds } },
@@ -792,6 +804,7 @@ export class SalesService {
       });
 
       // These intents cannot disappear between the sale commit and a process restart.
+      if (data.comandaId) await releaseComandaAssets(tx, data.comandaId);
       const jobs = [
         ...(fullSale.emitirNfce ? [{ kind: 'NFCE', payload: '{}' }] : []),
         ...(allProductIdsToSync.length ? [{ kind: 'STOCK', payload: JSON.stringify({ productIds: allProductIdsToSync }) }] : []),
@@ -802,7 +815,8 @@ export class SalesService {
       return fullSale;
     }, {
       timeout: 25000,
-    });
+      isolationLevel: 'ReadCommitted',
+    }));
   } catch (err: any) {
     // Rollback has finished. A matching committed winner is the only success condition.
     if (isSaleIdentityConflict(err) || err?.code === 'P2034' || err instanceof BadRequestException) {

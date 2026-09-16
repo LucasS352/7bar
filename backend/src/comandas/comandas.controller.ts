@@ -26,6 +26,23 @@ export class ComandasController {
     return this.comandasService.create(body);
   }
 
+  @Get('assets/:productId')
+  availableAssets(@Param('productId') productId: string) { return this.comandasService.availableAssets(productId); }
+
+  @Get('service-rounds')
+  serviceRounds() { return this.comandasService.serviceRounds(); }
+
+  @Post(':id/items/:itemId/timer/snooze')
+  snooze(@Param('id') id: string, @Param('itemId') itemId: string,
+    @Body() body: { extraMinutes: number; expectedDueAt: string }) {
+    return this.comandasService.snoozeTimer(id, itemId, body.extraMinutes, body.expectedDueAt);
+  }
+
+  @Post(':id/items/:itemId/return-asset')
+  returnAsset(@Param('id') id: string, @Param('itemId') itemId: string) {
+    return this.comandasService.returnAsset(id, itemId);
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.comandasService.findOne(id);
@@ -43,6 +60,7 @@ export class ComandasController {
         notes?: string;
         createdById?: string;
         serveImmediately?: boolean;
+        assetNumber?: number;
         modifiers?: Array<{ optionId: string }>;
       }>;
     },

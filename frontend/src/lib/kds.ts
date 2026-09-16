@@ -11,9 +11,10 @@ export interface KdsTicket {
   quantity: number;
   notes?: string;
   kdsStatus: KdsStatus;
-  kdsDestination: 'KITCHEN' | 'BAR' | 'SERVICE';
+  kdsDestination: 'KITCHEN' | 'BAR' | 'SERVICE' | 'CARVOARIA';
   kdsSentAt: string;
   serveImmediately: boolean;
+  assetNumber?: number | null;
   product: { name: string; preparationIngredients?: string | null };
   createdBy?: { name: string };
   comanda: { id: string; number: string; responsibleWaiter?: { name: string } };
@@ -26,6 +27,7 @@ export function waitsForKitchen(
   return (
     !item.serveImmediately &&
     item.kdsDestination !== 'KITCHEN' &&
+    item.kdsDestination !== 'CARVOARIA' &&
     items.some(
       (other) =>
         other.comandaId === item.comandaId &&

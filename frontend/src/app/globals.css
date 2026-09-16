@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/* Garçom: permite rolagem, sem zoom por toque duplo/pinça, inclusive nos portais. */
+body.garcom-touch-screen,
+body.garcom-touch-screen * {
+  touch-action: pan-x pan-y;
+}
+
+/* Evita zoom automático ao focar campos pequenos no Safari mobile. */
+@media (pointer: coarse) {
+  body.garcom-touch-screen input,
+  body.garcom-touch-screen textarea,
+  body.garcom-touch-screen select {
+    font-size: max(1rem, 16px);
+  }
+}
+
 /* Custom Scrollbar minimalista */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -154,5 +169,4 @@
   0%, 100% { transform: translateY(0px); }
   50%       { transform: translateY(-5px); }
 }
-
 

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
+import { useKdsConfig } from '@/hooks/useKdsEnabled';
 import { KdsStatus, KdsTicket, waitsForKitchen } from '@/lib/kds';
 
 const columns = [
@@ -45,6 +46,7 @@ const columns = [
 ] as const;
 
 export function KdsPage() {
+  const { stations } = useKdsConfig();
   const [tickets, setTickets] = useState<KdsTicket[]>([]);
   const [error, setError] = useState('');
   const [updated, setUpdated] = useState<Date | null>(null);
@@ -177,9 +179,10 @@ export function KdsPage() {
             className="rounded-xl bg-slate-800 border border-slate-700 p-3 text-sm"
           >
             <option value="ALL">Todos os destinos</option>
-            <option value="KITCHEN">Cozinha</option>
-            <option value="BAR">Bar</option>
-            <option value="SERVICE">Bebidas / acompanhamento</option>
+            {stations.includes('KITCHEN') && <option value="KITCHEN">Cozinha</option>}
+            {stations.includes('BAR') && <option value="BAR">Bar</option>}
+            {stations.includes('SERVICE') && <option value="SERVICE">Bebidas / acompanhamento</option>}
+            {stations.includes('CARVOARIA') && <option value="CARVOARIA">Carvoaria</option>}
           </select>
           <button
             aria-label={sound ? 'Desativar som' : 'Ativar som'}
@@ -289,6 +292,7 @@ export function KdsPage() {
                             (i) =>
                               i.comandaId === first.comandaId &&
                               i.kdsDestination !== 'KITCHEN' &&
+                              i.kdsDestination !== 'CARVOARIA' &&
                               !i.serveImmediately,
                           )
                         : [];
@@ -297,7 +301,7 @@ export function KdsPage() {
                         ? 'Cozinha'
                         : first.kdsDestination === 'BAR'
                           ? 'Bar'
-                          : 'Separar / servir';
+                          : first.kdsDestination === 'CARVOARIA' ? 'Carvoaria' : 'Separar / servir';
                     return (
                       <article
                         key={key}
@@ -328,6 +332,7 @@ export function KdsPage() {
                             <li key={item.id}>
                               <div className="text-sm font-semibold">
                                 {Number(item.quantity)}× {item.product.name}
+                                {item.assetNumber != null && <strong className="ml-2 text-amber-300">Narguile #{String(item.assetNumber).padStart(2, '0')}</strong>}
                               </div>
                               {item.product.preparationIngredients?.trim() && (
                                 <div className="mt-2 rounded-lg border border-slate-700/50 bg-black/10 px-3 py-2">

@@ -42,6 +42,10 @@ describe('KDS opt-in e ciclo de produção', () => {
     expect(() => assertKdsTransition('PREPARING', 'READY')).not.toThrow();
     expect(() => assertKdsTransition('READY', 'DELIVERED')).not.toThrow();
   });
+  it('Carvoaria funciona isolada e mantém preparo sem iniciar ronda', () => {
+    expect(initialKds({ requiresCarvoaria: true }, false, true, true)).toMatchObject({ kdsDestination: 'CARVOARIA', kdsStatus: 'PENDING', serveImmediately: false });
+    expect(initialKds({ requiresKitchen: true }, false, false, true)).toEqual({});
+  });
 });
 
 describe('KDS isolamento e entrega', () => {
@@ -71,7 +75,7 @@ describe('KDS isolamento e entrega', () => {
       manager as any,
       context as any,
     );
-    return { service, tx, manager };
+    return { service, tx, manager, heart };
   }
   const ready = {
     id: 'i1',
@@ -81,6 +85,30 @@ describe('KDS isolamento e entrega', () => {
     serveImmediately: false,
     comanda: { status: 'open' },
   };
+  it('inicia ronda somente em DELIVERED e respeita a duração fotografada', async () => {
+    const { service, tx, heart } = setup();
+    heart.tenant.findUnique.mockResolvedValue({ modulos: JSON.stringify({ carvoaria: true }) });
+    expect(await service.config()).toMatchObject({ enabled: true, kdsEnabled: false, stations: ['CARVOARIA'] });
+    const item = { ...ready, kdsDestination: 'CARVOARIA', timerMinutes: 30, timerStartedAt: null };
+    tx.comandaItem.findMany.mockResolvedValue([{ ...item, kdsStatus: 'PREPARING' }]);
+    await service.update(['i1'], 'READY');
+    expect(tx.comandaItem.updateMany.mock.calls[0][0].data.timerStartedAt).toBeUndefined();
+    tx.comandaItem.findMany.mockResolvedValue([item]);
+    await service.update(['i1'], 'DELIVERED');
+    const data = tx.comandaItem.updateMany.mock.calls[1][0].data;
+    expect(data.timerDueAt.getTime() - data.timerStartedAt.getTime()).toBe(30 * 60_000);
+    expect(tx.comandaItem.count).not.toHaveBeenCalled();
+  });
+  it('lote de 100 itens usa um bloqueio e uma atualização, preservando CAS', async () => {
+    const { service, tx } = setup();
+    const items = Array.from({ length: 100 }, (_, i) => ({ ...ready, id: `i${i}`, serveImmediately: true }));
+    tx.comandaItem.findMany.mockResolvedValue(items);
+    tx.comandaItem.updateMany.mockResolvedValue({ count: 100 });
+    await expect(service.update(items.map(i => i.id), 'DELIVERED')).resolves.toEqual({ updated: 100 });
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(tx.comandaItem.updateMany).toHaveBeenCalledTimes(1);
+    expect(tx.comandaItem.updateMany.mock.calls[0][0].where.kdsStatus).toBe('READY');
+  });
   it('bloqueia leitura e escrita com módulo desativado', async () => {
     const { service, manager } = setup(false);
     await expect(service.tickets()).rejects.toThrow('KDS não está ativo');
@@ -95,6 +123,7 @@ describe('KDS isolamento e entrega', () => {
     expect(manager.getTenantClient).toHaveBeenCalledWith('tenant-a', 'db-a');
     expect(tx.comandaItem.findMany.mock.calls[0][0].where).toEqual({
       kdsStatus: { in: ['PENDING', 'PREPARING', 'READY'] },
+      kdsDestination: { in: ['KITCHEN', 'BAR', 'SERVICE'] },
       comanda: { status: { in: ['open', 'waiting_payment'] } },
     });
   });

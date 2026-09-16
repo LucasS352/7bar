@@ -10,10 +10,11 @@ import {
   Settings, ToggleLeft, ToggleRight, AlertTriangle, Upload, X, Terminal,
   ChevronDown, ChevronRight, Trash2, DollarSign, Users, Plus, Phone, FileText,
   Clock, CreditCard, History, Info, Copy, Check, Edit2, LockKeyhole, Sparkles, UserPlus,
-  Activity
+  Activity, CalendarDays, LayoutGrid
 } from "lucide-react";
 import { exportTelemetry, clearTelemetry } from "@/lib/telemetry";
 import { db } from "@/lib/db";
+import { TenantBillingCalendar } from "@/components/TenantBillingCalendar";
 const ImageOptimizationPanel = lazy(() => import("@/components/ImageOptimizationPanel"));
 
 
@@ -49,6 +50,7 @@ function parseDateLocal(dateStr: string): Date {
 
 const MODULE_BADGES: Record<string, { label: string; color: string }> = {
   kds: { label: 'KDS', color: 'bg-green-500/20 text-green-300 border-green-500/30' },
+  carvoaria: { label: 'Carvoaria', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
   nfce:           { label: 'NFC-e',    color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
   estoque:        { label: 'Estoque',  color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
   dashboardMobile:{ label: 'Mobile',   color: 'bg-violet-500/20 text-violet-300 border-violet-500/30' },
@@ -89,7 +91,7 @@ export default function SysInitPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("pin");
 
-  const isDemoMode = process.env.NEXT_PUBLIC_APP_MODE === 'demo' ||
+  const isDemoMode = import.meta.env.VITE_APP_MODE === 'demo' ||
     (typeof window !== 'undefined' && window.location.hostname.includes('demo'));
 
   const [activeTab, setActiveTab] = useState<"tenants" | "groups" | "leads" | "sql">("tenants");
@@ -186,6 +188,8 @@ export default function SysInitPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
   const [includeHeart, setIncludeHeart] = useState(false);
+  const [tenantView, setTenantView] = useState<"calendar" | "cards">("calendar");
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 
   // ── GROUPS LIST ───────────────────────────────────────────────────────
   const [groups, setGroups] = useState<any[]>([]);
@@ -825,6 +829,15 @@ export default function SysInitPage() {
     t.emailContato?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+
+  const toggleTenant = (id: string, checked: boolean) => setSelectedTenantIds(ids => checked ? [...new Set([...ids, id])] : ids.filter(value => value !== id));
+  const allFilteredSelected = filteredTenants.length > 0 && filteredTenants.every(t => selectedTenantIds.includes(t.id));
+  const allTenantsSelected = tenants.length > 0 && tenants.every(t => selectedTenantIds.includes(t.id));
+  const toggleSelectAllTenants = () => setSelectedTenantIds(allTenantsSelected ? [] : tenants.map(t => t.id));
+  const toggleFilteredTenants = () => setSelectedTenantIds(ids => allFilteredSelected
+    ? ids.filter(id => !filteredTenants.some(t => t.id === id))
+    : [...new Set([...ids, ...filteredTenants.map(t => t.id)])]);
+
   const faturamentoEstimado = tenants
     .filter(t => t.status === 'active')
     .reduce((acc, t) => acc + (Number(t.mensalidadeValor) || 0), 0);
@@ -840,7 +853,8 @@ export default function SysInitPage() {
     if (!vencimento) return null;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const venc = new Date(vencimento);
-    const diffDays = Math.ceil((venc.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    venc.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((venc.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays < 0) return { color: "text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse", text: `Atrasado desde ${venc.toLocaleDateString("pt-BR")}` };
     if (diffDays === 0) return { color: "text-amber-400 bg-amber-500/10 border-amber-500/20", text: "Vence hoje!" };
     if (diffDays <= 5) return { color: "text-amber-400 bg-amber-500/10 border-amber-500/20", text: `Vence em ${diffDays} dias` };
@@ -848,7 +862,7 @@ export default function SysInitPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col p-6">
+    <div className="min-h-screen bg-zinc-950 text-white flex flex-col p-4 sm:p-8">
       {imageOptimizationOpen && <Suspense fallback={<div className="fixed inset-0 z-[100] bg-zinc-950 p-8">Carregando manutenção de imagens…</div>}><ImageOptimizationPanel
         tenants={tenants.filter(t => selectedTenantIds.includes(t.id))}
         pin={pinDigits.join('')}
@@ -859,7 +873,7 @@ export default function SysInitPage() {
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-600 rounded-full blur-[160px] opacity-15" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto w-full flex-1 flex flex-col">
+      <div className="relative z-10 w-full min-w-0 flex-1 flex flex-col">
         {/* — PIN STEP — */}
         {step === "pin" && (
           <div className={`transition-all duration-300 max-w-md mx-auto mt-20 ${pinShake ? "animate-[shake_0.4s_ease]" : ""}`}>
@@ -911,9 +925,9 @@ export default function SysInitPage() {
         {/* — LIST STEP — */}
         {step === "list" && (
           <div className="animate-[fadeIn_0.3s_ease] flex flex-col flex-1">
-            <div className="flex justify-between items-center mb-8 mt-4">
+            <div className="flex flex-wrap justify-between items-center gap-5 mb-6 mt-2">
               <div>
-                <h1 className="text-3xl font-black bg-gradient-to-r from-violet-400 to-indigo-500 bg-clip-text text-transparent">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100">
                   {activeTab === 'tenants'
                     ? 'Gestão de Tenants'
                     : activeTab === 'groups'
@@ -924,7 +938,7 @@ export default function SysInitPage() {
                 </h1>
                 <p className="text-zinc-400 mt-1">
                   {activeTab === 'tenants'
-                    ? 'Gerencie os clientes SaaS, módulos e identidades visuais.'
+                    ? 'Clientes, vencimentos e gestão da sua operação.'
                     : activeTab === 'groups'
                     ? 'Gerencie os grupos de lojas e redes corporativas.'
                     : activeTab === 'sql'
@@ -935,68 +949,7 @@ export default function SysInitPage() {
               <div className="flex gap-3">
                 {activeTab === 'tenants' && (
                   <>
-                    {/* Botão de atualizar bancos — sempre visível, com toggle Heart e contador de tenants */}
-                    <button disabled={selectedTenantIds.length === 0} onClick={() => setImageOptimizationOpen(true)}
-                      className="bg-cyan-900 hover:bg-cyan-800 disabled:opacity-40 text-white px-4 py-2.5 rounded-xl font-bold flex items-center gap-2"
-                      title="Selecionar lojas para analisar e otimizar fotos, sem atualização de schema">
-                      <ImageIcon size={18} /> Otimizar imagens
-                    </button>
-                    <div className="flex items-center gap-2">
-                      {/* Toggle Heart */}
-                      <button
-                        onClick={() => setIncludeHeart(!includeHeart)}
-                        title={includeHeart ? 'Heart incluído na migração' : 'Incluir banco Heart na migração'}
-                        className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border font-bold text-sm transition-all ${
-                          includeHeart
-                            ? 'bg-rose-600/20 border-rose-500/50 text-rose-400 shadow-lg shadow-rose-500/10'
-                            : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
-                        }`}
-                      >
-                        <span className="text-base leading-none">🫀</span>
-                        <span className="hidden sm:inline">Heart</span>
-                        {includeHeart && <CheckCircle2 size={13} className="text-rose-400" />}
-                      </button>
-
-                      {/* Botão principal — habilitado se Heart ativo OU tenants selecionados */}
-                      <button
-                        onClick={handleMigrateBancos}
-                        disabled={!includeHeart && selectedTenantIds.length === 0}
-                        className="bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-violet-500/20"
-                      >
-                        <Database size={18} />
-                        Atualizar Bancos
-                        {(includeHeart || selectedTenantIds.length > 0) && (
-                          <span className="bg-white/20 text-white text-xs font-mono px-1.5 py-0.5 rounded-md">
-                            {(includeHeart ? 1 : 0) + selectedTenantIds.length}
-                          </span>
-                        )}
-                      </button>
-                    </div>
-
-                    <button onClick={() => { setStep("backups"); loadBackups(); }} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-blue-500/20">
-                      <Database size={18} /> Gerenciar Backups
-                    </button>
-                    <button
-                      onClick={handleExportTelemetry}
-                      className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition"
-                      title="Exportar registros de oscilação de rede e encerramento de sessão gravados neste navegador"
-                    >
-                      <Activity size={18} className="text-amber-400" />
-                      Telemetria ({telemetryCount})
-                    </button>
-                    {telemetryCount > 0 && (
-                      <button
-                        onClick={handleClearTelemetry}
-                        className="bg-zinc-800 hover:bg-red-950/40 border border-zinc-700 hover:border-red-800/60 text-zinc-400 hover:text-red-300 px-3 py-2.5 rounded-xl transition"
-                        title="Limpar telemetria local"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                    <button onClick={() => setStep("create")} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
-                      <Building2 size={18} /> Novo Tenant
-                    </button>
-
+                    <button onClick={() => setStep("create")} className="flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl bg-violet-600 px-4 text-sm font-bold text-white transition hover:bg-violet-500"><Plus size={18} /> Novo cliente</button>
                   </>
                 )}
                 {activeTab === 'groups' && (
@@ -1011,6 +964,24 @@ export default function SysInitPage() {
                 )}
               </div>
             </div>
+
+            {activeTab === 'tenants' && <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3" aria-label="Ações administrativas">
+              <div className="flex flex-wrap items-center gap-2">
+                <button onClick={handleMigrateBancos} disabled={!includeHeart && !selectedTenantIds.length} className="flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 text-sm font-semibold text-violet-300 hover:bg-violet-500/20 disabled:opacity-40"><Database size={16} /> Atualizar Bancos {(includeHeart ? 1 : 0) + selectedTenantIds.length || ''}</button>
+                <label className="flex h-10 items-center gap-2 px-2 text-sm text-zinc-400 cursor-pointer select-none"><input type="checkbox" checked={includeHeart} onChange={e => setIncludeHeart(e.target.checked)} className="accent-violet-500 w-4 h-4 rounded" /> Incluir Heart</label>
+                <button type="button" onClick={toggleSelectAllTenants} className="flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-zinc-700 bg-zinc-800/80 px-3 text-sm font-semibold text-zinc-200 hover:bg-zinc-700 hover:text-white transition">
+                  <CheckCircle2 size={16} className={allTenantsSelected ? "text-violet-400" : "text-zinc-500"} />
+                  {allTenantsSelected ? 'Desmarcar todos os bancos' : `Selecionar todos os bancos (${tenants.length})`}
+                </button>
+                <span className="px-2 text-xs text-zinc-500">{selectedTenantIds.length} de {tenants.length} cliente(s) selecionado(s)</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
+                <button disabled={!selectedTenantIds.length} onClick={() => setImageOptimizationOpen(true)} className="flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-zinc-700 px-3 text-sm text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"><ImageIcon size={16} /> Otimizar imagens</button>
+                <button onClick={() => { setStep('backups'); loadBackups(); }} className="flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-zinc-700 px-3 text-sm text-zinc-300 hover:bg-zinc-800"><Database size={16} /> Gerenciar Backups</button>
+                <button onClick={handleExportTelemetry} className="flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-zinc-700 px-3 text-sm text-zinc-300 hover:bg-zinc-800"><Activity size={16} /> Exportar telemetria ({telemetryCount})</button>
+                {telemetryCount > 0 && <button onClick={handleClearTelemetry} title="Limpar telemetria local" className="flex h-10 items-center gap-2 rounded-xl px-3 text-sm text-zinc-400 hover:bg-rose-500/10 hover:text-rose-300"><Trash2 size={16} /> Limpar telemetria</button>}
+              </div>
+            </div>}
 
             {/* Tabs */}
             <div className="flex gap-4 mb-6 border-b border-zinc-800">
@@ -1052,130 +1023,72 @@ export default function SysInitPage() {
                   </div>
                 </div>
 
-                {/* Table */}
-                <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl flex-1 flex flex-col overflow-hidden">
-                  <div className="p-4 border-b border-zinc-800 flex items-center gap-4">
-                    <div className="relative flex-1 max-w-md">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
-                      <input type="text" placeholder="Buscar por nome, CNPJ, telefone, e-mail..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-violet-500" />
-                    </div>
-                    <span className="text-zinc-500 text-sm">{filteredTenants.length} resultado(s)</span>
+                <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 sm:flex-row sm:flex-wrap sm:items-center">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                    <input type="text" placeholder="Buscar por nome, CNPJ, telefone, e-mail..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-violet-500" />
                   </div>
-                  <div className="flex-1 overflow-auto custom-scrollbar">
-                    <table className="w-full text-left text-sm whitespace-nowrap">
-                      <thead className="bg-zinc-950/50 text-zinc-400 sticky top-0 z-10 border-b border-zinc-800">
-                        <tr>
-                          <th className="px-4 py-4 font-medium w-12">
-                            <input type="checkbox"
-                              checked={filteredTenants.length > 0 && selectedTenantIds.length === filteredTenants.length}
-                              onChange={(e) => setSelectedTenantIds(e.target.checked ? filteredTenants.map(t => t.id) : [])}
-                              className="rounded border-zinc-700 bg-zinc-950 text-violet-600 focus:ring-violet-500" />
-                          </th>
-                          <th className="px-4 py-4 font-medium">Tenant</th>
-                          <th className="px-4 py-4 font-medium">Contato</th>
-                          <th className="px-4 py-4 font-medium">Status</th>
-                          <th className="px-4 py-4 font-medium">Mensalidade</th>
-                          <th className="px-4 py-4 font-medium">Módulos</th>
-                          <th className="px-4 py-4 font-medium text-right">Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-zinc-800/50">
-                        {loadingTenants ? (
-                          <tr><td colSpan={7} className="px-6 py-12 text-center text-zinc-500"><Loader2 className="animate-spin inline-block mr-2" /> Carregando...</td></tr>
-                        ) : filteredTenants.length === 0 ? (
-                          <tr><td colSpan={7} className="px-6 py-12 text-center text-zinc-500">Nenhum tenant encontrado.</td></tr>
-                        ) : (
-                          filteredTenants.map(t => {
-                            const isSelected = selectedTenantIds.includes(t.id);
-                            const vencStatus = getVencimentoStatus(t.mensalidadeVencimento);
-                            return (
-                              <tr key={t.id} className={`hover:bg-zinc-800/30 transition ${isSelected ? 'bg-violet-950/10' : ''}`}>
-                                <td className="px-4 py-4">
-                                  <input type="checkbox" checked={isSelected}
-                                    onChange={(e) => setSelectedTenantIds(e.target.checked ? [...selectedTenantIds, t.id] : selectedTenantIds.filter(id => id !== t.id))}
-                                    className="rounded border-zinc-700 bg-zinc-950 text-violet-600 focus:ring-violet-500" />
-                                </td>
-                                <td className="px-4 py-4">
-                                  <div className="flex items-center gap-3">
-                                    {t.logoUrl ? (
-                                      <img src={getFullUrl(t.logoUrl)} alt="Logo" className="w-9 h-9 rounded-lg object-cover bg-zinc-950 border border-zinc-800" />
-                                    ) : (
-                                      <div className="w-9 h-9 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-sm font-bold text-violet-400">{(t.name || t.nomeFantasia)?.charAt(0).toUpperCase()}</div>
-                                    )}
-                                    <div>
-                                      <p className="font-semibold text-zinc-100">{t.name || t.nomeFantasia}</p>
-                                      <p className="text-xs text-zinc-500 font-mono">{t.databaseName}</p>
-                                      {(() => {
-                                        const adminUser = t.users?.find((u: any) => u.role === 'admin' || u.role === 'superadmin');
-                                        return adminUser?.email ? (
-                                          <p className="text-[11px] text-zinc-600 font-mono mt-0.5 truncate max-w-[180px]" title={adminUser.email}>{adminUser.email}</p>
-                                        ) : null;
-                                      })()}
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-4">
-                                  {(t.telefoneContato || t.emailContato) ? (
-                                    <div className="space-y-0.5">
-                                      {t.telefoneContato && (
-                                        <p className="text-xs text-zinc-300 flex items-center gap-1.5"><Phone size={11} className="text-zinc-500" />{t.telefoneContato}</p>
-                                      )}
-                                      {t.emailContato && (
-                                        <p className="text-xs text-zinc-400 flex items-center gap-1.5"><Mail size={11} className="text-zinc-500" />{t.emailContato}</p>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span className="text-zinc-600 text-xs">—</span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-4">
-                                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
-                                    t.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                    t.status === 'paused' ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' :
-                                    t.status === 'suspended' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                    'bg-red-500/10 text-red-400 border-red-500/20'
-                                  }`}>
-                                    {t.status === 'active' ? 'Ativo' : t.status === 'paused' ? '— Pausado' : t.status === 'suspended' ? 'Suspenso' : 'Inativo'}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-4">
-                                  <div>
-                                    <p className="font-semibold text-zinc-200">
-                                      R$ {Number(t.mensalidadeValor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                                    </p>
-                                    {vencStatus ? (
-                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${vencStatus.color} block w-max mt-1`}>
-                                        {vencStatus.text}
-                                      </span>
-                                    ) : (
-                                      <span className="text-zinc-600 text-xs">Sem vencimento</span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-4">
-                                  <ModuleBadges modulosRaw={t.modulos} />
-                                </td>
-                                <td className="px-4 py-4 text-right">
-                                  <div className="flex justify-end gap-1">
-                                    <button onClick={() => handleRegistrarPagamento(t.id)} className="p-2 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition" title="Registrar Pagamento">
-                                      <DollarSign size={17} />
-                                    </button>
-                                    <button onClick={() => openEdit(t)} className="p-2 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition" title="Editar">
-                                      <Edit size={17} />
-                                    </button>
-                                    <button onClick={() => handleDeleteTenant(t)} className="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition" title="Excluir">
-                                      <Trash2 size={17} />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
+                  <span className="text-sm text-zinc-500">{filteredTenants.length} cliente(s){selectedTenantIds.length > 0 ? ` · ${selectedTenantIds.length} selecionado(s)` : ''} </span>
+                  <button type="button" onClick={searchTerm ? toggleFilteredTenants : toggleSelectAllTenants} className="rounded-xl border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-300 hover:bg-zinc-800 transition flex items-center gap-1.5">
+                    <CheckCircle2 size={14} className={(searchTerm ? allFilteredSelected : allTenantsSelected) ? "text-violet-400" : "text-zinc-500"} />
+                    {searchTerm
+                      ? (allFilteredSelected ? 'Desmarcar resultados' : `Selecionar resultados (${filteredTenants.length})`)
+                      : (allTenantsSelected ? 'Desmarcar todos os bancos' : `Selecionar todos os bancos (${tenants.length})`)}
+                  </button>
+                  <div className="flex rounded-xl border border-zinc-700 bg-zinc-950 p-1">
+                    <button type="button" onClick={() => setTenantView('calendar')} className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition ${tenantView === 'calendar' ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}><CalendarDays size={15} /> Calendário</button>
+                    <button type="button" onClick={() => setTenantView('cards')} className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition ${tenantView === 'cards' ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}><LayoutGrid size={15} /> Clientes</button>
                   </div>
                 </div>
+
+                {tenantView === 'calendar' ? (
+                  loadingTenants ? (
+                    <div className="flex flex-1 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-12 text-zinc-500"><Loader2 className="mr-2 animate-spin" /> Carregando clientes...</div>
+                  ) : (
+                    <TenantBillingCalendar
+                      tenants={filteredTenants}
+                      month={calendarMonth}
+                      onMonthChange={setCalendarMonth}
+                      selectedIds={selectedTenantIds}
+                      onToggleTenant={toggleTenant}
+                      onEdit={openEdit}
+                      onRegisterPayment={handleRegistrarPagamento}
+                    />
+                  )
+                ) : (
+                <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))]">
+                  {loadingTenants ? <p className="p-8 text-zinc-400">Carregando clientes…</p> : !filteredTenants.length ? <p className="p-8 text-zinc-400">Nenhum cliente encontrado.</p> : filteredTenants.map(t => {
+                    const selected = selectedTenantIds.includes(t.id);
+                    const venc = getVencimentoStatus(t.mensalidadeVencimento);
+                    const admin = t.users?.find((u: any) => u.role === 'admin' || u.role === 'superadmin');
+                    return <article key={t.id} className={`flex min-w-0 flex-col rounded-2xl border p-5 transition ${selected ? 'border-violet-500 bg-violet-950/20' : 'border-zinc-800 bg-zinc-900/60 hover:border-zinc-700'}`}>
+                      <div className="mb-5 flex items-start gap-3">
+                        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800 text-lg font-bold text-violet-300">{(t.name || t.nomeFantasia || '?').charAt(0).toUpperCase()}{t.logoUrl && <img src={getFullUrl(t.logoUrl)} alt="" onError={event => { event.currentTarget.style.display = 'none'; }} className="absolute inset-0 h-full w-full object-cover" />}</div>
+                        <div className="min-w-0 flex-1"><button onClick={() => openEdit(t)} className="text-left font-bold leading-snug text-zinc-100 hover:text-violet-300">{t.name || t.nomeFantasia}</button><p className="mt-1 break-all text-xs text-zinc-500">{t.databaseName}</p></div>
+                        <input type="checkbox" aria-label={`Selecionar ${t.name || t.nomeFantasia}`} checked={selected} onChange={e => toggleTenant(t.id, e.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-violet-500" />
+                      </div>
+                      <div className="mb-4 flex items-end justify-between gap-3 rounded-xl bg-zinc-950/60 p-3">
+                        <div><p className="mb-1 text-xs text-zinc-500">Mensalidade</p><p className="text-xl font-semibold tabular-nums">{Number(t.mensalidadeValor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p></div>
+                        <span className={`rounded-full px-2 py-1 text-xs ${t.status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-zinc-800 text-zinc-400'}`}>{t.status === 'active' ? 'Ativo' : t.status === 'paused' ? 'Pausado' : t.status === 'suspended' ? 'Suspenso' : 'Inativo'}</span>
+                      </div>
+                      <p className="mb-3 flex items-center gap-2 text-sm text-zinc-300"><CalendarDays size={15} className="text-zinc-500" />{t.mensalidadeVencimento ? new Date(t.mensalidadeVencimento).toLocaleDateString('pt-BR') : 'Sem vencimento definido'}</p>
+                      {venc && <span className={`mb-4 w-fit rounded-lg border px-2 py-1 text-xs ${venc.color.replace('animate-pulse', '')}`}>{venc.text}</span>}
+                      <div className="mb-4 space-y-1 text-xs text-zinc-500">
+                        {t.telefoneContato && <p className="break-all">{t.telefoneContato}</p>}
+                        {(t.emailContato || admin?.email) && <p className="break-all">{t.emailContato || admin?.email}</p>}
+                        {t.emailContato && admin?.email && t.emailContato !== admin.email && <p className="break-all">Admin: {admin.email}</p>}
+                      </div>
+                      <div className="mb-4"><ModuleBadges modulosRaw={t.modulos} /></div>
+                      <button onClick={() => { openEdit(t); setEditTab('modulos'); }} className="mb-4 flex items-center justify-center gap-2 rounded-lg border border-violet-500/25 py-2.5 text-sm font-semibold text-violet-300 hover:bg-violet-500/10"><Settings size={16} /> Gerenciar módulos</button>
+                      <div className="mt-auto flex items-center gap-2 border-t border-zinc-800 pt-4">
+                        <button onClick={() => handleRegistrarPagamento(t.id)} disabled={registeringPayment} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-500/10 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-40" title="Registrar Pagamento"><DollarSign size={15} /> Registrar pagamento</button>
+                        <button onClick={() => openEdit(t)} className="rounded-lg border border-zinc-700 p-2 text-zinc-400 hover:text-white" title="Editar"><Edit size={16} /></button>
+                        <button onClick={() => handleDeleteTenant(t)} className="rounded-lg p-2 text-zinc-500 hover:bg-rose-500/10 hover:text-rose-300" title="Excluir"><Trash2 size={16} /></button>
+                      </div>
+                    </article>;
+                  })}
+                </div>
+                )}
               </>
             ) : activeTab === 'groups' ? (
               <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl flex-1 flex flex-col overflow-hidden">
@@ -2116,6 +2029,7 @@ export default function SysInitPage() {
                       { id: 'comandas', title: 'Comandas & Mesas', desc: 'Permite o lançamento, abertura e consumo em comandas/mesas.', badge: MODULE_BADGES.comandas },
                       { id: 'vitrineDigital', title: '▪ Vitrine Digital TV', desc: 'Exibe promoções e produtos em uma TV/tela secundária via URL pública.', badge: MODULE_BADGES.vitrineDigital },
                       { id: 'kds', title: 'KDS — Cozinha e Bar', desc: 'Ativa a produção em /kds e a retirada pelo garçom. Produtos existentes permanecem sem destino até serem configurados.', badge: MODULE_BADGES.kds },
+                      { id: 'carvoaria', title: 'Carvoaria / Narguilaria', desc: 'Estação independente no KDS, equipamentos numerados e rondas do garçom. Não exige cozinha ou bar.', badge: MODULE_BADGES.carvoaria },
                       { id: 'restaurante', title: '🍽️ Modo Restaurante / Garçom', desc: 'Ativa a interface dedicada para garçons criarem e gerenciarem comandas sem precisar abrir caixa. Acesso via /garcom.', badge: MODULE_BADGES.restaurante },
                     ].map(item => (
                       <div key={item.id} className="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-800 rounded-xl hover:border-zinc-700 transition">
@@ -2599,7 +2513,7 @@ export default function SysInitPage() {
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
           20% { transform: translateX(-8px); }

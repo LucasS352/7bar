@@ -6,6 +6,7 @@ import { NfceService } from '../nfce/nfce.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { ProductsService } from '../products/products.service';
 import { MailService } from '../mail/mail.service';
+import { IntegrationsService } from '../integrations/integrations.service';
 
 describe('SalesService', () => {
   let service: SalesService;
@@ -20,6 +21,7 @@ describe('SalesService', () => {
         { provide: TenantContextService, useValue: {} },
         { provide: ProductsService, useValue: {} },
         { provide: MailService, useValue: {} },
+        { provide: IntegrationsService, useValue: {} },
       ],
     }).compile();
 

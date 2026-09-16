@@ -23,6 +23,9 @@ interface ModifierGroupInputDto {
 }
 
 interface ProductCreateDto {
+  requiresCarvoaria?: boolean;
+  serviceTimerMinutes?: number | null;
+  assetTrackingTotal?: number | null;
   name: string;
   shortCode?: string | null;
   barcode?: string | null;
@@ -47,6 +50,9 @@ interface ProductCreateDto {
 }
 
 interface ProductUpdateDto {
+  requiresCarvoaria?: boolean;
+  serviceTimerMinutes?: number | null;
+  assetTrackingTotal?: number | null;
   name?: string;
   shortCode?: string | null;
   barcode?: string | null;
@@ -159,8 +165,13 @@ export class ProductsService {
     } else if ('volumeCapacity' in data && data.volumeCapacity != null) {
       data.volumeCapacity = Number(data.volumeCapacity);
     }
-    for (const key of ['requiresKitchen', 'requiresBar'] as const) {
+    for (const key of ['requiresKitchen', 'requiresBar', 'requiresCarvoaria'] as const) {
       if (data[key] !== undefined && typeof data[key] !== 'boolean') throw new BadRequestException('Destino de preparo inválido.');
+    }
+    for (const key of ['serviceTimerMinutes', 'assetTrackingTotal'] as const) {
+      const value = data[key];
+      if (value !== undefined && value !== null && (!Number.isInteger(value) || value < 1 || value > (key === 'assetTrackingTotal' ? 500 : 1440)))
+        throw new BadRequestException(`${key === 'assetTrackingTotal' ? 'Quantidade de equipamentos' : 'Tempo de ronda'} inválido.`);
     }
     if (data.preparationIngredients !== undefined && data.preparationIngredients !== null) {
       if (typeof data.preparationIngredients !== 'string' || data.preparationIngredients.length > 5000) throw new BadRequestException('Ingredientes devem ter até 5000 caracteres.');
@@ -387,7 +398,8 @@ export class ProductsService {
 
     if (!sanitized.unit) sanitized.unit = 'UN';
 
-    if (data.requiresKitchen && data.requiresBar) throw new BadRequestException('Selecione apenas um destino: cozinha ou bar.');
+    if ([data.requiresKitchen, data.requiresBar, data.requiresCarvoaria].filter(Boolean).length > 1) throw new BadRequestException('Selecione apenas um destino de preparo.');
+    if (!data.requiresCarvoaria && (data.serviceTimerMinutes != null || data.assetTrackingTotal != null)) throw new BadRequestException('Rondas e equipamentos exigem destino Carvoaria.');
     const isComposite = data.isComposite ?? false;
     const volumeUnit = data.volumeUnit || null;
     const volumeCapacity = data.volumeCapacity !== undefined && data.volumeCapacity !== null ? new Prisma.Decimal(data.volumeCapacity) : null;
@@ -409,6 +421,9 @@ export class ProductsService {
         imageUrl: sanitized.imageUrl,
         requiresKitchen: data.requiresKitchen ?? false,
         requiresBar: data.requiresBar ?? false,
+        requiresCarvoaria: data.requiresCarvoaria ?? false,
+        serviceTimerMinutes: data.serviceTimerMinutes ?? null,
+        assetTrackingTotal: data.assetTrackingTotal ?? null,
         preparationIngredients: sanitized.preparationIngredients ?? null,
         isComposite,
         volumeUnit,
@@ -466,7 +481,9 @@ export class ProductsService {
 
     const oldProduct = await prisma.product.findUnique({ where: { id } });
     if (!oldProduct) throw new NotFoundException('Produto não encontrado.');
-    if ((data.requiresKitchen ?? oldProduct.requiresKitchen) && (data.requiresBar ?? oldProduct.requiresBar)) throw new BadRequestException('Selecione apenas um destino: cozinha ou bar.');
+    const preparation = { ...oldProduct, ...sanitized };
+    if ([preparation.requiresKitchen, preparation.requiresBar, preparation.requiresCarvoaria].filter(Boolean).length > 1) throw new BadRequestException('Selecione apenas um destino de preparo.');
+    if (!preparation.requiresCarvoaria && (preparation.serviceTimerMinutes != null || preparation.assetTrackingTotal != null)) throw new BadRequestException('Desative ronda e rastreamento ao remover o destino Carvoaria.');
 
     const { shortCode: _ignored, ...updateData } = sanitized as Record<string, unknown>;
     void _ignored;
@@ -475,6 +492,8 @@ export class ProductsService {
       const productPayload: any = {};
       if (data.requiresKitchen !== undefined) productPayload.requiresKitchen = data.requiresKitchen;
       if (data.requiresBar !== undefined) productPayload.requiresBar = data.requiresBar;
+      for (const key of ['requiresCarvoaria', 'serviceTimerMinutes', 'assetTrackingTotal'] as const)
+        if (sanitized[key] !== undefined) productPayload[key] = sanitized[key];
       if (sanitized.preparationIngredients !== undefined) productPayload.preparationIngredients = sanitized.preparationIngredients;
       
       if (updateData.name !== undefined) productPayload.name = updateData.name;

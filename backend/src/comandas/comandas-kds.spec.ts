@@ -8,7 +8,14 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
   });
   function setup(enabled: boolean, product: any) {
     const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 'c', status: 'open' }]),
       product: {
+        findMany: jest.fn().mockResolvedValue([{
+          ...product,
+          modifierGroups: (product.modifierGroups || []).map((group: any) => ({ ...group,
+            options: group.options.map((option: any) => ({ ...option, componentProductId: option.componentProductId || option.componentProduct?.id })),
+          })),
+        }]),
         findUnique: jest.fn().mockResolvedValue(product),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
@@ -35,7 +42,7 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
       { get: () => ({ tenantId: 't' }) } as any,
       { invalidateCache: jest.fn() } as any,
       { syncProductStock: jest.fn() } as any,
-      { enabled: async () => enabled } as any,
+      { config: async () => ({ enabled, kdsEnabled: enabled, carvoariaEnabled: false }) } as any,
     );
     jest.spyOn(service, 'findOne').mockResolvedValue({ id: 'c' } as any);
     return { service, tx };
@@ -47,6 +54,13 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
     isComposite: false,
     requiresKitchen: true,
   };
+  it('recusa lançamento se o caixa encerrou a comanda após a leitura inicial', async () => {
+    const { service, tx } = setup(true, product);
+    tx.$queryRaw.mockResolvedValue([{ id: 'c', status: 'closed' }]);
+    await expect(service.addItems('c', [{ productId: 'p', quantity: 1 }])).rejects.toThrow('mudou de estado');
+    expect(tx.product.updateMany).not.toHaveBeenCalled();
+    expect(tx.comandaItem.create).not.toHaveBeenCalled();
+  });
   it.each([false, true])(
     'preserva preço, estoque e auditoria com KDS ativo=%s',
     async (enabled) => {

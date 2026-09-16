@@ -78,6 +78,7 @@ export function KdsReadyOrders({ onDelivered }: { onDelivered: () => void }) {
                 <p className="text-sm font-bold">
                   Mesa {item.comanda.number} · {Number(item.quantity)}×{' '}
                   {item.product.name}
+                  {item.assetNumber != null && <strong className="ml-2 text-amber-300">Narguile #{String(item.assetNumber).padStart(2, '0')}</strong>}
                 </p>
                 <p className="text-xs text-zinc-400">
                   {item.createdBy?.name || item.comanda.responsibleWaiter?.name}

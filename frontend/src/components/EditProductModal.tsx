@@ -4,7 +4,7 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Edit3, X, Loader2, Save, DollarSign, FileText, Tag, PackageOpen, Upload, Trash2 } from 'lucide-react';
 import { ProductSearchSelect } from './ProductSearchSelect';
-import { useKdsEnabled } from '@/hooks/useKdsEnabled';
+import { useKdsConfig } from '@/hooks/useKdsEnabled';
 import { ProductPreparationFields } from './ProductPreparationFields';
 import { useAuthStore } from '@/store/auth';
 
@@ -35,6 +35,9 @@ interface ProductData {
   imageUrl?: string | null;
   requiresKitchen?: boolean;
   requiresBar?: boolean;
+  requiresCarvoaria?: boolean;
+  serviceTimerMinutes?: number | null;
+  assetTrackingTotal?: number | null;
   preparationIngredients?: string | null;
   isComposite?: boolean;
   volumeUnit?: string | null;
@@ -51,7 +54,7 @@ export function EditProductModal({
   onSuccess: () => void;
 }) {
   const { user } = useAuthStore();
-  const kdsEnabled = useKdsEnabled();
+  const { enabled: kdsEnabled, carvoariaEnabled } = useKdsConfig();
   const isStockist = user?.role === 'stockist';
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [grupos, setGrupos] = useState<GrupoTributacao[]>([]);
@@ -74,7 +77,7 @@ export function EditProductModal({
     name: '', barcode: '', unit: 'UN',
     priceCost: '', priceSell: '', stock: '', categoryId: '',
     ncm: '', cest: '', origem: 0, grupoTributacaoId: '', imageUrl: '',
-    requiresKitchen: false, requiresBar: false, preparationIngredients: '',
+    requiresKitchen: false, requiresBar: false, preparationIngredients: '', requiresCarvoaria: false, serviceTimerMinutes: null as number | null, assetTrackingTotal: null as number | null,
     isComposite: false, volumeUnit: '', volumeCapacity: '', minStock: '',
   });
 
@@ -95,6 +98,9 @@ export function EditProductModal({
         imageUrl:           product.imageUrl       || '',
         requiresKitchen: product.requiresKitchen ?? false,
         requiresBar: product.requiresBar ?? false,
+        requiresCarvoaria: product.requiresCarvoaria ?? false,
+        serviceTimerMinutes: product.serviceTimerMinutes ?? null,
+        assetTrackingTotal: product.assetTrackingTotal ?? null,
         preparationIngredients: product.preparationIngredients || '',
         isComposite:        product.isComposite    ?? false,
         volumeUnit:         product.volumeUnit     || '',
@@ -335,7 +341,7 @@ export function EditProductModal({
         volumeUnit:         formData.volumeUnit || null,
         volumeCapacity:     formData.volumeCapacity ? parseFloat(formData.volumeCapacity) : null,
         minStock:           formData.minStock ? parseFloat(formData.minStock) : null,
-        ...(kdsEnabled ? { requiresKitchen: formData.requiresKitchen, requiresBar: formData.requiresBar, preparationIngredients: formData.preparationIngredients || null } : {}),
+        ...(kdsEnabled ? { requiresKitchen: formData.requiresKitchen, requiresBar: formData.requiresBar, requiresCarvoaria: formData.requiresCarvoaria, serviceTimerMinutes: formData.serviceTimerMinutes, assetTrackingTotal: formData.assetTrackingTotal, preparationIngredients: formData.preparationIngredients || null } : {}),
         modifierGroups:     formData.isComposite ? payloadGroups : [],
       });
       toast.success('Produto atualizado com sucesso!');
@@ -584,7 +590,7 @@ export function EditProductModal({
               )}
             </div>
 
-            {kdsEnabled && <ProductPreparationFields value={formData} onChange={value => setFormData(prev => ({ ...prev, ...value }))} />}
+            {kdsEnabled && <ProductPreparationFields carvoariaEnabled={carvoariaEnabled} value={formData} onChange={value => setFormData(prev => ({ ...prev, ...value }))} />}
 
             <div className="flex items-center justify-between py-2 border-t border-zinc-800/50">
               <span className="text-xs font-bold text-zinc-300">Produto Composto / Com adicionais</span>

@@ -8,9 +8,12 @@ describe('Remoção de itens da comanda pelo caixa', () => {
   });
   function setup(status = 'open', modifiers: any[] = [], stockDeducted = true) {
     const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 'c', status: 'open' }]),
       product: { update: jest.fn() },
       inventoryLog: { create: jest.fn() },
       comandaItem: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'i', productId: 'p', quantity: 2, stockDeducted, modifiers,
+          product: { id: 'p', name: 'Porção' } }),
         delete: jest.fn(),
         findMany: jest
           .fn()

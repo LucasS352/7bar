@@ -9,16 +9,19 @@ import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { assertKdsTransition } from './kds.rules';
+import { ShortReadCache } from '../prisma/short-read-cache';
 
 @Injectable()
 export class KdsService {
+  private readonly queueReads = new ShortReadCache();
+  invalidateQueue() { this.queueReads.clear(); }
   constructor(
     private readonly heart: HeartPrismaService,
     private readonly manager: TenantConnectionManager,
     private readonly context: TenantContextService,
   ) {}
 
-  async enabled() {
+  async config() {
     const tenant = await this.heart.tenant.findUnique({
       where: { id: this.context.get().tenantId },
       select: { modulos: true },
@@ -28,11 +31,16 @@ export class KdsService {
         typeof tenant?.modulos === 'string'
           ? JSON.parse(tenant.modulos)
           : tenant?.modulos;
-      return modules?.kds === true;
+      const kdsEnabled = modules?.kds === true;
+      const carvoariaEnabled = modules?.carvoaria === true;
+      return { enabled: kdsEnabled || carvoariaEnabled, kdsEnabled, carvoariaEnabled,
+        stations: [...(kdsEnabled ? ['KITCHEN', 'BAR', 'SERVICE'] : []), ...(carvoariaEnabled ? ['CARVOARIA'] : [])] };
     } catch {
-      return false;
+      return { enabled: false, kdsEnabled: false, carvoariaEnabled: false, stations: [] as string[] };
     }
   }
+
+  async enabled() { return (await this.config()).enabled; }
 
   private async client() {
     if (!(await this.enabled()))
@@ -43,9 +51,11 @@ export class KdsService {
 
   async tickets() {
     const prisma = await this.client();
-    return (prisma as any).comandaItem.findMany({
+    const config = await this.config();
+    return this.queueReads.get(this.context.get().tenantId + ':' + config.stations.join(','), () => (prisma as any).comandaItem.findMany({
       where: {
         kdsStatus: { in: ['PENDING', 'PREPARING', 'READY'] },
+        kdsDestination: { in: config.stations },
         comanda: { status: { in: ['open', 'waiting_payment'] } },
       },
       include: {
@@ -61,7 +71,7 @@ export class KdsService {
         },
       },
       orderBy: [{ kdsSentAt: 'asc' }, { id: 'asc' }],
-    });
+    }));
   }
 
   async update(itemIds: string[], status: string) {
@@ -77,7 +87,8 @@ export class KdsService {
     if (!['PREPARING', 'READY', 'DELIVERED'].includes(status))
       throw new BadRequestException('Status KDS inválido.');
     const prisma = await this.client();
-    return (prisma as any).$transaction(
+    const config = await this.config();
+    const updated = await (prisma as any).$transaction(
       async (tx: any) => {
         const items = await tx.comandaItem.findMany({
           where: { id: { in: itemIds } },
@@ -86,30 +97,36 @@ export class KdsService {
         if (items.length !== itemIds.length)
           throw new BadRequestException('Pedido não encontrado.');
         // Ordem estável evita deadlocks entre telas que enviam lotes diferentes.
-        for (const comandaId of [
+        const comandaIds = [
           ...new Set<string>(items.map((item: any) => item.comandaId)),
-        ].sort()) {
-          const rows = await tx.$queryRaw(
-            Prisma.sql`SELECT id, status FROM comandas WHERE id = ${comandaId} FOR UPDATE`,
-          );
-          if (
-            !rows.length ||
-            !['open', 'waiting_payment'].includes(rows[0].status)
-          )
-            throw new ConflictException('Comanda encerrada.');
-        }
+        ].sort();
+        const rows = await tx.$queryRaw(
+          Prisma.sql`SELECT id, status FROM comandas WHERE id IN (${Prisma.join(comandaIds)}) ORDER BY id FOR UPDATE`,
+        );
+        if (rows.length !== comandaIds.length || rows.some((row: any) => !['open', 'waiting_payment'].includes(row.status)))
+          throw new ConflictException('Comanda encerrada.');
+        const waitingComandas = new Set<string>();
+        const groups = new Map<number, any[]>();
         for (const item of items) {
+          if (!config.stations.includes(item.kdsDestination)) throw new ForbiddenException('Estação não está ativa nesta loja.');
           if (!['open', 'waiting_payment'].includes(item.comanda.status))
             throw new ConflictException('Comanda encerrada.');
           assertKdsTransition(item.kdsStatus, status);
           if (
             status === 'DELIVERED' &&
             !item.serveImmediately &&
-            item.kdsDestination !== 'KITCHEN'
+            item.kdsDestination !== 'KITCHEN' && item.kdsDestination !== 'CARVOARIA'
           ) {
-            const waiting = await tx.comandaItem.count({
+            waitingComandas.add(item.comandaId);
+          }
+          const minutes = status === 'DELIVERED' && !item.timerStartedAt && !item.assetReturnedAt ? (item.timerMinutes || 0) : 0;
+          if (!groups.has(minutes)) groups.set(minutes, []);
+          groups.get(minutes)!.push(item);
+        }
+        if (waitingComandas.size) {
+          const waiting = await tx.comandaItem.count({
               where: {
-                comandaId: item.comandaId,
+                comandaId: { in: [...waitingComandas] },
                 kdsDestination: 'KITCHEN',
                 kdsStatus: { in: ['PENDING', 'PREPARING'] },
               },
@@ -118,16 +135,19 @@ export class KdsService {
               throw new BadRequestException(
                 'Este item deve sair junto com a comida. Aguarde a cozinha ficar pronta.',
               );
-          }
+        }
+        const now = new Date();
+        for (const [minutes, group] of groups) {
           const result = await tx.comandaItem.updateMany({
-            where: { id: item.id, kdsStatus: item.kdsStatus },
+            where: { id: { in: group.map(item => item.id) }, kdsStatus: group[0].kdsStatus },
             data: {
               kdsStatus: status,
-              ...(status === 'READY' ? { kdsReadyAt: new Date() } : {}),
-              ...(status === 'DELIVERED' ? { kdsDeliveredAt: new Date() } : {}),
+              ...(status === 'READY' ? { kdsReadyAt: now } : {}),
+              ...(status === 'DELIVERED' ? { kdsDeliveredAt: now } : {}),
+              ...(minutes ? { timerStartedAt: now, timerDueAt: new Date(now.getTime() + minutes * 60_000) } : {}),
             },
           });
-          if (result.count !== 1)
+          if (result.count !== group.length)
             throw new ConflictException(
               'Pedido atualizado em outra tela. Recarregue a fila.',
             );
@@ -136,5 +156,7 @@ export class KdsService {
       },
       { isolationLevel: 'ReadCommitted' },
     );
+    this.invalidateQueue();
+    return updated;
   }
 }

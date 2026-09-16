@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useKdsEnabled } from '@/hooks/useKdsEnabled';
+import { useKdsConfig } from '@/hooks/useKdsEnabled';
+import { AssetPicker } from '@/components/AssetPicker';
+import { ServiceRounds } from '@/components/ServiceRounds';
 import { KdsReadyOrders } from '@/components/KdsReadyOrders';
 import { KdsStatus, kdsLabels } from '@/lib/kds';
 import { api } from '@/lib/api';
@@ -26,6 +28,7 @@ interface WaiterOperator {
 }
 
 interface ComandaItem {
+  assetNumber?: number | null;
   kdsStatus?: KdsStatus | null;
   serveImmediately?: boolean;
   kdsDestination?: string | null;
@@ -55,6 +58,8 @@ interface Comanda {
 }
 
 interface Product {
+  requiresCarvoaria?: boolean;
+  assetTrackingTotal?: number | null;
   requiresKitchen?: boolean;
   requiresBar?: boolean;
   id: string;
@@ -102,8 +107,15 @@ function normalizeText(s: string): string {
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
 export function GarcomPage() {
+  useEffect(() => {
+    // Inclui os modais renderizados em document.body via portal.
+    document.body.classList.add('garcom-touch-screen');
+    return () => document.body.classList.remove('garcom-touch-screen');
+  }, []);
   const { token } = useAuthStore();
-  const kdsEnabled = useKdsEnabled();
+  const { enabled: kdsEnabled, carvoariaEnabled } = useKdsConfig();
+  const [selectedAssetNumber, setSelectedAssetNumber] = useState<number | undefined>();
+  const [assetRevision, setAssetRevision] = useState(0);
   const [serveImmediately, setServeImmediately] = useState(false);
 
   // Estado global do garçom
@@ -149,7 +161,7 @@ export function GarcomPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [itemQty, setItemQty] = useState(1);
   const [itemNotes, setItemNotes] = useState('');
-  useEffect(() => { setServeImmediately(false); }, [selectedProduct?.id, showAddItem]);
+  useEffect(() => { setServeImmediately(false); setSelectedAssetNumber(undefined); if (selectedProduct?.assetTrackingTotal) setItemQty(1); }, [selectedProduct?.id, showAddItem]);
   const [addingItem, setAddingItem] = useState(false);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   // Produto composto aguardando seleção de modificadores para lançamento em comanda
@@ -332,6 +344,7 @@ export function GarcomPage() {
   // ── Adicionar item ────────────────────────────────────────────────────────
   async function handleAddItem() {
     if (!selectedComanda || !selectedProduct) return;
+    if (selectedProduct.assetTrackingTotal && selectedAssetNumber == null) { toast.error('Escolha o número do narguile.'); return; }
 
     // Produto composto com grupos de adicionais → abrir modal de seleção
     if (
@@ -363,7 +376,8 @@ export function GarcomPage() {
           quantity: qty,
           notes: notes || undefined,
           createdById: waiter?.id,
-          ...(kdsEnabled ? { serveImmediately: product.requiresKitchen ? false : serveImmediately } : {}),
+          ...(product.assetTrackingTotal ? { assetNumber: selectedAssetNumber } : {}),
+          ...(kdsEnabled ? { serveImmediately: product.requiresKitchen || product.requiresCarvoaria ? false : serveImmediately } : {}),
           ...(modifiers.length > 0 ? { modifiers } : {}),
         }],
       });
@@ -373,6 +387,7 @@ export function GarcomPage() {
       toast.dismiss();
       toast.success(`${product.name} lançado!`, { duration: 1200 });
     } catch (err: any) {
+      if (err?.response?.status === 409) { setSelectedAssetNumber(undefined); setAssetRevision(v => v + 1); }
       toast.error(err?.response?.data?.message || 'Erro ao lançar item.');
     } finally {
       setAddingItem(false);
@@ -501,6 +516,12 @@ export function GarcomPage() {
         </header>
 
         {kdsEnabled && waiter && <KdsReadyOrders onDelivered={fetchComandas} />}
+        {carvoariaEnabled && waiter && <ServiceRounds onNewRosh={async id => {
+          try {
+            const res = await api.get(`/v1/comandas/${id}`);
+            handleOpenComanda(res.data); setSelectedProduct(null); setProductSearch(''); setShowAddItem(true);
+          } catch { toast.error('Não foi possível abrir a mesa.'); }
+        }} />}
 
         {/* ─── Conteúdo Principal: Grid de Mesas ────────────────────────────── */}
         {waiter && !selectedComanda ? (
@@ -674,11 +695,12 @@ export function GarcomPage() {
                     <div key={item.id} className="flex items-center gap-3 px-4 py-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-white truncate">{item.product?.name || 'Produto'}</p>
+                        {item.assetNumber != null && <p className="text-xs font-bold text-amber-300">Narguile #{String(item.assetNumber).padStart(2, '0')}</p>}
                         <p className="text-xs text-zinc-500">
                           {Number(item.quantity)}x · {formatMoney(Number(item.unitPrice))}
                           {item.createdBy?.name && <span className="text-[10px] text-zinc-600 ml-1.5">(por {item.createdBy.name})</span>}
                         </p>
-                        {kdsEnabled && item.kdsStatus && <p className={`text-xs mt-1 ${item.kdsStatus === 'READY' ? 'text-emerald-400 font-bold' : 'text-zinc-400'}`}>{kdsLabels[item.kdsStatus]}{item.kdsDestination !== 'KITCHEN' && item.kdsStatus !== 'DELIVERED' ? (item.serveImmediately ? ' · Servir agora' : ' · Servir junto') : ''}</p>}
+                        {kdsEnabled && item.kdsStatus && <p className={`text-xs mt-1 ${item.kdsStatus === 'READY' ? 'text-emerald-400 font-bold' : 'text-zinc-400'}`}>{kdsLabels[item.kdsStatus]}{item.kdsDestination !== 'KITCHEN' && item.kdsDestination !== 'CARVOARIA' && item.kdsStatus !== 'DELIVERED' ? (item.serveImmediately ? ' · Servir agora' : ' · Servir junto') : ''}</p>}
                         {item.notes && <p className="text-xs text-zinc-400 italic mt-0.5">"{item.notes}"</p>}
                       </div>
                       <span className="text-sm font-bold text-white font-mono shrink-0">{formatMoney(Number(item.totalPrice))}</span>
@@ -994,6 +1016,7 @@ export function GarcomPage() {
                     <button
                       type="button"
                       onClick={() => setItemQty(q => q + 1)}
+                      disabled={!!selectedProduct.assetTrackingTotal}
                       className="w-9 h-9 rounded-xl bg-orange-600 hover:bg-orange-500 flex items-center justify-center text-white transition cursor-pointer active:scale-90"
                     >
                       <Plus size={16} />
@@ -1001,7 +1024,9 @@ export function GarcomPage() {
                   </div>
                 </div>
 
-                {kdsEnabled && !selectedProduct.requiresKitchen && <label className="flex gap-3 items-start rounded-xl border border-sky-500/25 bg-sky-500/10 p-3 text-sm text-white">
+                {!!selectedProduct.assetTrackingTotal && <AssetPicker productId={selectedProduct.id} value={selectedAssetNumber} onChange={setSelectedAssetNumber} revision={assetRevision} />}
+                {selectedProduct.requiresCarvoaria && <p className="text-xs text-amber-300">Será enviado para a Carvoaria. A ronda começa somente na entrega.</p>}
+                {kdsEnabled && !selectedProduct.requiresKitchen && !selectedProduct.requiresCarvoaria && <label className="flex gap-3 items-start rounded-xl border border-sky-500/25 bg-sky-500/10 p-3 text-sm text-white">
                   <input type="checkbox" checked={serveImmediately} onChange={e => setServeImmediately(e.target.checked)} className="mt-1 h-4 w-4" />
                   <span>Servir agora<span className="block text-xs text-sky-200/70 mt-1">Desmarcado: servir junto com a comida/porção. Se não houver comida, a entrega pode ser confirmada normalmente.</span></span>
                 </label>}
@@ -1016,7 +1041,7 @@ export function GarcomPage() {
                 <button
                   type="button"
                   onClick={handleAddItem}
-                  disabled={addingItem}
+                  disabled={addingItem || (!!selectedProduct.assetTrackingTotal && selectedAssetNumber == null)}
                   className="w-full py-3.5 rounded-2xl bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white font-bold transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer text-sm shadow-lg shadow-orange-600/20"
                 >
                   {addingItem ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
@@ -1118,6 +1143,7 @@ export function GarcomPage() {
                 <div key={item.id} className="flex items-center justify-between py-2 border-b border-zinc-800/50 last:border-0">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white font-medium truncate">{item.product?.name || 'Produto'}</p>
+                    {item.assetNumber != null && <p className="text-xs font-bold text-amber-300">Narguile #{String(item.assetNumber).padStart(2, '0')}</p>}
                     <p className="text-xs text-zinc-500">
                       {Number(item.quantity)}x · {formatMoney(Number(item.unitPrice))}
                       {item.notes && <span className="italic text-zinc-400"> — "{item.notes}"</span>}

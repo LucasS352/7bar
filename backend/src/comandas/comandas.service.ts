@@ -1,7 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
+import { serviceSnapshot, extendTimer, releaseComandaAssets } from './service-timer.rules';
+import { ShortReadCache } from '../prisma/short-read-cache';
 import { KdsService } from './kds.service';
 import { initialKds } from './kds.rules';
 import { Prisma } from '@prisma/client';
+import { retryTransaction } from '../prisma/transaction-retry';
+import { lockProducts } from '../prisma/lock-products';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { ProductsService } from '../products/products.service';
@@ -9,6 +13,7 @@ import { IntegrationsService } from '../integrations/integrations.service';
 
 @Injectable()
 export class ComandasService {
+  private readonly listReads = new ShortReadCache();
   private readonly logger = new Logger(ComandasService.name);
 
   constructor(
@@ -24,6 +29,72 @@ export class ComandasService {
     return this.tenantManager.getTenantClient(tenantId, databaseUrl);
   }
 
+  private async requireCarvoaria() {
+    if (!(await this.kds.config()).carvoariaEnabled) throw new ForbiddenException('Carvoaria não está ativa nesta loja.');
+  }
+
+  private async lockOpenComanda(tx: any, comandaId: string, statuses = ['open', 'waiting_payment']) {
+    const rows = await tx.$queryRaw(Prisma.sql`SELECT id, status FROM comandas WHERE id = ${comandaId} FOR UPDATE`);
+    if (!rows.length) throw new NotFoundException('Comanda não encontrada.');
+    if (!statuses.includes(rows[0].status)) throw new ConflictException('A comanda mudou de estado. Atualize a tela.');
+  }
+
+  async availableAssets(productId: string) {
+    await this.requireCarvoaria();
+    const db = await this.getPrisma();
+    const product = await db.product.findUnique({ where: { id: productId } });
+    if (!product) throw new NotFoundException('Produto não encontrado.');
+    const total = product.requiresCarvoaria ? (product.assetTrackingTotal || 0) : 0;
+    const occupied = await db.comandaAssetReservation.findMany({
+      where: { assetNumber: { lte: total } },
+      select: { assetNumber: true, item: { select: { comanda: { select: { id: true, number: true } } } } },
+      orderBy: { assetNumber: 'asc' },
+    });
+    return { total, occupied: occupied.map(row => ({ assetNumber: row.assetNumber, comanda: row.item.comanda })) };
+  }
+
+  async serviceRounds() {
+    await this.requireCarvoaria();
+    const db = await this.getPrisma();
+    const items = await db.comandaItem.findMany({
+      where: { assetReturnedAt: null, OR: [{ timerMinutes: { not: null } }, { assetNumber: { not: null } }],
+        comanda: { status: { in: ['open', 'waiting_payment'] } } },
+      include: { product: { select: { name: true } }, comanda: { select: { id: true, number: true, status: true } } },
+      orderBy: [{ timerDueAt: 'asc' }, { createdAt: 'asc' }],
+    });
+    return { serverTime: new Date().toISOString(), items };
+  }
+
+  async snoozeTimer(comandaId: string, itemId: string, minutes: number, expectedDueAt: string) {
+    await this.requireCarvoaria();
+    const db = await this.getPrisma();
+    return retryTransaction(() => db.$transaction(async tx => {
+      await this.lockOpenComanda(tx, comandaId);
+      const item = await tx.comandaItem.findFirst({ where: { id: itemId, comandaId } });
+      if (!item) throw new NotFoundException('Item não encontrado nesta comanda.');
+      if (!item.timerStartedAt || !item.timerDueAt || item.assetReturnedAt)
+        throw new BadRequestException('Este item não possui uma ronda em andamento.');
+      if (typeof expectedDueAt !== 'string' || new Date(expectedDueAt).getTime() !== item.timerDueAt.getTime())
+        throw new ConflictException('A ronda foi atualizada em outra tela. Atualize antes de prorrogar.');
+      return tx.comandaItem.update({ where: { id: itemId }, data: { timerDueAt: extendTimer(item.timerDueAt, minutes, new Date()) } });
+    }, { isolationLevel: 'ReadCommitted' }));
+  }
+
+  async returnAsset(comandaId: string, itemId: string) {
+    await this.requireCarvoaria();
+    const db = await this.getPrisma();
+    return retryTransaction(() => db.$transaction(async tx => {
+      await this.lockOpenComanda(tx, comandaId);
+      const item = await tx.comandaItem.findFirst({ where: { id: itemId, comandaId } });
+      if (!item) throw new NotFoundException('Item não encontrado nesta comanda.');
+      if (item.assetReturnedAt) return item;
+      if ((!item.assetNumber && !item.timerMinutes) || item.kdsStatus !== 'DELIVERED')
+        throw new BadRequestException('Somente itens de atendimento já entregues podem ser recolhidos.');
+      await tx.comandaAssetReservation.deleteMany({ where: { comandaItemId: itemId } });
+      return tx.comandaItem.update({ where: { id: itemId }, data: { assetReturnedAt: new Date() } });
+    }, { isolationLevel: 'ReadCommitted' }));
+  }
+
   async findAll(status: string = 'open') {
     const prisma = await this.getPrisma();
     const whereClause: any = {};
@@ -35,7 +106,7 @@ export class ComandasService {
       whereClause.status = status;
     }
 
-    const comandas = await (prisma as any).comanda.findMany({
+    const comandas = await this.listReads.get(this.tenantContext.get().tenantId + ':' + status, () => (prisma as any).comanda.findMany({
       where: whereClause,
       include: {
         items: {
@@ -74,12 +145,13 @@ export class ComandasService {
         },
       },
       orderBy: { updatedAt: 'desc' },
-    });
+    }));
 
     return comandas;
   }
 
   async findOne(id: string) {
+    this.listReads.clear();
     const prisma = await this.getPrisma();
     const comanda = await (prisma as any).comanda.findUnique({
       where: { id },
@@ -172,6 +244,7 @@ export class ComandasService {
       createdById?: string;
       modifiers?: Array<{ optionId: string }>;
       serveImmediately?: boolean;
+      assetNumber?: number;
     }>,
   ) {
     const { tenantId } = this.tenantContext.get();
@@ -197,16 +270,36 @@ export class ComandasService {
     // ── Ler configurações do tenant ──────────────────────────────────────────
     const tenantSettings = await (prisma as any).tenantSettings.findFirst();
     const allowNegativeStock: boolean = tenantSettings?.allowNegativeStock ?? false;
-    const kdsEnabled = await this.kds.enabled();
+    const features = await this.kds.config();
 
     // ── IDs dos produtos cujo estoque foi alterado (para sync pós-commit) ────
     const affectedProductIds = new Set<string>();
 
     // ── Transação principal ──────────────────────────────────────────────────
-    await (prisma as any).$transaction(async (tx: any) => {
+    await retryTransaction(() => (prisma as any).$transaction(async (tx: any) => {
+      // Serializa lançamentos da mesma mesa e disputa com o fechamento no caixa.
+      // A validação anterior à transação pode ter ficado desatualizada.
+      const current = await tx.$queryRaw(
+        Prisma.sql`SELECT id, status FROM comandas WHERE id = ${comandaId} FOR UPDATE`,
+      );
+      if (!current.length) throw new NotFoundException('Comanda não encontrada.');
+      if (current[0].status !== 'open') {
+        throw new BadRequestException('A comanda mudou de estado. Atualize a tela antes de lançar itens.');
+      }
+      const involvedProducts = await tx.product.findMany({
+        where: { id: { in: items.map(item => item.productId) } },
+        select: { id: true, modifierGroups: { select: { options: { select: { id: true, componentProductId: true } } } } },
+      });
+      const selectedOptions = new Set(items.flatMap(item => (item.modifiers || []).map(option => option.optionId)));
+      const lockIds = involvedProducts.flatMap((product: any) => [product.id,
+        ...(product.modifierGroups || []).flatMap((group: any) => group.options
+          .filter((option: any) => selectedOptions.has(option.id))
+          .map((option: any) => option.componentProductId)),
+      ]);
+      await lockProducts(tx, lockIds);
       for (const item of items) {
-        const qty = Number(item.quantity || 1);
-        if (qty <= 0) throw new BadRequestException('Quantidade inválida.');
+        const qty = Number(item.quantity);
+        if (!Number.isFinite(qty) || qty <= 0) throw new BadRequestException('Quantidade inválida.');
 
         // Buscar produto com grupos de modificadores (necessário para compostos)
         const product = await tx.product.findUnique({
@@ -225,7 +318,11 @@ export class ComandasService {
         });
 
         if (!product) throw new NotFoundException(`Produto ID ${item.productId} não encontrado.`);
-        const kdsData = initialKds(product, kdsEnabled, item.serveImmediately);
+        const kdsData = {
+          ...initialKds(product, features.kdsEnabled, item.serveImmediately, features.carvoariaEnabled),
+          ...serviceSnapshot(product, item.assetNumber, qty, features.carvoariaEnabled),
+        };
+        const reservation = item.assetNumber == null ? {} : { assetReservation: { create: { assetNumber: item.assetNumber } } };
 
         // ════════════════════════════════════════════════════════════════════
         //  PRODUTO SIMPLES
@@ -281,6 +378,7 @@ export class ComandasService {
               createdById: item.createdById || null,
               stockDeducted: true,
               ...kdsData,
+              ...reservation,
             },
           });
 
@@ -430,6 +528,7 @@ export class ComandasService {
               createdById: item.createdById || null,
               stockDeducted: true,
               ...kdsData,
+              ...reservation,
               modifiers: {
                 create: modifiersToCreate,
               },
@@ -445,6 +544,10 @@ export class ComandasService {
         where: { id: comandaId },
         data: { total: new Prisma.Decimal(Number(newTotal.toFixed(2))) },
       });
+    }, { isolationLevel: 'ReadCommitted' })).catch(error => {
+      if (error?.code === 'P2002' && items.some(item => item.assetNumber != null))
+        throw new ConflictException('Equipamento já reservado por outra mesa. Atualize a disponibilidade e escolha outro número.');
+      throw error;
     });
 
     // ── Pós-commit: invalidar cache e sincronizar integrações ────────────────
@@ -494,7 +597,12 @@ export class ComandasService {
 
     const affectedProductIds = new Set<string>();
 
-    await (prisma as any).$transaction(async (tx: any) => {
+    await retryTransaction(() => (prisma as any).$transaction(async (tx: any) => {
+      await this.lockOpenComanda(tx, comandaId, ['open']);
+      const item = await tx.comandaItem.findFirst({ where: { id: itemId, comandaId },
+        include: { modifiers: true, product: { select: { id: true, name: true, isComposite: true } } } });
+      if (!item) throw new NotFoundException('Item já removido desta comanda.');
+      await lockProducts(tx, [item.productId, ...item.modifiers.map((m: any) => m.componentProductId)]);
       // Estorno de estoque apenas se stockDeducted = true
       if (item.stockDeducted) {
         if (item.modifiers && item.modifiers.length > 0) {
@@ -546,7 +654,7 @@ export class ComandasService {
         where: { id: comandaId },
         data: { total: new Prisma.Decimal(Number(newTotal.toFixed(2))) },
       });
-    });
+    }, { isolationLevel: 'ReadCommitted' }));
 
     // Pós-commit
     try {
@@ -587,10 +695,11 @@ export class ComandasService {
       throw new BadRequestException('Não é possível solicitar fechamento de uma comanda sem itens lançados.');
     }
 
-    await (prisma as any).comanda.update({
-      where: { id: comandaId },
+    const changed = await (prisma as any).comanda.updateMany({
+      where: { id: comandaId, status: 'open' },
       data: { status: 'waiting_payment' },
     });
+    if (!changed.count) throw new ConflictException('Comanda alterada em outra tela. Atualize antes de solicitar pagamento.');
 
     return this.findOne(comandaId);
   }
@@ -607,10 +716,11 @@ export class ComandasService {
       throw new BadRequestException('Apenas comandas aguardando pagamento podem ser reabertas.');
     }
 
-    await (prisma as any).comanda.update({
-      where: { id: comandaId },
+    const changed = await (prisma as any).comanda.updateMany({
+      where: { id: comandaId, status: 'waiting_payment' },
       data: { status: 'open' },
     });
+    if (!changed.count) throw new ConflictException('Comanda alterada em outra tela. Atualize antes de reabrir.');
 
     return this.findOne(comandaId);
   }
@@ -629,13 +739,11 @@ export class ComandasService {
     }
 
     // Permite fechar tanto comanda open quanto waiting_payment (retrocompatibilidade)
-    const updated = await (prisma as any).comanda.update({
-      where: { id: comandaId },
-      data: {
-        status: 'closed',
-        saleId: saleId || null,
-      },
-    });
+    const updated = await retryTransaction(() => (prisma as any).$transaction(async (tx: any) => {
+      await this.lockOpenComanda(tx, comandaId);
+      await releaseComandaAssets(tx, comandaId);
+      return tx.comanda.update({ where: { id: comandaId }, data: { status: 'closed', saleId: saleId || null } });
+    }, { isolationLevel: 'ReadCommitted' }));
 
     return updated;
   }
@@ -668,7 +776,12 @@ export class ComandasService {
 
     const affectedProductIds = new Set<string>();
 
-    await (prisma as any).$transaction(async (tx: any) => {
+    await retryTransaction(() => (prisma as any).$transaction(async (tx: any) => {
+      await this.lockOpenComanda(tx, comandaId);
+      const comanda = await tx.comanda.findUnique({ where: { id: comandaId },
+        include: { items: { include: { modifiers: true, product: { select: { id: true, name: true } } } } } });
+      await lockProducts(tx, comanda.items.flatMap((item: any) => [item.productId, ...item.modifiers.map((m: any) => m.componentProductId)]));
+      await releaseComandaAssets(tx, comandaId);
       // Estornar estoque de todos os itens com stockDeducted = true
       for (const item of comanda.items) {
         if (!item.stockDeducted) continue;
@@ -716,7 +829,7 @@ export class ComandasService {
         where: { id: comandaId },
         data: { status: 'cancelled' },
       });
-    });
+    }, { isolationLevel: 'ReadCommitted' }));
 
     // Pós-commit
     try {

@@ -7,7 +7,7 @@ import { KdsService } from './kds.service';
 export class KdsController {
   constructor(private readonly kds: KdsService) {}
   @Get('config') config() {
-    return this.kds.enabled().then((enabled) => ({ enabled }));
+    return this.kds.config();
   }
   @Get('tickets') tickets() {
     return this.kds.tickets();
