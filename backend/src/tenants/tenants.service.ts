@@ -7,6 +7,7 @@ import * as bcrypt from 'bcrypt';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
+import { upgradeTenantSchema } from './tenant-schema-upgrade';
 
 const execAsync = promisify(exec);
 
@@ -274,13 +275,13 @@ export class TenantsService {
       // 2. Executar db push
       try {
         const prismaSchemaPath = path.resolve(process.cwd(), 'prisma', 'schema.prisma');
-        const { stdout, stderr } = await execAsync(`npx prisma db push --schema="${prismaSchemaPath}" --skip-generate`, {
+        const { stdout, stderr } = await upgradeTenantSchema(tenant.databaseUrl, () => execAsync(`npx prisma db push --schema="${prismaSchemaPath}" --skip-generate`, {
           env: {
             ...process.env,
             DATABASE_URL_TENANT: tenant.databaseUrl,
           },
           timeout: 60000,
-        });
+        }));
 
         // Após atualizar o schema, popular grupos tributários padrão (upsert — seguro)
         let seedResult = { criados: 0, existentes: 0 };
