@@ -157,10 +157,10 @@ export function ComandaWorkspaceModal({
       setError('');
       const id = selection.current;
       if (id && id !== 'new') await loadDetail(id);
-    } catch {
+    } catch (err: any) {
       if (request === version.current)
         setError(
-          'Não foi possível atualizar as comandas. Verifique a conexão e tente novamente.',
+          err?.message || 'Não foi possível atualizar as comandas. Verifique a conexão e tente novamente.',
         );
     } finally {
       if (request === version.current) setLoading(false);

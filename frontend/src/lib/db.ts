@@ -197,7 +197,15 @@ class SevenBarDatabase extends Dexie {
       products_cache: 'id, name, barcode, shortCode',
       telemetry_events: '++id, type, createdAt, sessionId',
     });
-    this.version(3).stores({ comandas_cache: 'tenantId' });
+
+    // ── v3: adiciona cache de comandas para contingência offline ─────────────
+    // IMPORTANTE: todas as stores existentes devem ser redeclaradas na migração
+    this.version(3).stores({
+      offline_sales: '++id, localId, syncStatus, createdAt, tenantId',
+      products_cache: 'id, name, barcode, shortCode',
+      telemetry_events: '++id, type, createdAt, sessionId',
+      comandas_cache: 'tenantId',
+    });
   }
 }
 

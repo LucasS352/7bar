@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/auth';
 import { useCartStore, type Product, type CartItemModifier } from '@/store/cart';
 import { api, apiGet } from '@/lib/api';
 import { toast } from 'sonner';
-import { updateProductsCache, getCachedProducts } from '@/lib/db';
+import { updateProductsCache, getCachedProducts, db } from '@/lib/db';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
 import { PaymentModal } from '@/components/PaymentModal';
@@ -123,6 +123,9 @@ function PosPageContent() {
         headers: { 'X-Silent-Poll': 'true' },
       });
       const newList: any[] = res.data || [];
+      if (user?.tenant && Array.isArray(newList)) {
+        void db.comandas_cache.put({ tenantId: user.tenant, savedAt: Date.now(), items: newList }).catch(() => {});
+      }
       setOpenComandas(prev => {
         const prevMap = new Map(prev.map((c: any) => [c.id, c.status]));
         // Dispara beep e badge somente na TRANSIÇÃO de estado:
@@ -153,11 +156,16 @@ function PosPageContent() {
         return newList;
       });
     } catch {
-      // Silenciado — erros de polling nunca quebram a interface
+      if (user?.tenant) {
+        try {
+          const cached = await db.comandas_cache.get(user.tenant);
+          if (cached?.items) setOpenComandas(cached.items);
+        } catch { /* silencia */ }
+      }
     } finally {
       setLoadingComandas(false);
     }
-  }, []);
+  }, [user?.tenant]);
 
   useEffect(() => {
     if (!isComandasEnabled) return;
