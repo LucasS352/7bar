@@ -32,7 +32,7 @@ export interface NetworkStatusState {
 const probeAxios = axios.create({ baseURL: '/', timeout: 8_000 });
 
 const PROBE_INTERVAL_NORMAL   = 60_000; // 60s quando online
-const PROBE_INTERVAL_DEGRADED = 15_000; // 15s quando degraded/offline
+const PROBE_INTERVAL_DEGRADED = 5_000;  // 5s quando degraded/offline (recuperação ágil)
 const DEBOUNCE_THRESHOLD      = 2;      // confirmações consecutivas
 
 export function useNetworkStatus(): NetworkStatusState {
@@ -98,9 +98,13 @@ export function useNetworkStatus(): NetworkStatusState {
         consecutiveSuccesses.current = 0;
       }
 
-      if (consecutiveSuccesses.current >= DEBOUNCE_THRESHOLD) {
-        const current = statusRef.current;
-        if (current === 'offline' || current === 'degraded') {
+      const current = statusRef.current;
+      if (current === 'offline') {
+        // Ao voltar de offline com probe válida, recupera imediatamente
+        applyStatus('recovering');
+        consecutiveSuccesses.current = 0;
+      } else if (consecutiveSuccesses.current >= DEBOUNCE_THRESHOLD) {
+        if (current === 'degraded') {
           applyStatus('recovering');
         } else {
           applyStatus('online');
@@ -112,7 +116,9 @@ export function useNetworkStatus(): NetworkStatusState {
       }
 
       if (!destroyed.current) {
-        const interval = statusRef.current === 'degraded' ? PROBE_INTERVAL_DEGRADED : PROBE_INTERVAL_NORMAL;
+        const interval = (statusRef.current === 'degraded' || statusRef.current === 'offline')
+          ? PROBE_INTERVAL_DEGRADED
+          : PROBE_INTERVAL_NORMAL;
         probeTimeout.current = setTimeout(runProbe, interval);
       }
     } catch (err: unknown) {
@@ -153,6 +159,8 @@ export function useNetworkStatus(): NetworkStatusState {
 
     const handleOnline = () => {
       setNavigatorOffline(false);
+      consecutiveSuccesses.current = 0;
+      consecutiveFailures.current = 0;
       // Dispara verificação imediata para confirmar disponibilidade real da API
       if (probeAbort.current) probeAbort.current.abort();
       if (probeTimeout.current) clearTimeout(probeTimeout.current);
@@ -180,14 +188,14 @@ export function useNetworkStatus(): NetworkStatusState {
     };
   }, [runProbe]);
 
-  // Transição suave de recovering para online após estabilização
+  // Transição suave de recovering para online após estabilização (1.8s)
   useEffect(() => {
     if (status !== 'recovering') return;
     const timer = setTimeout(() => {
       if (!destroyed.current && statusRef.current === 'recovering') {
         applyStatus('online');
       }
-    }, 6_000);
+    }, 1_800);
     return () => clearTimeout(timer);
   }, [status, applyStatus]);
 
