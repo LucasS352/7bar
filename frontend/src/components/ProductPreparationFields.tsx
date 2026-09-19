@@ -4,6 +4,7 @@ type Preparation = {
   assetTrackingTotal: number | null;
   requiresKitchen: boolean;
   requiresBar: boolean;
+  barStation?: string;
   preparationIngredients: string;
 };
 
@@ -61,6 +62,11 @@ export function ProductPreparationFields({
             serviceTimerMinutes: e.target.checked ? 30 : null, assetTrackingTotal: null })} /> Carvoaria / Narguile
         </label>}
       </div>
+      {value.requiresBar && <label className="block text-sm text-zinc-300">Estação do bar
+        <select value={value.barStation || 'BAR'} onChange={e => onChange({ ...value, barStation: e.target.value })} className="ml-3 rounded-lg bg-zinc-950 p-2">
+          <option value="BAR">Bar (existente)</option><option value="BAR_1">Bar 1</option><option value="BAR_2">Bar 2</option>
+        </select>
+      </label>}
       {value.requiresCarvoaria && <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-xs text-zinc-300">Ronda (minutos; vazio = sem alerta)
           <input type="number" min={1} max={1440} value={value.serviceTimerMinutes ?? ''}

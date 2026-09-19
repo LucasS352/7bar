@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
+import { StationAccessService } from './station-access.service';
 
 @Injectable()
 export class AuthService {
@@ -11,7 +12,8 @@ export class AuthService {
     private heartPrisma: HeartPrismaService,
     private jwtService: JwtService,
     private tenantManager: TenantConnectionManager,
-    private tenantContext: TenantContextService
+    private tenantContext: TenantContextService,
+    private access: StationAccessService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -30,7 +32,7 @@ export class AuthService {
     return null;
   }
 
-  async validateOperatorPin(tenantId: string, operatorId: string, pin: string): Promise<any> {
+  async validateOperatorPin(tenantId: string, operatorId: string, pin: string, context = 'cashier'): Promise<any> {
     const { databaseUrl } = this.tenantContext.get();
     const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
     const operator = await prisma.operator.findFirst({
@@ -42,11 +44,12 @@ export class AuthService {
     }
 
     if (await bcrypt.compare(pin, operator.pin)) {
-      const operatorToken = this.jwtService.sign(
+      const operatorToken = context === 'waiter' ? this.access.signWaiterSession(tenantId, operator as { id: string; pin: string }) : this.jwtService.sign(
         {
           type: 'op',
           opId: operator.id,
           tenantId,
+          context,
         },
         { expiresIn: '30m' }
       );

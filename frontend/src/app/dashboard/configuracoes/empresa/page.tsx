@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { StationAccessLinks } from '@/components/StationAccessLinks';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Building2, MapPin, Receipt, ShieldCheck, Save, Loader2, Upload, CheckCircle, AlertCircle, Zap, Eye, EyeOff, FlaskConical } from 'lucide-react';
@@ -199,6 +200,7 @@ export default function EmpresaConfigPage() {
       </div>
 
       {/* Tabs */}
+      <StationAccessLinks />
       <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-2xl p-1 overflow-x-auto">
         {activeTabs.map(tab => (
           <button

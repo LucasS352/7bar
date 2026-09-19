@@ -122,7 +122,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
     name: '', barcode: '', unit: 'UN',
     priceCost: '', priceSell: '', stock: '', categoryId: '',
     ncm: '', cest: '', origem: 0, grupoTributacaoId: '', imageUrl: '',
-    requiresKitchen: false, requiresBar: false, preparationIngredients: '', requiresCarvoaria: false, serviceTimerMinutes: null as number | null, assetTrackingTotal: null as number | null,
+    requiresKitchen: false, requiresBar: false, barStation: 'BAR', preparationIngredients: '', requiresCarvoaria: false, serviceTimerMinutes: null as number | null, assetTrackingTotal: null as number | null,
     isComposite: false,
     volumeUnit: '',
     volumeCapacity: '',
@@ -359,7 +359,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess }: {
         volumeUnit:        formData.volumeUnit || undefined,
         volumeCapacity:    formData.volumeCapacity ? parseFloat(formData.volumeCapacity) : undefined,
         minStock:          formData.minStock ? parseFloat(formData.minStock) : null,
-        ...(kdsEnabled ? { requiresKitchen: formData.requiresKitchen, requiresBar: formData.requiresBar, requiresCarvoaria: formData.requiresCarvoaria, serviceTimerMinutes: formData.serviceTimerMinutes, assetTrackingTotal: formData.assetTrackingTotal, preparationIngredients: formData.preparationIngredients || null } : {}),
+        ...(kdsEnabled ? { requiresKitchen: formData.requiresKitchen, requiresBar: formData.requiresBar, barStation: formData.barStation, requiresCarvoaria: formData.requiresCarvoaria, serviceTimerMinutes: formData.serviceTimerMinutes, assetTrackingTotal: formData.assetTrackingTotal, preparationIngredients: formData.preparationIngredients || null } : {}),
         modifierGroups:    formData.isComposite ? payloadGroups : undefined,
       });
       useDemoMissionsStore.getState().completeMission('productCreated');

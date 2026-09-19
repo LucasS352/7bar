@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { KdsService } from './kds.service';
 
@@ -6,13 +6,13 @@ import { KdsService } from './kds.service';
 @UseGuards(JwtAuthGuard)
 export class KdsController {
   constructor(private readonly kds: KdsService) {}
-  @Get('config') config() {
-    return this.kds.config();
+  @Get('config') config(@Request() req: any) {
+    return this.kds.config(req.user.station);
   }
-  @Get('tickets') tickets() {
-    return this.kds.tickets();
+  @Get('tickets') tickets(@Request() req: any) {
+    return this.kds.tickets(req.user.station);
   }
-  @Patch('status') update(@Body() body: { itemIds: string[]; status: string }) {
-    return this.kds.update(body.itemIds, body.status);
+  @Patch('status') update(@Body() body: { itemIds: string[]; status: string }, @Request() req: any) {
+    return this.kds.update(body.itemIds, body.status, req.user.station);
   }
 }

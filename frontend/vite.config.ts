@@ -16,8 +16,8 @@ export default defineConfig({
       // 'autoUpdate' instala e ativa o novo SW imediatamente sem prompt
       registerType: 'autoUpdate',
 
-      // Força o novo SW a ativar e assumir controle sem esperar a próxima visita
-      injectManifest: false,
+      // O service worker é gerado pelo Workbox; autoUpdate controla a ativação.
+      strategies: 'generateSW',
 
       // Ponto de entrada do manifest
       manifest: {

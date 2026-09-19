@@ -46,6 +46,7 @@ api.interceptors.response.use(
     const isAuthEndpoint =
       url.includes('/auth/operator-login') ||
       url.includes('/auth/login') ||
+      url.includes('/auth/station-login') ||
       Boolean(error.config?.skipAuthRedirect);
 
     // Timeout ou cancelamento (AbortController) → NÃO é logout, é falha de rede

@@ -11,7 +11,7 @@ export interface KdsTicket {
   quantity: number;
   notes?: string;
   kdsStatus: KdsStatus;
-  kdsDestination: 'KITCHEN' | 'BAR' | 'SERVICE' | 'CARVOARIA';
+  kdsDestination: 'KITCHEN' | 'BAR' | 'BAR_1' | 'BAR_2' | 'SERVICE' | 'CARVOARIA';
   kdsSentAt: string;
   serveImmediately: boolean;
   assetNumber?: number | null;

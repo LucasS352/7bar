@@ -1,11 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query, ForbiddenException } from '@nestjs/common';
+import { StationAccessService } from '../auth/station-access.service';
+import { operatorAllowed } from '../auth/access-policy';
 import { OperatorsService } from './operators.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
 @Controller('operators')
 export class OperatorsController {
-  constructor(private readonly operatorsService: OperatorsService) {}
+  constructor(private readonly operatorsService: OperatorsService, private readonly access: StationAccessService) {}
 
   @Post()
   create(@Request() req: any, @Body() body: { name: string; pin: string; isManager?: boolean; jobTitle?: string }) {
@@ -38,8 +40,13 @@ export class OperatorsController {
   }
 
   @Get()
-  findAll(@Request() req: any) {
-    return this.operatorsService.findAll(req.user.tenantId);
+  async findAll(@Request() req: any, @Query('context') requested?: string) {
+    const context = req.user.station === 'WAITER' ? 'waiter' : requested;
+    const operators = await this.operatorsService.findAll(req.user.tenantId);
+    if (!context) return operators;
+    const config = await this.access.config(req.user.tenantId);
+    if (context === 'waiter' && !config.waiter) throw new ForbiddenException('Modo Garçom não está ativo.');
+    return operators.filter(op => operatorAllowed(op, context, config.isolated));
   }
 
   @Get(':id')
@@ -49,6 +56,7 @@ export class OperatorsController {
 
   @Patch(':id')
   update(@Request() req: any, @Param('id') id: string, @Body() body: { name?: string; pin?: string; active?: boolean; isManager?: boolean; jobTitle?: string }) {
+    if (body.pin && !['admin', 'superadmin'].includes(req.user.role)) throw new ForbiddenException('Apenas administradores podem trocar o PIN.');
     return this.operatorsService.update(req.user.tenantId, id, body);
   }
 

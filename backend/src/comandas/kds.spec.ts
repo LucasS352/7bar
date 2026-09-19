@@ -2,6 +2,12 @@ import { initialKds, assertKdsTransition } from './kds.rules';
 import { KdsService } from './kds.service';
 
 describe('KDS opt-in e ciclo de produção', () => {
+  it('roteia Bar 1/2 preservando o Bar legado e o módulo desligado', () => {
+    for (const station of ['BAR', 'BAR_1', 'BAR_2']) {
+      expect(initialKds({ requiresBar: true, barStation: station }, true)).toMatchObject({ kdsDestination: station });
+      expect(initialKds({ requiresBar: true, barStation: station }, false)).toEqual({});
+    }
+  });
   it('não envia produtos antigos nem altera lançamentos com o módulo desligado', () => {
     expect(initialKds({}, true)).toEqual({});
     expect(initialKds({ requiresKitchen: true }, false, false)).toEqual({});
@@ -85,6 +91,15 @@ describe('KDS isolamento e entrega', () => {
     serveImmediately: false,
     comanda: { status: 'open' },
   };
+  it('filtra consulta no servidor e nega alteração de outra estação', async () => {
+    const { service, tx } = setup();
+    tx.comandaItem.findMany.mockResolvedValue([]);
+    await service.tickets('BAR_1');
+    expect(tx.comandaItem.findMany.mock.calls[0][0].where.kdsDestination).toEqual({ in: ['BAR_1'] });
+    tx.comandaItem.findMany.mockResolvedValue([ready]);
+    await expect(service.update(['i1'], 'DELIVERED', 'KITCHEN')).rejects.toThrow('Estação não está ativa');
+    expect(tx.comandaItem.updateMany).not.toHaveBeenCalled();
+  });
   it('inicia ronda somente em DELIVERED e respeita a duração fotografada', async () => {
     const { service, tx, heart } = setup();
     heart.tenant.findUnique.mockResolvedValue({ modulos: JSON.stringify({ carvoaria: true }) });
@@ -123,7 +138,7 @@ describe('KDS isolamento e entrega', () => {
     expect(manager.getTenantClient).toHaveBeenCalledWith('tenant-a', 'db-a');
     expect(tx.comandaItem.findMany.mock.calls[0][0].where).toEqual({
       kdsStatus: { in: ['PENDING', 'PREPARING', 'READY'] },
-      kdsDestination: { in: ['KITCHEN', 'BAR', 'SERVICE'] },
+      kdsDestination: { in: ['KITCHEN', 'BAR', 'BAR_1', 'BAR_2', 'SERVICE'] },
       comanda: { status: { in: ['open', 'waiting_payment'] } },
     });
   });

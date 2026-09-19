@@ -21,7 +21,7 @@ export class KdsService {
     private readonly context: TenantContextService,
   ) {}
 
-  async config() {
+  async config(station?: string) {
     const tenant = await this.heart.tenant.findUnique({
       where: { id: this.context.get().tenantId },
       select: { modulos: true },
@@ -34,7 +34,7 @@ export class KdsService {
       const kdsEnabled = modules?.kds === true;
       const carvoariaEnabled = modules?.carvoaria === true;
       return { enabled: kdsEnabled || carvoariaEnabled, kdsEnabled, carvoariaEnabled,
-        stations: [...(kdsEnabled ? ['KITCHEN', 'BAR', 'SERVICE'] : []), ...(carvoariaEnabled ? ['CARVOARIA'] : [])] };
+        stations: [...(kdsEnabled ? ['KITCHEN', 'BAR', 'BAR_1', 'BAR_2', 'SERVICE'] : []), ...(carvoariaEnabled ? ['CARVOARIA'] : [])].filter(s => !station || station === 'WAITER' || s === station) };
     } catch {
       return { enabled: false, kdsEnabled: false, carvoariaEnabled: false, stations: [] as string[] };
     }
@@ -49,9 +49,9 @@ export class KdsService {
     return this.manager.getTenantClient(tenantId, databaseUrl);
   }
 
-  async tickets() {
+  async tickets(station?: string) {
     const prisma = await this.client();
-    const config = await this.config();
+    const config = await this.config(station);
     return this.queueReads.get(this.context.get().tenantId + ':' + config.stations.join(','), () => (prisma as any).comandaItem.findMany({
       where: {
         kdsStatus: { in: ['PENDING', 'PREPARING', 'READY'] },
@@ -74,7 +74,7 @@ export class KdsService {
     }));
   }
 
-  async update(itemIds: string[], status: string) {
+  async update(itemIds: string[], status: string, station?: string) {
     if (
       !Array.isArray(itemIds) ||
       !itemIds.length ||
@@ -87,7 +87,7 @@ export class KdsService {
     if (!['PREPARING', 'READY', 'DELIVERED'].includes(status))
       throw new BadRequestException('Status KDS inválido.');
     const prisma = await this.client();
-    const config = await this.config();
+    const config = await this.config(station);
     const updated = await (prisma as any).$transaction(
       async (tx: any) => {
         const items = await tx.comandaItem.findMany({

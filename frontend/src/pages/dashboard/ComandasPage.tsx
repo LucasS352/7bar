@@ -91,9 +91,25 @@ interface Comanda {
 export function ComandasPage() {
   const navigate = useNavigate();
   const { clearCart, addItem, setActiveComanda } = useCartStore();
-  const { user } = useAuthStore();
-
-  const isComandasEnabled = user?.modules?.comandas === true;
+  const token = useAuthStore((state) => state.token);
+  const [isComandasEnabled, setIsComandasEnabled] = useState(false);
+  useEffect(() => {
+    let active = true;
+    setIsComandasEnabled(false);
+    if (token) {
+      api.get('/tenants/me').then(({ data }) => {
+        const modules = typeof data.modulos === 'string' ? JSON.parse(data.modulos) : data.modulos;
+        if (active) {
+          const enabled = modules?.comandas === true;
+          setIsComandasEnabled(enabled);
+          setActiveTab(enabled ? 'cliente' : 'funcionario');
+        }
+      }).catch(() => {
+        if (active) toast.error('Não foi possível consultar os módulos da loja.');
+      });
+    }
+    return () => { active = false; };
+  }, [token]);
   const [activeTab, setActiveTab] = useState<'cliente' | 'funcionario'>(() => isComandasEnabled ? 'cliente' : 'funcionario');
 
   useEffect(() => {

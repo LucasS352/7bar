@@ -71,6 +71,11 @@ type Payment = {
 
 type Sale = {
   id: string;
+  subtotal: number;
+  discount: number;
+  status: string;
+  cancelReason?: string | null;
+  operator?: { name: string } | null;
   total: number;
   createdAt: string;
   items: SaleItem[];
@@ -861,7 +866,7 @@ export default function SalesDashboard() {
                   cursor={{ fill: '#27272a' }}
                   contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px', color: '#fff' }}
                   itemStyle={{ color: '#fff', fontWeight: 'bold' }}
-                  formatter={(value: number) => [formatCurrency(value), 'Faturamento']}
+                  formatter={(value) => [formatCurrency(Number(value ?? 0)), 'Faturamento']}
                 />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                   {chartData.map((entry, index) => (
@@ -896,7 +901,7 @@ export default function SalesDashboard() {
                       ))}
                     </Pie>
                     <Tooltip 
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value) => formatCurrency(Number(value ?? 0))}
                       contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px', color: '#fff' }}
                       itemStyle={{ color: '#fff', fontWeight: 'bold' }}
                     />

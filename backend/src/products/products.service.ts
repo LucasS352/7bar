@@ -42,6 +42,7 @@ interface ProductCreateDto {
   isComposite?: boolean;
   requiresKitchen?: boolean;
   requiresBar?: boolean;
+  barStation?: string;
   preparationIngredients?: string | null;
   volumeUnit?: string | null;
   volumeCapacity?: number | null;
@@ -70,6 +71,7 @@ interface ProductUpdateDto {
   isComposite?: boolean;
   requiresKitchen?: boolean;
   requiresBar?: boolean;
+  barStation?: string;
   preparationIngredients?: string | null;
   volumeUnit?: string | null;
   volumeCapacity?: number | null;
@@ -173,6 +175,7 @@ export class ProductsService {
       if (value !== undefined && value !== null && (!Number.isInteger(value) || value < 1 || value > (key === 'assetTrackingTotal' ? 500 : 1440)))
         throw new BadRequestException(`${key === 'assetTrackingTotal' ? 'Quantidade de equipamentos' : 'Tempo de ronda'} inválido.`);
     }
+    if (data.barStation !== undefined && !['BAR', 'BAR_1', 'BAR_2'].includes(data.barStation)) throw new BadRequestException('Estação de bar inválida.');
     if (data.preparationIngredients !== undefined && data.preparationIngredients !== null) {
       if (typeof data.preparationIngredients !== 'string' || data.preparationIngredients.length > 5000) throw new BadRequestException('Ingredientes devem ter até 5000 caracteres.');
       data.preparationIngredients = data.preparationIngredients.trim() || null;
@@ -421,6 +424,7 @@ export class ProductsService {
         imageUrl: sanitized.imageUrl,
         requiresKitchen: data.requiresKitchen ?? false,
         requiresBar: data.requiresBar ?? false,
+        barStation: data.barStation ?? 'BAR',
         requiresCarvoaria: data.requiresCarvoaria ?? false,
         serviceTimerMinutes: data.serviceTimerMinutes ?? null,
         assetTrackingTotal: data.assetTrackingTotal ?? null,
@@ -492,6 +496,7 @@ export class ProductsService {
       const productPayload: any = {};
       if (data.requiresKitchen !== undefined) productPayload.requiresKitchen = data.requiresKitchen;
       if (data.requiresBar !== undefined) productPayload.requiresBar = data.requiresBar;
+      if (sanitized.barStation !== undefined) productPayload.barStation = sanitized.barStation;
       for (const key of ['requiresCarvoaria', 'serviceTimerMinutes', 'assetTrackingTotal'] as const)
         if (sanitized[key] !== undefined) productPayload[key] = sanitized[key];
       if (sanitized.preparationIngredients !== undefined) productPayload.preparationIngredients = sanitized.preparationIngredients;

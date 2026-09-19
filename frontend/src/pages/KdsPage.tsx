@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
 import { useKdsConfig } from '@/hooks/useKdsEnabled';
 import { KdsStatus, KdsTicket, waitsForKitchen } from '@/lib/kds';
 
@@ -46,12 +47,13 @@ const columns = [
 ] as const;
 
 export function KdsPage() {
+  const assignedStation = useAuthStore(state => state.user?.station);
   const { stations } = useKdsConfig();
   const [tickets, setTickets] = useState<KdsTicket[]>([]);
   const [error, setError] = useState('');
   const [updated, setUpdated] = useState<Date | null>(null);
   const [now, setNow] = useState(Date.now());
-  const [station, setStation] = useState('ALL');
+  const [station, setStation] = useState(assignedStation || new URLSearchParams(location.search).get('station') || 'ALL');
   const [filter, setFilter] = useState('ALL');
   const [busy, setBusy] = useState(false);
   const [sound, setSound] = useState(false);
@@ -155,13 +157,14 @@ export function KdsPage() {
     <main className="min-h-screen bg-[#090f14] text-slate-100 p-3 sm:p-5 lg:p-7">
       <header className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <Link
+          {!assignedStation && <Link
             to="/dashboard"
             aria-label="Voltar ao painel"
             className="p-2 rounded-xl bg-slate-800"
           >
             <ArrowLeft size={20} />
-          </Link>
+          </Link>}
+          {assignedStation && <button className="text-sm text-slate-400" onClick={() => useAuthStore.getState().logout()}>Sair do dispositivo</button>}
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
               <ChefHat className="text-amber-400" /> PDV · Produção
@@ -178,9 +181,11 @@ export function KdsPage() {
             onChange={(e) => setStation(e.target.value)}
             className="rounded-xl bg-slate-800 border border-slate-700 p-3 text-sm"
           >
-            <option value="ALL">Todos os destinos</option>
+            {!assignedStation && <option value="ALL">Todos os destinos</option>}
             {stations.includes('KITCHEN') && <option value="KITCHEN">Cozinha</option>}
             {stations.includes('BAR') && <option value="BAR">Bar</option>}
+            {stations.includes('BAR_1') && <option value="BAR_1">Bar 1</option>}
+            {stations.includes('BAR_2') && <option value="BAR_2">Bar 2</option>}
             {stations.includes('SERVICE') && <option value="SERVICE">Bebidas / acompanhamento</option>}
             {stations.includes('CARVOARIA') && <option value="CARVOARIA">Carvoaria</option>}
           </select>
@@ -299,8 +304,8 @@ export function KdsPage() {
                     const stationName =
                       first.kdsDestination === 'KITCHEN'
                         ? 'Cozinha'
-                        : first.kdsDestination === 'BAR'
-                          ? 'Bar'
+                        : ['BAR', 'BAR_1', 'BAR_2'].includes(first.kdsDestination)
+                          ? ({ BAR: 'Bar', BAR_1: 'Bar 1', BAR_2: 'Bar 2' } as Record<string, string>)[first.kdsDestination]
                           : first.kdsDestination === 'CARVOARIA' ? 'Carvoaria' : 'Separar / servir';
                     return (
                       <article

@@ -38,9 +38,13 @@ import VitrinePage from './pages/dashboard/VitrinePage';
 import VitrineTvPage from './pages/VitrineTvPage';
 import { KdsPage } from './pages/KdsPage';
 import { GarcomPage } from './pages/GarcomPage';
+import { StationAccessPage } from './pages/StationAccessPage';
+import { OperationalRoute } from './components/OperationalRoute';
 
 // Stores
 import { useAuthStore } from './store/auth';
+import { useOperatorTokenStore } from './store/operatorToken';
+import { isWaiterSession } from './lib/operatorAccess';
 import { ShiftProvider } from './contexts/ShiftContext';
 
 // Estilos globais
@@ -91,15 +95,21 @@ const IS_DEMO = import.meta.env.VITE_APP_MODE === 'demo';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { token, user } = useAuthStore();
+  const waiterSession = useOperatorTokenStore(state => isWaiterSession(state.token));
   if (!token) return <Navigate to={IS_DEMO ? '/demo' : '/login'} replace />;
+  if (user?.station) return <Navigate to={user.station === 'WAITER' ? '/garcom' : '/kds'} replace />;
+  if (waiterSession) return <Navigate to="/garcom" replace />;
   if (user?.role === 'stockist') return <Navigate to="/dashboard/inventory" replace />;
   return <><NetworkStatusBanner /><OverduePaymentBanner />{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { token, user } = useAuthStore();
+  const waiterSession = useOperatorTokenStore(state => isWaiterSession(state.token));
   if (!token) return <Navigate to="/login" replace />;
+  if (user?.station) return <Navigate to={user.station === 'WAITER' ? '/garcom' : '/kds'} replace />;
   const allowedRoles = ['admin', 'superadmin', 'stockist'];
+  if (waiterSession) return <Navigate to="/garcom" replace />;
   if (!allowedRoles.includes(user?.role || '')) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
@@ -108,9 +118,9 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <BrowserRouter>
-      <ShiftProvider>
         <Routes>
         {/* Rotas públicas */}
+        <Route path="/acesso" element={<StationAccessPage />} />
         <Route path="/login" element={IS_DEMO ? <Navigate to="/demo" replace /> : <LoginPage />} />
         <Route path="/demo" element={<DemoRegisterPage />} />
         <Route path="/sys-init" element={<SysInitPage />} />
@@ -124,7 +134,7 @@ function App() {
           path="/"
           element={
             <PrivateRoute>
-              <PosPage />
+              <ShiftProvider><PosPage /></ShiftProvider>
             </PrivateRoute>
           }
         />
@@ -133,20 +143,20 @@ function App() {
         <Route
           path="/garcom"
           element={
-            <PrivateRoute>
+            <OperationalRoute module="waiter">
               <GarcomPage />
-            </PrivateRoute>
+            </OperationalRoute>
           }
         />
 
-        <Route path="/kds" element={<PrivateRoute><KdsPage /></PrivateRoute>} />
+        <Route path="/kds" element={<OperationalRoute module="kds"><KdsPage /></OperationalRoute>} />
 
         {/* Dashboard e sub-rotas */}
         <Route
           path="/dashboard"
           element={
             <AdminRoute>
-              <DashboardLayout />
+              <ShiftProvider><DashboardLayout /></ShiftProvider>
             </AdminRoute>
           }
         >
@@ -193,7 +203,6 @@ function App() {
         }} 
       />
         <TermsAcceptanceModal />
-      </ShiftProvider>
     </BrowserRouter>
   );
 }

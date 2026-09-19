@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { StationAccessService } from './station-access.service';
 
 /** Interface do payload decodificado do JWT — usado em todos os controllers */
 export interface JwtPayload {
@@ -10,6 +11,8 @@ export interface JwtPayload {
   role: string;
   groupId?: string | null;
   type?: string;
+  linkId?: string;
+  station?: string;
 }
 
 /**
@@ -22,7 +25,7 @@ export const jwtConstants = {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private readonly access: StationAccessService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -35,6 +38,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * IMPORTANTE: `sub` é o userId — todos os controllers devem usar `user.sub`.
    */
   async validate(payload: JwtPayload): Promise<JwtPayload> {
+    if (payload.type === 'station-session') {
+      if (!payload.linkId || !payload.tenantId) throw new UnauthorizedException();
+      const link = await this.access.validateLink(payload.linkId, payload.tenantId);
+      return { ...payload, role: 'station', station: link.station };
+    }
     // RFC 8725: rejeitar tokens com finalidade diferente da sessão da loja
     if (payload.type) {
       throw new UnauthorizedException('Token inválido para autenticação da loja');

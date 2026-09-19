@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 
 export function initialKds(
-  product: { requiresKitchen?: boolean; requiresBar?: boolean; requiresCarvoaria?: boolean },
+  product: { requiresKitchen?: boolean; requiresBar?: boolean; requiresCarvoaria?: boolean; barStation?: string },
   enabled: boolean,
   serveImmediately?: boolean,
   carvoariaEnabled = false,
@@ -13,7 +13,7 @@ export function initialKds(
   const destination = product.requiresCarvoaria && carvoariaEnabled ? 'CARVOARIA' : product.requiresKitchen
     ? 'KITCHEN'
     : product.requiresBar
-      ? 'BAR'
+      ? (['BAR_1', 'BAR_2'].includes(product.barStation || '') ? product.barStation! : 'BAR')
       : null;
   // Clientes antigos não enviam a preferência: itens comuns continuam fora do KDS.
   if (!destination && serveImmediately === undefined) return {};

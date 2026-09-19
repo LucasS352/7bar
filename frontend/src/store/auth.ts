@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useOperatorTokenStore } from './operatorToken';
 
-export type User = { id: string, name: string, role: string, tenant: string, groupId?: string | null, termsAccepted?: boolean };
+export type User = { id: string, name: string, role: string, tenant: string, groupId?: string | null, termsAccepted?: boolean, station?: string };
 
 interface AuthState {
   token: string | null;
@@ -18,6 +19,8 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       login: (token, user) => set({ token, user }),
       logout: () => {
+        useOperatorTokenStore.getState().clearToken();
+        localStorage.removeItem('garcom_operator');
         localStorage.removeItem('currentOperator');
         set({ token: null, user: null });
       },

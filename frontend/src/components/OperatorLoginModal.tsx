@@ -34,15 +34,10 @@ export function OperatorLoginModal({ onSuccess, onClose, isReauth = false }: Ope
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Busca operadores e filtra apenas quem pode abrir caixa:
-    // isManager=true, jobTitle 'Gerente' ou 'Caixa', ou sem função definida (legado)
-    const CAN_OPEN_REGISTER = ['Gerente', 'Caixa'];
-    api.get('/operators')
+    // O servidor preserva o legado de adegas e aplica o isolamento por módulos.
+    api.get('/operators?context=cashier')
       .then(res => {
-        const ops = res.data.filter((u: any) =>
-          u.active &&
-          (u.isManager || !u.jobTitle || CAN_OPEN_REGISTER.includes(u.jobTitle))
-        );
+        const ops = res.data;
         setOperators(ops);
         // Em reautenticação (F5 ou token expirado), pré-seleciona automaticamente o operador já logado
         if (isReauth && operator?.id) {
@@ -71,7 +66,7 @@ export function OperatorLoginModal({ onSuccess, onClose, isReauth = false }: Ope
     setLoadingLogin(true);
     setErrorMessage(null);
     try {
-      const res = await api.post('/auth/operator-login', { operatorId: selectedOp.id, pin });
+      const res = await api.post('/auth/operator-login', { operatorId: selectedOp.id, pin, context: 'cashier' });
       const { operatorToken, ...operatorData } = res.data;
       setOperator(operatorData, operatorToken);
       toast.success(isReauth ? 'Reautenticação concluída com sucesso!' : `Bem-vindo, ${res.data.name}!`);

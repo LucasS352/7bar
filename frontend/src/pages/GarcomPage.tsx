@@ -6,6 +6,8 @@ import { KdsReadyOrders } from '@/components/KdsReadyOrders';
 import { KdsStatus, kdsLabels } from '@/lib/kds';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { useOperatorTokenStore } from '@/store/operatorToken';
+import { isWaiterSession } from '@/lib/operatorAccess';
 import { toast } from 'sonner';
 import {
   UtensilsCrossed, Plus, Search, X, ChevronLeft, Loader2,
@@ -28,6 +30,7 @@ interface WaiterOperator {
 }
 
 interface ComandaItem {
+  modifiers?: Array<{ id: string; name: string }>;
   assetNumber?: number | null;
   kdsStatus?: KdsStatus | null;
   serveImmediately?: boolean;
@@ -120,7 +123,11 @@ export function GarcomPage() {
 
   // Estado global do garçom
   const [waiter, setWaiter] = useState<WaiterOperator | null>(() => {
-    try { return JSON.parse(localStorage.getItem('garcom_operator') || 'null'); } catch { return null; }
+    try {
+      const saved = JSON.parse(localStorage.getItem('garcom_operator') || 'null');
+      const session = useOperatorTokenStore.getState();
+      return saved && isWaiterSession(session.token) && session.operatorId === saved.id && session.tenantId === useAuthStore.getState().user?.tenant ? saved : null;
+    } catch { return null; }
   });
   const [comandas, setComandas] = useState<Comanda[]>([]);
   const [loadingComandas, setLoadingComandas] = useState(false);
@@ -130,6 +137,17 @@ export function GarcomPage() {
   const selectedComandaIdRef = useRef<string | null>(null);
 
   const [showLoginModal, setShowLoginModal] = useState(!waiter);
+  useEffect(() => {
+    const expired = () => {
+      setWaiter(null);
+      localStorage.removeItem('garcom_operator');
+      setShowLoginModal(true);
+      setSelectedComanda(null);
+      selectedComandaIdRef.current = null;
+    };
+    window.addEventListener('operator-token-expired', expired);
+    return () => window.removeEventListener('operator-token-expired', expired);
+  }, []);
   const [showNewComanda, setShowNewComanda] = useState(false);
   const [showAddItem, setShowAddItem] = useState(false);
   const [showExtrato, setShowExtrato] = useState(false);
@@ -183,27 +201,11 @@ export function GarcomPage() {
     setSelectedComanda(null);
   };
 
-  // ── Auth: redirecionar se sem token JWT ──────────────────────────────────
-  if (!token) {
-    return (
-      <div className="fixed inset-0 bg-zinc-950 flex items-center justify-center p-6">
-        <div className="text-center space-y-4 max-w-sm w-full bg-zinc-900 border border-zinc-800 p-8 rounded-3xl shadow-2xl">
-          <UtensilsCrossed size={48} className="text-orange-500 mx-auto" />
-          <h2 className="text-lg font-bold text-white">Sessão Expirada</h2>
-          <p className="text-zinc-400 text-sm">Por favor, faça login novamente para acessar o Modo Garçom.</p>
-          <a href="/login" className="block w-full py-3.5 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-center transition">
-            Ir para Login
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   // ── Buscar operadores para login ─────────────────────────────────────────
   useEffect(() => {
     if (!showLoginModal) return;
     setLoadingOps(true);
-    api.get('/operators')
+    api.get('/operators?context=waiter')
       .then(res => setOperators(res.data.filter((o: any) => o.active)))
       .catch(() => toast.error('Erro ao carregar colaboradores.'))
       .finally(() => setLoadingOps(false));
@@ -292,7 +294,8 @@ export function GarcomPage() {
     setLoginLoading(true);
     setPinError('');
     try {
-      await api.post('/auth/operator-login', { operatorId: selectedOp.id, pin: pinInput });
+      const { data } = await api.post('/auth/operator-login', { operatorId: selectedOp.id, pin: pinInput, context: 'waiter' });
+      useOperatorTokenStore.getState().setToken(data.operatorToken, selectedOp.id, useAuthStore.getState().user?.tenant);
       const op: WaiterOperator = { id: selectedOp.id, name: selectedOp.name, jobTitle: selectedOp.jobTitle };
       setWaiter(op);
       localStorage.setItem('garcom_operator', JSON.stringify(op));
@@ -308,6 +311,7 @@ export function GarcomPage() {
   }
 
   function handleLogout() {
+    useOperatorTokenStore.getState().clearToken();
     setWaiter(null);
     localStorage.removeItem('garcom_operator');
     selectedComandaIdRef.current = null;
@@ -342,32 +346,56 @@ export function GarcomPage() {
   }
 
   // ── Adicionar item ────────────────────────────────────────────────────────
+  const productSelectionSeq = useRef(0);
+  const addItemInFlight = useRef(false);
+  async function loadCompositeProduct(product: Product): Promise<Product> {
+    const populated = product.modifierGroups?.length && product.modifierGroups.every(group => Array.isArray(group.options) && group.options.length > 0);
+    if (populated) return product;
+    const { data } = await api.get(`/products/${product.id}/composition`);
+    return { ...product, modifierGroups: data };
+  }
+  async function selectProduct(product: Product) {
+    const sequence = ++productSelectionSeq.current;
+    setCompositeProductForComanda(null);
+    setSelectedProduct(product);
+    setItemQty(1);
+    setItemNotes('');
+    if (!product.isComposite) return;
+    try {
+      const full = await loadCompositeProduct(product);
+      if (sequence !== productSelectionSeq.current) return;
+      if (!Array.isArray(full.modifierGroups) || !full.modifierGroups.length) { toast.error('Este produto está sem adicionais configurados. Consulte o administrador.'); return; }
+      setSelectedProduct(full);
+      if (!full.assetTrackingTotal) setCompositeProductForComanda(full);
+    } catch { toast.error('Não foi possível carregar os adicionais. Tente selecionar o produto novamente.'); }
+  }
+
   async function handleAddItem() {
-    if (!selectedComanda || !selectedProduct) return;
+    if (!selectedComanda || !selectedProduct || addItemInFlight.current) return;
     if (selectedProduct.assetTrackingTotal && selectedAssetNumber == null) { toast.error('Escolha o número do narguile.'); return; }
 
     // Produto composto com grupos de adicionais → abrir modal de seleção
-    if (
-      selectedProduct.isComposite &&
-      selectedProduct.modifierGroups &&
-      selectedProduct.modifierGroups.length > 0
-    ) {
-      setCompositeProductForComanda(selectedProduct);
-      return; // aguarda confirmação do modal
+    if (selectedProduct.isComposite) {
+      const sequence = ++productSelectionSeq.current;
+      try {
+        const full = await loadCompositeProduct(selectedProduct);
+        if (sequence !== productSelectionSeq.current) return;
+        if (!Array.isArray(full.modifierGroups) || !full.modifierGroups.length) { toast.error('Este produto está sem adicionais configurados. Consulte o administrador.'); return; }
+        setCompositeProductForComanda(full);
+      } catch { toast.error('Não foi possível carregar os adicionais. Tente novamente.'); }
+      return;
     }
-
-    // Produto simples → lançar direto
     await doAddItem(selectedProduct, itemQty, itemNotes, []);
   }
 
-  // Função interna que efetivamente lança o item na comanda
   async function doAddItem(
     product: Product,
     qty: number,
     notes: string,
     modifiers: Array<{ optionId: string }>,
   ) {
-    if (!selectedComanda) return;
+    if (!selectedComanda || addItemInFlight.current) return;
+    addItemInFlight.current = true;
     setAddingItem(true);
     try {
       const res = await api.post(`/v1/comandas/${selectedComanda.id}/items`, {
@@ -390,6 +418,7 @@ export function GarcomPage() {
       if (err?.response?.status === 409) { setSelectedAssetNumber(undefined); setAssetRevision(v => v + 1); }
       toast.error(err?.response?.data?.message || 'Erro ao lançar item.');
     } finally {
+      addItemInFlight.current = false;
       setAddingItem(false);
     }
   }
@@ -453,7 +482,7 @@ export function GarcomPage() {
     setShowCamera(false);
     setProductSearch(code);
     const found = products.find(p => p.barcode === code || p.shortCode === code);
-    if (found) setSelectedProduct(found);
+    if (found) void selectProduct(found);
     else toast.info(`Buscando: ${code}`);
   }
 
@@ -702,6 +731,7 @@ export function GarcomPage() {
                         </p>
                         {kdsEnabled && item.kdsStatus && <p className={`text-xs mt-1 ${item.kdsStatus === 'READY' ? 'text-emerald-400 font-bold' : 'text-zinc-400'}`}>{kdsLabels[item.kdsStatus]}{item.kdsDestination !== 'KITCHEN' && item.kdsDestination !== 'CARVOARIA' && item.kdsStatus !== 'DELIVERED' ? (item.serveImmediately ? ' · Servir agora' : ' · Servir junto') : ''}</p>}
                         {item.notes && <p className="text-xs text-zinc-400 italic mt-0.5">"{item.notes}"</p>}
+                        {item.modifiers?.map(modifier => <p key={modifier.id} className="text-xs text-orange-300">+ {modifier.name}</p>)}
                       </div>
                       <span className="text-sm font-bold text-white font-mono shrink-0">{formatMoney(Number(item.totalPrice))}</span>
                       {selectedComanda.status === 'open' && (
@@ -914,7 +944,7 @@ export function GarcomPage() {
           <div className="w-full max-w-xl h-full sm:h-[85vh] sm:rounded-3xl flex flex-col bg-zinc-950 border border-zinc-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="bg-zinc-900 border-b border-zinc-800 px-4 py-3 flex items-center gap-3 shrink-0">
-              <button type="button" onClick={() => { setShowAddItem(false); setSelectedProduct(null); }} className="p-1.5 hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-white cursor-pointer">
+<button type="button" aria-label="Voltar à comanda" onClick={() => { productSelectionSeq.current++; setShowAddItem(false); setSelectedProduct(null); }} className="p-1.5 hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-white cursor-pointer">
                 <ChevronLeft size={20} />
               </button>
               <p className="font-bold text-white text-sm flex-1 truncate">Adicionar Item — #{selectedComanda.number}</p>
@@ -964,7 +994,7 @@ export function GarcomPage() {
                     <button
                       type="button"
                       key={product.id}
-                      onClick={() => setSelectedProduct(selectedProduct?.id === product.id ? null : product)}
+                      onClick={() => { void selectProduct(product); }}
                       className={`w-full flex items-center gap-3 px-4 py-3 text-left transition cursor-pointer ${
                         selectedProduct?.id === product.id ? 'bg-orange-500/10 border-l-2 border-l-orange-500' : 'hover:bg-zinc-900'
                       }`}
@@ -1176,16 +1206,18 @@ export function GarcomPage() {
       )}
 
       {/* ═══ Modal: Compostos — Seleção de Adicionais ══════════════════════ */}
-      <CompositeModifierModal
+      {createPortal(<CompositeModifierModal
         product={compositeProductForComanda as any}
         isOpen={!!compositeProductForComanda}
+        confirmLabel="Adicionar à comanda"
+        autoConfirmSingleOption={false}
         onClose={() => setCompositeProductForComanda(null)}
         onConfirm={(product, selectedModifiers) => {
           const modifiers = selectedModifiers.map(({ option }) => ({ optionId: option.id }));
-          doAddItem(compositeProductForComanda!, itemQty, itemNotes, modifiers);
+          doAddItem(product as Product, itemQty, itemNotes, modifiers);
           setCompositeProductForComanda(null);
         }}
-      />
+      />, document.body)}
     </div>
   );
 }

@@ -2028,9 +2028,9 @@ export default function SysInitPage() {
                       { id: 'dashboardMobile', title: 'Dashboard Mobile', desc: 'Acesso ao painel resumido em dispositivos móveis.', badge: MODULE_BADGES.dashboardMobile },
                       { id: 'comandas', title: 'Comandas & Mesas', desc: 'Permite o lançamento, abertura e consumo em comandas/mesas.', badge: MODULE_BADGES.comandas },
                       { id: 'vitrineDigital', title: '▪ Vitrine Digital TV', desc: 'Exibe promoções e produtos em uma TV/tela secundária via URL pública.', badge: MODULE_BADGES.vitrineDigital },
-                      { id: 'kds', title: 'KDS — Cozinha e Bar', desc: 'Ativa a produção em /kds e a retirada pelo garçom. Produtos existentes permanecem sem destino até serem configurados.', badge: MODULE_BADGES.kds },
-                      { id: 'carvoaria', title: 'Carvoaria / Narguilaria', desc: 'Estação independente no KDS, equipamentos numerados e rondas do garçom. Não exige cozinha ou bar.', badge: MODULE_BADGES.carvoaria },
-                      { id: 'restaurante', title: '🍽️ Modo Restaurante / Garçom', desc: 'Ativa a interface dedicada para garçons criarem e gerenciarem comandas sem precisar abrir caixa. Acesso via /garcom.', badge: MODULE_BADGES.restaurante },
+                      { id: 'kds', title: 'KDS — Cozinha e Bar', desc: 'Ativa produção e links por estação (Cozinha, Bar, Bar 1 e Bar 2). O caixa passa a listar somente caixas e gerentes. Configure o destino nos produtos.', badge: MODULE_BADGES.kds },
+                      { id: 'carvoaria', title: 'Carvoaria / Narguilaria', desc: 'Estação independente com link próprio, equipamentos e rondas. Não exige cozinha ou bar. O caixa passa a listar somente caixas e gerentes.', badge: MODULE_BADGES.carvoaria },
+                      { id: 'restaurante', title: '🍽️ Modo Restaurante / Garçom', desc: 'Ativa /garcom e link para celulares: somente garçons entram com PIN. No caixa aparecem somente caixas e gerentes. Sem estes módulos, a adega mantém o fluxo atual.', badge: MODULE_BADGES.restaurante },
                     ].map(item => (
                       <div key={item.id} className="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-800 rounded-xl hover:border-zinc-700 transition">
                         <div className="flex items-center gap-3">

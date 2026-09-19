@@ -105,8 +105,8 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
     );
     expect(tx.product.updateMany.mock.calls[0][0].where.id).toBe('p');
   });
-  it('produto composto mantém consumo por ingrediente e preço dos adicionais', async () => {
-    const { service, tx } = setup(true, {
+  it.each([false, true])('produto composto preserva ingrediente e preço, KDS=%s', async (enabled) => {
+    const { service, tx } = setup(enabled, {
       ...product,
       isComposite: true,
       modifierGroups: [
@@ -136,8 +136,22 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
     ]);
     const data = tx.comandaItem.create.mock.calls[0][0].data;
     expect(Number(data.totalPrice)).toBe(34);
-    expect(data.kdsStatus).toBe('PENDING');
+    expect(data.kdsStatus).toBe(enabled ? 'PENDING' : undefined);
     expect(Number(data.modifiers.create[0].consumedQuantity)).toBeCloseTo(0.2);
     expect(tx.product.updateMany.mock.calls[0][0].where.id).toBe('queijo');
+  });
+  it.each([
+    { modifiers: [] }, { modifiers: [{ optionId: 'desconhecida' }] },
+    { modifiers: [{ optionId: 'o' }, { optionId: 'o' }] },
+  ])('recusa adicionais inválidos sem baixar estoque: %j', async ({ modifiers }) => {
+    const { service, tx } = setup(true, {
+      ...product, isComposite: true,
+      modifierGroups: [{ id: 'g', name: 'Sabor', minSelected: 1, maxSelected: 1,
+        options: [{ id: 'o', quantity: 1, priceAdjustment: 0, componentProduct: { id: 'ingrediente', name: 'Ingrediente' } }],
+      }],
+    });
+    await expect(service.addItems('c', [{ productId: 'p', quantity: 1, modifiers }])).rejects.toThrow();
+    expect(tx.product.updateMany).not.toHaveBeenCalled();
+    expect(tx.comandaItem.create).not.toHaveBeenCalled();
   });
 });

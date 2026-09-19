@@ -151,7 +151,7 @@ function TenantDetailDrawer({ tenantId, tenantAlias, color, onClose }: { tenantI
             <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
             <span style={{ fontSize: '0.85rem' }}>Conectando à loja...</span>
           </div>
-        ) : fetchError ? (
+        ) : fetchError || !data ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', padding: '2rem' }}>
             <AlertTriangle size={28} color="#f59e0b" />
             <div style={{ color: '#f87171', fontWeight: 600, fontSize: '0.85rem', textAlign: 'center' }}>Não foi possível carregar os detalhes</div>
@@ -436,10 +436,10 @@ function TabDashboard({ dateFilter }: { dateFilter: string }) {
                     <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
                     <XAxis dataKey="name" stroke="#52525b" fontSize={11} tickLine={false} axisLine={false} tickMargin={8} />
                     <YAxis stroke="#52525b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `R$ ${val >= 1000 ? (val / 1000).toFixed(1) + 'k' : Math.round(val)}`} />
-                    <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ background: '#18181b', border: '1px solid rgba(63,63,70,0.8)', borderRadius: '0.75rem' }} formatter={(value: number) => [fmt(value), 'Faturamento']} />
+                    <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ background: '#18181b', border: '1px solid rgba(63,63,70,0.8)', borderRadius: '0.75rem' }} formatter={(value) => [fmt(Number(value ?? 0)), 'Faturamento']} />
                     <Bar dataKey="total" radius={[6, 6, 0, 0]} maxBarSize={48}>
                       {chartDataWithPeak.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.isPeak ? 'url(#colorBarPeak)' : 'url(#colorBarNormal)'} />))}
-                      {chartDataWithPeak.length <= 14 && <LabelList dataKey="total" position="top" fill="#e4e4e7" fontSize={11} fontWeight={700} formatter={(val: number) => val >= 1000 ? 'R$ ' + (val / 1000).toFixed(1) + 'k' : 'R$ ' + Math.round(val)} />}
+                      {chartDataWithPeak.length <= 14 && <LabelList dataKey="total" position="top" fill="#e4e4e7" fontSize={11} fontWeight={700} formatter={(val) => Number(val ?? 0) >= 1000 ? 'R$ ' + (Number(val) / 1000).toFixed(1) + 'k' : 'R$ ' + Math.round(Number(val ?? 0))} />}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -966,7 +966,7 @@ function TabProdutos() {
                               );
                             })}
                             <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>
-                              <button onClick={() => { setEqualizeModal(row.name); setEqualizePrice(''); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.75rem', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '0.5rem', color: '#60a5fa', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer' }}>
+                              <button onClick={() => { setEqualizeModal(row.name); setEqualizePriceValue(''); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.75rem', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '0.5rem', color: '#60a5fa', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer' }}>
                                 <Copy size={11} /> Equalizar
                               </button>
                             </td>

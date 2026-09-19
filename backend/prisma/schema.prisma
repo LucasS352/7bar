@@ -110,6 +110,7 @@ model Product {
   assetTrackingTotal Int?
   requiresKitchen Boolean @default(false)
   requiresBar Boolean @default(false)
+  barStation String @default("BAR")
   preparationIngredients String? @db.Text
 
   id                  String           @id @default(uuid())

@@ -5,9 +5,11 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy, jwtConstants } from './jwt.strategy';
 import { TenantsModule } from '../tenants/tenants.module';
+import { StationAccessModule } from './station-access.module';
 
 @Module({
   imports: [
+    StationAccessModule,
     TenantsModule,
     PassportModule,
     JwtModule.register({

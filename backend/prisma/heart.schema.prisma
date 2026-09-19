@@ -83,8 +83,22 @@ model Tenant {
   tenantIntegrations  TenantIntegration[]
   groupMembers        TenantGroupMember[]
   paymentLogs         PaymentLog[]
+  stationAccessLinks  StationAccessLink[]
 
   @@map("tenants")
+}
+
+model StationAccessLink {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  station   String
+  tokenHash String   @unique @db.Char(64)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, station])
+  @@map("station_access_links")
 }
 
 // ------------------------------------------------------------

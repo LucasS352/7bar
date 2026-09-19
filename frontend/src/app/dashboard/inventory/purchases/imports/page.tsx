@@ -23,7 +23,8 @@ import {
   Database,
   Trash2,
   Clock,
-  Link2Off
+  Link2Off,
+  Terminal
 } from 'lucide-react';
 
 // ── Interfaces ───────────────────────────────────────────────────────────────
@@ -65,6 +66,7 @@ interface NfeItem {
 
 interface NfeEntrada {
   id: string;
+  createdAt: string;
   chave: string;
   numero: string;
   serie: string;
@@ -1388,7 +1390,7 @@ export default function XmlImportPage() {
                     const origQtyVal = origQty * factor;
                     setAdjustedQty(origQtyVal);
                     if (origQtyVal > 0) {
-                      setAdjustedCost(Number((conversionItem.custoTotal / origQtyVal).toFixed(4)));
+                      setAdjustedCost(Number((Number(conversionItem.custoTotal) / origQtyVal).toFixed(4)));
                     }
                   }}
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500 transition-colors"
@@ -1431,7 +1433,7 @@ export default function XmlImportPage() {
                       const val = parseFloat(e.target.value) || 0;
                       setAdjustedQty(val);
                       if (val > 0) {
-                        setAdjustedCost(Number((conversionItem.custoTotal / val).toFixed(4)));
+                        setAdjustedCost(Number((Number(conversionItem.custoTotal) / val).toFixed(4)));
                       }
                     }}
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-sky-400 focus:outline-none focus:border-sky-500 transition-colors font-bold"

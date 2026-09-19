@@ -140,7 +140,7 @@ export function CapitaoGelada() {
   const [tilt, setTilt]               = useState(0);
   const [bounceKey, setBounceKey]     = useState(0);
 
-  const hideTimer = useRef<ReturnType<typeof setTimeout>>();
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const prevCtx   = useRef('');
 
   const show = useCallback((context: string) => {

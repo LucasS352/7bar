@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Plus, Edit3, Trash2, FileText, Loader2, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
 export default function FiscalGroupsPage() {
   const [groups, setGroups] = useState<any[]>([]);
@@ -84,7 +84,7 @@ export default function FiscalGroupsPage() {
       
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Link href="/dashboard" className="text-zinc-500 hover:text-blue-400 flex items-center gap-2 text-sm font-semibold mb-2 transition-colors">
+          <Link to="/dashboard" className="text-zinc-500 hover:text-blue-400 flex items-center gap-2 text-sm font-semibold mb-2 transition-colors">
             <ArrowLeft size={16} /> Voltar ao Dashboard
           </Link>
           <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">

@@ -21,11 +21,11 @@ exports.Prisma = Prisma
 exports.$Enums = {}
 
 /**
- * Prisma Client JS version: 6.19.2
+ * Prisma Client JS version: 6.19.3
  * Query Engine version: c2990dca591cba766e3b7ef5d9e8a84796e47ab7
  */
 Prisma.prismaVersion = {
-  client: "6.19.2",
+  client: "6.19.3",
   engine: "c2990dca591cba766e3b7ef5d9e8a84796e47ab7"
 }
 
@@ -164,6 +164,15 @@ exports.Prisma.TenantScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   termsAcceptedAt: 'termsAcceptedAt'
+};
+
+exports.Prisma.StationAccessLinkScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  station: 'station',
+  tokenHash: 'tokenHash',
+  active: 'active',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.UserScalarFieldEnum = {
@@ -390,6 +399,13 @@ exports.Prisma.TenantOrderByRelevanceFieldEnum = {
   observacoes: 'observacoes'
 };
 
+exports.Prisma.StationAccessLinkOrderByRelevanceFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  station: 'station',
+  tokenHash: 'tokenHash'
+};
+
 exports.Prisma.UserOrderByRelevanceFieldEnum = {
   id: 'id',
   tenantId: 'tenantId',
@@ -522,6 +538,7 @@ exports.Prisma.LeadOrderByRelevanceFieldEnum = {
 
 exports.Prisma.ModelName = {
   Tenant: 'Tenant',
+  StationAccessLink: 'StationAccessLink',
   User: 'User',
   MasterProduct: 'MasterProduct',
   Image: 'Image',

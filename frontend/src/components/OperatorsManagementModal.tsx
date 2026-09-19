@@ -156,8 +156,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
                     type="button"
                     onClick={() => {
                       setJobTitle(s);
-                      if (s === 'Gerente') setIsManager(true);
-                      else setIsManager(false);
+                      setHideReceipts(s !== 'Gerente');
                     }}
                     className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors font-medium ${
                       jobTitle === s
@@ -173,7 +172,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
 
             <div className="animate-in fade-in slide-in-from-top-2 duration-300">
               <label className="text-sm text-amber-400 mb-1.5 font-semibold flex items-center gap-1.5">
-                <KeyRound size={14} /> PIN do PDV
+                <KeyRound size={14} /> PIN do colaborador
               </label>
               <input
                 type="text"
@@ -184,6 +183,12 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
                 placeholder={editId ? "Novo PIN (deixe branco p/ manter)" : "4 a 6 dígitos (usado na tela de vendas)"}
                 className="w-full px-4 py-2.5 bg-zinc-950 border border-amber-500/30 rounded-xl focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all outline-none text-white text-sm"
               />
+              <button type="button" className="mt-2 text-sm text-amber-300" onClick={() => {
+                const digits = new Uint32Array(6);
+                crypto.getRandomValues(digits);
+                setPin(Array.from(digits, n => n % 10).join(''));
+              }}>Gerar novo PIN</button>
+              {editId && <p className="mt-1 text-xs text-zinc-400">Ao salvar um novo PIN, o garçom precisará entrar novamente nos dispositivos em uso.</p>}
             </div>
 
               <div className="flex items-start gap-3 pt-2 bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/80">
@@ -300,7 +305,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }

@@ -30,9 +30,11 @@ interface CompositeModifierModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (product: CompositeProduct, selectedModifiers: { group: ModifierGroup; option: ModifierOption }[]) => void;
+  confirmLabel?: string;
+  autoConfirmSingleOption?: boolean;
 }
 
-export function CompositeModifierModal({ product, isOpen, onClose, onConfirm }: CompositeModifierModalProps) {
+export function CompositeModifierModal({ product, isOpen, onClose, onConfirm, confirmLabel = 'Adicionar ao Carrinho', autoConfirmSingleOption = true }: CompositeModifierModalProps) {
   // Map de groupId → optionId selecionado
   const [selections, setSelections] = useState<Record<string, string>>({});
   // Índice do grupo com foco atual (para navegação por teclado)
@@ -63,30 +65,31 @@ export function CompositeModifierModal({ product, isOpen, onClose, onConfirm }: 
     setFocusedOptionIdx(0);
 
     // Se todos os grupos têm apenas 1 opção, confirmar automaticamente sem abrir o modal
-    if (allAutoResolved && product.modifierGroups.length > 0) {
+    if (autoConfirmSingleOption && allAutoResolved && product.modifierGroups.length > 0) {
       const resolvedModifiers = product.modifierGroups.map(group => ({
         group,
         option: group.options[0],
       }));
       onConfirm(product, resolvedModifiers);
     }
-  }, [isOpen, product]);
+  }, [isOpen, product, autoConfirmSingleOption]);
 
   // Focar a primeira opção quando o modal abre
   useEffect(() => {
     if (!isOpen || !product) return;
     const allAutoResolved = product.modifierGroups.every(g => g.options.length === 1);
-    if (allAutoResolved && product.modifierGroups.length > 0) return;
-    setTimeout(() => {
+    if (autoConfirmSingleOption && allAutoResolved && product.modifierGroups.length > 0) return;
+    const timer = setTimeout(() => {
       optionRefs.current[0]?.[0]?.focus();
     }, 50);
-  }, [isOpen, product]);
+    return () => clearTimeout(timer);
+  }, [isOpen, product, autoConfirmSingleOption]);
 
   if (!isOpen || !product) return null;
 
   // Verificar se o modal já foi auto-resolvido
   const allGroupsHaveSingleOption = product.modifierGroups.every(g => g.options.length === 1);
-  if (allGroupsHaveSingleOption && product.modifierGroups.length > 0) return null;
+  if (autoConfirmSingleOption && allGroupsHaveSingleOption && product.modifierGroups.length > 0) return null;
 
   const handleSelect = (groupId: string, optionId: string) => {
     setSelections(prev => ({ ...prev, [groupId]: optionId }));
@@ -220,6 +223,9 @@ export function CompositeModifierModal({ product, isOpen, onClose, onConfirm }: 
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Adicionais de ${product.name}`}
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onKeyDown={(e) => { if (e.key === 'Escape') handleClose(); }}
     >
@@ -232,6 +238,8 @@ export function CompositeModifierModal({ product, isOpen, onClose, onConfirm }: 
             <p className="text-xs text-zinc-500 mt-0.5">Selecione os adicionais · use ↑↓ e Enter</p>
           </div>
           <button
+            type="button"
+            aria-label="Fechar adicionais"
             onClick={handleClose}
             className="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-full transition text-zinc-400 hover:text-white ml-3 shrink-0"
           >
@@ -336,7 +344,7 @@ export function CompositeModifierModal({ product, isOpen, onClose, onConfirm }: 
               disabled={!isComplete}
               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all active:scale-95 text-sm shadow-[0_0_15px_rgba(59,130,246,0.25)] focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
-              Adicionar ao Carrinho
+              {confirmLabel}
             </button>
           </div>
         </div>
