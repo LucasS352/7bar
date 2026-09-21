@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Request, UseGuards } from '@nestjs/common';
 import { ComandasService } from './comandas.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -68,9 +68,14 @@ export class ComandasController {
     return this.comandasService.addItems(id, body.items);
   }
 
-  @Delete(':id/items/:itemId')
-  async removeItem(@Param('id') id: string, @Param('itemId') itemId: string) {
-    return this.comandasService.removeItem(id, itemId);
+  @Post(':id/authorize')
+  async authorizeAction(@Request() req: any, @Param('id') id: string, @Body() body: { action: string; itemId?: string; pin: string }) {
+    return this.comandasService.authorizeAction(id, body, this.actor(req));
+  }
+
+  @Post(':id/items/:itemId/remove')
+  async removeItem(@Request() req: any, @Param('id') id: string, @Param('itemId') itemId: string, @Body() body: { authorizationToken: string; reason: string }) {
+    return this.comandasService.removeItem(id, itemId, body.authorizationToken, body.reason, this.actor(req));
   }
 
   @Post(':id/request-payment')
@@ -88,9 +93,13 @@ export class ComandasController {
     return this.comandasService.closeComanda(id, body.saleId);
   }
 
-  @Delete(':id')
-  async cancelComanda(@Param('id') id: string) {
-    return this.comandasService.cancelComanda(id);
+  @Post(':id/cancel')
+  async cancelComanda(@Request() req: any, @Param('id') id: string, @Body() body: { authorizationToken: string; reason: string }) {
+    return this.comandasService.cancelComanda(id, body.authorizationToken, body.reason, this.actor(req));
+  }
+
+  private actor(req: any) {
+    return req.comandaActor || { userId: req.user?.sub, name: req.user?.email || 'Usuário autenticado' };
   }
 }
 

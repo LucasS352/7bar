@@ -87,12 +87,13 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
       expect(tx.comanda.update.mock.calls[0][0].data.status).toBeUndefined();
     },
   );
-  it('produto antigo sem flag e sem check continua fora da cozinha', async () => {
+  it('produto sem preparo inicia como servir agora quando o KDS está ativo', async () => {
     const { service, tx } = setup(true, { ...product, requiresKitchen: false });
     await service.addItems('c', [{ productId: 'p', quantity: 1 }]);
     expect(
       tx.comandaItem.create.mock.calls[0][0].data.kdsStatus,
-    ).toBeUndefined();
+    ).toBe('READY');
+    expect(tx.comandaItem.create.mock.calls[0][0].data.serveImmediately).toBe(true);
   });
   it('ingredientes opcionais não tornam o produto composto nem exigem seleções', async () => {
     const { service, tx } = setup(true, {

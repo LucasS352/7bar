@@ -37,7 +37,7 @@ export function stationRouteAllowed(station: string, method: string, path: strin
   if (method === 'POST' && path === '/auth/operator-login') return true;
   if (method === 'GET' && (path === '/products' || /^\/products\/[^/]+\/composition$/.test(path))) return true;
   if (method === 'GET' && /^\/v1\/comandas(?:\/[^/]+|\/assets\/[^/]+)?$/.test(path)) return true;
-  if (method === 'POST' && (path === '/v1/comandas' || /^\/v1\/comandas\/[^/]+\/(items|request-payment|reopen)$/.test(path))) return true;
+  if (method === 'POST' && (path === '/v1/comandas' || /^\/v1\/comandas\/[^/]+\/(items|request-payment|reopen|authorize|cancel)$/.test(path))) return true;
   if (method === 'POST' && /^\/v1\/comandas\/[^/]+\/items\/[^/]+\/(timer\/snooze|return-asset)$/.test(path)) return true;
-  return method === 'DELETE' && /^\/v1\/comandas\/[^/]+\/items\/[^/]+$/.test(path);
+  return method === 'POST' && /^\/v1\/comandas\/[^/]+\/items\/[^/]+\/remove$/.test(path);
 }

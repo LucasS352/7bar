@@ -95,7 +95,10 @@ export class StationAccessService {
       const token = req.headers['x-operator-token'];
       let payload: any;
       try { payload = this.jwt.verify(token); } catch { throw new UnauthorizedException({ message: 'Informe o PIN do garçom.', errorSource: 'operator_token' }); }
-      await this.validateWaiterSession(payload, user.tenantId);
+      const operator = await this.validateWaiterSession(payload, user.tenantId);
+      // A identidade da sessão do garçom é anexada pelo servidor; o cliente não
+      // pode escolher quem solicitou uma operação sensível.
+      req.comandaActor = { operatorId: operator.id, name: operator.name };
       if (req.method === 'POST' && path === '/v1/comandas') req.body.responsibleWaiterId = req.body.waiterId = payload.opId;
       if (req.method === 'POST' && /^\/v1\/comandas\/[^/]+\/items$/.test(path) && Array.isArray(req.body?.items)) {
         req.body.items.forEach((item: any) => { item.createdById = payload.opId; });

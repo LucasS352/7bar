@@ -920,7 +920,18 @@ model Comanda {
   responsibleWaiterId String?       // Garçom responsável pela comanda (Módulo Restaurante)
   responsibleWaiter   Operator?     @relation("ComandaResponsibleWaiter", fields: [responsibleWaiterId], references: [id])
 
+  // Cancelamento é lógico: a comanda permanece fora do financeiro, porém consultável.
+  cancelledAt                 DateTime?
+  cancellationReason          String?
+  cancelledByOperatorId       String?
+  cancelledByName             String?
+  cancellationAuthorizationType String?
+  cancellationAuthorizedById  String?
+  cancellationAuthorizedByName String?
+
   items               ComandaItem[]
+  auditEvents         ComandaAuditEvent[]
+  actionAuthorizations ComandaActionAuthorization[]
 
   saleId              String?       // Venda gerada no fechamento
   sale                Sale?         @relation(fields: [saleId], references: [id])
@@ -959,16 +970,75 @@ model ComandaItem {
   notes       String?
   stockDeducted Boolean @default(false)  // Se true: product.stock já foi debitado no lançamento da comanda
 
+  // Nunca apagar lançamento já efetivado: a baixa e o estado original ficam auditáveis.
+  status                    String    @default("active") // active, removed, cancelled
+  removedAt                 DateTime?
+  removalReason             String?
+  removedByOperatorId       String?
+  removedByName             String?
+  removalAuthorizationType  String?
+  removalAuthorizedById     String?
+  removalAuthorizedByName   String?
+
   createdById String?   // Garçom/Operador que adicionou o item (Auditoria V2)
   createdBy   Operator? @relation("ComandaItemCreatedBy", fields: [createdById], references: [id])
 
   modifiers   ComandaItemModifier[]
+  auditEvents ComandaAuditEvent[]
+  actionAuthorizations ComandaActionAuthorization[]
 
   createdAt   DateTime  @default(now())
 
   @@index([comandaId])
+  @@index([comandaId, status])
   @@index([createdById])
   @@map("comanda_items")
+}
+
+// Autorização de operação sensível. Apenas o hash do segredo aleatório é salvo;
+// o token expira e é consumido na mesma transação da remoção/cancelamento.
+model ComandaActionAuthorization {
+  id                   String       @id @default(uuid())
+  tokenHash            String       @unique
+  action               String       // remove_item | cancel_comanda
+  comandaId            String
+  comanda              Comanda      @relation(fields: [comandaId], references: [id], onDelete: Cascade)
+  comandaItemId        String?
+  comandaItem          ComandaItem? @relation(fields: [comandaItemId], references: [id], onDelete: Cascade)
+  requestedByOperatorId String?
+  requestedByName      String?
+  authorizationType    String       // cashier_pin | manager_pin
+  authorizedByOperatorId String?
+  authorizedByName     String?
+  expiresAt            DateTime
+  consumedAt           DateTime?
+  createdAt            DateTime     @default(now())
+
+  @@index([comandaId, action, expiresAt])
+  @@map("comanda_action_authorizations")
+}
+
+// Evento imutável para conferência posterior. Snapshots evitam que uma troca de
+// cadastro de produto ou operador apague o contexto do ocorrido.
+model ComandaAuditEvent {
+  id                    String       @id @default(uuid())
+  comandaId             String
+  comanda               Comanda      @relation(fields: [comandaId], references: [id], onDelete: Cascade)
+  comandaItemId         String?
+  comandaItem           ComandaItem? @relation(fields: [comandaItemId], references: [id], onDelete: SetNull)
+  action                String       // item_removed | comanda_cancelled
+  reason                String
+  requestedByOperatorId String?
+  requestedByName       String?
+  authorizationType     String
+  authorizedByOperatorId String?
+  authorizedByName      String?
+  snapshot              Json
+  createdAt             DateTime     @default(now())
+
+  @@index([comandaId, createdAt])
+  @@index([comandaItemId])
+  @@map("comanda_audit_events")
 }
 
 // Reserva atual; histórico permanece no item. Número físico único na loja.

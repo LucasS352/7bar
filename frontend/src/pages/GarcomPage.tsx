@@ -29,12 +29,24 @@ interface WaiterOperator {
   isManager?: boolean;
 }
 
+function readPersistedWaiter(): WaiterOperator | null {
+  try {
+    const saved = JSON.parse(localStorage.getItem('garcom_operator') || 'null');
+    return saved && typeof saved.id === 'string' && typeof saved.name === 'string' ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
 interface ComandaItem {
   modifiers?: Array<{ id: string; name: string }>;
   assetNumber?: number | null;
   kdsStatus?: KdsStatus | null;
   serveImmediately?: boolean;
   kdsDestination?: string | null;
+  status?: 'active' | 'removed' | 'cancelled';
+  removedAt?: string | null;
+  removalReason?: string | null;
   id: string;
   productId: string;
   quantity: number;
@@ -115,19 +127,17 @@ export function GarcomPage() {
     document.body.classList.add('garcom-touch-screen');
     return () => document.body.classList.remove('garcom-touch-screen');
   }, []);
-  const { token } = useAuthStore();
+  const { token, user } = useAuthStore();
   const { enabled: kdsEnabled, carvoariaEnabled } = useKdsConfig();
   const [selectedAssetNumber, setSelectedAssetNumber] = useState<number | undefined>();
   const [assetRevision, setAssetRevision] = useState(0);
-  const [serveImmediately, setServeImmediately] = useState(false);
+  const [serveImmediately, setServeImmediately] = useState(true);
 
   // Estado global do garçom
   const [waiter, setWaiter] = useState<WaiterOperator | null>(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('garcom_operator') || 'null');
-      const session = useOperatorTokenStore.getState();
-      return saved && isWaiterSession(session.token) && session.operatorId === saved.id && session.tenantId === useAuthStore.getState().user?.tenant ? saved : null;
-    } catch { return null; }
+    const saved = readPersistedWaiter();
+    const session = useOperatorTokenStore.getState();
+    return saved && isWaiterSession(session.token) && session.operatorId === saved.id && session.tenantId === useAuthStore.getState().user?.tenant ? saved : null;
   });
   const [comandas, setComandas] = useState<Comanda[]>([]);
   const [loadingComandas, setLoadingComandas] = useState(false);
@@ -137,6 +147,48 @@ export function GarcomPage() {
   const selectedComandaIdRef = useRef<string | null>(null);
 
   const [showLoginModal, setShowLoginModal] = useState(!waiter);
+
+  const restoreWaiterSession = useCallback(() => {
+    const saved = readPersistedWaiter();
+    const tenantId = useAuthStore.getState().user?.tenant;
+    if (!saved || !tenantId) return false;
+
+    const operatorSession = useOperatorTokenStore.getState();
+    const restored = operatorSession.restoreFromSession(saved.id, tenantId);
+    const currentSession = useOperatorTokenStore.getState();
+    const isValid = restored
+      && isWaiterSession(currentSession.token)
+      && currentSession.operatorId === saved.id
+      && currentSession.tenantId === tenantId;
+
+    if (isValid) {
+      setWaiter(saved);
+      setShowLoginModal(false);
+    }
+    return isValid;
+  }, []);
+
+  // Alguns navegadores móveis suspendem a aba e reconstroem o estado em
+  // memória ao desbloquear. O PIN persistente deve ser restaurado antes de
+  // exibir novamente a seleção de colaborador.
+  useEffect(() => {
+    if (user?.tenant) restoreWaiterSession();
+  }, [user?.tenant, restoreWaiterSession]);
+
+  useEffect(() => {
+    const restoreWhenVisible = () => {
+      if (document.visibilityState === 'visible') restoreWaiterSession();
+    };
+    document.addEventListener('visibilitychange', restoreWhenVisible);
+    window.addEventListener('pageshow', restoreWhenVisible);
+    window.addEventListener('online', restoreWhenVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', restoreWhenVisible);
+      window.removeEventListener('pageshow', restoreWhenVisible);
+      window.removeEventListener('online', restoreWhenVisible);
+    };
+  }, [restoreWaiterSession]);
+
   useEffect(() => {
     const expired = () => {
       setWaiter(null);
@@ -179,9 +231,12 @@ export function GarcomPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [itemQty, setItemQty] = useState(1);
   const [itemNotes, setItemNotes] = useState('');
-  useEffect(() => { setServeImmediately(false); setSelectedAssetNumber(undefined); if (selectedProduct?.assetTrackingTotal) setItemQty(1); }, [selectedProduct?.id, showAddItem]);
+  useEffect(() => { setServeImmediately(true); setSelectedAssetNumber(undefined); if (selectedProduct?.assetTrackingTotal) setItemQty(1); }, [selectedProduct?.id, showAddItem]);
   const [addingItem, setAddingItem] = useState(false);
-  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
+  const [sensitiveAction, setSensitiveAction] = useState<{ type: 'remove_item' | 'cancel_comanda'; item?: ComandaItem } | null>(null);
+  const [sensitivePin, setSensitivePin] = useState('');
+  const [sensitiveReason, setSensitiveReason] = useState('');
+  const [sensitiveLoading, setSensitiveLoading] = useState(false);
   // Produto composto aguardando seleção de modificadores para lançamento em comanda
   const [compositeProductForComanda, setCompositeProductForComanda] = useState<Product | null>(null);
 
@@ -199,6 +254,13 @@ export function GarcomPage() {
   const handleBackToTables = () => {
     selectedComandaIdRef.current = null;
     setSelectedComanda(null);
+  };
+
+  const requestCancelComanda = (comanda: Comanda) => {
+    handleOpenComanda(comanda);
+    setSensitivePin('');
+    setSensitiveReason('');
+    setSensitiveAction({ type: 'cancel_comanda' });
   };
 
   // ── Buscar operadores para login ─────────────────────────────────────────
@@ -320,6 +382,12 @@ export function GarcomPage() {
     setComandas([]);
   }
 
+  function handleExitDevice() {
+    // Mesmo comportamento da Cozinha: encerra a sessão da estação inteira,
+    // não apenas o PIN do garçom, e devolve o dispositivo ao login geral.
+    useAuthStore.getState().logout();
+  }
+
   // ── Criar comanda ─────────────────────────────────────────────────────────
   async function handleCreateComanda(e: React.FormEvent) {
     e.preventDefault();
@@ -360,6 +428,7 @@ export function GarcomPage() {
     setSelectedProduct(product);
     setItemQty(1);
     setItemNotes('');
+    setServeImmediately(true);
     if (!product.isComposite) return;
     try {
       const full = await loadCompositeProduct(product);
@@ -425,19 +494,34 @@ export function GarcomPage() {
 
 
   // ── Remover item ──────────────────────────────────────────────────────────
-  async function handleRemoveItem(itemId: string) {
-    if (!selectedComanda) return;
-    setRemovingItemId(itemId);
+  async function submitSensitiveAction() {
+    if (!selectedComanda || !sensitiveAction) return;
+    if (sensitivePin.length < 4) { toast.error('Informe o PIN de autorização.'); return; }
+    if (sensitiveReason.trim().length < 3) { toast.error('Informe o motivo da ação.'); return; }
+    setSensitiveLoading(true);
     try {
-      const res = await api.delete(`/v1/comandas/${selectedComanda.id}/items/${itemId}`);
+      const authorization = await api.post(`/v1/comandas/${selectedComanda.id}/authorize`, {
+        action: sensitiveAction.type,
+        itemId: sensitiveAction.item?.id,
+        pin: sensitivePin,
+      });
+      const res = sensitiveAction.type === 'remove_item'
+        ? await api.post(`/v1/comandas/${selectedComanda.id}/items/${sensitiveAction.item!.id}/remove`, { authorizationToken: authorization.data.authorizationToken, reason: sensitiveReason.trim() })
+        : await api.post(`/v1/comandas/${selectedComanda.id}/cancel`, { authorizationToken: authorization.data.authorizationToken, reason: sensitiveReason.trim() });
       setSelectedComanda(res.data);
-      setComandas(prev => prev.map(c => c.id === res.data.id ? res.data : c));
+      if (sensitiveAction.type === 'cancel_comanda') {
+        setComandas(prev => prev.filter(c => c.id !== res.data.id));
+        handleBackToTables();
+      } else {
+        setComandas(prev => prev.map(c => c.id === res.data.id ? res.data : c));
+      }
+      setSensitiveAction(null); setSensitivePin(''); setSensitiveReason('');
       toast.dismiss();
-      toast.success('Item removido.', { duration: 1200 });
+      toast.success(sensitiveAction.type === 'remove_item' ? 'Item removido com autorização.' : 'Comanda cancelada com autorização.', { duration: 1600 });
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erro ao remover item.');
+      toast.error(err?.response?.data?.message || 'Não foi possível concluir a ação protegida.');
     } finally {
-      setRemovingItemId(null);
+      setSensitiveLoading(false);
     }
   }
 
@@ -610,21 +694,38 @@ export function GarcomPage() {
                     const isWaiting = comanda.status === 'waiting_payment';
                     const waiterName = comanda.responsibleWaiter?.name || comanda.waiter?.name;
                     return (
-                      <button
-                        type="button"
+                      <div
                         key={comanda.id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => handleOpenComanda(comanda)}
-                        className={`rounded-2xl p-4 text-left transition-all active:scale-95 cursor-pointer flex flex-col gap-2 relative overflow-hidden ${
+                        onKeyDown={(event) => {
+                          if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                            event.preventDefault();
+                            handleOpenComanda(comanda);
+                          }
+                        }}
+                        className={`rounded-2xl p-4 text-left transition-all active:scale-95 cursor-pointer flex flex-col gap-2 relative overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${
                           isWaiting
                             ? 'bg-orange-950/30 border-2 border-orange-500/70 ring-1 ring-orange-500/40 shadow-lg shadow-orange-500/10'
                             : 'bg-zinc-900 border border-zinc-800 hover:border-amber-500/40'
                         }`}
                       >
                         {isWaiting && (
-                          <div className="absolute top-2 right-2 flex items-center gap-1 bg-orange-500/20 text-orange-300 border border-orange-500/40 text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md">
+                          <div className="absolute top-2 right-10 flex items-center gap-1 bg-orange-500/20 text-orange-300 border border-orange-500/40 text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md">
                             <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-ping" /> Caixa
                           </div>
                         )}
+
+                        <button
+                          type="button"
+                          onClick={(event) => { event.stopPropagation(); requestCancelComanda(comanda); }}
+                          className="absolute top-2 right-2 p-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition cursor-pointer"
+                          title="Cancelar comanda com autorização"
+                          aria-label={`Cancelar comanda ${comanda.number}`}
+                        >
+                          <X size={14} />
+                        </button>
 
                         <div className="flex items-start justify-between gap-1 pr-12">
                           <span className="font-black text-lg text-white leading-tight truncate">#{comanda.number}</span>
@@ -649,7 +750,7 @@ export function GarcomPage() {
                           </span>
                           {waiterName && <span className="truncate max-w-[80px]">👤 {waiterName}</span>}
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -694,6 +795,10 @@ export function GarcomPage() {
                 {selectedComanda.customerName && (
                   <p className="text-xs text-zinc-400 truncate">{selectedComanda.customerName}</p>
                 )}
+                <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1 text-[10px] text-zinc-500">
+                  {selectedComanda.responsibleWaiter?.name && <span>Garçom: {selectedComanda.responsibleWaiter.name}</span>}
+                  {selectedComanda.notes && <span className="text-zinc-400 truncate max-w-[190px]">Obs.: {selectedComanda.notes}</span>}
+                </div>
               </div>
               <span className={`font-black text-lg font-mono shrink-0 ${selectedComanda.status === 'waiting_payment' ? 'text-orange-400' : 'text-emerald-400'}`}>
                 {formatMoney(Number(selectedComanda.total))}
@@ -721,9 +826,9 @@ export function GarcomPage() {
               ) : (
                 <div className="divide-y divide-zinc-800/60">
                   {selectedComanda.items.map(item => (
-                    <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                    <div key={item.id} className={`flex items-center gap-3 px-4 py-3 ${item.status && item.status !== 'active' ? 'opacity-55 bg-zinc-950/40' : ''}`}>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{item.product?.name || 'Produto'}</p>
+                        <p className="text-sm font-semibold text-white truncate">{item.product?.name || 'Produto'} {item.status === 'removed' && <span className="text-[10px] text-red-300 uppercase">· removido</span>}{item.status === 'cancelled' && <span className="text-[10px] text-red-300 uppercase">· cancelado</span>}</p>
                         {item.assetNumber != null && <p className="text-xs font-bold text-amber-300">Narguile #{String(item.assetNumber).padStart(2, '0')}</p>}
                         <p className="text-xs text-zinc-500">
                           {Number(item.quantity)}x · {formatMoney(Number(item.unitPrice))}
@@ -731,18 +836,18 @@ export function GarcomPage() {
                         </p>
                         {kdsEnabled && item.kdsStatus && <p className={`text-xs mt-1 ${item.kdsStatus === 'READY' ? 'text-emerald-400 font-bold' : 'text-zinc-400'}`}>{kdsLabels[item.kdsStatus]}{item.kdsDestination !== 'KITCHEN' && item.kdsDestination !== 'CARVOARIA' && item.kdsStatus !== 'DELIVERED' ? (item.serveImmediately ? ' · Servir agora' : ' · Servir junto') : ''}</p>}
                         {item.notes && <p className="text-xs text-zinc-400 italic mt-0.5">"{item.notes}"</p>}
+                        {item.removalReason && <p className="text-xs text-red-300 mt-0.5">Motivo: {item.removalReason}</p>}
                         {item.modifiers?.map(modifier => <p key={modifier.id} className="text-xs text-orange-300">+ {modifier.name}</p>)}
                       </div>
                       <span className="text-sm font-bold text-white font-mono shrink-0">{formatMoney(Number(item.totalPrice))}</span>
-                      {selectedComanda.status === 'open' && (
+                      {selectedComanda.status === 'open' && (!item.status || item.status === 'active') && (
                         <button
                           type="button"
-                          onClick={() => handleRemoveItem(item.id)}
-                          disabled={removingItemId === item.id}
-                          className="p-1.5 rounded-xl hover:bg-red-500/10 text-zinc-600 hover:text-red-400 transition disabled:opacity-50 cursor-pointer"
+                          onClick={() => { setSensitiveAction({ type: 'remove_item', item }); setSensitivePin(''); setSensitiveReason(''); }}
+                          className="p-1.5 rounded-xl hover:bg-red-500/10 text-zinc-600 hover:text-red-400 transition cursor-pointer"
                           title="Remover item"
                         >
-                          {removingItemId === item.id ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
+                          <X size={14} />
                         </button>
                       )}
                     </div>
@@ -769,6 +874,12 @@ export function GarcomPage() {
                   >
                     <Unlock size={15} /> Reabrir Comanda
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSensitiveAction({ type: 'cancel_comanda' }); setSensitivePin(''); setSensitiveReason(''); }}
+                    className="px-3 py-3 rounded-2xl border border-red-500/35 bg-red-500/10 hover:bg-red-500/20 text-red-300 transition cursor-pointer"
+                    title="Cancelar comanda com autorização"
+                  ><X size={15} /></button>
                 </div>
               ) : (
                 <div className="flex gap-2">
@@ -796,6 +907,14 @@ export function GarcomPage() {
                   >
                     <BellRing size={15} /> Fechar
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSensitiveAction({ type: 'cancel_comanda' }); setSensitivePin(''); setSensitiveReason(''); }}
+                    className="px-3 py-3 rounded-2xl border border-red-500/35 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-sm font-bold transition active:scale-95 flex items-center justify-center cursor-pointer shrink-0"
+                    title="Cancelar comanda com autorização"
+                  >
+                    <X size={15} />
+                  </button>
                 </div>
               )}
             </div>
@@ -806,7 +925,16 @@ export function GarcomPage() {
       {/* ═══ Modal: Login de Garçom (Centralizado) ═════════════════════════ */}
       {showLoginModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="relative bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+            <button
+              type="button"
+              onClick={handleExitDevice}
+              className="absolute top-3 right-3 p-2 rounded-xl text-zinc-500 hover:bg-zinc-800 hover:text-white transition cursor-pointer"
+              title="Sair do dispositivo"
+              aria-label="Sair do dispositivo"
+            >
+              <X size={17} />
+            </button>
             <div className="p-6 border-b border-zinc-800 text-center">
               <div className="w-12 h-12 rounded-2xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center mx-auto mb-3">
                 <UtensilsCrossed size={24} className="text-orange-400" />
@@ -1190,6 +1318,32 @@ export function GarcomPage() {
                 <span className="text-xl font-black text-emerald-400 font-mono">{formatMoney(Number(selectedComanda.total))}</span>
               </div>
               <p className="text-[10px] text-zinc-500 mt-2 text-center">Pagamento realizado no caixa. Extrato de simples conferência.</p>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ═══ Modal: ação sensível protegida por PIN ═══════════════════════ */}
+      {sensitiveAction && selectedComanda && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+          <div className="bg-zinc-900 border border-red-500/35 rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="w-11 h-11 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center mb-4"><KeyRound size={20} className="text-red-300" /></div>
+            <h3 className="text-base font-black text-white">{sensitiveAction.type === 'remove_item' ? 'Remover item da comanda?' : 'Cancelar comanda inteira?'}</h3>
+            <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+              {sensitiveAction.type === 'remove_item'
+                ? `${sensitiveAction.item?.product?.name || 'Item'} será removido e o estorno ficará registrado.`
+                : `A Mesa #${selectedComanda.number} será cancelada. Os itens e a auditoria serão preservados, mas não entrarão no financeiro.`}
+            </p>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mt-5 mb-1.5">Motivo obrigatório</label>
+            <input value={sensitiveReason} onChange={e => setSensitiveReason(e.target.value)} maxLength={500} placeholder="Ex.: lançamento duplicado" className="w-full bg-zinc-950 border border-zinc-700 focus:border-red-400 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mt-3 mb-1.5">PIN do Caixa ou Gerente</label>
+            <input type="password" inputMode="numeric" autoFocus value={sensitivePin} onChange={e => setSensitivePin(e.target.value.replace(/\D/g, '').slice(0, 12))} placeholder="••••" className="w-full bg-zinc-950 border border-zinc-700 focus:border-red-400 rounded-xl px-3 py-2.5 text-center text-xl tracking-[0.45em] font-mono text-white outline-none" />
+            <div className="flex gap-2 mt-6">
+              <button type="button" disabled={sensitiveLoading} onClick={() => setSensitiveAction(null)} className="flex-1 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs transition cursor-pointer">Voltar</button>
+              <button type="button" disabled={sensitiveLoading} onClick={submitSensitiveAction} className="flex-[1.35] py-3 rounded-xl bg-red-500 hover:bg-red-400 text-zinc-950 font-black text-xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50">
+                {sensitiveLoading ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />}{sensitiveAction.type === 'remove_item' ? 'Autorizar remoção' : 'Autorizar cancelamento'}
+              </button>
             </div>
           </div>
         </div>,

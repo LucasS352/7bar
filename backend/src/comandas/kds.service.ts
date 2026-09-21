@@ -54,6 +54,7 @@ export class KdsService {
     const config = await this.config(station);
     return this.queueReads.get(this.context.get().tenantId + ':' + config.stations.join(','), () => (prisma as any).comandaItem.findMany({
       where: {
+        status: 'active',
         kdsStatus: { in: ['PENDING', 'PREPARING', 'READY'] },
         kdsDestination: { in: config.stations },
         comanda: { status: { in: ['open', 'waiting_payment'] } },
@@ -91,7 +92,7 @@ export class KdsService {
     const updated = await (prisma as any).$transaction(
       async (tx: any) => {
         const items = await tx.comandaItem.findMany({
-          where: { id: { in: itemIds } },
+          where: { id: { in: itemIds }, status: 'active' },
           include: { comanda: true },
         });
         if (items.length !== itemIds.length)
@@ -127,6 +128,7 @@ export class KdsService {
           const waiting = await tx.comandaItem.count({
               where: {
                 comandaId: { in: [...waitingComandas] },
+                status: 'active',
                 kdsDestination: 'KITCHEN',
                 kdsStatus: { in: ['PENDING', 'PREPARING'] },
               },
@@ -139,7 +141,7 @@ export class KdsService {
         const now = new Date();
         for (const [minutes, group] of groups) {
           const result = await tx.comandaItem.updateMany({
-            where: { id: { in: group.map(item => item.id) }, kdsStatus: group[0].kdsStatus },
+            where: { id: { in: group.map(item => item.id) }, status: 'active', kdsStatus: group[0].kdsStatus },
             data: {
               kdsStatus: status,
               ...(status === 'READY' ? { kdsReadyAt: now } : {}),

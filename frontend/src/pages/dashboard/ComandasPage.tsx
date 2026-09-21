@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/auth';
 import { 
   User, Search, Plus, Trash2, CheckCircle2, AlertCircle, 
   ChevronRight, Calendar, DollarSign, X, Loader2, ArrowLeft, RefreshCw,
-  UtensilsCrossed, Printer, ShoppingBag, Receipt, Clock
+  UtensilsCrossed, Printer, ShoppingBag, Receipt, Clock, KeyRound
 } from 'lucide-react';
 import { CompositeModifierModal } from '@/components/CompositeModifierModal';
 
@@ -72,6 +72,8 @@ interface ComandaItem {
   unitPrice: number;
   totalPrice: number;
   notes?: string | null;
+  status?: 'active' | 'removed' | 'cancelled';
+  removalReason?: string | null;
   createdAt: string;
   product?: Product;
 }
@@ -86,6 +88,7 @@ interface Comanda {
   createdAt: string;
   updatedAt: string;
   items?: ComandaItem[];
+  responsibleWaiter?: { id: string; name: string; jobTitle?: string | null } | null;
 }
 
 export function ComandasPage() {
@@ -123,6 +126,7 @@ export function ComandasPage() {
   const [comandas, setComandas] = useState<Comanda[]>([]);
   const [loadingComandas, setLoadingComandas] = useState(true);
   const [comandaSearch, setComandaSearch] = useState('');
+  const [comandaStatusFilter, setComandaStatusFilter] = useState<'open' | 'cancelled'>('open');
   
   // Modal de Nova Comanda
   const [isNewComandaModalOpen, setIsNewComandaModalOpen] = useState(false);
@@ -139,6 +143,10 @@ export function ComandasPage() {
   const [productSearch, setProductSearch] = useState('');
   // Produto composto aguardando seleção de modificadores para lançamento em comanda
   const [compositeProductForComanda, setCompositeProductForComanda] = useState<Product | null>(null);
+  const [sensitiveAction, setSensitiveAction] = useState<{ type: 'remove_item' | 'cancel_comanda'; item?: ComandaItem } | null>(null);
+  const [sensitivePin, setSensitivePin] = useState('');
+  const [sensitiveReason, setSensitiveReason] = useState('');
+  const [sensitiveLoading, setSensitiveLoading] = useState(false);
 
 
   // ── ESTADOS DE CONSUMO DE FUNCIONÁRIOS ────────────────────────────────────
@@ -163,7 +171,7 @@ export function ComandasPage() {
   const fetchComandas = async () => {
     setLoadingComandas(true);
     try {
-      const res = await api.get('/v1/comandas?status=open');
+      const res = await api.get(`/v1/comandas?status=${comandaStatusFilter}`);
       setComandas(res.data || []);
     } catch (err) {
       console.error(err);
@@ -209,7 +217,7 @@ export function ComandasPage() {
     fetchComandas();
     fetchOperators();
     fetchProducts();
-  }, []);
+  }, [comandaStatusFilter]);
 
   // Recarregar detalhes da comanda selecionada
   const refreshSelectedComanda = async (id: string) => {
@@ -309,14 +317,31 @@ export function ComandasPage() {
 
 
   // Remover Item da Comanda
-  const handleRemoveComandaItem = async (itemId: string) => {
-    if (!selectedComanda) return;
+  const submitSensitiveAction = async () => {
+    if (!selectedComanda || !sensitiveAction) return;
+    if (sensitivePin.length < 4) { toast.error('Informe o PIN de autorização.'); return; }
+    if (sensitiveReason.trim().length < 3) { toast.error('Informe o motivo da ação.'); return; }
+    setSensitiveLoading(true);
     try {
-      await api.delete(`/v1/comandas/${selectedComanda.id}/items/${itemId}`);
-      toast.success('Item removido da comanda.');
-      refreshSelectedComanda(selectedComanda.id);
+      const authorization = await api.post(`/v1/comandas/${selectedComanda.id}/authorize`, {
+        action: sensitiveAction.type, itemId: sensitiveAction.item?.id, pin: sensitivePin,
+      });
+      const response = sensitiveAction.type === 'remove_item'
+        ? await api.post(`/v1/comandas/${selectedComanda.id}/items/${sensitiveAction.item!.id}/remove`, { authorizationToken: authorization.data.authorizationToken, reason: sensitiveReason.trim() })
+        : await api.post(`/v1/comandas/${selectedComanda.id}/cancel`, { authorizationToken: authorization.data.authorizationToken, reason: sensitiveReason.trim() });
+      setSensitiveAction(null); setSensitivePin(''); setSensitiveReason('');
+      if (sensitiveAction.type === 'cancel_comanda') {
+        setSelectedComanda(response.data);
+        toast.success('Comanda cancelada e preservada no histórico.');
+      } else {
+        setSelectedComanda(response.data);
+        toast.success('Item removido com autorização.');
+      }
+      fetchComandas();
     } catch (err: any) {
-      toast.error('Erro ao remover item.');
+      toast.error(err?.response?.data?.message || 'Não foi possível concluir a ação protegida.');
+    } finally {
+      setSensitiveLoading(false);
     }
   };
 
@@ -565,7 +590,7 @@ export function ComandasPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 flex justify-between items-center">
               <div>
-                <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Comandas Abertas</p>
+                <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">{comandaStatusFilter === 'open' ? 'Comandas Abertas' : 'Comandas Canceladas'}</p>
                 <p className="text-2xl font-black text-white mt-1">{comandas.length}</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold">
@@ -575,8 +600,8 @@ export function ComandasPage() {
 
             <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 flex justify-between items-center">
               <div>
-                <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Consumo Total Acumulado</p>
-                <p className="text-2xl font-black text-emerald-400 mt-1">R$ {totalComandasAccrued.toFixed(2)}</p>
+                <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">{comandaStatusFilter === 'open' ? 'Consumo Total Acumulado' : 'Valor histórico não faturado'}</p>
+                <p className={`text-2xl font-black mt-1 ${comandaStatusFilter === 'open' ? 'text-emerald-400' : 'text-red-300'}`}>R$ {totalComandasAccrued.toFixed(2)}</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
                 <DollarSign size={20} />
@@ -591,6 +616,11 @@ export function ComandasPage() {
                 <Plus size={20} /> Abrir Nova Comanda / Mesa
               </button>
             </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button onClick={() => setComandaStatusFilter('open')} className={`px-3 py-2 rounded-xl text-xs font-bold transition ${comandaStatusFilter === 'open' ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}>Em atendimento</button>
+            <button onClick={() => setComandaStatusFilter('cancelled')} className={`px-3 py-2 rounded-xl text-xs font-bold transition ${comandaStatusFilter === 'cancelled' ? 'bg-red-400 text-zinc-950' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}>Histórico cancelado</button>
           </div>
 
           {/* Search bar */}
@@ -614,7 +644,7 @@ export function ComandasPage() {
           ) : filteredComandas.length === 0 ? (
             <div className="bg-zinc-900/30 border border-zinc-800/80 rounded-3xl p-12 text-center">
               <UtensilsCrossed className="mx-auto text-zinc-600 mb-3" size={40} />
-              <h3 className="text-white font-bold text-base">Nenhuma comanda aberta encontrada</h3>
+              <h3 className="text-white font-bold text-base">{comandaStatusFilter === 'open' ? 'Nenhuma comanda aberta encontrada' : 'Nenhuma comanda cancelada encontrada'}</h3>
               <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
                 {comandaSearch ? 'Nenhum resultado corresponde à sua pesquisa.' : 'Nenhuma mesa ou comanda está em consumo no momento. Clique no botão acima para abrir uma nova.'}
               </p>
@@ -636,7 +666,7 @@ export function ComandasPage() {
                       </div>
                       <div className="text-right">
                         <span className="text-[10px] text-zinc-500 font-bold uppercase block">Acumulado</span>
-                        <span className="text-lg font-black text-emerald-400">R$ {Number(c.total || 0).toFixed(2)}</span>
+                        <span className={`text-lg font-black ${c.status === 'cancelled' ? 'text-red-300' : 'text-emerald-400'}`}>R$ {Number(c.total || 0).toFixed(2)}</span>
                       </div>
                     </div>
 
@@ -674,9 +704,9 @@ export function ComandasPage() {
                     <button
                       onClick={() => setSelectedComanda(c)}
                       className="px-2 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
-                      title="Ver e adicionar itens"
+                      title={c.status === 'cancelled' ? 'Ver auditoria da comanda cancelada' : 'Ver e adicionar itens'}
                     >
-                      <Plus size={14} /> Lançar
+                      <Plus size={14} /> {c.status === 'cancelled' ? 'Ver' : 'Lançar'}
                     </button>
                     <button
                       onClick={() => handlePrintExtrato(c)}
@@ -687,7 +717,8 @@ export function ComandasPage() {
                     </button>
                     <button
                       onClick={() => handleChargeComanda(c)}
-                      className="px-2 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                      disabled={c.status === 'cancelled'}
+                      className="px-2 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
                       title="Carregar itens no caixa do PDV para cobrar"
                     >
                       <ShoppingBag size={14} /> Cobrar
@@ -838,6 +869,11 @@ export function ComandasPage() {
                 <p className="text-xs text-zinc-400 mt-0.5">
                   Aberta em: {new Date(selectedComanda.createdAt).toLocaleString('pt-BR')}
                 </p>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-zinc-400">
+                  {selectedComanda.responsibleWaiter?.name && <span>Garçom: {selectedComanda.responsibleWaiter.name}</span>}
+                  {selectedComanda.notes && <span>Obs.: {selectedComanda.notes}</span>}
+                  <span className={selectedComanda.status === 'cancelled' ? 'text-red-300 font-bold uppercase' : 'text-emerald-400 font-bold uppercase'}>{selectedComanda.status === 'cancelled' ? 'Comanda cancelada' : selectedComanda.status}</span>
+                </div>
               </div>
 
               <div className="flex items-center gap-3">
@@ -855,7 +891,7 @@ export function ComandasPage() {
             </div>
 
             {/* Form de Adicionar Item Direto na Comanda */}
-            <form onSubmit={handleAddItemToComanda} className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 mb-5 space-y-3">
+            {selectedComanda.status !== 'cancelled' && <form onSubmit={handleAddItemToComanda} className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 mb-5 space-y-3">
               <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">Lançar Novo Produto na Comanda:</span>
               
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -915,7 +951,7 @@ export function ComandasPage() {
                   </button>
                 </div>
               </div>
-            </form>
+            </form>}
 
             {/* Extrato / Lista de Itens Lançados */}
             <div className="space-y-2 mb-6">
@@ -924,22 +960,23 @@ export function ComandasPage() {
               <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-2 pr-1">
                 {selectedComanda.items && selectedComanda.items.length > 0 ? (
                   selectedComanda.items.map(item => (
-                    <div key={item.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex justify-between items-center text-xs">
+                    <div key={item.id} className={`bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex justify-between items-center text-xs ${item.status && item.status !== 'active' ? 'opacity-55' : ''}`}>
                       <div>
-                        <p className="font-bold text-white text-sm">{item.product?.name || 'Produto'}</p>
+                        <p className="font-bold text-white text-sm">{item.product?.name || 'Produto'} {item.status === 'removed' && <span className="text-[10px] text-red-300 uppercase">· removido</span>}{item.status === 'cancelled' && <span className="text-[10px] text-red-300 uppercase">· cancelado</span>}</p>
                         <p className="text-zinc-500 font-mono text-[11px] mt-0.5">
                           {Number(item.quantity)} x R$ {Number(item.unitPrice).toFixed(2)}
                         </p>
+                        {item.removalReason && <p className="text-red-300 mt-1">Motivo: {item.removalReason}</p>}
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="font-black text-emerald-400 text-sm">R$ {Number(item.totalPrice).toFixed(2)}</span>
-                        <button
-                          onClick={() => handleRemoveComandaItem(item.id)}
+                        {selectedComanda.status !== 'cancelled' && (!item.status || item.status === 'active') && <button
+                          onClick={() => { setSensitiveAction({ type: 'remove_item', item }); setSensitivePin(''); setSensitiveReason(''); }}
                           className="text-zinc-600 hover:text-red-400 p-1 transition"
                           title="Remover item da comanda"
                         >
                           <Trash2 size={16} />
-                        </button>
+                        </button>}
                       </div>
                     </div>
                   ))
@@ -968,13 +1005,20 @@ export function ComandasPage() {
                   Fechar
                 </button>
 
+                {selectedComanda.status !== 'cancelled' && <button
+                  onClick={() => { setSensitiveAction({ type: 'cancel_comanda' }); setSensitivePin(''); setSensitiveReason(''); }}
+                  className="border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-300 font-bold px-4 py-2.5 rounded-xl transition text-xs flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Trash2 size={15} /> Cancelar comanda
+                </button>}
+
                 <button
                   onClick={() => {
                     const c = selectedComanda;
                     setSelectedComanda(null);
                     handleChargeComanda(c);
                   }}
-                  disabled={!selectedComanda.items || selectedComanda.items.length === 0}
+                  disabled={selectedComanda.status === 'cancelled' || !selectedComanda.items || selectedComanda.items.filter(item => !item.status || item.status === 'active').length === 0}
                   className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold px-5 py-2.5 rounded-xl transition text-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                 >
                   <ShoppingBag size={16} /> Cobrar / Ir para o Caixa
@@ -1164,6 +1208,26 @@ export function ComandasPage() {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {sensitiveAction && selectedComanda && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-zinc-900 border border-red-500/35 rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="w-11 h-11 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center mb-4"><KeyRound size={20} className="text-red-300" /></div>
+            <h3 className="text-base font-black text-white">{sensitiveAction.type === 'remove_item' ? 'Remover item da comanda?' : 'Cancelar comanda inteira?'}</h3>
+            <p className="text-xs text-zinc-400 mt-2 leading-relaxed">{sensitiveAction.type === 'remove_item' ? `${sensitiveAction.item?.product?.name || 'Item'} será removido com estorno rastreável.` : `A comanda #${selectedComanda.number} permanecerá no histórico como cancelada e não entrará no financeiro.`}</p>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mt-5 mb-1.5">Motivo obrigatório</label>
+            <input value={sensitiveReason} onChange={e => setSensitiveReason(e.target.value)} maxLength={500} placeholder="Ex.: lançamento duplicado" className="w-full bg-zinc-950 border border-zinc-700 focus:border-red-400 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mt-3 mb-1.5">PIN do Caixa ou Gerente</label>
+            <input type="password" inputMode="numeric" autoFocus value={sensitivePin} onChange={e => setSensitivePin(e.target.value.replace(/\D/g, '').slice(0, 12))} placeholder="••••" className="w-full bg-zinc-950 border border-zinc-700 focus:border-red-400 rounded-xl px-3 py-2.5 text-center text-xl tracking-[0.45em] font-mono text-white outline-none" />
+            <div className="flex gap-2 mt-6">
+              <button type="button" disabled={sensitiveLoading} onClick={() => setSensitiveAction(null)} className="flex-1 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs transition">Voltar</button>
+              <button type="button" disabled={sensitiveLoading} onClick={submitSensitiveAction} className="flex-[1.35] py-3 rounded-xl bg-red-500 hover:bg-red-400 text-zinc-950 font-black text-xs transition flex items-center justify-center gap-1.5 disabled:opacity-50">
+                {sensitiveLoading ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />}{sensitiveAction.type === 'remove_item' ? 'Autorizar remoção' : 'Autorizar cancelamento'}
+              </button>
+            </div>
           </div>
         </div>
       )}

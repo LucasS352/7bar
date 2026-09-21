@@ -137,6 +137,7 @@ describe('KDS isolamento e entrega', () => {
     await service.tickets();
     expect(manager.getTenantClient).toHaveBeenCalledWith('tenant-a', 'db-a');
     expect(tx.comandaItem.findMany.mock.calls[0][0].where).toEqual({
+      status: 'active',
       kdsStatus: { in: ['PENDING', 'PREPARING', 'READY'] },
       kdsDestination: { in: ['KITCHEN', 'BAR', 'BAR_1', 'BAR_2', 'SERVICE'] },
       comanda: { status: { in: ['open', 'waiting_payment'] } },

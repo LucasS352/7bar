@@ -66,6 +66,6 @@ describe('Narguilaria: patrimônio e prazos de atendimento', () => {
     const { service, tx } = setup();
     tx.comandaItem.findFirst.mockResolvedValue(null as any);
     await expect(service.returnAsset('other', 'i')).rejects.toThrow('nesta comanda');
-    expect(tx.comandaItem.findFirst).toHaveBeenCalledWith({ where: { id: 'i', comandaId: 'other' } });
+    expect(tx.comandaItem.findFirst).toHaveBeenCalledWith({ where: { id: 'i', comandaId: 'other', status: 'active' } });
   });
 });

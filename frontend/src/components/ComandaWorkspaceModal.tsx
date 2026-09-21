@@ -35,6 +35,8 @@ type Item = {
   createdBy?: { name: string };
   modifiers?: { id: string; name: string }[];
   kdsStatus?: KdsStatus | null;
+  status?: 'active' | 'removed' | 'cancelled';
+  removalReason?: string | null;
 };
 type Comanda = {
   id: string;
@@ -100,10 +102,12 @@ export function ComandaWorkspaceModal({
   const [filter, setFilter] = useState('all');
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<{
-    kind: 'remove' | 'reopen' | 'charge';
+    kind: 'remove' | 'cancel' | 'reopen' | 'charge';
     comanda: Comanda;
     item?: Item;
   } | null>(null);
+  const [authorizationPin, setAuthorizationPin] = useState('');
+  const [authorizationReason, setAuthorizationReason] = useState('');
   const [mobileDetail, setMobileDetail] = useState(selectedId === 'new');
   const panel = useRef<HTMLDivElement>(null);
   const confirmation = useRef<HTMLDivElement>(null);
@@ -231,6 +235,13 @@ export function ComandaWorkspaceModal({
     onSelect(id);
     setMobileDetail(true);
   }
+
+  function requestProtectedAction(action: 'remove' | 'cancel', comanda: Comanda, item?: Item) {
+    setAuthorizationPin('');
+    setAuthorizationReason('');
+    setConfirm({ kind: action, comanda, item });
+  }
+
   async function runAction(action: NonNullable<typeof confirm>) {
     if (
       mutating.current ||
@@ -238,6 +249,16 @@ export function ComandaWorkspaceModal({
       useCartStore.getState().isOperationLocked
     )
       return;
+    if (action.kind === 'remove' || action.kind === 'cancel') {
+      if (authorizationPin.length < 4) {
+        toast.error('Informe o PIN do Caixa ou Gerente.');
+        return;
+      }
+      if (authorizationReason.trim().length < 3) {
+        toast.error('Informe o motivo da ação.');
+        return;
+      }
+    }
     mutating.current = true;
     setBusy(true);
     version.current++;
@@ -249,25 +270,46 @@ export function ComandaWorkspaceModal({
         if (!['open', 'waiting_payment'].includes(res.data.status))
           throw new Error('Esta comanda já foi encerrada.');
         onCharge(res.data);
-      } else {
+      } else if (action.kind === 'remove' || action.kind === 'cancel') {
         if (offlineAt || !navigator.onLine) throw new Error('Reconecte para alterar a comanda.');
-        const res =
-          action.kind === 'remove'
-            ? await api.delete(
-                `/v1/comandas/${action.comanda.id}/items/${action.item!.id}`,
-              )
-            : await api.post(`/v1/comandas/${action.comanda.id}/reopen`);
+        const authorization = await api.post(`/v1/comandas/${action.comanda.id}/authorize`, {
+          action: action.kind === 'remove' ? 'remove_item' : 'cancel_comanda',
+          itemId: action.item?.id,
+          pin: authorizationPin,
+        });
+        const res = action.kind === 'remove'
+          ? await api.post(
+              `/v1/comandas/${action.comanda.id}/items/${action.item!.id}/remove`,
+              { authorizationToken: authorization.data.authorizationToken, reason: authorizationReason.trim() },
+            )
+          : await api.post(
+              `/v1/comandas/${action.comanda.id}/cancel`,
+              { authorizationToken: authorization.data.authorizationToken, reason: authorizationReason.trim() },
+            );
         setDetail(res.data);
-        setComandas((list) =>
-          list.map((c) => (c.id === res.data.id ? res.data : c)),
-        );
-        syncLoadedComanda(res.data);
+        setComandas((list) => action.kind === 'cancel'
+          ? list.filter((c) => c.id !== res.data.id)
+          : list.map((c) => (c.id === res.data.id ? res.data : c)));
+        if (action.kind !== 'cancel') syncLoadedComanda(res.data);
         onUpdated(res.data);
         toast.success(
           action.kind === 'remove'
-            ? 'Item removido. Total da comanda atualizado.'
-            : 'Comanda reaberta para edição.',
+            ? 'Item removido com autorização. Total da comanda atualizado.'
+            : 'Comanda cancelada e preservada no histórico.',
         );
+        if (action.kind === 'cancel') {
+          setDetail(null);
+          onSelect(launch ? 'new' : '');
+          setMobileDetail(false);
+        }
+      } else {
+        if (offlineAt || !navigator.onLine) throw new Error('Reconecte para alterar a comanda.');
+        const res = await api.post(`/v1/comandas/${action.comanda.id}/reopen`);
+        setDetail(res.data);
+        setComandas((list) => list.map((c) => (c.id === res.data.id ? res.data : c)));
+        syncLoadedComanda(res.data);
+        onUpdated(res.data);
+        toast.success('Comanda reaberta para edição.');
       }
       setConfirm(null);
     } catch (err: any) {
@@ -458,15 +500,35 @@ export function ComandaWorkspaceModal({
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   {list.map((c) => (
-                    <button
-                      type="button"
+                    <div
                       key={c.id}
-                      disabled={disabled}
-                      onClick={() => choose(c.id)}
+                      role="button"
+                      tabIndex={disabled ? -1 : 0}
+                      aria-disabled={disabled}
+                      onClick={() => { if (!disabled) choose(c.id); }}
+                      onKeyDown={(event) => {
+                        if (!disabled && event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                          event.preventDefault();
+                          choose(c.id);
+                        }
+                      }}
                       aria-pressed={selectedId === c.id}
                       aria-label={`Comanda ${c.number}`}
-                      className={`text-left rounded-2xl border p-4 transition disabled:opacity-50 ${selectedId === c.id ? 'bg-amber-400/10 border-amber-400 shadow-[inset_0_0_0_1px_#fbbf24]' : 'bg-[#191e23] border-zinc-700/50 hover:border-zinc-500'}`}
+                      className={`relative text-left rounded-2xl border p-4 transition outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${selectedId === c.id ? 'bg-amber-400/10 border-amber-400 shadow-[inset_0_0_0_1px_#fbbf24]' : 'bg-[#191e23] border-zinc-700/50 hover:border-zinc-500'}`}
                     >
+                      <button
+                        type="button"
+                        disabled={disabled || !!offlineAt}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          requestProtectedAction('cancel', c);
+                        }}
+                        className="absolute top-3 right-3 p-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 disabled:opacity-25 disabled:cursor-not-allowed"
+                        aria-label={`Cancelar comanda ${c.number}`}
+                        title="Cancelar comanda com autorização"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                       <div className="flex items-center gap-2">
                         <span
                           className={`w-2 h-2 rounded-full shrink-0 ${c.status === 'waiting_payment' ? 'bg-orange-400' : 'bg-emerald-400'}`}
@@ -497,7 +559,7 @@ export function ComandaWorkspaceModal({
                           </span>
                         </div>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -701,13 +763,7 @@ export function ComandaWorkspaceModal({
                                 !!error ||
                                 selected.status !== 'open'
                               }
-                              onClick={() =>
-                                setConfirm({
-                                  kind: 'remove',
-                                  comanda: selected,
-                                  item,
-                                })
-                              }
+                              onClick={() => requestProtectedAction('remove', selected, item)}
                               className="p-2.5 -mr-2 mt-1 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg disabled:opacity-25 disabled:cursor-not-allowed"
                             >
                               <Trash2 size={16} />
@@ -727,21 +783,33 @@ export function ComandaWorkspaceModal({
                       {money(selected.total)}
                     </strong>
                   </div>
-                  <button
-                    type="button"
-                    disabled={
-                      disabled ||
-                      detailLoading ||
-                      !!error ||
-                      !selected.items.length
-                    }
-                    onClick={charge}
-                    className="w-full flex justify-center items-center gap-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-sm disabled:opacity-35"
-                  >
-                    <ReceiptText size={18} />
-                    Cobrar no caixa
-                    <ArrowRight size={16} />
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={disabled || detailLoading || !!error || !!offlineAt}
+                      onClick={() => requestProtectedAction('cancel', selected)}
+                      className="px-3 rounded-xl border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 disabled:opacity-35"
+                      title="Cancelar comanda com autorização"
+                      aria-label="Cancelar comanda"
+                    >
+                      <Trash2 size={17} />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={
+                        disabled ||
+                        detailLoading ||
+                        !!error ||
+                        !selected.items.length
+                      }
+                      onClick={charge}
+                      className="flex-1 flex justify-center items-center gap-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-sm disabled:opacity-35"
+                    >
+                      <ReceiptText size={18} />
+                      Cobrar no caixa
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
                 </div>
               </>
             )}
@@ -792,13 +860,15 @@ export function ComandaWorkspaceModal({
             >
               <AlertTriangle
                 className={
-                  confirm.kind === 'remove' ? 'text-red-400' : 'text-amber-400'
+                  confirm.kind === 'remove' || confirm.kind === 'cancel' ? 'text-red-400' : 'text-amber-400'
                 }
                 size={28}
               />
               <h3 id="comanda-confirm-title" className="mt-4 text-xl font-bold">
                 {confirm.kind === 'remove'
                   ? 'Remover item da comanda?'
+                  : confirm.kind === 'cancel'
+                    ? 'Cancelar comanda inteira?'
                   : confirm.kind === 'reopen'
                     ? 'Reabrir esta comanda?'
                     : 'Carregar comanda no caixa?'}
@@ -811,7 +881,9 @@ export function ComandaWorkspaceModal({
               </p>
               <p className="mt-3 text-sm text-zinc-400">
                 {confirm.kind === 'remove'
-                  ? 'O lançamento inteiro será removido e o estoque debitado será devolvido. A comanda continuará aberta.'
+                  ? 'O lançamento será removido com estorno rastreável. A comanda continuará aberta.'
+                  : confirm.kind === 'cancel'
+                    ? 'A comanda não será apagada: itens, valores e auditoria serão preservados no histórico e não irão para o financeiro.'
                   : confirm.kind === 'reopen'
                     ? 'A conta voltará ao atendimento para permitir alterações nos itens.'
                     : 'Os itens desta comanda substituirão o carrinho atual para iniciar a cobrança.'}
@@ -822,11 +894,37 @@ export function ComandaWorkspaceModal({
                   também retira o item da fila do KDS.
                 </p>
               )}
+              {(confirm.kind === 'remove' || confirm.kind === 'cancel') && (
+                <div className="mt-5 space-y-3">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                    Motivo obrigatório
+                    <input
+                      value={authorizationReason}
+                      onChange={(event) => setAuthorizationReason(event.target.value)}
+                      maxLength={500}
+                      placeholder="Ex.: lançamento duplicado"
+                      className="mt-1.5 w-full rounded-xl border border-zinc-700 bg-black/25 px-3 py-2.5 text-sm text-white outline-none focus:border-red-400"
+                    />
+                  </label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                    PIN do Caixa ou Gerente
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      autoFocus
+                      value={authorizationPin}
+                      onChange={(event) => setAuthorizationPin(event.target.value.replace(/\D/g, '').slice(0, 12))}
+                      placeholder="••••"
+                      className="mt-1.5 w-full rounded-xl border border-zinc-700 bg-black/25 px-3 py-2.5 text-center text-lg tracking-[0.4em] text-white outline-none focus:border-red-400"
+                    />
+                  </label>
+                </div>
+              )}
               <div className="flex gap-3 mt-6">
                 <button
                   type="button"
                   disabled={disabled}
-                  onClick={() => setConfirm(null)}
+                  onClick={() => { setConfirm(null); setAuthorizationPin(''); setAuthorizationReason(''); }}
                   className="flex-1 py-3 rounded-xl bg-white/5 font-semibold"
                 >
                   Cancelar
@@ -835,12 +933,14 @@ export function ComandaWorkspaceModal({
                   type="button"
                   disabled={disabled}
                   onClick={() => runAction(confirm)}
-                  className={`flex-1 py-3 rounded-xl font-bold text-zinc-950 disabled:opacity-50 ${confirm.kind === 'remove' ? 'bg-red-400' : 'bg-amber-400'}`}
+                  className={`flex-1 py-3 rounded-xl font-bold text-zinc-950 disabled:opacity-50 ${confirm.kind === 'remove' || confirm.kind === 'cancel' ? 'bg-red-400' : 'bg-amber-400'}`}
                 >
                   {busy
                     ? 'Aguarde…'
                     : confirm.kind === 'remove'
-                      ? 'Remover item'
+                      ? 'Autorizar remoção'
+                      : confirm.kind === 'cancel'
+                        ? 'Autorizar cancelamento'
                       : 'Confirmar'}
                 </button>
               </div>

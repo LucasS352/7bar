@@ -10,6 +10,10 @@ import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { ProductsService } from '../products/products.service';
 import { IntegrationsService } from '../integrations/integrations.service';
+import { TenantsService } from '../tenants/tenants.service';
+import { createHash, randomBytes } from 'crypto';
+
+type ComandaActor = { operatorId?: string; userId?: string; name?: string };
 
 @Injectable()
 export class ComandasService {
@@ -22,6 +26,7 @@ export class ComandasService {
     private readonly productsService: ProductsService,
     private readonly integrationsService: IntegrationsService,
     private readonly kds: KdsService,
+    private readonly tenantsService?: TenantsService,
   ) {}
 
   private async getPrisma() {
@@ -37,6 +42,85 @@ export class ComandasService {
     const rows = await tx.$queryRaw(Prisma.sql`SELECT id, status FROM comandas WHERE id = ${comandaId} FOR UPDATE`);
     if (!rows.length) throw new NotFoundException('Comanda não encontrada.');
     if (!statuses.includes(rows[0].status)) throw new ConflictException('A comanda mudou de estado. Atualize a tela.');
+  }
+
+  private normalizeReason(reason: unknown) {
+    if (typeof reason !== 'string' || reason.trim().length < 3 || reason.trim().length > 500) {
+      throw new BadRequestException('Informe um motivo entre 3 e 500 caracteres.');
+    }
+    return reason.trim();
+  }
+
+  private tokenHash(token: unknown) {
+    if (typeof token !== 'string' || token.length < 32) {
+      throw new ForbiddenException('Autorização por PIN ausente ou inválida.');
+    }
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private async consumeAuthorization(
+    tx: any,
+    token: unknown,
+    action: 'remove_item' | 'cancel_comanda',
+    comandaId: string,
+    itemId?: string,
+  ) {
+    const tokenHash = this.tokenHash(token);
+    const now = new Date();
+    const authorization = await tx.comandaActionAuthorization.findFirst({
+      where: { tokenHash, action, comandaId, comandaItemId: itemId || null, consumedAt: null, expiresAt: { gt: now } },
+    });
+    if (!authorization) throw new ForbiddenException('A autorização por PIN expirou, foi usada ou não pertence a esta ação.');
+    const consumed = await tx.comandaActionAuthorization.updateMany({
+      where: { id: authorization.id, consumedAt: null, expiresAt: { gt: now } },
+      data: { consumedAt: now },
+    });
+    if (consumed.count !== 1) throw new ConflictException('A autorização já foi utilizada. Informe o PIN novamente.');
+    return authorization;
+  }
+
+  async authorizeAction(
+    comandaId: string,
+    body: { action: string; itemId?: string; pin: string },
+    actor: ComandaActor,
+  ) {
+    if (!['remove_item', 'cancel_comanda'].includes(body?.action)) {
+      throw new BadRequestException('Ação sensível inválida.');
+    }
+    if (typeof body.pin !== 'string' || !/^\d{4,12}$/.test(body.pin)) {
+      throw new BadRequestException('Informe um PIN válido.');
+    }
+    const prisma = await this.getPrisma();
+    const comanda = await (prisma as any).comanda.findUnique({ where: { id: comandaId } });
+    if (!comanda) throw new NotFoundException('Comanda não encontrada.');
+    if (!['open', 'waiting_payment'].includes(comanda.status)) {
+      throw new BadRequestException('Esta comanda não pode mais ser alterada.');
+    }
+    if (body.action === 'remove_item') {
+      if (!body.itemId) throw new BadRequestException('Item obrigatório para remoção.');
+      const item = await (prisma as any).comandaItem.findFirst({ where: { id: body.itemId, comandaId } });
+      if (!item || item.status !== 'active') throw new NotFoundException('Item ativo não encontrado nesta comanda.');
+      if (comanda.status !== 'open') throw new BadRequestException('Reabra a comanda antes de remover itens.');
+    }
+    if (!this.tenantsService) throw new ForbiddenException('Serviço de autorização indisponível.');
+    const verification = await this.tenantsService.verifyCashierPin(this.tenantContext.get().tenantId, body.pin);
+    if (!verification.authorized) throw new ForbiddenException('PIN do Caixa ou Gerente incorreto.');
+
+    const token = randomBytes(32).toString('base64url');
+    const expiresAt = new Date(Date.now() + 5 * 60_000);
+    await (prisma as any).comandaActionAuthorization.create({
+      data: {
+        tokenHash: this.tokenHash(token), action: body.action, comandaId,
+        comandaItemId: body.action === 'remove_item' ? body.itemId : null,
+        requestedByOperatorId: actor.operatorId || actor.userId || null,
+        requestedByName: actor.name || null,
+        authorizationType: verification.authType,
+        authorizedByOperatorId: verification.managerOpId || null,
+        authorizedByName: verification.managerName || (verification.authType === 'cashier_pin' ? 'PIN do Caixa' : null),
+        expiresAt,
+      },
+    });
+    return { authorizationToken: token, expiresAt: expiresAt.toISOString() };
   }
 
   async availableAssets(productId: string) {
@@ -57,7 +141,7 @@ export class ComandasService {
     await this.requireCarvoaria();
     const db = await this.getPrisma();
     const items = await db.comandaItem.findMany({
-      where: { assetReturnedAt: null, OR: [{ timerMinutes: { not: null } }, { assetNumber: { not: null } }],
+      where: { status: 'active', assetReturnedAt: null, OR: [{ timerMinutes: { not: null } }, { assetNumber: { not: null } }],
         comanda: { status: { in: ['open', 'waiting_payment'] } } },
       include: { product: { select: { name: true } }, comanda: { select: { id: true, number: true, status: true } } },
       orderBy: [{ timerDueAt: 'asc' }, { createdAt: 'asc' }],
@@ -70,7 +154,7 @@ export class ComandasService {
     const db = await this.getPrisma();
     return retryTransaction(() => db.$transaction(async tx => {
       await this.lockOpenComanda(tx, comandaId);
-      const item = await tx.comandaItem.findFirst({ where: { id: itemId, comandaId } });
+      const item = await tx.comandaItem.findFirst({ where: { id: itemId, comandaId, status: 'active' } });
       if (!item) throw new NotFoundException('Item não encontrado nesta comanda.');
       if (!item.timerStartedAt || !item.timerDueAt || item.assetReturnedAt)
         throw new BadRequestException('Este item não possui uma ronda em andamento.');
@@ -85,7 +169,7 @@ export class ComandasService {
     const db = await this.getPrisma();
     return retryTransaction(() => db.$transaction(async tx => {
       await this.lockOpenComanda(tx, comandaId);
-      const item = await tx.comandaItem.findFirst({ where: { id: itemId, comandaId } });
+      const item = await tx.comandaItem.findFirst({ where: { id: itemId, comandaId, status: 'active' } });
       if (!item) throw new NotFoundException('Item não encontrado nesta comanda.');
       if (item.assetReturnedAt) return item;
       if ((!item.assetNumber && !item.timerMinutes) || item.kdsStatus !== 'DELIVERED')
@@ -110,6 +194,7 @@ export class ComandasService {
       where: whereClause,
       include: {
         items: {
+          where: { status: 'active' },
           include: {
             product: {
               select: {
@@ -170,6 +255,7 @@ export class ComandasService {
           orderBy: { createdAt: 'desc' },
         },
         sale: true,
+        auditEvents: { orderBy: { createdAt: 'desc' } },
         responsibleWaiter: {
           select: {
             id: true,
@@ -318,8 +404,9 @@ export class ComandasService {
         });
 
         if (!product) throw new NotFoundException(`Produto ID ${item.productId} não encontrado.`);
+        const serveImmediately = item.serveImmediately ?? (!product.requiresKitchen && !product.requiresCarvoaria);
         const kdsData = {
-          ...initialKds(product, features.kdsEnabled, item.serveImmediately, features.carvoariaEnabled),
+          ...initialKds(product, features.kdsEnabled, serveImmediately, features.carvoariaEnabled),
           ...serviceSnapshot(product, item.assetNumber, qty, features.carvoariaEnabled),
         };
         const reservation = item.assetNumber == null ? {} : { assetReservation: { create: { assetNumber: item.assetNumber } } };
@@ -538,7 +625,7 @@ export class ComandasService {
       }
 
       // Recalcular total da comanda dentro da transação
-      const allItems = await tx.comandaItem.findMany({ where: { comandaId } });
+      const allItems = await tx.comandaItem.findMany({ where: { comandaId, status: 'active' } });
       const newTotal = allItems.reduce((acc: number, i: any) => acc + Number(i.totalPrice), 0);
       await tx.comanda.update({
         where: { id: comandaId },
@@ -563,13 +650,15 @@ export class ComandasService {
           .catch(err => this.logger.error(`Erro ao sincronizar estoque: ${err.message}`));
       }, 500);
     }
+    this.kds.invalidateQueue?.();
 
     return this.findOne(comandaId);
   }
 
-  async removeItem(comandaId: string, itemId: string) {
+  async removeItem(comandaId: string, itemId: string, authorizationToken: string, reason: string, actor: ComandaActor) {
     const { tenantId } = this.tenantContext.get();
     const prisma = await this.getPrisma();
+    const removalReason = this.normalizeReason(reason);
 
     const comanda = await (prisma as any).comanda.findUnique({
       where: { id: comandaId },
@@ -593,15 +682,16 @@ export class ComandasService {
       },
     });
 
-    if (!item) throw new NotFoundException('Item não encontrado nesta comanda.');
+    if (!item || item.status !== 'active') throw new NotFoundException('Item ativo não encontrado nesta comanda.');
 
     const affectedProductIds = new Set<string>();
 
     await retryTransaction(() => (prisma as any).$transaction(async (tx: any) => {
       await this.lockOpenComanda(tx, comandaId, ['open']);
+      const authorization = await this.consumeAuthorization(tx, authorizationToken, 'remove_item', comandaId, itemId);
       const item = await tx.comandaItem.findFirst({ where: { id: itemId, comandaId },
         include: { modifiers: true, product: { select: { id: true, name: true, isComposite: true } } } });
-      if (!item) throw new NotFoundException('Item já removido desta comanda.');
+      if (!item || item.status !== 'active') throw new NotFoundException('Item já removido desta comanda.');
       await lockProducts(tx, [item.productId, ...item.modifiers.map((m: any) => m.componentProductId)]);
       // Estorno de estoque apenas se stockDeducted = true
       if (item.stockDeducted) {
@@ -618,7 +708,7 @@ export class ComandasService {
                 type: 'IN',
                 quantity: new Prisma.Decimal(mod.consumedQuantity),
                 origin: 'COMANDA',
-                reason: `Remoção de item da Comanda #${comanda.number} (Composto: ${item.product.name})`,
+                reason: `Remoção autorizada da Comanda #${comanda.number}: ${removalReason} (Composto: ${item.product.name})`,
                 referenceId: comandaId,
               },
             });
@@ -636,7 +726,7 @@ export class ComandasService {
               type: 'IN',
               quantity: new Prisma.Decimal(item.quantity),
               origin: 'COMANDA',
-              reason: `Remoção de item da Comanda #${comanda.number}`,
+              reason: `Remoção autorizada da Comanda #${comanda.number}: ${removalReason}`,
               referenceId: comandaId,
             },
           });
@@ -644,11 +734,33 @@ export class ComandasService {
         }
       }
 
-      // Deletar item (modifiers são deletados em cascade via onDelete: Cascade)
-      await tx.comandaItem.delete({ where: { id: itemId } });
+      const removedAt = new Date();
+      await tx.comandaItem.update({ where: { id: itemId }, data: {
+        status: 'removed', removedAt, removalReason,
+        removedByOperatorId: actor.operatorId || actor.userId || null,
+        removedByName: actor.name || null,
+        removalAuthorizationType: authorization.authorizationType,
+        removalAuthorizedById: authorization.authorizedByOperatorId,
+        removalAuthorizedByName: authorization.authorizedByName,
+      } });
+      await tx.comandaAssetReservation.deleteMany({ where: { comandaItemId: itemId } });
+      await tx.comandaAuditEvent.create({ data: {
+        comandaId, comandaItemId: itemId, action: 'item_removed', reason: removalReason,
+        requestedByOperatorId: actor.operatorId || actor.userId || null,
+        requestedByName: actor.name || null,
+        authorizationType: authorization.authorizationType,
+        authorizedByOperatorId: authorization.authorizedByOperatorId,
+        authorizedByName: authorization.authorizedByName,
+        snapshot: {
+          productId: item.productId, productName: item.product.name, quantity: String(item.quantity),
+          unitPrice: String(item.unitPrice), totalPrice: String(item.totalPrice),
+          kdsStatus: item.kdsStatus, kdsDestination: item.kdsDestination,
+          modifiers: item.modifiers.map((modifier: any) => ({ name: modifier.name, consumedQuantity: String(modifier.consumedQuantity) })),
+        },
+      } });
 
       // Recalcular total
-      const remaining = await tx.comandaItem.findMany({ where: { comandaId } });
+      const remaining = await tx.comandaItem.findMany({ where: { comandaId, status: 'active' } });
       const newTotal = remaining.reduce((acc: number, i: any) => acc + Number(i.totalPrice), 0);
       await tx.comanda.update({
         where: { id: comandaId },
@@ -669,6 +781,7 @@ export class ComandasService {
           .catch(err => this.logger.error(`Erro ao sincronizar estoque: ${err.message}`));
       }, 500);
     }
+    this.kds.invalidateQueue?.();
 
     return this.findOne(comandaId);
   }
@@ -677,7 +790,7 @@ export class ComandasService {
     const prisma = await this.getPrisma();
     const comanda = await (prisma as any).comanda.findUnique({
       where: { id: comandaId },
-      include: { items: true },
+      include: { items: { where: { status: 'active' } } },
     });
 
     if (!comanda) throw new NotFoundException('Comanda não encontrada.');
@@ -748,9 +861,10 @@ export class ComandasService {
     return updated;
   }
 
-  async cancelComanda(comandaId: string) {
+  async cancelComanda(comandaId: string, authorizationToken: string, reason: string, actor: ComandaActor) {
     const { tenantId } = this.tenantContext.get();
     const prisma = await this.getPrisma();
+    const cancellationReason = this.normalizeReason(reason);
 
     // Buscar comanda com todos os itens e modifiers para estorno correto
     const comanda = await (prisma as any).comanda.findUnique({
@@ -778,12 +892,14 @@ export class ComandasService {
 
     await retryTransaction(() => (prisma as any).$transaction(async (tx: any) => {
       await this.lockOpenComanda(tx, comandaId);
+      const authorization = await this.consumeAuthorization(tx, authorizationToken, 'cancel_comanda', comandaId);
       const comanda = await tx.comanda.findUnique({ where: { id: comandaId },
         include: { items: { include: { modifiers: true, product: { select: { id: true, name: true } } } } } });
-      await lockProducts(tx, comanda.items.flatMap((item: any) => [item.productId, ...item.modifiers.map((m: any) => m.componentProductId)]));
+      const activeItems = comanda.items.filter((item: any) => item.status === 'active');
+      await lockProducts(tx, activeItems.flatMap((item: any) => [item.productId, ...item.modifiers.map((m: any) => m.componentProductId)]));
       await releaseComandaAssets(tx, comandaId);
       // Estornar estoque de todos os itens com stockDeducted = true
-      for (const item of comanda.items) {
+      for (const item of activeItems) {
         if (!item.stockDeducted) continue;
 
         if (item.modifiers && item.modifiers.length > 0) {
@@ -799,7 +915,7 @@ export class ComandasService {
                 type: 'IN',
                 quantity: new Prisma.Decimal(mod.consumedQuantity),
                 origin: 'COMANDA',
-                reason: `Cancelamento da Comanda #${comanda.number} (Composto: ${item.product.name})`,
+                reason: `Cancelamento autorizado da Comanda #${comanda.number}: ${cancellationReason} (Composto: ${item.product.name})`,
                 referenceId: comandaId,
               },
             });
@@ -817,7 +933,7 @@ export class ComandasService {
               type: 'IN',
               quantity: new Prisma.Decimal(item.quantity),
               origin: 'COMANDA',
-              reason: `Cancelamento da Comanda #${comanda.number}`,
+              reason: `Cancelamento autorizado da Comanda #${comanda.number}: ${cancellationReason}`,
               referenceId: comandaId,
             },
           });
@@ -825,9 +941,33 @@ export class ComandasService {
         }
       }
 
+      const cancelledAt = new Date();
+      await tx.comandaItem.updateMany({
+        where: { comandaId, status: 'active' },
+        data: { status: 'cancelled' },
+      });
+      await tx.comandaAuditEvent.create({ data: {
+        comandaId, action: 'comanda_cancelled', reason: cancellationReason,
+        requestedByOperatorId: actor.operatorId || actor.userId || null,
+        requestedByName: actor.name || null,
+        authorizationType: authorization.authorizationType,
+        authorizedByOperatorId: authorization.authorizedByOperatorId,
+        authorizedByName: authorization.authorizedByName,
+        snapshot: {
+          number: comanda.number, totalBeforeCancellation: String(comanda.total),
+          items: activeItems.map((item: any) => ({ id: item.id, productName: item.product.name, quantity: String(item.quantity), totalPrice: String(item.totalPrice), kdsStatus: item.kdsStatus })),
+        },
+      } });
       await tx.comanda.update({
         where: { id: comandaId },
-        data: { status: 'cancelled' },
+        data: {
+          status: 'cancelled', cancelledAt, cancellationReason,
+          cancelledByOperatorId: actor.operatorId || actor.userId || null,
+          cancelledByName: actor.name || null,
+          cancellationAuthorizationType: authorization.authorizationType,
+          cancellationAuthorizedById: authorization.authorizedByOperatorId,
+          cancellationAuthorizedByName: authorization.authorizedByName,
+        },
       });
     }, { isolationLevel: 'ReadCommitted' }));
 
@@ -844,6 +984,7 @@ export class ComandasService {
           .catch(err => this.logger.error(`Erro ao sincronizar estoque: ${err.message}`));
       }, 500);
     }
+    this.kds.invalidateQueue?.();
 
     return this.findOne(comandaId);
   }
@@ -851,7 +992,7 @@ export class ComandasService {
   private async recalculateTotal(comandaId: string) {
     const prisma = await this.getPrisma();
     const items = await (prisma as any).comandaItem.findMany({
-      where: { comandaId },
+      where: { comandaId, status: 'active' },
     });
 
     const newTotal = items.reduce((acc: number, item: any) => acc + Number(item.totalPrice), 0);
