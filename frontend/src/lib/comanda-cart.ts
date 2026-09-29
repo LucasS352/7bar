@@ -4,7 +4,7 @@ import { useCartStore, type CartItem } from '@/store/cart';
 export function syncLoadedComanda(comanda: { id: string; items: any[] }) {
   const cart = useCartStore.getState();
   if (cart.activeComandaId !== comanda.id || cart.isOperationLocked) return;
-  const imported: CartItem[] = comanda.items.map((item) => ({
+  const imported: CartItem[] = comanda.items.filter((item) => !item.status || item.status === 'active').map((item) => ({
     ...item.product,
     id: item.productId || item.product.id,
     name: item.product?.name || 'Produto',

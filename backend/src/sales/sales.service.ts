@@ -243,6 +243,7 @@ export class SalesService {
           where: { id: data.comandaId },
           include: {
             items: {
+              where: { status: 'active' },
               include: {
                 modifiers: { include: { componentProduct: true } },
                 product: {
@@ -261,7 +262,7 @@ export class SalesService {
         assertComandaSnapshot(data.expectedComandaItems, comandaToClose.items);
         // Detectar compostos legados sem modifiers — exigir resolução manual
         for (const ci of comandaToClose.items) {
-          if (!ci.stockDeducted && ci.product.isComposite) {
+          if (!ci.stockDeducted && ci.product.isComposite && ci.product.modifierGroups?.length > 0) {
             throw new BadRequestException(
               `O item composto "${ci.product.name}" foi lançado antes do suporte a compostos em comandas. ` +
               `Remova-o da comanda e relance selecionando os ingredientes para continuar.`,
@@ -504,8 +505,8 @@ export class SalesService {
                 priceAdjustment: new Prisma.Decimal(mod.priceAdjustment),
               });
             }
-          } else if (!product.isComposite) {
-            // Simples com stockDeducted=true — só FIFO para custeio
+          } else {
+            // Sem adicionais no lançamento: estoque do próprio produto (mesmo se hoje estiver marcado composto).
             if (ci.stockDeducted && shouldMoveStock) {
               const lotConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost);
               for (const cons of lotConsumptions) {
@@ -602,7 +603,12 @@ export class SalesService {
         const itemLotConsumptions: any[] = [];
         let totalCostOfLots = new Prisma.Decimal(0);
 
-        if (product.isComposite) {
+        if (product.isComposite && product.modifierGroups?.length > 0) {
+          if (!item.modifiers?.length) {
+            throw new BadRequestException(
+              `O produto composto "${product.name}" requer adicionais. Remova-o do carrinho e adicione-o novamente.`,
+            );
+          }
           await tx.product.update({
             where: { id: item.productId },
             data: { salesCount: { increment: qty } },
@@ -683,6 +689,11 @@ export class SalesService {
             }
           }
         } else {
+          if (item.modifiers?.length) {
+            throw new BadRequestException(
+              `Os adicionais de "${product.name}" mudaram. Remova o item do carrinho e adicione-o novamente.`,
+            );
+          }
           // ─── Movimentação de estoque (desabilitada em Ajuste Fiscal sem estoque) ───
           if (shouldMoveStock) {
             if (!allowNegativeStock) {

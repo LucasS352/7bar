@@ -51,6 +51,8 @@ type Comanda = {
 };
 type Props = {
   selectedId: string | null;
+  initialRemoveItemId?: string | null;
+  initialRemoveQuantity?: number | null;
   onSelect: (id: string) => void;
   onClose: () => void;
   onCharge: (comanda: Comanda) => void;
@@ -85,6 +87,8 @@ function elapsed(date: string) {
 
 export function ComandaWorkspaceModal({
   selectedId,
+  initialRemoveItemId,
+  initialRemoveQuantity,
   onSelect,
   onClose,
   onCharge,
@@ -102,7 +106,7 @@ export function ComandaWorkspaceModal({
   const [filter, setFilter] = useState('all');
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<{
-    kind: 'remove' | 'cancel' | 'reopen' | 'charge';
+    kind: 'remove' | 'decrease' | 'cancel' | 'reopen' | 'charge';
     comanda: Comanda;
     item?: Item;
   } | null>(null);
@@ -123,7 +127,17 @@ export function ComandaWorkspaceModal({
   const disabledRef = useRef(disabled);
   disabledRef.current = disabled;
   const selected = detail?.id === selectedId ? detail : null;
+  const activeItems = selected?.items.filter((item) => !item.status || item.status === 'active') || [];
   const isNew = !!launch && selectedId === 'new';
+  const promptedRemoval = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!initialRemoveItemId || !selected || promptedRemoval.current === initialRemoveItemId) return;
+    promptedRemoval.current = initialRemoveItemId;
+    const item = activeItems.find((entry) => entry.id === initialRemoveItemId);
+    if (item && selected.status === 'open') requestProtectedAction(initialRemoveQuantity === 1 ? 'decrease' : 'remove', selected, item);
+    else toast.error('Este item não está mais ativo na comanda. Confira a lista atualizada.');
+  }, [initialRemoveItemId, initialRemoveQuantity, selected]);
 
   const loadDetail = useCallback(async (id: string) => {
     const request = ++detailVersion.current;
@@ -236,7 +250,7 @@ export function ComandaWorkspaceModal({
     setMobileDetail(true);
   }
 
-  function requestProtectedAction(action: 'remove' | 'cancel', comanda: Comanda, item?: Item) {
+  function requestProtectedAction(action: 'remove' | 'decrease' | 'cancel', comanda: Comanda, item?: Item) {
     setAuthorizationPin('');
     setAuthorizationReason('');
     setConfirm({ kind: action, comanda, item });
@@ -249,7 +263,7 @@ export function ComandaWorkspaceModal({
       useCartStore.getState().isOperationLocked
     )
       return;
-    if (action.kind === 'remove' || action.kind === 'cancel') {
+    if (action.kind === 'remove' || action.kind === 'decrease' || action.kind === 'cancel') {
       if (authorizationPin.length < 4) {
         toast.error('Informe o PIN do Caixa ou Gerente.');
         return;
@@ -269,18 +283,20 @@ export function ComandaWorkspaceModal({
         if (res.offline && !window.confirm(`Sem conexão: cópia de ${new Date(res.savedAt).toLocaleString('pt-BR')}. Confira os consumos com o garçom e concentre as cobranças em um único caixa durante a queda. Continuar com estes valores?`)) return;
         if (!['open', 'waiting_payment'].includes(res.data.status))
           throw new Error('Esta comanda já foi encerrada.');
+        if (!res.data.items?.some((item: Item) => !item.status || item.status === 'active'))
+          throw new Error('Esta comanda não possui itens ativos para cobrar.');
         onCharge(res.data);
-      } else if (action.kind === 'remove' || action.kind === 'cancel') {
+      } else if (action.kind === 'remove' || action.kind === 'decrease' || action.kind === 'cancel') {
         if (offlineAt || !navigator.onLine) throw new Error('Reconecte para alterar a comanda.');
         const authorization = await api.post(`/v1/comandas/${action.comanda.id}/authorize`, {
-          action: action.kind === 'remove' ? 'remove_item' : 'cancel_comanda',
+          action: action.kind === 'cancel' ? 'cancel_comanda' : 'remove_item',
           itemId: action.item?.id,
           pin: authorizationPin,
         });
-        const res = action.kind === 'remove'
+        const res = action.kind !== 'cancel'
           ? await api.post(
               `/v1/comandas/${action.comanda.id}/items/${action.item!.id}/remove`,
-              { authorizationToken: authorization.data.authorizationToken, reason: authorizationReason.trim() },
+              { authorizationToken: authorization.data.authorizationToken, reason: authorizationReason.trim(), ...(action.kind === 'decrease' ? { quantity: 1, expectedQuantity: Number(action.item!.quantity) } : {}) },
             )
           : await api.post(
               `/v1/comandas/${action.comanda.id}/cancel`,
@@ -293,8 +309,8 @@ export function ComandaWorkspaceModal({
         if (action.kind !== 'cancel') syncLoadedComanda(res.data);
         onUpdated(res.data);
         toast.success(
-          action.kind === 'remove'
-            ? 'Item removido com autorização. Total da comanda atualizado.'
+          action.kind !== 'cancel'
+            ? action.kind === 'decrease' ? 'Uma unidade removida com autorização. Total da comanda atualizado.' : 'Item removido com autorização. Total da comanda atualizado.'
             : 'Comanda cancelada e preservada no histórico.',
         );
         if (action.kind === 'cancel') {
@@ -701,16 +717,16 @@ export function ComandaWorkspaceModal({
                 )}
                 <div className="flex items-center justify-between px-5 sm:px-6 pt-5 pb-2 text-xs text-zinc-500 uppercase tracking-wider">
                   <span>Itens consumidos</span>
-                  <span>{selected.items.length} lançamento(s)</span>
+                  <span>{activeItems.length} lançamento(s)</span>
                 </div>
                 <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-5 sm:px-6">
-                  {!selected.items.length ? (
+                  {!activeItems.length ? (
                     <p className="py-12 text-center text-sm text-zinc-500">
                       Esta comanda ainda não possui itens.
                     </p>
                   ) : (
                     <ul className="divide-y divide-white/5">
-                      {selected.items.map((item) => (
+                      {activeItems.map((item) => (
                         <li
                           key={item.id}
                           className="py-4 flex items-start gap-3"
@@ -800,7 +816,7 @@ export function ComandaWorkspaceModal({
                         disabled ||
                         detailLoading ||
                         !!error ||
-                        !selected.items.length
+                        !activeItems.length
                       }
                       onClick={charge}
                       className="flex-1 flex justify-center items-center gap-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-sm disabled:opacity-35"
@@ -860,13 +876,13 @@ export function ComandaWorkspaceModal({
             >
               <AlertTriangle
                 className={
-                  confirm.kind === 'remove' || confirm.kind === 'cancel' ? 'text-red-400' : 'text-amber-400'
+                  confirm.kind === 'remove' || confirm.kind === 'decrease' || confirm.kind === 'cancel' ? 'text-red-400' : 'text-amber-400'
                 }
                 size={28}
               />
               <h3 id="comanda-confirm-title" className="mt-4 text-xl font-bold">
-                {confirm.kind === 'remove'
-                  ? 'Remover item da comanda?'
+                {confirm.kind === 'remove' || confirm.kind === 'decrease'
+                  ? confirm.kind === 'decrease' ? 'Remover uma unidade da comanda?' : 'Remover item da comanda?'
                   : confirm.kind === 'cancel'
                     ? 'Cancelar comanda inteira?'
                   : confirm.kind === 'reopen'
@@ -880,8 +896,8 @@ export function ComandaWorkspaceModal({
                   : ''}
               </p>
               <p className="mt-3 text-sm text-zinc-400">
-                {confirm.kind === 'remove'
-                  ? 'O lançamento será removido com estorno rastreável. A comanda continuará aberta.'
+                {confirm.kind === 'remove' || confirm.kind === 'decrease'
+                  ? confirm.kind === 'decrease' ? 'Uma unidade será retirada deste lançamento, com estorno rastreável e recálculo da comanda.' : 'O lançamento será removido com estorno rastreável. A comanda continuará aberta.'
                   : confirm.kind === 'cancel'
                     ? 'A comanda não será apagada: itens, valores e auditoria serão preservados no histórico e não irão para o financeiro.'
                   : confirm.kind === 'reopen'
@@ -894,7 +910,7 @@ export function ComandaWorkspaceModal({
                   também retira o item da fila do KDS.
                 </p>
               )}
-              {(confirm.kind === 'remove' || confirm.kind === 'cancel') && (
+              {(confirm.kind === 'remove' || confirm.kind === 'decrease' || confirm.kind === 'cancel') && (
                 <div className="mt-5 space-y-3">
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                     Motivo obrigatório
@@ -933,12 +949,12 @@ export function ComandaWorkspaceModal({
                   type="button"
                   disabled={disabled}
                   onClick={() => runAction(confirm)}
-                  className={`flex-1 py-3 rounded-xl font-bold text-zinc-950 disabled:opacity-50 ${confirm.kind === 'remove' || confirm.kind === 'cancel' ? 'bg-red-400' : 'bg-amber-400'}`}
+                  className={`flex-1 py-3 rounded-xl font-bold text-zinc-950 disabled:opacity-50 ${confirm.kind === 'remove' || confirm.kind === 'decrease' || confirm.kind === 'cancel' ? 'bg-red-400' : 'bg-amber-400'}`}
                 >
                   {busy
                     ? 'Aguarde…'
-                    : confirm.kind === 'remove'
-                      ? 'Autorizar remoção'
+                    : confirm.kind === 'remove' || confirm.kind === 'decrease'
+                      ? confirm.kind === 'decrease' ? 'Remover uma unidade' : 'Autorizar remoção'
                       : confirm.kind === 'cancel'
                         ? 'Autorizar cancelamento'
                       : 'Confirmar'}

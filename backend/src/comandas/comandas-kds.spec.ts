@@ -106,6 +106,22 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
     );
     expect(tx.product.updateMany.mock.calls[0][0].where.id).toBe('p');
   });
+  it('composto sem grupos baixa o próprio estoque e preserva preço na comanda', async () => {
+    const { service, tx } = setup(true, { ...product, isComposite: true, modifierGroups: [] });
+    await service.addItems('c', [{ productId: 'p', quantity: 2 }]);
+    const data = tx.comandaItem.create.mock.calls[0][0].data;
+    expect(Number(data.totalPrice)).toBe(30);
+    expect(data.stockDeducted).toBe(true);
+    expect(data.modifiers).toBeUndefined();
+    expect(Number(tx.product.updateMany.mock.calls[0][0].data.stock.decrement)).toBe(2);
+    expect(tx.inventoryLog.create).toHaveBeenCalledTimes(1);
+    expect(tx.inventoryLog.create.mock.calls[0][0].data.productId).toBe('p');
+  });
+  it('não aceita adicionais antigos quando o produto ficou sem grupos', async () => {
+    const { service, tx } = setup(true, { ...product, isComposite: true, modifierGroups: [] });
+    await expect(service.addItems('c', [{ productId: 'p', quantity: 1, modifiers: [{ optionId: 'antiga' }] }])).rejects.toThrow('Remova o item');
+    expect(tx.product.updateMany).not.toHaveBeenCalled();
+  });
   it.each([false, true])('produto composto preserva ingrediente e preço, KDS=%s', async (enabled) => {
     const { service, tx } = setup(enabled, {
       ...product,

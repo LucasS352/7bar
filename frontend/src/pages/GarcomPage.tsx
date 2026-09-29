@@ -433,7 +433,7 @@ export function GarcomPage() {
     try {
       const full = await loadCompositeProduct(product);
       if (sequence !== productSelectionSeq.current) return;
-      if (!Array.isArray(full.modifierGroups) || !full.modifierGroups.length) { toast.error('Este produto está sem adicionais configurados. Consulte o administrador.'); return; }
+      if (!full.modifierGroups?.length) { setSelectedProduct(full); return; }
       setSelectedProduct(full);
       if (!full.assetTrackingTotal) setCompositeProductForComanda(full);
     } catch { toast.error('Não foi possível carregar os adicionais. Tente selecionar o produto novamente.'); }
@@ -449,7 +449,7 @@ export function GarcomPage() {
       try {
         const full = await loadCompositeProduct(selectedProduct);
         if (sequence !== productSelectionSeq.current) return;
-        if (!Array.isArray(full.modifierGroups) || !full.modifierGroups.length) { toast.error('Este produto está sem adicionais configurados. Consulte o administrador.'); return; }
+        if (!full.modifierGroups?.length) { await doAddItem(full, itemQty, itemNotes, []); return; }
         setCompositeProductForComanda(full);
       } catch { toast.error('Não foi possível carregar os adicionais. Tente novamente.'); }
       return;

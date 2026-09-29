@@ -96,6 +96,8 @@ function PosPageContent() {
 
   // Estados para Módulo de Comandas no Frente de Caixa (PDV)
   const [isComandasModalOpen, setIsComandasModalOpen] = useState(false);
+  const [pendingRemoveComandaItemId, setPendingRemoveComandaItemId] = useState<string | null>(null);
+  const [pendingRemoveComandaQuantity, setPendingRemoveComandaQuantity] = useState<number | null>(null);
   const [openComandas, setOpenComandas] = useState<any[]>([]);
   const [loadingComandas, setLoadingComandas] = useState(false);
   const [selectedComandaId, setSelectedComandaId] = useState<string | null>(null);
@@ -220,6 +222,17 @@ function PosPageContent() {
     setIsComandasModalOpen(false);
     setInitialOpenComanda(false);
     setIsPaymentOpen(true);
+  };
+
+  const requestRemoveComandaItem = (comandaItemId?: string, quantity?: number) => {
+    if (!activeComandaId || !comandaItemId) {
+      toast.error('Não foi possível identificar o lançamento da comanda. Recarregue a comanda antes de remover.');
+      return;
+    }
+    setSelectedComandaId(activeComandaId);
+    setPendingRemoveComandaItemId(comandaItemId);
+    setPendingRemoveComandaQuantity(quantity ?? null);
+    setIsComandasModalOpen(true);
   };
 
   useEffect(() => {
@@ -872,13 +885,13 @@ function PosPageContent() {
                   <button
                     onClick={() => {
                       if (item.fromComanda) {
-                        toast.info(`Item da Comanda #${activeComandaNumber}. O estoque já foi baixado. Para cancelar ou remover, utilize a tela de Comandas ou Modo Garçom.`);
+                        requestRemoveComandaItem(item.comandaItemId, 1);
                         return;
                       }
                       updateQuantity(item.cartKey, item.quantity - 1);
                     }}
                     className={`p-4 lg:p-3 hover:bg-zinc-800 transition active:scale-95 ${item.fromComanda ? 'text-zinc-600' : 'text-zinc-400 hover:text-white'}`}
-                    title={item.fromComanda ? "Item de Comanda — alteração no Salão/Comandas" : "Diminuir"}
+                    title={item.fromComanda ? "Remover uma unidade da comanda com autorização" : "Diminuir"}
                   >
                     <Minus size={22} />
                   </button>
@@ -886,7 +899,7 @@ function PosPageContent() {
                   <button
                     onClick={() => {
                       if (item.fromComanda) {
-                        toast.info(`Item da Comanda #${activeComandaNumber}. Para adicionar novas unidades na comanda, use o Salão / Garçom.`);
+                        toast.info(`Para adicionar unidades à Comanda #${activeComandaNumber}, faça um novo lançamento pela tela de Comandas.`);
                         return;
                       }
                       updateQuantity(item.cartKey, item.quantity + 1);
@@ -900,7 +913,7 @@ function PosPageContent() {
                   <button
                     onClick={() => {
                       if (item.fromComanda) {
-                        toast.info(`Item da Comanda #${activeComandaNumber}. O estoque já foi baixado. Para cancelar ou remover, utilize a tela de Comandas ou Modo Garçom.`);
+                        requestRemoveComandaItem(item.comandaItemId);
                         return;
                       }
                       removeItem(item.cartKey);
@@ -1136,7 +1149,7 @@ function PosPageContent() {
                       <button
                         onClick={() => {
                           if (item.fromComanda) {
-                            toast.info(`Item da Comanda #${activeComandaNumber}. O estoque já foi baixado. Para alterar ou remover, utilize a tela de Comandas.`);
+                            requestRemoveComandaItem(item.comandaItemId, 1);
                             return;
                           }
                           updateQuantity(item.cartKey, item.quantity - 1);
@@ -1149,7 +1162,7 @@ function PosPageContent() {
                       <button
                         onClick={() => {
                           if (item.fromComanda) {
-                            toast.info(`Item da Comanda #${activeComandaNumber}. Para adicionar mais unidades na comanda, use o Salão / Garçom.`);
+                            toast.info(`Para adicionar unidades à Comanda #${activeComandaNumber}, faça um novo lançamento pela tela de Comandas.`);
                             return;
                           }
                           updateQuantity(item.cartKey, item.quantity + 1);
@@ -1164,7 +1177,7 @@ function PosPageContent() {
                     <button
                       onClick={() => {
                         if (item.fromComanda) {
-                          toast.info(`Item da Comanda #${activeComandaNumber}. O estoque já foi baixado. Para cancelar ou remover, utilize a tela de Comandas.`);
+                          requestRemoveComandaItem(item.comandaItemId);
                           return;
                         }
                         removeItem(item.cartKey);
@@ -1527,8 +1540,10 @@ function PosPageContent() {
       {isComandasModalOpen && (
         <ComandaWorkspaceModal
           selectedId={selectedComandaId}
+          initialRemoveItemId={pendingRemoveComandaItemId}
+          initialRemoveQuantity={pendingRemoveComandaQuantity}
           onSelect={setSelectedComandaId}
-          onClose={() => setIsComandasModalOpen(false)}
+          onClose={() => { setIsComandasModalOpen(false); setPendingRemoveComandaItemId(null); setPendingRemoveComandaQuantity(null); }}
           onCharge={handleChargeComandaFromPos}
           onUpdated={updated => setOpenComandas(list => list.map(c => c.id === updated.id ? updated : c))}
         />

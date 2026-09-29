@@ -74,8 +74,8 @@ export class ComandasController {
   }
 
   @Post(':id/items/:itemId/remove')
-  async removeItem(@Request() req: any, @Param('id') id: string, @Param('itemId') itemId: string, @Body() body: { authorizationToken: string; reason: string }) {
-    return this.comandasService.removeItem(id, itemId, body.authorizationToken, body.reason, this.actor(req));
+  async removeItem(@Request() req: any, @Param('id') id: string, @Param('itemId') itemId: string, @Body() body: { authorizationToken: string; reason: string; quantity?: number; expectedQuantity?: number }) {
+    return this.comandasService.removeItem(id, itemId, body.authorizationToken, body.reason, this.actor(req), body.quantity, body.expectedQuantity);
   }
 
   @Post(':id/request-payment')

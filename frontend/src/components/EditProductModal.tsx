@@ -332,7 +332,7 @@ export function EditProductModal({
         unit:               formData.unit || 'UN',
         priceCost:          parseFloat(formData.priceCost) || 0,
         priceSell:          parseFloat(formData.priceSell) || 0,
-        stock:              formData.isComposite ? undefined : (parseFloat(formData.stock) || 0),
+        stock:              formData.isComposite && modifierGroups.length > 0 ? undefined : (parseFloat(formData.stock) || 0),
         categoryId:         formData.categoryId,
         ncm:                formData.ncm || undefined,
         cest:               formData.cest || undefined,
@@ -539,10 +539,10 @@ export function EditProductModal({
               </label>
               <input
                 type="number" step="0.001" min="0"
-                disabled={formData.isComposite}
+                disabled={formData.isComposite && modifierGroups.length > 0}
                 className={`${inp} text-blue-400 font-bold disabled:opacity-50`}
-                placeholder={formData.isComposite ? 'Produto composto' : '0'}
-                value={formData.isComposite ? '' : formData.stock}
+                placeholder={formData.isComposite && modifierGroups.length > 0 ? 'Produto composto' : '0'}
+                value={formData.isComposite && modifierGroups.length > 0 ? '' : formData.stock}
                 onChange={e => f('stock', e.target.value)}
               />
             </div>

@@ -414,7 +414,12 @@ export class ComandasService {
         // ════════════════════════════════════════════════════════════════════
         //  PRODUTO SIMPLES
         // ════════════════════════════════════════════════════════════════════
-        if (!product.isComposite) {
+        if (!product.isComposite || product.modifierGroups.length === 0) {
+          if (item.modifiers?.length) {
+            throw new BadRequestException(
+              `Os adicionais de "${product.name}" mudaram. Remova o item do carrinho e adicione-o novamente.`,
+            );
+          }
           const unitPrice = item.unitPrice !== undefined
             ? new Prisma.Decimal(item.unitPrice)
             : new Prisma.Decimal(product.priceSell);
@@ -475,13 +480,6 @@ export class ComandasService {
         //  PRODUTO COMPOSTO
         // ════════════════════════════════════════════════════════════════════
         } else {
-          // Validar que o produto composto tem grupos configurados
-          if (!product.modifierGroups || product.modifierGroups.length === 0) {
-            throw new BadRequestException(
-              `Produto composto "${product.name}" não possui grupos de adicionais configurados e não pode ser lançado em comanda.`,
-            );
-          }
-
           // Validar que modifiers foram enviados
           if (!item.modifiers || item.modifiers.length === 0) {
             throw new BadRequestException(
@@ -655,10 +653,16 @@ export class ComandasService {
     return this.findOne(comandaId);
   }
 
-  async removeItem(comandaId: string, itemId: string, authorizationToken: string, reason: string, actor: ComandaActor) {
+  async removeItem(comandaId: string, itemId: string, authorizationToken: string, reason: string, actor: ComandaActor, quantityToRemove?: number, expectedQuantity?: number) {
     const { tenantId } = this.tenantContext.get();
     const prisma = await this.getPrisma();
     const removalReason = this.normalizeReason(reason);
+    if (quantityToRemove !== undefined && (!Number.isInteger(quantityToRemove) || quantityToRemove < 1)) {
+      throw new BadRequestException('Informe uma quantidade inteira positiva para reduzir.');
+    }
+    if (expectedQuantity !== undefined && (!Number.isFinite(expectedQuantity) || expectedQuantity <= 0)) {
+      throw new BadRequestException('Quantidade esperada inválida.');
+    }
 
     const comanda = await (prisma as any).comanda.findUnique({
       where: { id: comandaId },
@@ -692,60 +696,81 @@ export class ComandasService {
       const item = await tx.comandaItem.findFirst({ where: { id: itemId, comandaId },
         include: { modifiers: true, product: { select: { id: true, name: true, isComposite: true } } } });
       if (!item || item.status !== 'active') throw new NotFoundException('Item já removido desta comanda.');
+      const originalQuantity = new Prisma.Decimal(item.quantity);
+      if (expectedQuantity !== undefined && !originalQuantity.eq(expectedQuantity))
+        throw new ConflictException('A quantidade da comanda mudou. Atualize a tela antes de reduzir.');
+      const removedQuantity = quantityToRemove === undefined ? originalQuantity : new Prisma.Decimal(quantityToRemove);
+      if (removedQuantity.gt(originalQuantity)) throw new ConflictException('A quantidade da comanda mudou. Atualize a tela antes de reduzir.');
+      const remainingQuantity = originalQuantity.sub(removedQuantity);
+      const fullRemoval = remainingQuantity.eq(0);
       await lockProducts(tx, [item.productId, ...item.modifiers.map((m: any) => m.componentProductId)]);
       // Estorno de estoque apenas se stockDeducted = true
       if (item.stockDeducted) {
         if (item.modifiers && item.modifiers.length > 0) {
           // Produto composto: estornar via snapshot (consumedQuantity já calculado)
           for (const mod of item.modifiers) {
+            const oldConsumed = new Prisma.Decimal(mod.consumedQuantity);
+            const remainingConsumed = fullRemoval ? new Prisma.Decimal(0) : oldConsumed.mul(remainingQuantity).div(originalQuantity).toDecimalPlaces(3);
+            const restored = oldConsumed.sub(remainingConsumed);
             await tx.product.update({
               where: { id: mod.componentProductId },
-              data: { stock: { increment: new Prisma.Decimal(mod.consumedQuantity) } },
+              data: { stock: { increment: restored } },
             });
             await tx.inventoryLog.create({
               data: {
                 productId: mod.componentProductId,
                 type: 'IN',
-                quantity: new Prisma.Decimal(mod.consumedQuantity),
+                quantity: restored,
                 origin: 'COMANDA',
-                reason: `Remoção autorizada da Comanda #${comanda.number}: ${removalReason} (Composto: ${item.product.name})`,
+                reason: `${fullRemoval ? 'Remoção' : 'Redução'} autorizada da Comanda #${comanda.number}: ${removalReason} (Composto: ${item.product.name})`,
                 referenceId: comandaId,
               },
             });
+            if (!fullRemoval) await tx.comandaItemModifier.update({ where: { id: mod.id }, data: { consumedQuantity: remainingConsumed } });
             affectedProductIds.add(mod.componentProductId);
           }
         } else {
           // Produto simples
           await tx.product.update({
             where: { id: item.productId },
-            data: { stock: { increment: new Prisma.Decimal(item.quantity) } },
+            data: { stock: { increment: removedQuantity } },
           });
           await tx.inventoryLog.create({
             data: {
               productId: item.productId,
               type: 'IN',
-              quantity: new Prisma.Decimal(item.quantity),
+              quantity: removedQuantity,
               origin: 'COMANDA',
-              reason: `Remoção autorizada da Comanda #${comanda.number}: ${removalReason}`,
+              reason: `${fullRemoval ? 'Remoção' : 'Redução'} autorizada da Comanda #${comanda.number}: ${removalReason}`,
               referenceId: comandaId,
             },
           });
           affectedProductIds.add(item.productId);
         }
+      } else if (!fullRemoval) {
+        // Lançamentos legados sem baixa de estoque ainda precisam manter o snapshot
+        // dos ingredientes coerente com a quantidade restante.
+        for (const mod of item.modifiers) {
+          const remainingConsumed = new Prisma.Decimal(mod.consumedQuantity)
+            .mul(remainingQuantity).div(originalQuantity).toDecimalPlaces(3);
+          await tx.comandaItemModifier.update({ where: { id: mod.id }, data: { consumedQuantity: remainingConsumed } });
+        }
       }
 
-      const removedAt = new Date();
-      await tx.comandaItem.update({ where: { id: itemId }, data: {
-        status: 'removed', removedAt, removalReason,
+      await tx.comandaItem.update({ where: { id: itemId }, data: fullRemoval ? {
+        status: 'removed', removedAt: new Date(), removalReason,
         removedByOperatorId: actor.operatorId || actor.userId || null,
         removedByName: actor.name || null,
         removalAuthorizationType: authorization.authorizationType,
         removalAuthorizedById: authorization.authorizedByOperatorId,
         removalAuthorizedByName: authorization.authorizedByName,
+      } : {
+        quantity: remainingQuantity,
+        totalPrice: new Prisma.Decimal(item.unitPrice).mul(remainingQuantity).toDecimalPlaces(2),
       } });
-      await tx.comandaAssetReservation.deleteMany({ where: { comandaItemId: itemId } });
+      if (fullRemoval) await tx.comandaAssetReservation.deleteMany({ where: { comandaItemId: itemId } });
       await tx.comandaAuditEvent.create({ data: {
-        comandaId, comandaItemId: itemId, action: 'item_removed', reason: removalReason,
+        comandaId, comandaItemId: itemId, action: fullRemoval ? 'item_removed' : 'item_quantity_reduced', reason: removalReason,
         requestedByOperatorId: actor.operatorId || actor.userId || null,
         requestedByName: actor.name || null,
         authorizationType: authorization.authorizationType,
@@ -754,6 +779,7 @@ export class ComandasService {
         snapshot: {
           productId: item.productId, productName: item.product.name, quantity: String(item.quantity),
           unitPrice: String(item.unitPrice), totalPrice: String(item.totalPrice),
+          removedQuantity: String(removedQuantity), remainingQuantity: String(remainingQuantity),
           kdsStatus: item.kdsStatus, kdsDestination: item.kdsDestination,
           modifiers: item.modifiers.map((modifier: any) => ({ name: modifier.name, consumedQuantity: String(modifier.consumedQuantity) })),
         },

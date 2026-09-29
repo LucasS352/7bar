@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cart';
+import { syncLoadedComanda } from '@/lib/comanda-cart';
 import { useAuthStore } from '@/store/auth';
 import { 
   User, Search, Plus, Trash2, CheckCircle2, AlertCircle, 
@@ -335,6 +336,7 @@ export function ComandasPage() {
         toast.success('Comanda cancelada e preservada no histórico.');
       } else {
         setSelectedComanda(response.data);
+        syncLoadedComanda(response.data);
         toast.success('Item removido com autorização.');
       }
       fetchComandas();
@@ -347,7 +349,7 @@ export function ComandasPage() {
 
   // Cobrar / Fechar Comanda -> Carrega no Carrinho do PDV
   const handleChargeComanda = (comanda: Comanda) => {
-    if (!comanda.items || comanda.items.length === 0) {
+    if (!comanda.items?.some(item => !item.status || item.status === 'active')) {
       toast.error('A comanda não possui itens para cobrar.');
       return;
     }
@@ -355,32 +357,7 @@ export function ComandasPage() {
     clearCart();
     setActiveComanda(comanda.id, comanda.number);
 
-    comanda.items.forEach(item => {
-      if (item.product) {
-        addItem(
-          {
-            id: item.product.id,
-            name: item.product.name,
-            priceSell: Number(item.unitPrice),
-            stock: item.product.stock || 0,
-            barcode: item.product.barcode || null,
-            shortCode: item.product.shortCode || null,
-            isComposite: item.product.isComposite,
-          },
-          Number(item.quantity),
-          (item as any).modifiers?.map((m: any) => ({
-            groupId: m.optionId,
-            groupName: 'Ingrediente',
-            optionId: m.optionId,
-            optionName: m.name,
-            componentProductId: m.componentProductId,
-            quantity: Number(m.consumedQuantity),
-            priceAdjustment: Number(m.priceAdjustment),
-          })),
-          true // fromComanda: true
-        );
-      }
-    });
+    syncLoadedComanda({ ...comanda, items: comanda.items || [] });
 
     toast.info(`Itens da Comanda #${comanda.number} carregados no caixa!`, { duration: 3000 });
     navigate('/dashboard');

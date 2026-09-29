@@ -12,6 +12,28 @@ function service(db: any) {
 }
 
 describe('transactional sale identity', () => {
+  it('busca apenas itens ativos ao fechar uma comanda, antes de calcular ou cobrar', async () => {
+    const stop = new Error('consulta conferida');
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      tenantSettings: { findUnique: jest.fn().mockResolvedValue({}) },
+      cashRegister: { findUnique: jest.fn().mockResolvedValue({ id: 'caixa', status: 'open' }) },
+      comanda: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUnique: jest.fn().mockImplementation((query: any) => {
+          expect(query.include.items.where).toEqual({ status: 'active' });
+          throw stop;
+        }),
+      },
+    };
+    const db = {
+      sale: { findUnique: jest.fn().mockResolvedValue(null) },
+      $transaction: jest.fn((callback: any) => callback(tx)),
+    };
+    await expect(service(db).checkout({ ...request, comandaId: 'comanda', cashRegisterId: 'caixa' }))
+      .rejects.toBe(stop);
+    expect(tx.comanda.findUnique).toHaveBeenCalledTimes(1);
+  });
   it('returns a committed sale without a file cache or optional client totals', async () => {
     const existing = sale();
     const db = { sale: { findUnique: jest.fn().mockResolvedValue(existing) }, $transaction: jest.fn() };

@@ -12,13 +12,14 @@ describe('Remoção de itens da comanda pelo caixa', () => {
       product: { update: jest.fn() },
       inventoryLog: { create: jest.fn() },
       comandaItem: {
-        findFirst: jest.fn().mockResolvedValue({ id: 'i', status: 'active', productId: 'p', quantity: 2, stockDeducted, modifiers,
+        findFirst: jest.fn().mockResolvedValue({ id: 'i', status: 'active', productId: 'p', quantity: 2, unitPrice: 3, totalPrice: 6, stockDeducted, modifiers,
           product: { id: 'p', name: 'Porção' } }),
         update: jest.fn(),
         findMany: jest
           .fn()
           .mockResolvedValue([{ totalPrice: 12.5 }, { totalPrice: 7.25 }]),
       },
+      comandaItemModifier: { update: jest.fn() },
       comanda: { update: jest.fn() },
       comandaActionAuthorization: {
         findFirst: jest.fn().mockResolvedValue({ id: 'auth', authorizationType: 'manager_pin', authorizedByOperatorId: 'mgr', authorizedByName: 'Gerente' }),
@@ -40,6 +41,8 @@ describe('Remoção de itens da comanda pelo caixa', () => {
             id: 'i',
             productId: 'p',
             quantity: 2,
+            unitPrice: 3,
+            totalPrice: 6,
             stockDeducted,
             modifiers,
           product: { id: 'p', name: 'Porção' }, status: 'active',
@@ -86,6 +89,39 @@ describe('Remoção de itens da comanda pelo caixa', () => {
     expect(
       Number(tx.product.update.mock.calls[0][0].data.stock.increment),
     ).toBe(0.3);
+  });
+  it('reduz uma unidade, estorna só uma e mantém o lançamento ativo', async () => {
+    const { service, tx } = setup();
+    tx.comandaItem.findMany.mockResolvedValue([{ totalPrice: 3 }, { totalPrice: 7.25 }]);
+    await service.removeItem('c', 'i', 'a'.repeat(40), 'Unidade lançada a mais', { operatorId: 'waiter', name: 'João' }, 1);
+    expect(Number(tx.product.update.mock.calls[0][0].data.stock.increment)).toBe(1);
+    expect(tx.comandaItem.update).toHaveBeenCalledWith({ where: { id: 'i' }, data: expect.objectContaining({ quantity: expect.anything(), totalPrice: expect.anything() }) });
+    expect(Number(tx.comandaItem.update.mock.calls[0][0].data.quantity)).toBe(1);
+    expect(Number(tx.comandaItem.update.mock.calls[0][0].data.totalPrice)).toBe(3);
+    expect(tx.comandaAssetReservation.deleteMany).not.toHaveBeenCalled();
+    expect(tx.comandaAuditEvent.create.mock.calls[0][0].data.action).toBe('item_quantity_reduced');
+    expect(Number(tx.comanda.update.mock.calls[0][0].data.total)).toBe(10.25);
+  });
+  it('reduz ingrediente composto proporcionalmente e preserva o saldo para novo estorno', async () => {
+    const { service, tx } = setup('open', [{ id: 'm', componentProductId: 'ingrediente', consumedQuantity: 0.3 }]);
+    await service.removeItem('c', 'i', 'a'.repeat(40), 'Unidade lançada a mais', { operatorId: 'waiter', name: 'João' }, 1);
+    expect(Number(tx.product.update.mock.calls[0][0].data.stock.increment)).toBe(0.15);
+    expect(tx.comandaItemModifier.update).toHaveBeenCalledWith({ where: { id: 'm' }, data: { consumedQuantity: expect.anything() } });
+    expect(Number(tx.comandaItemModifier.update.mock.calls[0][0].data.consumedQuantity)).toBe(0.15);
+  });
+  it('recusa redução maior que o saldo sem estorno ou alteração', async () => {
+    const { service, tx } = setup();
+    await expect(service.removeItem('c', 'i', 'a'.repeat(40), 'Quantidade errada', { operatorId: 'waiter', name: 'João' }, 3)).rejects.toThrow('quantidade da comanda mudou');
+    expect(tx.product.update).not.toHaveBeenCalled();
+    expect(tx.comandaItem.update).not.toHaveBeenCalled();
+  });
+  it('recusa quantidade alterada por outro caixa antes da confirmação', async () => {
+    const { service, tx } = setup();
+    tx.comandaItem.findFirst.mockResolvedValue({ id: 'i', status: 'active', productId: 'p', quantity: 1, unitPrice: 3, totalPrice: 3, stockDeducted: true, modifiers: [], product: { id: 'p', name: 'Porção' } });
+    await expect(service.removeItem('c', 'i', 'a'.repeat(40), 'Unidade lançada a mais', { operatorId: 'waiter', name: 'João' }, 1, 2))
+      .rejects.toThrow('quantidade da comanda mudou');
+    expect(tx.product.update).not.toHaveBeenCalled();
+    expect(tx.comandaItem.update).not.toHaveBeenCalled();
   });
   it('não adiciona estoque quando o lançamento original não foi debitado', async () => {
     const { service, tx } = setup('open', [], false);
