@@ -12,6 +12,7 @@ import { ProductsService } from '../products/products.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { TenantsService } from '../tenants/tenants.service';
 import { createHash, randomBytes } from 'crypto';
+import { fingerprintComandaItems, validateComandaItemKey } from './comanda-item-idempotency';
 
 type ComandaActor = { operatorId?: string; userId?: string; name?: string };
 
@@ -332,26 +333,13 @@ export class ComandasService {
       serveImmediately?: boolean;
       assetNumber?: number;
     }>,
+    idempotencyKey: string,
   ) {
+    validateComandaItemKey(idempotencyKey);
+    if (!items || items.length === 0) throw new BadRequestException('Nenhum item fornecido para lançamento.');
+    const requestFingerprint = fingerprintComandaItems(items);
     const { tenantId } = this.tenantContext.get();
     const prisma = await this.getPrisma();
-
-    // ── Validação da comanda ─────────────────────────────────────────────────
-    const comanda = await (prisma as any).comanda.findUnique({
-      where: { id: comandaId },
-    });
-
-    if (!comanda) throw new NotFoundException('Comanda não encontrada.');
-
-    if (comanda.status === 'waiting_payment') {
-      throw new BadRequestException('Comanda aguardando fechamento no caixa. Reabra a comanda para realizar novos lançamentos.');
-    }
-    if (comanda.status !== 'open') {
-      throw new BadRequestException('Não é possível adicionar itens a uma comanda já fechada ou cancelada.');
-    }
-    if (!items || items.length === 0) {
-      throw new BadRequestException('Nenhum item fornecido para lançamento.');
-    }
 
     // ── Ler configurações do tenant ──────────────────────────────────────────
     const tenantSettings = await (prisma as any).tenantSettings.findFirst();
@@ -362,13 +350,24 @@ export class ComandasService {
     const affectedProductIds = new Set<string>();
 
     // ── Transação principal ──────────────────────────────────────────────────
-    await retryTransaction(() => (prisma as any).$transaction(async (tx: any) => {
+    const replayed = await retryTransaction(() => (prisma as any).$transaction(async (tx: any) => {
       // Serializa lançamentos da mesma mesa e disputa com o fechamento no caixa.
       // A validação anterior à transação pode ter ficado desatualizada.
       const current = await tx.$queryRaw(
-        Prisma.sql`SELECT id, status FROM comandas WHERE id = ${comandaId} FOR UPDATE`,
+        Prisma.sql`SELECT id, number, status FROM comandas WHERE id = ${comandaId} FOR UPDATE`,
       );
       if (!current.length) throw new NotFoundException('Comanda não encontrada.');
+      const comanda = current[0];
+      const existingAttempt = await tx.comandaAuditEvent.findFirst({
+        where: { comandaId, action: 'items_added', reason: idempotencyKey },
+        select: { snapshot: true },
+      });
+      if (existingAttempt) {
+        if ((existingAttempt.snapshot as any)?.fingerprint !== requestFingerprint) {
+          throw new ConflictException('Esta chave de lançamento já foi usada com outros itens. Atualize a tela antes de tentar novamente.');
+        }
+        return true;
+      }
       if (current[0].status !== 'open') {
         throw new BadRequestException('A comanda mudou de estado. Atualize a tela antes de lançar itens.');
       }
@@ -629,6 +628,12 @@ export class ComandasService {
         where: { id: comandaId },
         data: { total: new Prisma.Decimal(Number(newTotal.toFixed(2))) },
       });
+      await tx.comandaAuditEvent.create({ data: {
+        comandaId, action: 'items_added', reason: idempotencyKey,
+        authorizationType: 'not_required',
+        snapshot: { fingerprint: requestFingerprint },
+      } });
+      return false;
     }, { isolationLevel: 'ReadCommitted' })).catch(error => {
       if (error?.code === 'P2002' && items.some(item => item.assetNumber != null))
         throw new ConflictException('Equipamento já reservado por outra mesa. Atualize a disponibilidade e escolha outro número.');
@@ -636,6 +641,7 @@ export class ComandasService {
     });
 
     // ── Pós-commit: invalidar cache e sincronizar integrações ────────────────
+    if (replayed) return this.findOne(comandaId);
     try {
       this.productsService.invalidateCache(tenantId);
     } catch (err) {

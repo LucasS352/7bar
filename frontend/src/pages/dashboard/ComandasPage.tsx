@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '@/lib/api';
+import { getComandaItemAttempt, clearComandaItemAttempt } from '@/lib/comanda-item-attempt';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cart';
@@ -295,13 +296,17 @@ export function ComandasPage() {
     if (!selectedComanda) return;
     setAddingItem(true);
     try {
-      await api.post(`/v1/comandas/${selectedComanda.id}/items`, {
+      const body = {
         items: [{
           productId: product.id,
           quantity,
           ...(modifiers.length > 0 ? { modifiers } : {}),
         }],
-      });
+      };
+      const attemptScope = `dashboard:${selectedComanda.id}`;
+      const attemptKey = getComandaItemAttempt(attemptScope, body);
+      await api.post(`/v1/comandas/${selectedComanda.id}/items`, body, { headers: { 'Idempotency-Key': attemptKey } });
+      clearComandaItemAttempt(attemptScope);
       toast.success('Item adicionado à comanda!');
       setAddingProductId('');
       setAddingQuantity(1);

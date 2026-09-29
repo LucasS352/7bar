@@ -5,6 +5,7 @@ import { ServiceRounds } from '@/components/ServiceRounds';
 import { KdsReadyOrders } from '@/components/KdsReadyOrders';
 import { KdsStatus, kdsLabels } from '@/lib/kds';
 import { api } from '@/lib/api';
+import { getComandaItemAttempt, clearComandaItemAttempt } from '@/lib/comanda-item-attempt';
 import { useAuthStore } from '@/store/auth';
 import { useOperatorTokenStore } from '@/store/operatorToken';
 import { isWaiterSession } from '@/lib/operatorAccess';
@@ -145,6 +146,8 @@ export function GarcomPage() {
   // Telas / modais
   const [selectedComanda, setSelectedComanda] = useState<Comanda | null>(null);
   const selectedComandaIdRef = useRef<string | null>(null);
+  const fetchVersionRef = useRef(0);
+  const localMutationVersionRef = useRef(0);
 
   const [showLoginModal, setShowLoginModal] = useState(!waiter);
 
@@ -191,6 +194,7 @@ export function GarcomPage() {
 
   useEffect(() => {
     const expired = () => {
+      fetchVersionRef.current++;
       setWaiter(null);
       localStorage.removeItem('garcom_operator');
       setShowLoginModal(true);
@@ -276,9 +280,12 @@ export function GarcomPage() {
   // ── Buscar comandas (polling 15s) ────────────────────────────────────────
   const fetchComandas = useCallback(async () => {
     if (!waiter) return;
+    const fetchVersion = ++fetchVersionRef.current;
+    const mutationVersion = localMutationVersionRef.current;
     setLoadingComandas(true);
     try {
       const res = await api.get('/v1/comandas?status=open');
+      if (fetchVersion !== fetchVersionRef.current || mutationVersion !== localMutationVersionRef.current) return;
       const list: Comanda[] = res.data || [];
       setComandas(list);
       // Atualiza a comanda selecionada APENAS se o ref ainda indicar que estamos nela
@@ -296,7 +303,7 @@ export function GarcomPage() {
     } catch {
       // silencia erros de rede no polling
     } finally {
-      setLoadingComandas(false);
+      if (fetchVersion === fetchVersionRef.current) setLoadingComandas(false);
     }
   }, [waiter]);
 
@@ -373,6 +380,7 @@ export function GarcomPage() {
   }
 
   function handleLogout() {
+    fetchVersionRef.current++;
     useOperatorTokenStore.getState().clearToken();
     setWaiter(null);
     localStorage.removeItem('garcom_operator');
@@ -400,6 +408,7 @@ export function GarcomPage() {
         notes: newNotes.trim() || undefined,
         responsibleWaiterId: waiter?.id,
       });
+      localMutationVersionRef.current++;
       setComandas(prev => [res.data, ...prev]);
       setShowNewComanda(false);
       setNewNumber(''); setNewCustomer(''); setNewNotes('');
@@ -467,7 +476,7 @@ export function GarcomPage() {
     addItemInFlight.current = true;
     setAddingItem(true);
     try {
-      const res = await api.post(`/v1/comandas/${selectedComanda.id}/items`, {
+      const body = {
         items: [{
           productId: product.id,
           quantity: qty,
@@ -477,7 +486,12 @@ export function GarcomPage() {
           ...(kdsEnabled ? { serveImmediately: product.requiresKitchen || product.requiresCarvoaria ? false : serveImmediately } : {}),
           ...(modifiers.length > 0 ? { modifiers } : {}),
         }],
-      });
+      };
+      const attemptScope = `garcom:${selectedComanda.id}`;
+      const attemptKey = getComandaItemAttempt(attemptScope, body);
+      const res = await api.post(`/v1/comandas/${selectedComanda.id}/items`, body, { headers: { 'Idempotency-Key': attemptKey } });
+      clearComandaItemAttempt(attemptScope);
+      localMutationVersionRef.current++;
       setSelectedComanda(res.data);
       setComandas(prev => prev.map(c => c.id === res.data.id ? res.data : c));
       setSelectedProduct(null); setItemQty(1); setItemNotes(''); setProductSearch('');
@@ -508,6 +522,7 @@ export function GarcomPage() {
       const res = sensitiveAction.type === 'remove_item'
         ? await api.post(`/v1/comandas/${selectedComanda.id}/items/${sensitiveAction.item!.id}/remove`, { authorizationToken: authorization.data.authorizationToken, reason: sensitiveReason.trim() })
         : await api.post(`/v1/comandas/${selectedComanda.id}/cancel`, { authorizationToken: authorization.data.authorizationToken, reason: sensitiveReason.trim() });
+      localMutationVersionRef.current++;
       setSelectedComanda(res.data);
       if (sensitiveAction.type === 'cancel_comanda') {
         setComandas(prev => prev.filter(c => c.id !== res.data.id));
@@ -531,6 +546,7 @@ export function GarcomPage() {
     setActionLoading(true);
     try {
       const res = await api.post(`/v1/comandas/${selectedComanda.id}/request-payment`);
+      localMutationVersionRef.current++;
       setSelectedComanda(res.data);
       setComandas(prev => prev.map(c => c.id === res.data.id ? res.data : c));
       setShowRequestPaymentModal(false);
@@ -549,6 +565,7 @@ export function GarcomPage() {
     setActionLoading(true);
     try {
       const res = await api.post(`/v1/comandas/${selectedComanda.id}/reopen`);
+      localMutationVersionRef.current++;
       setSelectedComanda(res.data);
       setComandas(prev => prev.map(c => c.id === res.data.id ? res.data : c));
       setShowReopenModal(false);

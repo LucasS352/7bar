@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Param, Query, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Request, UseGuards, Headers } from '@nestjs/common';
 import { ComandasService } from './comandas.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { validateComandaItemKey } from './comanda-item-idempotency';
 
 @Controller('v1/comandas')
 @UseGuards(JwtAuthGuard)
@@ -51,6 +52,7 @@ export class ComandasController {
   @Post(':id/items')
   async addItems(
     @Param('id') id: string,
+    @Headers('idempotency-key') idempotencyKey: string,
     @Body()
     body: {
       items: Array<{
@@ -65,7 +67,7 @@ export class ComandasController {
       }>;
     },
   ) {
-    return this.comandasService.addItems(id, body.items);
+    return this.comandasService.addItems(id, body.items, validateComandaItemKey(idempotencyKey));
   }
 
   @Post(':id/authorize')

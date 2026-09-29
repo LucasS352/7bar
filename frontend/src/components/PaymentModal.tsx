@@ -1,5 +1,6 @@
 import { ComandaWorkspaceModal } from './ComandaWorkspaceModal';
 import { syncLoadedComanda } from '@/lib/comanda-cart';
+import { getComandaItemAttempt, clearComandaItemAttempt } from '@/lib/comanda-item-attempt';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
@@ -201,10 +202,14 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
           : undefined,
       }));
 
-      await api.post(`/v1/comandas/${comandaIdToUse}/items`, { items: itemsPayload });
+      const body = { items: itemsPayload };
+      const attemptScope = `pdv:${comandaIdToUse}`;
+      const attemptKey = getComandaItemAttempt(attemptScope, body);
+      await api.post(`/v1/comandas/${comandaIdToUse}/items`, body, { headers: { 'Idempotency-Key': attemptKey } });
 
       toast.success('Itens lançados na comanda com sucesso!');
       clearCart();
+      clearComandaItemAttempt(attemptScope);
       setComandasModalOpen(false);
       onSuccess?.();
       onClose();

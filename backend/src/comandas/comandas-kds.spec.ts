@@ -20,6 +20,7 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       inventoryLog: { create: jest.fn() },
+      comandaAuditEvent: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn() },
       comandaItem: {
         create: jest.fn(),
         findMany: jest.fn().mockResolvedValue([{ totalPrice: 30 }]),
@@ -57,7 +58,7 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
   it('recusa lançamento se o caixa encerrou a comanda após a leitura inicial', async () => {
     const { service, tx } = setup(true, product);
     tx.$queryRaw.mockResolvedValue([{ id: 'c', status: 'closed' }]);
-    await expect(service.addItems('c', [{ productId: 'p', quantity: 1 }])).rejects.toThrow('mudou de estado');
+    await expect(service.addItems('c', [{ productId: 'p', quantity: 1 }], 'test-key-closed')).rejects.toThrow('mudou de estado');
     expect(tx.product.updateMany).not.toHaveBeenCalled();
     expect(tx.comandaItem.create).not.toHaveBeenCalled();
   });
@@ -72,7 +73,7 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
           notes: 'Sem sal',
           createdById: 'garcom',
         },
-      ]);
+      ], `test-key-kds-${enabled}`);
       const data = tx.comandaItem.create.mock.calls[0][0].data;
       expect(Number(data.totalPrice)).toBe(30);
       expect(Number(data.unitPrice)).toBe(15);
@@ -89,7 +90,7 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
   );
   it('produto sem preparo inicia como servir agora quando o KDS está ativo', async () => {
     const { service, tx } = setup(true, { ...product, requiresKitchen: false });
-    await service.addItems('c', [{ productId: 'p', quantity: 1 }]);
+    await service.addItems('c', [{ productId: 'p', quantity: 1 }], 'test-key-serving');
     expect(
       tx.comandaItem.create.mock.calls[0][0].data.kdsStatus,
     ).toBe('READY');
@@ -100,7 +101,7 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
       ...product,
       preparationIngredients: 'Batata, sal',
     });
-    await service.addItems('c', [{ productId: 'p', quantity: 1 }]);
+    await service.addItems('c', [{ productId: 'p', quantity: 1 }], 'test-key-ingredients');
     expect(tx.comandaItem.create.mock.calls[0][0].data.kdsStatus).toBe(
       'PENDING',
     );
@@ -108,7 +109,7 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
   });
   it('composto sem grupos baixa o próprio estoque e preserva preço na comanda', async () => {
     const { service, tx } = setup(true, { ...product, isComposite: true, modifierGroups: [] });
-    await service.addItems('c', [{ productId: 'p', quantity: 2 }]);
+    await service.addItems('c', [{ productId: 'p', quantity: 2 }], 'test-key-own-stock');
     const data = tx.comandaItem.create.mock.calls[0][0].data;
     expect(Number(data.totalPrice)).toBe(30);
     expect(data.stockDeducted).toBe(true);
@@ -119,8 +120,35 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
   });
   it('não aceita adicionais antigos quando o produto ficou sem grupos', async () => {
     const { service, tx } = setup(true, { ...product, isComposite: true, modifierGroups: [] });
-    await expect(service.addItems('c', [{ productId: 'p', quantity: 1, modifiers: [{ optionId: 'antiga' }] }])).rejects.toThrow('Remova o item');
+    await expect(service.addItems('c', [{ productId: 'p', quantity: 1, modifiers: [{ optionId: 'antiga' }] }], 'test-key-stale')).rejects.toThrow('Remova o item');
     expect(tx.product.updateMany).not.toHaveBeenCalled();
+  });
+  it('reenvio da mesma chave não duplica item nem baixa estoque, mesmo após fechamento', async () => {
+    const { service, tx } = setup(false, product);
+    const items = [{ productId: 'p', quantity: 2 }];
+    await service.addItems('c', items, 'test-key-replay');
+    const firstAttempt = tx.comandaAuditEvent.create.mock.calls[0][0].data;
+    tx.$queryRaw.mockResolvedValue([{ id: 'c', number: '04', status: 'closed' }]);
+    tx.comandaAuditEvent.findFirst.mockResolvedValue({ snapshot: firstAttempt.snapshot });
+    await service.addItems('c', items, 'test-key-replay');
+    expect(tx.product.updateMany).toHaveBeenCalledTimes(1);
+    expect(tx.comandaItem.create).toHaveBeenCalledTimes(1);
+    expect(tx.inventoryLog.create).toHaveBeenCalledTimes(1);
+    expect(tx.comandaAuditEvent.create).toHaveBeenCalledTimes(1);
+  });
+  it('a mesma chave com conteúdo diferente é conflito, sem nova baixa', async () => {
+    const { service, tx } = setup(false, product);
+    await service.addItems('c', [{ productId: 'p', quantity: 1 }], 'test-key-conflict');
+    const firstAttempt = tx.comandaAuditEvent.create.mock.calls[0][0].data;
+    tx.comandaAuditEvent.findFirst.mockResolvedValue({ snapshot: firstAttempt.snapshot });
+    await expect(service.addItems('c', [{ productId: 'p', quantity: 2 }], 'test-key-conflict')).rejects.toThrow('já foi usada');
+    expect(tx.product.updateMany).toHaveBeenCalledTimes(1);
+    expect(tx.comandaItem.create).toHaveBeenCalledTimes(1);
+  });
+  it('recusa lançamento sem chave de tentativa', async () => {
+    const { service, tx } = setup(false, product);
+    await expect(service.addItems('c', [{ productId: 'p', quantity: 1 }], '')).rejects.toThrow('Idempotency-Key');
+    expect(tx.$queryRaw).not.toHaveBeenCalled();
   });
   it.each([false, true])('produto composto preserva ingrediente e preço, KDS=%s', async (enabled) => {
     const { service, tx } = setup(enabled, {
@@ -150,7 +178,7 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
     });
     await service.addItems('c', [
       { productId: 'p', quantity: 2, modifiers: [{ optionId: 'o' }] },
-    ]);
+    ], `test-key-composite-${enabled}`);
     const data = tx.comandaItem.create.mock.calls[0][0].data;
     expect(Number(data.totalPrice)).toBe(34);
     expect(data.kdsStatus).toBe(enabled ? 'PENDING' : undefined);
@@ -167,7 +195,7 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
         options: [{ id: 'o', quantity: 1, priceAdjustment: 0, componentProduct: { id: 'ingrediente', name: 'Ingrediente' } }],
       }],
     });
-    await expect(service.addItems('c', [{ productId: 'p', quantity: 1, modifiers }])).rejects.toThrow();
+    await expect(service.addItems('c', [{ productId: 'p', quantity: 1, modifiers }], 'test-key-invalid')).rejects.toThrow();
     expect(tx.product.updateMany).not.toHaveBeenCalled();
     expect(tx.comandaItem.create).not.toHaveBeenCalled();
   });
