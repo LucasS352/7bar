@@ -210,6 +210,13 @@ export class GroupsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('my/stock-transfers')
+  async myRecentTransfers(@Request() req: any) {
+    if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
+    return this.groupsService.getRecentTransfers(req.user.groupId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('my/stock-transfer')
   async myStockTransfer(
     @Request() req: any,
@@ -253,7 +260,7 @@ export class GroupsController {
     @Query('daysToForecast') daysToForecast?: string,
   ) {
     if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
-    const days = daysToForecast ? parseInt(daysToForecast, 10) : 15;
+    const days = daysToForecast ? Number(daysToForecast) : 15;
     return this.groupsService.getPurchaseForecast(req.user.groupId, days);
   }
 
@@ -271,7 +278,7 @@ export class GroupsController {
   @Post('my/stock-adjust')
   async myStockAdjust(
     @Request() req: any,
-    @Body() body: { tenantId: string; productId: string; newStock: number },
+    @Body() body: { tenantId: string; productId: string; newStock: number; expectedStock?: number },
   ) {
     if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
     return this.groupsService.stockAdjust(req.user.groupId, body);
@@ -288,7 +295,7 @@ export class GroupsController {
   @Patch('my/products/price-per-tenant')
   async myUpdatePricePerTenant(
     @Request() req: any,
-    @Body() body: { productName: string; updates: { tenantId: string; priceSell: number; priceCost?: number }[] },
+    @Body() body: { productName: string; updates: { tenantId: string; productId?: string; priceSell: number; priceCost?: number }[] },
   ) {
     if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
     return this.groupsService.updatePricePerTenant(req.user.groupId, body);
@@ -315,7 +322,7 @@ export class GroupsController {
   @Post('my/products/sync')
   async mySyncProducts(
     @Request() req: any,
-    @Body() body: { products: { name: string; targetTenantIds: string[] }[] },
+    @Body() body: { products: { name: string; targetTenantIds: string[]; sourceTenantId?: string; sourceProductId?: string }[] },
   ) {
     if (!req.user.groupId) throw new UnauthorizedException('Usuário não pertence a nenhum grupo');
     return this.groupsService.syncProductsToTenants(req.user.groupId, body);

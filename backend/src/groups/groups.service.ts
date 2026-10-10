@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ServiceUnavailableException, Logger } from '@nestjs/common';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { ProductsService } from '../products/products.service';
+import { randomUUID } from 'crypto';
+import { PrismaClient, Prisma } from '@prisma/client';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { PrismaClient } = require('@prisma/client');
 
 @Injectable()
 export class GroupsService {
@@ -32,7 +32,14 @@ export class GroupsService {
       },
     });
     if (!group) throw new NotFoundException(`Grupo ${groupId} não encontrado`);
-    return group;
+    const labels = group.members.map(m => m.alias?.trim() || m.tenant.nomeFantasia || m.tenant.name);
+    return { ...group, members: group.members.map((m, i) => ({ ...m,
+      alias: labels.filter(label => label === labels[i]).length > 1 ? `${labels[i]} · ${m.tenant.databaseName}` : labels[i],
+    })) };
+  }
+
+  private productKey(product: { name: string; unit: string; barcode?: string | null }) {
+    return product.barcode?.trim() ? `ean:${product.barcode.trim()}:${product.unit}` : `name:${product.name.trim().toLocaleLowerCase('pt-BR')}:${product.unit}`;
   }
 
   // ── Group CRUD ─────────────────────────────────────────────────────────────
@@ -92,16 +99,20 @@ export class GroupsService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const start = startDate ? new Date(startDate) : new Date(today.getFullYear(), today.getMonth(), 1);
-    const end = endDate ? new Date(endDate) : new Date();
-    if (endDate) {
+    const parseDate = (value: string) => new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value);
+    const start = startDate ? parseDate(startDate) : new Date(today.getFullYear(), today.getMonth(), 1);
+    const end = endDate ? parseDate(endDate) : new Date();
+    if (endDate && /^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
       end.setHours(23, 59, 59, 999);
+    }
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || start > end) {
+      throw new BadRequestException('Período inválido');
     }
 
     for (const member of group.members) {
       const client = this.createTenantClient(member.tenant.databaseUrl);
       try {
-        const [salesTodayAgg, salesPeriodAgg, salesPeriodCount, topProducts, dailySales, paymentsData] = await Promise.all([
+        const [salesTodayAgg, salesPeriodAgg, salesPeriodCount, topProducts, dailySales, paymentsData, todayCount] = await Promise.all([
           client.sale.aggregate({
             where: { createdAt: { gte: today }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
             _sum: { total: true },
@@ -129,6 +140,7 @@ export class GroupsService {
             where: { sale: { createdAt: { gte: start, lte: end }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] } },
             _sum: { value: true },
           }),
+          client.sale.count({ where: { createdAt: { gte: today }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] } }),
         ]);
 
         // Aggregate daily and hourly sales
@@ -137,7 +149,7 @@ export class GroupsService {
         
         for (const sale of dailySales) {
           const dt = sale.createdAt;
-          const dStr = dt.toISOString().split('T')[0];
+          const dStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
           const hourStr = dt.getHours().toString() + 'h';
           const dayOfWeekStr = DIAS_SEMANA[dt.getDay()];
           const startOfWeek = new Date(dt);
@@ -192,7 +204,8 @@ export class GroupsService {
           alias: member.alias ?? member.tenant.nomeFantasia ?? member.tenant.name,
           salesToday: Number(salesTodayAgg._sum.total ?? 0),
           salesMonth: Number(salesPeriodAgg._sum.total ?? 0),
-          countToday: salesPeriodCount,
+          countToday: todayCount,
+          countPeriod: salesPeriodCount,
           topProducts: topProducts.map((p: any) => {
             const prodData = productMap.get(p.productId) || { name: 'Desconhecido', imageUrl: null };
             return {
@@ -212,6 +225,7 @@ export class GroupsService {
           salesToday: 0,
           salesMonth: 0,
           countToday: 0,
+          countPeriod: 0,
           topProducts: [],
         });
       } finally {
@@ -259,62 +273,35 @@ export class GroupsService {
   // ── Stock ──────────────────────────────────────────────────────────────────
 
   async getConsolidatedStock(groupId: string) {
-    const group = await this.getGroupWithMembers(groupId);
-    // Map: productName -> { tenantId -> qty }
-    const stockMap: Record<string, Record<string, any>> = {};
-    const tenantLabels: Record<string, string> = {};
-
-    for (const member of group.members) {
-      const label = member.alias ?? member.tenant.nomeFantasia ?? member.tenant.name;
-      tenantLabels[member.tenantId] = label;
-      const client = this.createTenantClient(member.tenant.databaseUrl);
-      try {
-        const products = await client.product.findMany({
-          select: { id: true, name: true, stock: true, unit: true },
-          where: { active: true },
-        });
-        for (const p of products) {
-          if (!stockMap[p.name]) stockMap[p.name] = {};
-          stockMap[p.name][member.tenantId] = { qty: Number(p.stock ?? 0), productId: p.id, unit: p.unit };
-        }
-      } catch (err: any) {
-        this.logger.warn(`Stock erro tenant ${member.tenantId}: ${err.message}`);
-      } finally {
-        await client.$disconnect();
-      }
-    }
-
-    const rows = Object.entries(stockMap).map(([name, tenants]) => ({ name, tenants }));
-    return { groupId, groupName: group.name, tenantLabels, rows };
+    const catalog = await this.getProductsCatalog(groupId);
+    return { groupId, groupName: catalog.groupName, tenantLabels: catalog.tenantLabels,
+      rows: catalog.rows.map(row => ({ key: row.key, name: row.name, barcode: row.barcode, unit: row.unit,
+        tenants: Object.fromEntries(Object.entries(row.tenants).map(([id, p]: [string, any]) => [id, { qty: p.stock, productId: p.id, unit: p.unit }])) })) };
   }
 
   async stockEntry(
     groupId: string,
     body: { tenantId: string; productId: string; quantity: number; costPrice?: number },
   ) {
+    if (!Number.isFinite(body.quantity) || body.quantity <= 0 || body.quantity > 9999999.999 || Math.abs(body.quantity * 1000 - Math.round(body.quantity * 1000)) > 0.000001 || (body.costPrice !== undefined && (!Number.isFinite(body.costPrice) || body.costPrice < 0 || body.costPrice > 999999.9999))) {
+      throw new BadRequestException('Informe quantidade positiva com até 3 casas decimais e custo válido');
+    }
     const group = await this.getGroupWithMembers(groupId);
     const member = group.members.find((m) => m.tenantId === body.tenantId);
     if (!member) throw new NotFoundException('Tenant não faz parte deste grupo');
 
     const client = this.createTenantClient(member.tenant.databaseUrl);
     try {
-      const product = await client.product.findUnique({ where: { id: body.productId } });
-      if (!product) throw new NotFoundException('Produto não encontrado no tenant');
-
-      const newStock = Number(product.stock ?? 0) + Number(body.quantity);
-      await client.product.update({
-        where: { id: body.productId },
-        data: { stock: newStock },
+      const newStock = await client.$transaction(async tx => {
+        const changed = await tx.product.updateMany({ where: { id: body.productId, active: true, stock: { lte: 9999999.999 - body.quantity } }, data: { stock: { increment: body.quantity } } });
+        if (changed.count !== 1) throw new BadRequestException('Produto indisponível ou saldo acima do limite');
+        const product = await tx.product.findUniqueOrThrow({ where: { id: body.productId } });
+        const costPrice = body.costPrice ?? product.priceCost;
+        await tx.stockLot.create({ data: { productId: product.id, quantity: body.quantity, remaining: body.quantity, costPrice } });
+        await tx.inventoryLog.create({ data: { productId: product.id, type: 'entry', quantity: body.quantity, costPrice, reason: 'Entrada via portal grupo multiempresa' } });
+        return Number(product.stock);
       });
-      await client.inventoryLog.create({
-        data: {
-          productId: body.productId,
-          type: 'entry',
-          quantity: Number(body.quantity),
-          costPrice: body.costPrice ? Number(body.costPrice) : null,
-          notes: 'Entrada via portal grupo multiempresa',
-        },
-      });
+      this.productsService.invalidateCache(body.tenantId);
       return { success: true, newStock };
     } finally {
       await client.$disconnect();
@@ -325,101 +312,112 @@ export class GroupsService {
     groupId: string,
     body: { fromTenantId: string; toTenantId: string; productId: string; quantity: number },
   ) {
+    const quantity = body.quantity;
+    if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 9999999.999 || Math.abs(quantity * 1000 - Math.round(quantity * 1000)) > 0.000001) {
+      throw new BadRequestException('Informe uma quantidade positiva com até 3 casas decimais');
+    }
+    if (body.fromTenantId === body.toTenantId) throw new BadRequestException('Origem e destino devem ser diferentes');
     const group = await this.getGroupWithMembers(groupId);
-    const fromMember = group.members.find((m) => m.tenantId === body.fromTenantId);
-    const toMember = group.members.find((m) => m.tenantId === body.toTenantId);
-    if (!fromMember) throw new NotFoundException('Tenant de origem não faz parte deste grupo');
-    if (!toMember) throw new NotFoundException('Tenant de destino não faz parte deste grupo');
-
+    const fromMember = group.members.find(m => m.tenantId === body.fromTenantId);
+    const toMember = group.members.find(m => m.tenantId === body.toTenantId);
+    if (!fromMember || !toMember) throw new BadRequestException('As duas lojas devem pertencer ao grupo');
     const fromClient = this.createTenantClient(fromMember.tenant.databaseUrl);
     const toClient = this.createTenantClient(toMember.tenant.databaseUrl);
-
+    const transferId = randomUUID();
+    const consumed: { id: string; quantity: number }[] = [];
     try {
-      const fromProduct = await fromClient.product.findUnique({ where: { id: body.productId } });
-      if (!fromProduct) throw new NotFoundException('Produto não encontrado no tenant de origem');
-      if (Number(fromProduct.stock ?? 0) < body.quantity) {
-        throw new BadRequestException('Estoque insuficiente para transferência');
+      const product = await fromClient.product.findUnique({ where: { id: body.productId } });
+      if (!product?.active) throw new BadRequestException('Produto indisponível na origem');
+      // IDs são locais a cada banco; EAN tem prioridade e nome/unidade é o fallback.
+      const candidates = await toClient.product.findMany({ where: product.barcode
+        ? { barcode: product.barcode, active: true }
+        : { name: product.name, unit: product.unit, active: true }, take: 2 });
+      if (candidates.length !== 1 || candidates[0].unit !== product.unit) {
+        throw new BadRequestException('Produto ausente, ambíguo ou com unidade diferente no destino. Sincronize o catálogo e confira o cadastro antes de transferir. Nenhum saldo foi debitado.');
       }
-
-      // ── ORIGEM: consumir lotes FIFO ──────────────────────────────────────
-      const fromLots = await fromClient.stockLot.findMany({
-        where: { productId: body.productId, remaining: { gt: 0 } },
-        orderBy: { createdAt: 'asc' },
+      const destination = candidates[0];
+      // Cada banco confirma saldo, lotes e log juntos. A reserva usa débito
+      // condicional para impedir duas transferências de gastar o mesmo saldo.
+      await fromClient.$transaction(async tx => {
+        const debit = await tx.product.updateMany({ where: { id: product.id, active: true, stock: { gte: quantity } }, data: { stock: { decrement: quantity } } });
+        if (debit.count !== 1) throw new BadRequestException('Estoque insuficiente para transferência');
+        const lots = await tx.stockLot.findMany({ where: { productId: product.id, remaining: { gt: 0 } }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
+        let remaining = quantity;
+        for (const lot of lots) {
+          if (remaining <= 0) break;
+          const amount = Math.min(Number(lot.remaining), remaining);
+          const updated = await tx.stockLot.updateMany({ where: { id: lot.id, remaining: { gte: amount } }, data: { remaining: { decrement: amount } } });
+          if (updated.count !== 1) throw new BadRequestException('O estoque mudou durante a transferência. Tente novamente.');
+          consumed.push({ id: lot.id, quantity: amount });
+          remaining = Math.round((remaining - amount) * 1000) / 1000;
+        }
+        await tx.inventoryLog.create({ data: { id: transferId, productId: product.id, type: 'transfer_out', quantity: -quantity,
+          origin: 'GROUP_TRANSFER', referenceId: transferId, referenceKey: body.toTenantId, reason: 'Transferência entre lojas do grupo' } });
       });
-
-      let remaining = body.quantity;
-      for (const lot of fromLots) {
-        if (remaining <= 0) break;
-        const lotRemaining = Number(lot.remaining);
-        const deduct = Math.min(lotRemaining, remaining);
-        await fromClient.stockLot.update({
-          where: { id: lot.id },
-          data: { remaining: lotRemaining - deduct },
+      try {
+        await toClient.$transaction(async tx => {
+          const credit = await tx.product.updateMany({ where: { id: destination.id, active: true, unit: product.unit }, data: { stock: { increment: quantity } } });
+          if (credit.count !== 1) throw new BadRequestException('Produto indisponível no destino');
+          await tx.stockLot.create({ data: { productId: destination.id, quantity, remaining: quantity, costPrice: product.priceCost, lotNumber: `TRANSF-${transferId}` } });
+          await tx.inventoryLog.create({ data: { id: transferId, productId: destination.id, type: 'transfer_in', quantity,
+            origin: 'GROUP_TRANSFER', referenceId: transferId, referenceKey: body.fromTenantId, reason: 'Recebimento entre lojas do grupo' } });
         });
-        remaining -= deduct;
+      } catch (error) {
+        // Um timeout de commit pode esconder um recebimento confirmado. Nunca
+        // devolver à origem sem consultar o recibo durável no destino.
+        let receipt;
+        try { receipt = await toClient.inventoryLog.findUnique({ where: { id: transferId } }); }
+        catch {
+          this.logger.error(`Transferência ${transferId}: confirmação pendente no destino`);
+          throw new BadRequestException(`Não foi possível confirmar a transferência ${transferId}. Confira os saldos antes de repetir; a origem está reservada.`);
+        }
+        if (!receipt) {
+          try {
+            await fromClient.$transaction(async tx => {
+              await tx.product.update({ where: { id: product.id }, data: { stock: { increment: quantity } } });
+              for (const lot of consumed) await tx.stockLot.update({ where: { id: lot.id }, data: { remaining: { increment: lot.quantity } } });
+              await tx.inventoryLog.update({ where: { id: transferId }, data: { type: 'transfer_cancelled', reason: 'Destino falhou; saldo e lotes devolvidos à origem' } });
+            });
+          } catch {
+            this.logger.error(`Transferência ${transferId}: falha na compensação`);
+            throw new BadRequestException(`Transferência ${transferId} pendente de conferência. Não repita a operação; verifique o saldo da origem.`);
+          }
+          throw new BadRequestException('Não foi possível receber na loja destino. O saldo da origem foi restaurado.');
+        }
       }
-
-      // Recalcular stock do produto de origem pela soma dos lotes
-      const updatedFromLots = await fromClient.stockLot.findMany({
-        where: { productId: body.productId },
-      });
-      const fromTotal = updatedFromLots.reduce(
-        (s: number, l: any) => s + Math.max(0, Number(l.remaining)), 0,
-      );
-      await fromClient.product.update({
-        where: { id: body.productId },
-        data: { stock: fromTotal },
-      });
-
-      await fromClient.inventoryLog.create({
-        data: {
-          productId: body.productId,
-          type: 'transfer_out',
-          quantity: -body.quantity,
-          notes: `Transferência para tenant ${body.toTenantId}`,
-        },
-      });
-
-      // ── DESTINO: criar lote + sync ───────────────────────────────────────
-      const toProduct = await toClient.product.findFirst({ where: { name: fromProduct.name } });
-      if (toProduct) {
-        await toClient.stockLot.create({
-          data: {
-            productId: toProduct.id,
-            costPrice: fromProduct.priceCost,
-            quantity: body.quantity,
-            remaining: body.quantity,
-            lotNumber: `TRANSF-${new Date().toISOString().slice(0, 10)}`,
-          },
-        });
-
-        // Recalcular stock do produto destino pela soma dos lotes
-        const updatedToLots = await toClient.stockLot.findMany({
-          where: { productId: toProduct.id },
-        });
-        const toTotal = updatedToLots.reduce(
-          (s: number, l: any) => s + Math.max(0, Number(l.remaining)), 0,
-        );
-        await toClient.product.update({
-          where: { id: toProduct.id },
-          data: { stock: toTotal },
-        });
-
-        await toClient.inventoryLog.create({
-          data: {
-            productId: toProduct.id,
-            type: 'transfer_in',
-            quantity: body.quantity,
-            notes: `Recebimento de transferência do tenant ${body.fromTenantId}`,
-          },
-        });
-      }
-
-      return { success: true, fromNewStock: fromTotal };
+      return { success: true, transferId };
     } finally {
-      await fromClient.$disconnect();
-      await toClient.$disconnect();
+      this.productsService.invalidateCache(body.fromTenantId);
+      this.productsService.invalidateCache(body.toTenantId);
+      await Promise.allSettled([fromClient.$disconnect(), toClient.$disconnect()]);
     }
+  }
+
+  async getRecentTransfers(groupId: string) {
+    const group = await this.getGroupWithMembers(groupId);
+    const transfers: any[] = [];
+    const unavailableTenants: string[] = [];
+    for (const member of group.members) {
+      const client = this.createTenantClient(member.tenant.databaseUrl);
+      try {
+        const logs = await client.inventoryLog.findMany({ where: { type: { in: ['transfer_out', 'transfer_cancelled'] }, origin: 'GROUP_TRANSFER' }, orderBy: { createdAt: 'desc' }, take: 5, include: { product: { select: { name: true, unit: true } } } });
+        for (const log of logs) {
+          const target = group.members.find(m => m.tenantId === log.referenceKey);
+          let status = log.type === 'transfer_cancelled' ? 'cancelled' : 'pending';
+          if (target && status === 'pending') {
+            const receiver = this.createTenantClient(target.tenant.databaseUrl);
+            try { if (await receiver.inventoryLog.findFirst({ where: { id: log.id, type: 'transfer_in' } })) status = 'completed'; }
+            catch { /* Sem confirmação, manter pendente visível ao gestor. */ }
+            finally { await receiver.$disconnect(); }
+          }
+          transfers.push({ id: log.id, productName: log.product.name, unit: log.product.unit, quantity: Math.abs(Number(log.quantity)), createdAt: log.createdAt, status,
+            fromAlias: member.alias ?? member.tenant.nomeFantasia ?? member.tenant.name,
+            toAlias: target ? target.alias ?? target.tenant.nomeFantasia ?? target.tenant.name : 'Loja removida do grupo' });
+        }
+      } catch { unavailableTenants.push(member.tenantId); }
+      finally { await client.$disconnect(); }
+    }
+    return { transfers: transfers.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 5), unavailableTenants };
   }
 
   // ── Products ───────────────────────────────────────────────────────────────
@@ -471,8 +469,9 @@ export class GroupsService {
           category = await client.category.create({ data: { name: body.categoryName } });
         }
 
+        const existing = await client.product.findFirst({ where: { name: body.name, unit: body.unit } });
         const product = await client.product.upsert({
-          where: { name: body.name } as any,
+          where: { id: existing?.id ?? randomUUID() },
           update: { priceSell: body.priceSell, priceCost: body.priceCost, unit: body.unit },
           create: {
             name: body.name,
@@ -571,6 +570,7 @@ export class GroupsService {
 
   async getPurchaseForecast(groupId: string, daysToForecast: number = 15) {
     const group = await this.getGroupWithMembers(groupId);
+    if (!Number.isInteger(daysToForecast) || daysToForecast < 1 || daysToForecast > 365) throw new BadRequestException('Informe um prazo entre 1 e 365 dias');
     const productAgg = new Map<string, { name: string, totalStock: number, totalSold30d: number }>();
     
     const thirtyDaysAgo = new Date();
@@ -580,24 +580,28 @@ export class GroupsService {
       const client = this.createTenantClient(member.tenant.databaseUrl);
       try {
         const [products, sales30d] = await Promise.all([
-          client.product.findMany({ select: { id: true, name: true, stock: true }, where: { active: true } }),
+          client.product.findMany({ select: { id: true, name: true, unit: true, stock: true, barcode: true }, where: { active: true } }),
           client.saleItem.groupBy({
             by: ['productId'],
-            where: { sale: { createdAt: { gte: thirtyDaysAgo }, status: { not: 'cancelled' } } },
+            where: { sale: { createdAt: { gte: thirtyDaysAgo }, NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] } },
             _sum: { quantity: true },
           })
         ]);
 
         const salesMap = new Map<string, number>(sales30d.map((s: any) => [s.productId, Number(s._sum.quantity ?? 0)]));
 
+        const keyCounts = new Map<string, number>();
+        for (const p of products) keyCounts.set(this.productKey(p), (keyCounts.get(this.productKey(p)) ?? 0) + 1);
         for (const p of products) {
           const currentStock = Number(p.stock);
           const sold = salesMap.has(p.id) ? salesMap.get(p.id)! : 0;
           
-          if (!productAgg.has(p.id)) {
-            productAgg.set(p.id, { name: p.name, totalStock: 0, totalSold30d: 0 });
+          const base = this.productKey(p);
+          const key = keyCounts.get(base)! > 1 ? `${base}:${member.tenantId}:${p.id}` : base;
+          if (!productAgg.has(key)) {
+            productAgg.set(key, { name: p.name, totalStock: 0, totalSold30d: 0 });
           }
-          const agg = productAgg.get(p.id)!;
+          const agg = productAgg.get(key)!;
           agg.totalStock += currentStock;
           agg.totalSold30d += sold;
         }
@@ -611,7 +615,7 @@ export class GroupsService {
 
     const forecast = Array.from(productAgg.entries()).map(([productId, data]) => {
       const avgDailySales = data.totalSold30d / 30;
-      const autonomyDays = avgDailySales > 0 ? data.totalStock / avgDailySales : 999;
+      const autonomyDays = avgDailySales > 0 ? Math.max(0, data.totalStock) / avgDailySales : null;
       
       const targetStock = avgDailySales * daysToForecast;
       const suggestion = targetStock - data.totalStock;
@@ -621,12 +625,12 @@ export class GroupsService {
         name: data.name,
         totalStock: data.totalStock,
         avgDailySales: Number(avgDailySales.toFixed(2)),
-        autonomyDays: Number(autonomyDays.toFixed(1)),
-        suggestion: suggestion > 0 ? Math.ceil(suggestion) : 0,
+        autonomyDays: autonomyDays === null ? null : Number(autonomyDays.toFixed(1)),
+        suggestion: avgDailySales > 0 && suggestion > 0 ? Math.ceil(suggestion) : 0,
       };
     });
 
-    forecast.sort((a, b) => b.suggestion - a.suggestion || a.autonomyDays - b.autonomyDays);
+    forecast.sort((a, b) => b.suggestion - a.suggestion || (a.autonomyDays ?? Number.MAX_VALUE) - (b.autonomyDays ?? Number.MAX_VALUE));
 
     return forecast;
   }
@@ -689,95 +693,76 @@ export class GroupsService {
 
   async stockAdjust(
     groupId: string,
-    body: { tenantId: string; productId: string; newStock: number },
+    body: { tenantId: string; productId: string; newStock: number; expectedStock?: number },
   ) {
+    if (!Number.isFinite(body.newStock) || body.newStock < 0 || body.newStock > 9999999.999 || Math.abs(body.newStock * 1000 - Math.round(body.newStock * 1000)) > 0.000001) {
+      throw new BadRequestException('Informe um saldo válido com até 3 casas decimais');
+    }
     const group = await this.getGroupWithMembers(groupId);
-    const member = group.members.find((m) => m.tenantId === body.tenantId);
+    const member = group.members.find(m => m.tenantId === body.tenantId);
     if (!member) throw new NotFoundException('Tenant não faz parte deste grupo');
-
     const client = this.createTenantClient(member.tenant.databaseUrl);
     try {
-      const product = await client.product.findUnique({ where: { id: body.productId } });
-      if (!product) throw new NotFoundException('Produto não encontrado');
-
-      const diff = body.newStock - Number(product.stock ?? 0);
-      await client.product.update({
-        where: { id: body.productId },
-        data: { stock: body.newStock },
+      await client.$transaction(async tx => {
+        const product = await tx.product.findUnique({ where: { id: body.productId } });
+        if (!product) throw new NotFoundException('Produto não encontrado');
+        if (body.expectedStock !== undefined && body.expectedStock !== Number(product.stock)) throw new BadRequestException('O saldo mudou durante a edição. Atualize e tente novamente.');
+        const changed = await tx.product.updateMany({ where: { id: product.id, stock: product.stock }, data: { stock: body.newStock } });
+        if (changed.count !== 1) throw new BadRequestException('O saldo mudou durante a edição. Atualize e tente novamente.');
+        const diff = body.newStock - Number(product.stock);
+        if (diff > 0) await tx.stockLot.create({ data: { productId: product.id, quantity: diff, remaining: diff, costPrice: product.priceCost } });
+        if (diff < 0) {
+          const lots = await tx.stockLot.findMany({ where: { productId: product.id, remaining: { gt: 0 } }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
+          let remaining = -diff;
+          for (const lot of lots) {
+            if (remaining <= 0) break;
+            const amount = Math.min(Number(lot.remaining), remaining);
+            const changedLot = await tx.stockLot.updateMany({ where: { id: lot.id, remaining: { gte: amount } }, data: { remaining: { decrement: amount } } });
+            if (changedLot.count !== 1) throw new BadRequestException('Os lotes mudaram. Atualize e tente novamente.');
+            remaining = Math.round((remaining - amount) * 1000) / 1000;
+          }
+        }
+        await tx.inventoryLog.create({ data: { productId: product.id, type: diff >= 0 ? 'IN' : 'OUT', quantity: Math.abs(diff), reason: 'Ajuste via Portal Grupo' } });
       });
-
-      // Registra no log de inventário
-      try {
-        await client.inventoryLog.create({
-          data: {
-            productId: body.productId,
-            type: diff >= 0 ? 'IN' : 'OUT',
-            quantity: Math.abs(diff),
-            notes: 'Ajuste via Portal Grupo',
-          },
-        });
-      } catch (logErr) {
-        // Log silencioso — o ajuste de estoque já foi salvo
-        this.logger.warn(`inventoryLog falhou para produto ${body.productId}: ${logErr}`);
-      }
-
-      // Invalida o cache do catálogo deste tenant para que a tela de estoque
-      // mostre o valor atualizado imediatamente sem esperar os 10 min de TTL
       this.productsService.invalidateCache(body.tenantId);
-
       return { success: true, newStock: body.newStock };
-    } finally {
-      await client.$disconnect();
-    }
+    } finally { await client.$disconnect(); }
   }
 
   // ── Products Catalog (consolidated with prices per tenant) ────────────────
 
   async getProductsCatalog(groupId: string) {
     const group = await this.getGroupWithMembers(groupId);
-    // Map: productName -> { tenantId -> { id, priceSell, priceCost, stock, unit, barcode, ncm } }
-    const catalogMap: Record<string, Record<string, any>> = {};
+    const catalog = new Map<string, { key: string; name: string; barcode: string | null; unit: string; tenants: Record<string, any> }>();
     const tenantLabels: Record<string, string> = {};
-
     for (const member of group.members) {
-      const label = member.alias ?? member.tenant.nomeFantasia ?? member.tenant.name;
-      tenantLabels[member.tenantId] = label;
+      tenantLabels[member.tenantId] = member.alias;
       const client = this.createTenantClient(member.tenant.databaseUrl);
       try {
-        const products = await client.product.findMany({
-          where: { active: true },
-          select: { id: true, name: true, priceSell: true, priceCost: true, stock: true, unit: true, barcode: true, ncm: true, imageUrl: true },
-        });
+        const products = await client.product.findMany({ where: { active: true },
+          select: { id: true, name: true, priceSell: true, priceCost: true, stock: true, unit: true, barcode: true, ncm: true, imageUrl: true } });
+        const counts = new Map<string, number>();
+        for (const p of products) counts.set(this.productKey(p), (counts.get(this.productKey(p)) ?? 0) + 1);
         for (const p of products) {
-          if (!catalogMap[p.name]) catalogMap[p.name] = {};
-          catalogMap[p.name][member.tenantId] = {
-            id: p.id,
-            priceSell: Number(p.priceSell ?? 0),
-            priceCost: Number(p.priceCost ?? 0),
-            stock: Number(p.stock ?? 0),
-            unit: p.unit,
-            barcode: p.barcode,
-            ncm: p.ncm,
-            imageUrl: p.imageUrl,
-          };
+          const base = this.productKey(p);
+          // Cadastros homônimos sem EAN não têm identidade compartilhada confiável.
+          const key = counts.get(base)! > 1 ? `${base}:${member.tenantId}:${p.id}` : base;
+          if (!catalog.has(key)) catalog.set(key, { key, name: p.name, barcode: p.barcode, unit: p.unit, tenants: {} });
+          catalog.get(key)!.tenants[member.tenantId] = { ...p, priceSell: Number(p.priceSell), priceCost: Number(p.priceCost), stock: Number(p.stock) };
         }
       } catch (err: any) {
         this.logger.warn(`Catalog erro tenant ${member.tenantId}: ${err.message}`);
-      } finally {
-        await client.$disconnect();
-      }
+        throw new ServiceUnavailableException(`Não foi possível consultar a loja ${member.alias}. Atualize antes de alterar o catálogo.`);
+      } finally { await client.$disconnect(); }
     }
-
-    const rows = Object.entries(catalogMap).map(([name, tenants]) => ({ name, tenants }));
-    rows.sort((a, b) => a.name.localeCompare(b.name));
-    return { groupId, groupName: group.name, tenantLabels, rows };
+    return { groupId, groupName: group.name, tenantLabels, rows: [...catalog.values()].sort((a, b) => a.name.localeCompare(b.name) || a.key.localeCompare(b.key)) };
   }
 
   // ── Update price per tenant (individual or all) ───────────────────────────
 
   async updatePricePerTenant(
     groupId: string,
-    body: { productName: string; updates: { tenantId: string; priceSell: number; priceCost?: number }[] },
+    body: { productName: string; updates: { tenantId: string; productId?: string; priceSell: number; priceCost?: number }[] },
   ) {
     const group = await this.getGroupWithMembers(groupId);
     const results: any[] = [];
@@ -788,10 +773,14 @@ export class GroupsService {
 
       const client = this.createTenantClient(member.tenant.databaseUrl);
       try {
-        const data: any = { priceSell: update.priceSell };
+        if (!Number.isFinite(update.priceSell) || update.priceSell < 0 || (update.priceCost !== undefined && (!Number.isFinite(update.priceCost) || update.priceCost < 0))) throw new BadRequestException('Preço inválido');
+        const data: Prisma.ProductUpdateManyMutationInput = { priceSell: update.priceSell };
         if (update.priceCost !== undefined) data.priceCost = update.priceCost;
-        const updated = await client.product.updateMany({ where: { name: body.productName }, data });
-        results.push({ tenantId: update.tenantId, success: true, updatedCount: updated.count });
+        const candidates = await client.product.findMany({ where: { ...(update.productId ? { id: update.productId } : { name: body.productName }), active: true }, select: { id: true }, take: 2 });
+        if (candidates.length !== 1) throw new BadRequestException('Produto ausente ou nome ambíguo. Selecione o cadastro pelo código no catálogo.');
+        const updated = await client.product.updateMany({ where: { id: candidates[0].id, active: true }, data });
+        this.productsService.invalidateCache(update.tenantId);
+        results.push({ tenantId: update.tenantId, success: updated.count > 0, updatedCount: updated.count, ...(updated.count === 0 ? { error: 'Produto não encontrado na loja' } : {}) });
       } catch (err: any) {
         results.push({ tenantId: update.tenantId, success: false, error: err.message });
       } finally {
@@ -815,6 +804,9 @@ export class GroupsService {
       tenantPrices: { tenantId: string; priceSell: number }[];
     },
   ) {
+    if (!body.name?.trim() || !body.categoryName?.trim() || !body.unit?.trim() || !Number.isFinite(body.priceCost) || body.priceCost < 0 || !Array.isArray(body.tenantPrices) || !body.tenantPrices.length || body.tenantPrices.some(p => !Number.isFinite(p.priceSell) || p.priceSell < 0)) {
+      throw new BadRequestException('Informe nome, categoria, unidade e preços válidos para as lojas selecionadas');
+    }
     const group = await this.getGroupWithMembers(groupId);
     const results: any[] = [];
 
@@ -827,10 +819,12 @@ export class GroupsService {
         let category = await client.category.findFirst({ where: { name: body.categoryName } });
         if (!category) category = await client.category.create({ data: { name: body.categoryName } });
 
-        const product = await client.product.upsert({
-          where: { name: body.name } as any,
-          update: { priceSell: tp.priceSell, priceCost: body.priceCost, unit: body.unit, ...(body.barcode ? { barcode: body.barcode } : {}), ...(body.ncm ? { ncm: body.ncm } : {}) },
-          create: {
+        const matches = await client.product.findMany({ where: body.barcode ? { barcode: body.barcode } : { name: body.name, unit: body.unit, barcode: null }, take: 2 });
+        if (matches.length > 1) throw new BadRequestException('Nome ambíguo. Informe um código de barras para identificar o produto.');
+        const existing = matches[0];
+        if (existing) throw new BadRequestException('Produto já cadastrado nesta loja. Use a edição de preços para alterar o cadastro existente.');
+        const product = await client.product.create({
+          data: {
             name: body.name,
             priceSell: tp.priceSell,
             priceCost: body.priceCost,
@@ -841,6 +835,7 @@ export class GroupsService {
             ...(body.ncm ? { ncm: body.ncm } : {}),
           },
         });
+        this.productsService.invalidateCache(tp.tenantId);
         results.push({ tenantId: tp.tenantId, success: true, productId: product.id });
       } catch (err: any) {
         results.push({ tenantId: tp.tenantId, success: false, error: err.message });
@@ -854,69 +849,22 @@ export class GroupsService {
   // ── Sync Check: products present in some tenants but not others ───────────
 
   async getSyncStatus(groupId: string) {
-    const group = await this.getGroupWithMembers(groupId);
-    const tenantProductNames: Record<string, Set<string>> = {};
-    const tenantLabels: Record<string, string> = {};
-    const tenantData: Record<string, any[]> = {};
-    const allTenantIds = group.members.map((m) => m.tenantId);
-
-    for (const member of group.members) {
-      const label = member.alias ?? member.tenant.nomeFantasia ?? member.tenant.name;
-      tenantLabels[member.tenantId] = label;
-      tenantProductNames[member.tenantId] = new Set();
-      tenantData[member.tenantId] = [];
-      const client = this.createTenantClient(member.tenant.databaseUrl);
-      try {
-        const products = await client.product.findMany({
-          where: { active: true },
-          select: { id: true, name: true, priceSell: true, priceCost: true, unit: true, barcode: true, ncm: true, imageUrl: true },
-        });
-        for (const p of products) {
-          tenantProductNames[member.tenantId].add(p.name);
-          tenantData[member.tenantId].push({ ...p, priceSell: Number(p.priceSell), priceCost: Number(p.priceCost) });
-        }
-      } catch (err: any) {
-        this.logger.warn(`SyncCheck erro tenant ${member.tenantId}: ${err.message}`);
-      } finally {
-        await client.$disconnect();
-      }
-    }
-
-    // Find products missing from at least one tenant
-    const allNames = new Set<string>();
-    for (const names of Object.values(tenantProductNames)) {
-      for (const n of names) allNames.add(n);
-    }
-
-    const missingProducts: any[] = [];
-    for (const name of allNames) {
-      const presentIn: string[] = [];
-      const missingIn: string[] = [];
-      for (const tid of allTenantIds) {
-        if (tenantProductNames[tid]?.has(name)) presentIn.push(tid);
-        else missingIn.push(tid);
-      }
-      if (missingIn.length > 0) {
-        // Get product data from the first tenant that has it
-        const sourceTenantId = presentIn[0];
-        const productData = tenantData[sourceTenantId]?.find((p) => p.name === name);
-        missingProducts.push({ name, presentIn, missingIn, productData });
-      }
-    }
-
-    return {
-      groupId,
-      tenantLabels,
-      hasDifferences: missingProducts.length > 0,
-      missingProducts,
-    };
+    const catalog = await this.getProductsCatalog(groupId);
+    const allTenantIds = Object.keys(catalog.tenantLabels);
+    const missingProducts = catalog.rows.flatMap(row => {
+      const presentIn = Object.keys(row.tenants);
+      const missingIn = allTenantIds.filter(id => !row.tenants[id]);
+      return missingIn.length ? [{ key: row.key, name: row.name, barcode: row.barcode, unit: row.unit, presentIn, missingIn,
+        sourceTenantId: presentIn[0], sourceProductId: row.tenants[presentIn[0]].id, productData: row.tenants[presentIn[0]] }] : [];
+    });
+    return { groupId, tenantLabels: catalog.tenantLabels, hasDifferences: missingProducts.length > 0, missingProducts };
   }
 
   // ── Sync Products to missing tenants ─────────────────────────────────────
 
   async syncProductsToTenants(
     groupId: string,
-    body: { products: { name: string; targetTenantIds: string[] }[] },
+    body: { products: { name: string; targetTenantIds: string[]; sourceTenantId?: string; sourceProductId?: string }[] },
   ) {
     const group = await this.getGroupWithMembers(groupId);
     const results: any[] = [];
@@ -927,13 +875,14 @@ export class GroupsService {
       let sourceCategoryName = 'Geral';
 
       for (const member of group.members) {
-        if (item.targetTenantIds.includes(member.tenantId)) continue; // skip targets
+        if (item.targetTenantIds.includes(member.tenantId) || (item.sourceTenantId && item.sourceTenantId !== member.tenantId)) continue;
         const client = this.createTenantClient(member.tenant.databaseUrl);
         try {
-          const p = await client.product.findFirst({
-            where: { name: item.name },
-            include: { category: { select: { name: true } } },
+          const candidates = await client.product.findMany({
+            where: { ...(item.sourceProductId ? { id: item.sourceProductId } : { name: item.name }), active: true },
+            include: { category: { select: { name: true } } }, take: 2,
           });
+          const p = candidates.length === 1 ? candidates[0] : null;
           if (p) {
             sourceData = p;
             sourceCategoryName = (p as any).category?.name ?? 'Geral';
@@ -942,21 +891,24 @@ export class GroupsService {
         } catch { } finally { await client.$disconnect(); }
       }
 
-      if (!sourceData) { results.push({ name: item.name, success: false, error: 'Produto não encontrado em nenhuma loja origem' }); continue; }
+      if (!sourceData) { results.push({ name: item.name, success: false, error: 'Produto ausente ou ambíguo na origem. Atualize a seleção.' }); continue; }
 
       // Create in target tenants
       for (const targetTenantId of item.targetTenantIds) {
         const member = group.members.find((m) => m.tenantId === targetTenantId);
-        if (!member) continue;
+        if (!member) { results.push({ name: item.name, tenantId: targetTenantId, success: false, error: 'Loja não pertence ao grupo' }); continue; }
         const client = this.createTenantClient(member.tenant.databaseUrl);
         try {
           let category = await client.category.findFirst({ where: { name: sourceCategoryName } });
           if (!category) category = await client.category.create({ data: { name: sourceCategoryName } });
-          await client.product.upsert({
-            where: { name: item.name } as any,
-            update: { priceSell: sourceData.priceSell, priceCost: sourceData.priceCost, unit: sourceData.unit },
-            create: {
-              name: item.name,
+          const matches = await client.product.findMany({ where: sourceData.barcode ? { barcode: sourceData.barcode } : { name: sourceData.name, unit: sourceData.unit, barcode: null }, take: 2 });
+          if (matches.length > 1) throw new BadRequestException('Mais de um cadastro sem código de barras no destino. Revise os produtos.');
+          const existing = matches[0];
+          if (existing) throw new BadRequestException('Produto já cadastrado no destino. Atualize o catálogo antes de sincronizar.');
+          await client.product.create({
+            data: {
+              name: sourceData.name,
+              cest: sourceData.cest, origem: sourceData.origem, emiteNfce: sourceData.emiteNfce, imageUrl: sourceData.imageUrl,
               priceSell: sourceData.priceSell,
               priceCost: sourceData.priceCost,
               unit: sourceData.unit,
@@ -966,6 +918,7 @@ export class GroupsService {
               ...(sourceData.ncm ? { ncm: sourceData.ncm } : {}),
             },
           });
+          this.productsService.invalidateCache(targetTenantId);
           results.push({ name: item.name, tenantId: targetTenantId, success: true });
         } catch (err: any) {
           results.push({ name: item.name, tenantId: targetTenantId, success: false, error: err.message });
