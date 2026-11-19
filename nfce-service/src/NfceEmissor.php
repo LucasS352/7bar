@@ -66,7 +66,9 @@ class NfceEmissor
         // SOLUÇÃO: SoapBase expõe httpVersion() e setSecurityLevel() publicamente.
         // Não é necessário Reflection — são métodos da API oficial do NFePHP.
         $soap = new SoapCurl($certificate);
-        $soap->disableCertValidation(true);       // desativa verificação CA chain SEFAZ
+        if (getenv('SEFAZ_DISABLE_CERT_VALIDATION') === 'true') {
+            $soap->disableCertValidation(true);
+        }
         $soap->httpVersion('1.1');                // força HTTP/1.1 → sem ALPN h2
         $soap->setSecurityLevel(true);            // DEFAULT@SECLEVEL=1 → aceita ICP-Brasil
         $soap->loadCA('/etc/ssl/certs/ca-certificates.crt'); // CA bundle com ICP-Brasil
@@ -95,9 +97,8 @@ class NfceEmissor
             try {
                 $idLote = str_pad('1', 15, '0', STR_PAD_LEFT);
                 $resp = $tools->sefazEnviaLote([$xmlAssinado], $idLote, 1, false);
-                error_log("SEFAZ RESPONSE: " . $resp);
                 $response = $resp;
-                error_log("NfceEmissor: Resposta SEFAZ recebida na tentativa {$attempt}");
+                error_log("NfceEmissor: Resposta SEFAZ recebida na tentativa {$attempt} (" . strlen((string) $resp) . " bytes)");
                 break; // Sucesso, sai do loop
             } catch (\Exception $e) {
                 $msg = $e->getMessage();
@@ -145,7 +146,6 @@ class NfceEmissor
         }
 
         // Rejeitada pela SEFAZ
-        file_put_contents('/tmp/debug_rejeitado.xml', $xmlAssinado);
         return [
             'status'         => 'rejeitada',
             'codRejeicao'    => $responseArr['cStat']   ?? '999',

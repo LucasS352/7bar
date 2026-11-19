@@ -1,0 +1,166 @@
+services:
+  # ─── MySQL Database (Produção) ────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: 7bar_mysql
+    restart: unless-stopped
+    command: --innodb-redo-log-capacity=536870912 --max-connections=1000
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Defina MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: 7bar
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks:
+      - 7bar_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:?Defina MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Backend (NestJS) ──────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: 7bar_backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3520:3520"
+    environment:
+      NODE_ENV: production
+      PORT: 3520
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:?Defina PUBLIC_APP_URL}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Defina MYSQL_ROOT_PASSWORD}
+      GOOGLE_DRIVE_CLIENT_ID: ${GOOGLE_DRIVE_CLIENT_ID:-}
+      GOOGLE_DRIVE_CLIENT_SECRET: ${GOOGLE_DRIVE_CLIENT_SECRET:-}
+      GOOGLE_DRIVE_REFRESH_TOKEN: ${GOOGLE_DRIVE_REFRESH_TOKEN:-}
+      DATABASE_URL_HEART: ${DATABASE_URL_HEART:?Defina DATABASE_URL_HEART}
+      DATABASE_URL_TENANT: ${DATABASE_URL_TENANT:?Defina DATABASE_URL_TENANT}
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET}
+      SETUP_PIN: ${SETUP_PIN:?Defina SETUP_PIN}
+      SQL_PIN: ${SQL_PIN:?Defina SQL_PIN}
+      ENABLE_SQL_CONSOLE: ${ENABLE_SQL_CONSOLE:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      TENANT_DB_MAX_CLIENTS: ${TENANT_DB_MAX_CLIENTS:-80}
+      TENANT_DB_CONNECTION_LIMIT: ${TENANT_DB_CONNECTION_LIMIT:-6}
+      NFCE_SERVICE_URL: http://nfce-service:80
+      NFCE_INTERNAL_SECRET: ${NFCE_INTERNAL_SECRET:?Defina NFCE_INTERNAL_SECRET}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      TZ: America/Sao_Paulo
+    volumes:
+      - uploads_data:/app/uploads
+      - private_data:/app/private-data
+      - ./backups:/app/backups
+    depends_on:
+      mysql:
+        condition: service_healthy
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3520/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    networks:
+      - 7bar_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Frontend (Vite/React PWA) ─────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: 7bar_frontend
+    restart: unless-stopped
+    ports:
+      - "3521:3521"
+    environment:
+      PORT: 3521
+    depends_on:
+      - backend
+    volumes:
+      - uploads_data:/usr/share/nginx/html/uploads:ro
+    networks:
+      - 7bar_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── NFC-e PHP Microsserviço ───────────────────────────────────────────────
+  nfce-service:
+    build:
+      context: ./nfce-service
+      dockerfile: Dockerfile
+    container_name: 7bar_nfce
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3522:80"
+    environment:
+      NFCE_INTERNAL_SECRET: ${NFCE_INTERNAL_SECRET:?Defina NFCE_INTERNAL_SECRET}
+      SEFAZ_DISABLE_CERT_VALIDATION: ${SEFAZ_DISABLE_CERT_VALIDATION:-false}
+    networks:
+      - 7bar_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Integrações (Microserviço Separado) ───────────────────────────────────
+  integrations-hub:
+    build:
+      context: ./integrations-hub
+      dockerfile: Dockerfile
+    container_name: 7bar_integrations
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL_HEART: ${DATABASE_URL_HEART:?Defina DATABASE_URL_HEART}
+      DATABASE_URL_TENANT: ${DATABASE_URL_TENANT:?Defina DATABASE_URL_TENANT}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    stop_grace_period: 30s
+    networks:
+      - 7bar_network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  mysql_data:
+    name: 7bar_mysql_data
+  uploads_data:
+    name: 7bar_uploads_data
+  private_data:
+    name: 7bar_private_data
+
+networks:
+  7bar_network:
+    name: 7bar_network
+    driver: bridge

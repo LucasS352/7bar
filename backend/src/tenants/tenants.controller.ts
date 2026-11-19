@@ -5,11 +5,12 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
-import { createReadStream, existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { createReadStream, existsSync, lstatSync, mkdirSync } from 'fs';
+import { join, resolve, sep } from 'path';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TenantsService } from './tenants.service';
 import { ProvisionTenantDto } from './provision-tenant.dto';
+import { safeEqual } from '../common/security/security';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('tenants')
@@ -19,11 +20,18 @@ export class TenantsController {
     private readonly jwtService: JwtService,
   ) {}
 
+  private assertTenantAdmin(user: any, tenantId: string) {
+    if (!user?.tenantId || user.type || user.station ||
+      (user.role !== 'superadmin' && !(user.role === 'admin' && user.tenantId === tenantId))) {
+      throw new ForbiddenException('Permissão negada para esta empresa.');
+    }
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get()
   findAll(@Request() req: any) {
-    if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
-      throw new UnauthorizedException('Somente admins podem listar empresas SaaS');
+    if (req.user.role !== 'superadmin') {
+      throw new ForbiddenException('Somente a administração da plataforma pode listar empresas SaaS.');
     }
     return this.tenantsService.findAll();
   }
@@ -31,7 +39,7 @@ export class TenantsController {
   /** Lista tenants protegida por PIN — usada pelo sys-init sem JWT */
   @Get('setup/list')
   async listByPin(@Request() req: any) {
-    const pin = (req.headers['x-setup-pin'] || req.query['pin']) as string;
+    const pin = req.headers['x-setup-pin'] as string;
     const valid = await this.tenantsService.validatePin(pin);
     if (!valid) throw new UnauthorizedException('PIN inválido.');
     return this.tenantsService.findAll();
@@ -58,7 +66,7 @@ export class TenantsController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   getMe(@Request() req: any) {
-    return this.tenantsService.findById(req.user.tenantId);
+    return this.tenantsService.findById(req.user.tenantId, req.user.role);
   }
 
   /**
@@ -67,8 +75,8 @@ export class TenantsController {
   @UseGuards(JwtAuthGuard)
   @Patch('me')
   updateMe(@Request() req: any, @Body() body: any) {
-    if (req.user.role !== 'admin') {
-      throw new UnauthorizedException('Somente Gerentes podem alterar configurações da empresa.');
+    if (!['admin', 'superadmin'].includes(req.user.role) || req.user.type || req.user.station) {
+      throw new ForbiddenException('Somente Gerentes podem alterar configurações da empresa.');
     }
     return this.tenantsService.updateTenant(req.user.tenantId, body);
   }
@@ -79,7 +87,7 @@ export class TenantsController {
     const pin = req.headers['x-setup-pin'] as string;
     const valid = await this.tenantsService.validatePin(pin);
     if (!valid) throw new UnauthorizedException('PIN inválido.');
-    return this.tenantsService.updateTenant(id, body);
+    return this.tenantsService.updateTenantPlatform(id, body);
   }
 
   /**
@@ -88,8 +96,9 @@ export class TenantsController {
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   updateTenant(@Request() req: any, @Param('id') id: string, @Body() body: any) {
-    if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
-      throw new UnauthorizedException('Permissão negada.');
+    this.assertTenantAdmin(req.user, id);
+    if (req.user.role === 'superadmin') {
+      return this.tenantsService.updateTenantPlatform(id, body);
     }
     return this.tenantsService.updateTenant(id, body);
   }
@@ -99,14 +108,14 @@ export class TenantsController {
    */
   @UseGuards(JwtAuthGuard)
   @Post('me/certificado')
-  @UseInterceptors(FileInterceptor('certPfx'))
+  @UseInterceptors(FileInterceptor('certPfx', { limits: { fileSize: 2 * 1024 * 1024 } }))
   async uploadCertificado(
     @Request() req: any,
     @UploadedFile() file: Express.Multer.File,
     @Body() body: any,
   ) {
     if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-      throw new UnauthorizedException('Permissão negada.');
+      throw new ForbiddenException('Permissão negada.');
     }
     if (!file) throw new BadRequestException('Arquivo .pfx não enviado.');
     if (!body.certSenha) throw new BadRequestException('Senha do certificado não informada.');
@@ -116,7 +125,7 @@ export class TenantsController {
 
   /** Upload de logotipo para White Label via sys-init (protegido por PIN) */
   @Post('setup/:id/logo')
-  @UseInterceptors(FileInterceptor('logo'))
+  @UseInterceptors(FileInterceptor('logo', { limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: (_req, file, cb) => cb(null, /^image\/(png|jpe?g|webp|gif)$/.test(file.mimetype)) }))
   async uploadLogoSetup(
     @Request() req: any,
     @Param('id') id: string,
@@ -135,21 +144,20 @@ export class TenantsController {
    */
   @UseGuards(JwtAuthGuard)
   @Post(':id/logo')
-  @UseInterceptors(FileInterceptor('logo'))
+  @UseInterceptors(FileInterceptor('logo', { limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: (_req, file, cb) => cb(null, /^image\/(png|jpe?g|webp|gif)$/.test(file.mimetype)) }))
   async uploadLogo(
     @Request() req: any,
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
-      throw new UnauthorizedException('Permissão negada.');
-    }
+    this.assertTenantAdmin(req.user, id);
     if (!file) throw new BadRequestException('Arquivo não enviado.');
     return this.tenantsService.uploadLogo(id, file);
   }
 
   @Get('uploads/logos/:filename')
   async serveLogo(@Param('filename') filename: string, @Res() res: Response) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     try {
       const image = await this.tenantsService.getLogoImage(filename);
       if (image) {
@@ -161,9 +169,14 @@ export class TenantsController {
       // Fallback para arquivo físico em caso de erro (ex: UUID inválido)
     }
 
-    // Fallback: Busca arquivo físico (Logos antigos)
-    const filePath = join(process.cwd(), 'uploads/logos', filename);
-    if (!existsSync(filePath)) {
+    // Fallback: Busca arquivo físico (Logos antigos) com prevenção contra path traversal
+    if (!/^[a-zA-Z0-9._-]+$/.test(filename) || filename.includes('..')) {
+      res.status(404).send('Logo not found');
+      return;
+    }
+    const baseDir = resolve(process.cwd(), 'uploads', 'logos');
+    const filePath = resolve(baseDir, filename);
+    if (!filePath.startsWith(baseDir + sep) || !existsSync(filePath) || !lstatSync(filePath).isFile()) {
       res.status(404).send('Logo not found');
       return;
     }
@@ -200,7 +213,7 @@ export class TenantsController {
   @Post('me/discount-pin')
   async setDiscountPin(@Request() req: any, @Body() body: { pin: string }) {
     if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-      throw new UnauthorizedException('Apenas admins podem configurar o PIN de desconto.');
+      throw new ForbiddenException('Apenas admins podem configurar o PIN de desconto.');
     }
     if (!body.pin || body.pin.length < 4) {
       throw new BadRequestException('O PIN deve ter no mínimo 4 caracteres.');
@@ -215,7 +228,7 @@ export class TenantsController {
   @Post('me/verify-discount-pin')
   async verifyDiscountPin(@Request() req: any, @Body() body: { pin: string }) {
     const valid = await this.tenantsService.verifyDiscountPin(req.user.tenantId, body.pin);
-    if (!valid) throw new UnauthorizedException('PIN de desconto inválido.');
+    if (!valid) throw new ForbiddenException('PIN de desconto inválido.');
     return { valid: true };
   }
 
@@ -226,7 +239,7 @@ export class TenantsController {
   @Post('me/cashier-pin')
   async setCashierPin(@Request() req: any, @Body() body: { pin: string }) {
     if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-      throw new UnauthorizedException('Apenas admins podem configurar o PIN do Caixa.');
+      throw new ForbiddenException('Apenas admins podem configurar o PIN do Caixa.');
     }
     if (!body.pin || body.pin.length < 4) {
       throw new BadRequestException('O PIN deve ter no mínimo 4 caracteres.');
@@ -267,8 +280,8 @@ export class TenantsController {
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async deleteTenant(@Request() req: any, @Param('id') id: string) {
-    if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
-      throw new UnauthorizedException('Permissão negada.');
+    if (req.user.role !== 'superadmin') {
+      throw new ForbiddenException('Somente superadmins podem excluir empresas SaaS.');
     }
     return this.tenantsService.deleteTenant(id);
   }
@@ -360,13 +373,17 @@ export class TenantsController {
     @Request() req: any,
     @Body() body: { sql: string; tenantId?: string; useHeart?: boolean }
   ) {
+    // Console SQL desabilitado por padrão em produção. Habilite com ENABLE_SQL_CONSOLE=true apenas quando necessário.
+    if (process.env.ENABLE_SQL_CONSOLE !== 'true' && process.env.NODE_ENV !== 'development') {
+      throw new ForbiddenException('Console SQL desabilitado neste ambiente.');
+    }
+
     const pin = req.headers['x-setup-pin'] as string;
     const valid = await this.tenantsService.validatePin(pin);
     if (!valid) throw new UnauthorizedException('PIN do sys-init inválido.');
 
     const sqlPin = req.headers['x-sql-pin'] as string;
-    const expectedSqlPin = process.env.SQL_PIN || '43619835';
-    if (sqlPin !== expectedSqlPin) throw new UnauthorizedException('PIN do SQL editor inválido.');
+    if (!safeEqual(sqlPin, process.env.SQL_PIN)) throw new UnauthorizedException('PIN do SQL editor inválido.');
 
     if (!body.sql?.trim()) throw new BadRequestException('Query SQL vazia.');
 
@@ -374,7 +391,10 @@ export class TenantsController {
   }
 
   @Post('trigger-sync')
-  async triggerSync() {
+  async triggerSync(@Request() req: any) {
+    const pin = req.headers['x-setup-pin'] as string;
+    const valid = await this.tenantsService.validatePin(pin);
+    if (!valid) throw new UnauthorizedException('PIN inválido.');
     return this.tenantsService.syncMasterCatalogFromTenants();
   }
 }

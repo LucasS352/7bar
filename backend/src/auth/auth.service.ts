@@ -2,9 +2,11 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { StationAccessService } from './station-access.service';
+import { pinVersion } from './operator-session';
 
 @Injectable()
 export class AuthService {
@@ -26,6 +28,9 @@ export class AuthService {
       if (!user.active) {
         throw new UnauthorizedException('Sua conta foi inativada pelo administrador.');
       }
+      if (user.tenant?.status && user.tenant.status !== 'active' && user.role !== 'superadmin') {
+        throw new UnauthorizedException('Acesso bloqueado: loja inativa ou suspensa.');
+      }
       const { password, ...result } = user;
       return result;
     }
@@ -44,12 +49,14 @@ export class AuthService {
     }
 
     if (await bcrypt.compare(pin, operator.pin)) {
+      const secret = process.env.JWT_SECRET || '';
       const operatorToken = context === 'waiter' ? this.access.signWaiterSession(tenantId, operator as { id: string; pin: string }) : this.jwtService.sign(
         {
           type: 'op',
           opId: operator.id,
           tenantId,
           context,
+          ...(secret ? { pinVersion: pinVersion(operator.pin, secret) } : {}),
         },
         { expiresIn: '30m' }
       );
@@ -68,6 +75,7 @@ export class AuthService {
 
   async login(user: any) {
     const payload = {
+      jti: randomUUID(),
       sub: user.id,
       email: user.email,
       tenantId: user.tenant.id,
@@ -82,6 +90,7 @@ export class AuthService {
         role: user.role,
         groupId: user.groupId ?? null,
         tenant: user.tenant.name,
+        modules: user.tenant.modulos ?? {},
         termsAccepted: !!user.tenant.termsAcceptedAt
       }
     };

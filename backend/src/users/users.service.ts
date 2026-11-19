@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import * as bcrypt from 'bcrypt';
 
+const ALLOWED_TENANT_USER_ROLES = new Set(['admin', 'manager', 'operator', 'stockist']);
+
 @Injectable()
 export class UsersService {
   constructor(private heartPrisma: HeartPrismaService) {}
@@ -22,6 +24,11 @@ export class UsersService {
   }
 
   async create(tenantId: string, data: any) {
+    const requestedRole = data.role || 'operator';
+    if (!ALLOWED_TENANT_USER_ROLES.has(requestedRole)) {
+      throw new BadRequestException('Perfil de usuário inválido.');
+    }
+
     // Verificar cota de usuários
     const usersCount = await this.heartPrisma.user.count({
       where: { tenantId }
@@ -31,7 +38,7 @@ export class UsersService {
       throw new BadRequestException('Limite atingido: O plano atual permite no máximo 2 usuários por loja (1 Admin e 1 Colaborador).');
     }
 
-    if (data.role === 'admin') {
+    if (requestedRole === 'admin') {
       const adminCount = await this.heartPrisma.user.count({
         where: { tenantId, role: 'admin' }
       });
@@ -54,7 +61,7 @@ export class UsersService {
         name: data.name,
         email: data.email,
         password: hashedPassword,
-        role: data.role || 'operator',
+        role: requestedRole,
         pin: data.pin ? await bcrypt.hash(data.pin, 10) : null,
         tenantId
       },
@@ -89,6 +96,10 @@ export class UsersService {
     });
 
     if (!user) throw new NotFoundException('Usuário não encontrado.');
+
+    if (data.role !== undefined && !ALLOWED_TENANT_USER_ROLES.has(data.role)) {
+      throw new BadRequestException('Perfil de usuário inválido.');
+    }
 
     // 1. Impedir alteração de role de admin para outra coisa
     if (user.role === 'admin' && data.role && data.role !== 'admin') {

@@ -7,6 +7,12 @@ inspecionar-soap.php
 teste-certificado.php
 public/ssl.php
 
-# Arquivos de desenvolvimento
+# Arquivos de desenvolvimento e segredos
 .git
 *.md
+.env
+.env.*
+*.pfx
+*.p12
+*.pem
+*.log

@@ -112,7 +112,9 @@ class NfceDistribuidor
             $tools->model(55); // NF-e (Distribuição DF-e usa modelo 55)
 
             $soap = new SoapCurl($certificate);
-            $soap->disableCertValidation(true);
+            if (getenv('SEFAZ_DISABLE_CERT_VALIDATION') === 'true') {
+                $soap->disableCertValidation(true);
+            }
             $soap->httpVersion('1.1');
             $soap->setSecurityLevel(true);
             $soap->loadCA('/etc/ssl/certs/ca-certificates.crt');
@@ -193,7 +195,6 @@ class NfceDistribuidor
                         'tipo'       => $tipoErro,
                         'mensagem'   => $msg,
                         'acao'       => $acao,
-                        'stackTrace' => $e->getTraceAsString(),
                         'tentativa'  => $attempt,
                     ];
 
@@ -242,8 +243,6 @@ class NfceDistribuidor
                 'tipo'       => 'ERRO_FATAL',
                 'mensagem'   => $e->getMessage(),
                 'acao'       => 'Erro inesperado no processo de distribuição. Verifique os logs.',
-                'stackTrace' => $e->getTraceAsString(),
-                'arquivo'    => $e->getFile() . ':' . $e->getLine(),
             ];
             $this->addEtapa('FATAL', 'ERRO_FATAL', $e->getMessage());
             return $this->buildResponse([], '0', '0', null, null, $startMs);
@@ -285,7 +284,9 @@ class NfceDistribuidor
         $tools->model(55);
 
         $soap = new SoapCurl($certificate);
-        $soap->disableCertValidation(true);
+        if (getenv('SEFAZ_DISABLE_CERT_VALIDATION') === 'true') {
+            $soap->disableCertValidation(true);
+        }
         $soap->httpVersion('1.1');
         $soap->setSecurityLevel(true);
         $soap->loadCA('/etc/ssl/certs/ca-certificates.crt');

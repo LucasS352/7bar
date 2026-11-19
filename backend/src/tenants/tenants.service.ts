@@ -1,5 +1,7 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ForbiddenException, NotFoundException, Logger } from '@nestjs/common';
+import { randomInt } from 'crypto';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
+import { Prisma as HeartPrisma } from '../generated/heart-client';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { PrismaClient } from '@prisma/client';
@@ -11,18 +13,41 @@ import { upgradeTenantSchema } from './tenant-schema-upgrade';
 
 const execAsync = promisify(exec);
 
+const RESERVED_DB_NAMES = new Set([
+  'mysql',
+  'sys',
+  'information_schema',
+  'performance_schema',
+  'heart',
+  '7bar',
+]);
+
+const STORE_ADMIN_ALLOWED_FIELDS = [
+  'razaoSocial', 'nomeFantasia', 'cnpj', 'ie', 'im', 'crt',
+  'logradouro', 'numero', 'complemento', 'bairro',
+  'municipio', 'codMunicipio', 'uf', 'cep', 'telefone',
+  'nfceAtivo', 'nfceSerie', 'nfceAmbiente', 'nfceCsc', 'nfceIdCsc',
+  'emailContador', 'cosmosApiKey', 'telefoneContato', 'emailContato', 'observacoes',
+];
+
+const PLATFORM_ADMIN_ALLOWED_FIELDS = [
+  ...STORE_ADMIN_ALLOWED_FIELDS,
+  'modulos', 'status', 'mensalidadeValor', 'mensalidadeVencimento', 'tvPublicId',
+];
+
 /** Gera um ID público único de 8 caracteres para a Vitrine Digital (ex: "4J9XQ2KM") */
 function generateTvPublicId(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem ambiguidades (0/O, 1/I)
   let result = '';
   for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+    result += chars.charAt(randomInt(chars.length));
   }
   return result;
 }
 
 import { ProvisionTenantDto } from './provision-tenant.dto';
 import { seedDefaultGruposStatic } from '../tributacao/tributacao.service';
+import { safeEqual } from '../common/security/security';
 
 @Injectable()
 export class TenantsService {
@@ -34,15 +59,41 @@ export class TenantsService {
     private tenantContext: TenantContextService
   ) {}
 
-  findAll() {
-    return this.heartPrisma.tenant.findMany({ include: { users: true, tenantIntegrations: true } });
+  private sanitizeTenantRecord<T extends Record<string, any>>(tenant: T) {
+    if (!tenant) return tenant;
+    const { certPfx, certSenha, databaseUrl, ...safeTenant } = tenant;
+    return {
+      ...safeTenant,
+      hasCertificado: Boolean(certPfx),
+    };
+  }
+
+  async findAll() {
+    const tenants = await this.heartPrisma.tenant.findMany({
+      include: {
+        users: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            active: true,
+            groupId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        tenantIntegrations: true,
+      },
+    });
+    return tenants.map(t => this.sanitizeTenantRecord(t));
   }
 
   create(data: any) {
     return this.heartPrisma.tenant.create({ data });
   }
 
-  async findById(tenantId: string) {
+  async findById(tenantId: string, role?: string) {
     const tenant = await this.heartPrisma.tenant.findUnique({
       where: { id: tenantId },
     });
@@ -59,6 +110,7 @@ export class TenantsService {
         modulos: { nfce: true, estoque: true, dashboardMobile: true, comandas: true },
         nfceAtivo: false,
         proximaNota: 1,
+        hasCertificado: false,
       };
     }
 
@@ -74,8 +126,13 @@ export class TenantsService {
       (tenant as any).tvPublicId = newTvId;
     }
 
-    // Remover o certificado (blob) por segurança
-    const { certPfx, ...safeTenant } = tenant as any;
+    // Nunca expor credenciais sensíveis (certificado, senha A1 ou URL/senha root do MySQL)
+    const safeTenant: any = this.sanitizeTenantRecord(tenant as any);
+    if (role && !['admin', 'superadmin'].includes(role)) {
+      delete safeTenant.nfceCsc;
+      delete safeTenant.nfceIdCsc;
+      delete safeTenant.cosmosApiKey;
+    }
 
     try {
       const tenantPrisma = await this.tenantManager.getTenantClient(tenantId, tenant.databaseUrl);
@@ -92,20 +149,17 @@ export class TenantsService {
   }
 
   async updateTenant(tenantId: string, data: any) {
-    // Campos permitidos (whitelist — nunca atualizar certPfx por aqui)
-    const allowed = [
-      'razaoSocial', 'nomeFantasia', 'cnpj', 'ie', 'im', 'crt',
-      'logradouro', 'numero', 'complemento', 'bairro',
-      'municipio', 'codMunicipio', 'uf', 'cep', 'telefone',
-      'nfceAtivo', 'nfceSerie', 'nfceAmbiente', 'nfceCsc', 'nfceIdCsc',
-      'modulos', 'status', 'emailContador', 'mensalidadeValor', 'mensalidadeVencimento',
-      'tvPublicId',
-      // Novos campos de contato e notas
-      'telefoneContato', 'emailContato', 'observacoes',
-    ];
+    return this.applyTenantUpdate(tenantId, data, STORE_ADMIN_ALLOWED_FIELDS);
+  }
+
+  async updateTenantPlatform(tenantId: string, data: any) {
+    return this.applyTenantUpdate(tenantId, data, PLATFORM_ADMIN_ALLOWED_FIELDS);
+  }
+
+  private async applyTenantUpdate(tenantId: string, data: any, allowed: string[]) {
     // Tipamos explicitamente como Record<string, any> para evitar erro TS no acesso de chaves dinâmicas
     const safeData: Record<string, any> = Object.fromEntries(
-      Object.entries(data).filter(([k]) => allowed.includes(k))
+      Object.entries(data || {}).filter(([k]) => allowed.includes(k))
     );
 
     // Tratar tipos numéricos para evitar que strings quebrem o Prisma
@@ -162,11 +216,32 @@ export class TenantsService {
     }
 
     try {
-      return await this.heartPrisma.tenant.update({
+      if (safeData.modulos !== undefined && allowed.includes('modulos')) {
+        // Serialize concurrent module edits so unrelated flags are never lost.
+        const updated = await this.heartPrisma.$transaction(async tx => {
+          await tx.$queryRaw`SELECT id FROM tenants WHERE id = ${tenantId} FOR UPDATE`;
+          const current = await tx.tenant.findUnique({ where: { id: tenantId }, select: { modulos: true } });
+          if (!current) throw new NotFoundException('Empresa não encontrada.');
+          return tx.tenant.update({
+            where: { id: tenantId },
+            data: {
+              ...safeData,
+              modulos: {
+                ...(typeof current.modulos === 'object' && current.modulos ? (current.modulos as Record<string, any>) : {}),
+                ...safeData.modulos,
+              } as any,
+            },
+          });
+        });
+        return this.sanitizeTenantRecord(updated);
+      }
+      const updated = await this.heartPrisma.tenant.update({
         where: { id: tenantId },
         data: safeData,
       });
+      return this.sanitizeTenantRecord(updated);
     } catch (err: any) {
+      if (err instanceof ForbiddenException || err instanceof BadRequestException || err instanceof NotFoundException) throw err;
       this.logger.error(`Erro ao atualizar tenant ${tenantId}: ${err.message}`, err.stack);
       throw new BadRequestException(`Erro ao salvar dados no banco: ${err.message}`);
     }
@@ -206,10 +281,9 @@ export class TenantsService {
   }
 
   async validatePin(pin: string): Promise<boolean> {
-    const setupPin = process.env.SETUP_PIN || 'teltech352';
-    const sqlPin = process.env.SQL_PIN || '43619835';
-    if (!pin) return false;
-    return pin === setupPin || pin === sqlPin;
+    // Sem fallback: exige exatamente SETUP_PIN (não aceita SQL_PIN como substituto).
+    if (!pin || typeof pin !== 'string') return false;
+    return safeEqual(pin, process.env.SETUP_PIN);
   }
 
   async migrateTenants(tenantIds: string[], includeHeart = false): Promise<any[]> {
@@ -233,7 +307,7 @@ export class TenantsService {
       } else {
         try {
           const { stdout, stderr } = await execAsync(
-            `npx prisma db push --schema="${heartSchemaPath}" --skip-generate`,
+            `npx --no-install prisma db push --schema="${heartSchemaPath}" --skip-generate`,
             {
               env: { ...process.env, DATABASE_URL_HEART: heartDbUrl },
               timeout: 120000,
@@ -275,7 +349,7 @@ export class TenantsService {
       // 2. Executar db push
       try {
         const prismaSchemaPath = path.resolve(process.cwd(), 'prisma', 'schema.prisma');
-        const { stdout, stderr } = await upgradeTenantSchema(tenant.databaseUrl, () => execAsync(`npx prisma db push --schema="${prismaSchemaPath}" --skip-generate`, {
+        const { stdout, stderr } = await upgradeTenantSchema(tenant.databaseUrl, () => execAsync(`npx --no-install prisma db push --schema="${prismaSchemaPath}" --skip-generate`, {
           env: {
             ...process.env,
             DATABASE_URL_TENANT: tenant.databaseUrl,
@@ -285,10 +359,10 @@ export class TenantsService {
 
         // Após atualizar o schema, popular grupos tributários padrão (upsert — seguro)
         let seedResult = { criados: 0, existentes: 0 };
+        const tenantClient = new PrismaClient({
+          datasources: { db: { url: tenant.databaseUrl } },
+        });
         try {
-          const tenantClient = new PrismaClient({
-            datasources: { db: { url: tenant.databaseUrl } },
-          });
           await tenantClient.$connect();
           seedResult = await seedDefaultGruposStatic(tenantClient);
 
@@ -337,10 +411,10 @@ export class TenantsService {
             }
             this.logger.log(`[Migracao] Backfill de códigos de caixas: ${unnumberedRegisters.length} caixas numerados.`);
           }
-
-          await tenantClient.$disconnect();
         } catch (seedErr: any) {
           this.logger.warn(`Pós-migração (seed/backfill) falhou para ${tenant.name}: ${seedErr.message}`);
+        } finally {
+          await tenantClient.$disconnect().catch(() => {});
         }
 
         results.push({
@@ -397,16 +471,38 @@ export class TenantsService {
       .replace(/_{2,}/g, '_')
       .replace(/^_|_$/g, '');
 
-    if (!sanitizedDbName) {
+    if (!sanitizedDbName || !/^[a-z0-9_]{1,64}$/.test(sanitizedDbName)) {
       throw new BadRequestException('Nome do banco inválido após sanitização.');
     }
 
-    // 3. Verificar se tenant já existe
+    const baseUrl = process.env.DATABASE_URL_HEART || '';
+    if (!baseUrl) {
+      throw new BadRequestException('DATABASE_URL_HEART não configurado.');
+    }
+    let parsedHeartUrl: URL;
+    try {
+      parsedHeartUrl = new URL(baseUrl);
+    } catch {
+      throw new BadRequestException('DATABASE_URL_HEART inválido.');
+    }
+    const heartDbName = parsedHeartUrl.pathname.replace(/^\/+/, '').toLowerCase();
+    if (RESERVED_DB_NAMES.has(sanitizedDbName) || (heartDbName && sanitizedDbName === heartDbName)) {
+      throw new BadRequestException(`O nome de banco "${sanitizedDbName}" é reservado pelo sistema.`);
+    }
+
+    // 3. Verificar se tenant já existe no Heart ou no MySQL
     const existingTenant = await this.heartPrisma.tenant.findFirst({
       where: { databaseName: sanitizedDbName },
     });
     if (existingTenant) {
       throw new BadRequestException(`Já existe um tenant com o banco "${sanitizedDbName}".`);
+    }
+
+    const existingSchemas = await this.heartPrisma.$queryRaw<Array<{ SCHEMA_NAME: string }>>(
+      HeartPrisma.sql`SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE LOWER(SCHEMA_NAME) = ${sanitizedDbName}`,
+    );
+    if (existingSchemas.length > 0) {
+      throw new BadRequestException(`Já existe um banco de dados MySQL chamado "${sanitizedDbName}".`);
     }
 
     // 4. Verificar se email já existe
@@ -419,18 +515,18 @@ export class TenantsService {
 
     // 5. Criar o banco de dados via SQL raw
     await this.heartPrisma.$queryRawUnsafe(
-      `CREATE DATABASE IF NOT EXISTS \`${sanitizedDbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+      `CREATE DATABASE \`${sanitizedDbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
     );
 
-    // 6. Montar a DATABASE_URL para o novo tenant
-    const baseUrl = process.env.DATABASE_URL_HEART || '';
-    // Substituir apenas o nome do banco no final da URL
-    const tenantDbUrl = baseUrl.replace(/\/[^/]+$/, `/${sanitizedDbName}`);
+    // 6. Montar a DATABASE_URL para o novo tenant preservando parâmetros de query
+    const parsedTenantUrl = new URL(baseUrl);
+    parsedTenantUrl.pathname = `/${sanitizedDbName}`;
+    const tenantDbUrl = parsedTenantUrl.toString();
 
     // 7. Rodar migrations Prisma no novo banco
     try {
       const prismaSchemaPath = path.resolve(process.cwd(), 'prisma', 'schema.prisma');
-      await execAsync(`npx prisma db push --schema="${prismaSchemaPath}" --skip-generate --accept-data-loss`, {
+      await execAsync(`npx --no-install prisma db push --schema="${prismaSchemaPath}" --skip-generate --accept-data-loss`, {
         env: {
           ...process.env,
           DATABASE_URL_TENANT: tenantDbUrl,
@@ -479,16 +575,17 @@ export class TenantsService {
     }
 
     // 10. Popular grupos tributários padrão no novo banco
+    const tenantClient = new PrismaClient({
+      datasources: { db: { url: tenantDbUrl } },
+    });
     try {
-      const tenantClient = new PrismaClient({
-        datasources: { db: { url: tenantDbUrl } },
-      });
       await tenantClient.$connect();
       const gruposResult = await seedDefaultGruposStatic(tenantClient);
-      await tenantClient.$disconnect();
       this.logger.log(`Grupos tributários padrão criados para ${tenantName}: ${gruposResult.criados} criados.`);
     } catch (err: any) {
       this.logger.warn(`Aviso: seed de grupos tributários para ${tenantName} falhou: ${err.message}`);
+    } finally {
+      await tenantClient.$disconnect().catch(() => {});
     }
 
     return {
@@ -650,12 +747,12 @@ export class TenantsService {
         inserted++;
       }
 
-      this.logger.log(`✅ Catálogo Disk inserido: ${inserted} produtos no banco ${databaseUrl}`);
+      this.logger.log(`✅ Catálogo Disk inserido: ${inserted} produtos no banco ${databaseUrl.split('/').pop()?.split('?')[0] || 'tenant'}`);
     } catch (err) {
       this.logger.error(`❌ Erro ao popular produtos base: ${err.message}`, err.stack);
       throw err;
     } finally {
-      await client.$disconnect();
+      await client.$disconnect().catch(() => {});
     }
   }
 
@@ -762,6 +859,20 @@ export class TenantsService {
 
     if (!tenant) throw new NotFoundException('Empresa não encontrada');
 
+    let heartDbName = '';
+    try {
+      heartDbName = new URL(process.env.DATABASE_URL_HEART || '').pathname.replace(/^\/+/, '').toLowerCase();
+    } catch {}
+    if (
+      !/^[a-z0-9_]{1,64}$/.test(tenant.databaseName) ||
+      RESERVED_DB_NAMES.has(tenant.databaseName.toLowerCase()) ||
+      (heartDbName && tenant.databaseName.toLowerCase() === heartDbName)
+    ) {
+      throw new BadRequestException(`Nome de banco inválido ou protegido: ${tenant.databaseName}`);
+    }
+
+    await this.tenantManager?.evictTenant?.(tenantId);
+
     // 1. Drop the tenant's database
     try {
       this.logger.log(`⚠️ Excluindo banco de dados: ${tenant.databaseName}`);
@@ -821,7 +932,7 @@ export class TenantsService {
       })
     ]);
 
-    return updatedTenant;
+    return this.sanitizeTenantRecord(updatedTenant);
   }
 
   async getPaymentHistory(tenantId: string) {
@@ -887,7 +998,8 @@ export class TenantsService {
     const hashedPassword = await bcrypt.hash(newPasswordRaw, 10);
     return this.heartPrisma.user.update({
       where: { id: userId },
-      data: { password: hashedPassword }
+      data: { password: hashedPassword },
+      select: { id: true, name: true, email: true, role: true, active: true },
     });
   }
 
@@ -897,9 +1009,11 @@ export class TenantsService {
     });
     if (!user) throw new NotFoundException('Usuário não encontrado.');
 
+    const hashedPin = await bcrypt.hash(newPin, 10);
     return this.heartPrisma.user.update({
       where: { id: userId },
-      data: { pin: newPin }
+      data: { pin: hashedPin },
+      select: { id: true, name: true, email: true, role: true, active: true },
     });
   }
 

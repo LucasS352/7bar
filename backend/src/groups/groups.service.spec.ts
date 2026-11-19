@@ -141,4 +141,22 @@ describe('GroupsService dashboard period', () => {
     expect(client.sale.count.mock.calls[0][0].where.createdAt.lte.toISOString()).toBe('2026-10-09T13:24:00.000Z');
     await expect(service.getDashboard('g', 'not-a-date')).rejects.toThrow('Período inválido');
   });
+
+  it('reuses TenantConnectionManager pool without disconnecting shared clients', async () => {
+    const sharedClient = {
+      inventoryLog: { findMany: jest.fn().mockResolvedValue([]) },
+      $disconnect: jest.fn(),
+    };
+    const tenantManager = { getTenantClient: jest.fn().mockResolvedValue(sharedClient) };
+    const service = new GroupsService(
+      { tenantGroup: { findUnique: jest.fn().mockResolvedValue({ name: 'Grupo', members: [{ tenantId: 'a', tenant: { databaseUrl: 'mysql://a', name: 'Loja A' } }] }) } } as any,
+      { invalidateCache: jest.fn() } as any,
+      tenantManager as any,
+    );
+
+    const res = await service.getRecentTransfers('g');
+    expect(res).toEqual({ transfers: [], unavailableTenants: [] });
+    expect(tenantManager.getTenantClient).toHaveBeenCalledWith('a', 'mysql://a');
+    expect(sharedClient.$disconnect).not.toHaveBeenCalled();
+  });
 });

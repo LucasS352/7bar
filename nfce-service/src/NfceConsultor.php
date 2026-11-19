@@ -40,7 +40,9 @@ class NfceConsultor
         $tools->model(65);
 
         $soap = new SoapCurl($certificate);
-        $soap->disableCertValidation(true);
+        if (getenv('SEFAZ_DISABLE_CERT_VALIDATION') === 'true') {
+            $soap->disableCertValidation(true);
+        }
         $soap->httpVersion('1.1');
         $soap->setSecurityLevel(true);
         $soap->loadCA('/etc/ssl/certs/ca-certificates.crt');

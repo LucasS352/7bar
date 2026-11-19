@@ -19,10 +19,14 @@ export class FiscalPhpService {
   constructor(private readonly httpService: HttpService) {}
 
   private getHeaders(correlationId: string): Record<string, string> {
-    return {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-Correlation-ID': correlationId,
     };
+    if (process.env.NFCE_INTERNAL_SECRET) {
+      headers['X-Internal-Secret'] = process.env.NFCE_INTERNAL_SECRET;
+    }
+    return headers;
   }
 
   private mapPhpError(err: any): string {

@@ -57,7 +57,9 @@ class NfceCancelador
         $tools->model(65);
 
         $soap = new SoapCurl($certificate);
-        $soap->disableCertValidation(true);
+        if (getenv('SEFAZ_DISABLE_CERT_VALIDATION') === 'true') {
+            $soap->disableCertValidation(true);
+        }
         $soap->httpVersion('1.1');
         $soap->setSecurityLevel(true);
         $soap->loadCA('/etc/ssl/certs/ca-certificates.crt');
@@ -111,7 +113,7 @@ class NfceCancelador
 
     private function parseResponse(string $response, string $chave): array
     {
-        error_log("[NfceCancelador] Sefaz raw response: " . $response);
+        error_log("[NfceCancelador] Resposta SEFAZ recebida (" . strlen($response) . " bytes)");
         
         // Remove SOAP Envelope para pegar apenas a tag retEnvEvento
         $cleanXml = preg_replace('/^.*<retEnvEvento/is', '<retEnvEvento', $response);

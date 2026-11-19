@@ -87,7 +87,8 @@ export class StationAccessService {
 
   async authorizeRequest(req: any) {
     const user = req.user;
-    const path = (req.originalUrl || req.url).split('?')[0].replace(/^\/api(?=\/)/, '').replace(/\/$/, '') || '/';
+    const rawPath = (req.originalUrl || req.url).split('?')[0].replace(/\/{2,}/g, '/');
+    const path = rawPath.replace(/^\/api(?=\/|$)/i, '').replace(/\/$/, '').toLowerCase() || '/';
     if (user.type === 'station-session') {
       if (!stationRouteAllowed(user.station, req.method, path)) throw new ForbiddenException('Acesso restrito ao módulo deste dispositivo.');
       if (user.station !== 'WAITER') return;
@@ -114,14 +115,19 @@ export class StationAccessService {
         catch { throw new UnauthorizedException({ message: 'Entre com o PIN do caixa.', errorSource: 'operator_token' }); }
         if (cashier.type !== 'op' || cashier.tenantId !== user.tenantId || cashier.context === 'waiter') throw new ForbiddenException('Credencial de caixa inválida.');
         if (req.body?.operatorId && req.body.operatorId !== cashier.opId) throw new ForbiddenException('Operador diferente da sessão autenticada.');
-        await this.assertOperator(user.tenantId, cashier.opId, 'cashier');
+        const op = await this.assertOperator(user.tenantId, cashier.opId, 'cashier');
+        if (cashier.pinVersion && cashier.pinVersion !== pinVersion(op.pin || '', process.env.JWT_SECRET!)) {
+          throw new UnauthorizedException({ message: 'PIN alterado pelo administrador. Entre com o novo PIN.', errorSource: 'operator_token' });
+        }
         req.body.operatorId = cashier.opId;
       }
     }
     if (req.headers['x-operator-token']) {
+      if (path === '/auth/operator-login' && req.method === 'POST') return;
       let op: any;
-      try { op = this.jwt.verify(req.headers['x-operator-token']); } catch { return; }
-      if (op.context === 'waiter' && path !== '/auth/operator-login') {
+      try { op = this.jwt.verify(req.headers['x-operator-token']); }
+      catch { throw new UnauthorizedException({ message: 'Identifique o colaborador novamente.', errorSource: 'operator_token' }); }
+      if (op.context === 'waiter') {
         await this.validateWaiterSession(op, user.tenantId);
         if (!stationRouteAllowed('WAITER', req.method, path)) throw new ForbiddenException('Sessão de garçom não permite acesso ao caixa ou administração.');
       }

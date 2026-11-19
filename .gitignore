@@ -47,9 +47,12 @@ nfce-service/composer.lock
 *.p12
 *.pem
 certs/
+Certificadoa1/
 
-# Uploads de usuários (logos, etc) — gerados em runtime
+# Uploads e dados locais de clientes — gerados em runtime
 uploads/
+imagens-produtos-sos/
+scratch/
 
 # Dumps MySQL com dados sensíveis (tenants, clientes, vendas)
 # NOTA: mysql/products-seed.sql É permitido — só contém catálogo de produtos genérico

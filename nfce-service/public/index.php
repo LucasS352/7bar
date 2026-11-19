@@ -9,7 +9,6 @@ require __DIR__ . '/../vendor/autoload.php';
 
 $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
-$app->addErrorMiddleware(true, true, true);
 
 // ─── Helper: Resposta JSON ─────────────────────────────────────────────────────
 $jsonResponse = function (Response $res, array $data, int $status = 200): Response {
@@ -24,15 +23,30 @@ $app->add(function (Request $req, $handler) {
     return $handler->handle($req);
 });
 
+// ─── Middleware: Autenticação interna (X-Internal-Secret) ─────────────────────
+$app->add(function (Request $req, $handler) use ($jsonResponse, $app) {
+    if ($req->getUri()->getPath() !== '/status') {
+        $expectedSecret = getenv('NFCE_INTERNAL_SECRET') ?: '';
+        if ($expectedSecret !== '') {
+            $provided = $req->getHeaderLine('X-Internal-Secret');
+            if (!hash_equals($expectedSecret, $provided)) {
+                $res = $app->getResponseFactory()->createResponse();
+                return $jsonResponse($res, ['status' => 'erro', 'mensagem' => 'Acesso não autorizado.'], 401);
+            }
+        }
+    }
+    return $handler->handle($req);
+});
+
+$debug = getenv('APP_DEBUG') === 'true';
+$app->addErrorMiddleware($debug, true, true);
+
 // ─── GET /status — Health Check ───────────────────────────────────────────────
 $app->get('/status', function (Request $req, Response $res) use ($jsonResponse) {
     return $jsonResponse($res, [
-        'status'    => 'online',
-        'service'   => '7bar NFC-e PHP Service',
-        'version'   => '2.0.0',
-        'php'       => PHP_VERSION,
-        'endpoints' => ['/emitir', '/cancelar', '/consultar-status', '/distribuicao-dfe', '/download-xml', '/gerar-danfe'],
-        'time'      => date('c'),
+        'status'  => 'online',
+        'service' => '7bar-nfce',
+        'time'    => date('c'),
     ]);
 });
 

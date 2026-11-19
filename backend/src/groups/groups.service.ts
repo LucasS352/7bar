@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException, ServiceUnavailableException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ServiceUnavailableException, Logger, Optional } from '@nestjs/common';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
+import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { ProductsService } from '../products/products.service';
 import { randomUUID } from 'crypto';
 import { PrismaClient, Prisma } from '@prisma/client';
@@ -12,13 +13,37 @@ export class GroupsService {
   constructor(
     private heartPrisma: HeartPrismaService,
     private productsService: ProductsService,
+    @Optional() private readonly tenantManager?: TenantConnectionManager,
   ) {}
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  /** Creates a Prisma client connected to a specific tenant database */
+  /** Creates a Prisma client connected to a specific tenant database (test/fallback only) */
   private createTenantClient(databaseUrl: string) {
     return new PrismaClient({ datasources: { db: { url: databaseUrl } } });
+  }
+
+  private async acquireTenantClient(tenantId: string, databaseUrl: string): Promise<{ client: PrismaClient; managed: boolean }> {
+    if (this.tenantManager) {
+      return {
+        client: await this.tenantManager.getTenantClient(tenantId, databaseUrl),
+        managed: true,
+      };
+    }
+    return {
+      client: this.createTenantClient(databaseUrl),
+      managed: false,
+    };
+  }
+
+  private async releaseTenantClient(client: PrismaClient, managed: boolean) {
+    if (!managed) {
+      try {
+        await client.$disconnect?.();
+      } catch {
+        // Ignora erro de desconexão em cliente temporário
+      }
+    }
   }
 
   /** Fetches a group and validates it exists, includes members+tenant */
@@ -110,7 +135,7 @@ export class GroupsService {
     }
 
     for (const member of group.members) {
-      const client = this.createTenantClient(member.tenant.databaseUrl);
+      const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
       try {
         const [salesTodayAgg, salesPeriodAgg, salesPeriodCount, topProducts, dailySales, paymentsData, todayCount] = await Promise.all([
           client.sale.aggregate({
@@ -229,7 +254,7 @@ export class GroupsService {
           topProducts: [],
         });
       } finally {
-        await client.$disconnect();
+        await this.releaseTenantClient(client, managed);
       }
     }
 
@@ -290,7 +315,7 @@ export class GroupsService {
     const member = group.members.find((m) => m.tenantId === body.tenantId);
     if (!member) throw new NotFoundException('Tenant não faz parte deste grupo');
 
-    const client = this.createTenantClient(member.tenant.databaseUrl);
+    const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
     try {
       const newStock = await client.$transaction(async tx => {
         const changed = await tx.product.updateMany({ where: { id: body.productId, active: true, stock: { lte: 9999999.999 - body.quantity } }, data: { stock: { increment: body.quantity } } });
@@ -304,7 +329,7 @@ export class GroupsService {
       this.productsService.invalidateCache(body.tenantId);
       return { success: true, newStock };
     } finally {
-      await client.$disconnect();
+      await this.releaseTenantClient(client, managed);
     }
   }
 
@@ -321,8 +346,8 @@ export class GroupsService {
     const fromMember = group.members.find(m => m.tenantId === body.fromTenantId);
     const toMember = group.members.find(m => m.tenantId === body.toTenantId);
     if (!fromMember || !toMember) throw new BadRequestException('As duas lojas devem pertencer ao grupo');
-    const fromClient = this.createTenantClient(fromMember.tenant.databaseUrl);
-    const toClient = this.createTenantClient(toMember.tenant.databaseUrl);
+    const { client: fromClient, managed: fromManaged } = await this.acquireTenantClient(fromMember.tenantId, fromMember.tenant.databaseUrl);
+    const { client: toClient, managed: toManaged } = await this.acquireTenantClient(toMember.tenantId, toMember.tenant.databaseUrl);
     const transferId = randomUUID();
     const consumed: { id: string; quantity: number }[] = [];
     try {
@@ -389,7 +414,10 @@ export class GroupsService {
     } finally {
       this.productsService.invalidateCache(body.fromTenantId);
       this.productsService.invalidateCache(body.toTenantId);
-      await Promise.allSettled([fromClient.$disconnect(), toClient.$disconnect()]);
+      await Promise.allSettled([
+        this.releaseTenantClient(fromClient, fromManaged),
+        this.releaseTenantClient(toClient, toManaged),
+      ]);
     }
   }
 
@@ -398,24 +426,24 @@ export class GroupsService {
     const transfers: any[] = [];
     const unavailableTenants: string[] = [];
     for (const member of group.members) {
-      const client = this.createTenantClient(member.tenant.databaseUrl);
+      const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
       try {
         const logs = await client.inventoryLog.findMany({ where: { type: { in: ['transfer_out', 'transfer_cancelled'] }, origin: 'GROUP_TRANSFER' }, orderBy: { createdAt: 'desc' }, take: 5, include: { product: { select: { name: true, unit: true } } } });
         for (const log of logs) {
           const target = group.members.find(m => m.tenantId === log.referenceKey);
           let status = log.type === 'transfer_cancelled' ? 'cancelled' : 'pending';
           if (target && status === 'pending') {
-            const receiver = this.createTenantClient(target.tenant.databaseUrl);
+            const { client: receiver, managed: receiverManaged } = await this.acquireTenantClient(target.tenantId, target.tenant.databaseUrl);
             try { if (await receiver.inventoryLog.findFirst({ where: { id: log.id, type: 'transfer_in' } })) status = 'completed'; }
             catch { /* Sem confirmação, manter pendente visível ao gestor. */ }
-            finally { await receiver.$disconnect(); }
+            finally { await this.releaseTenantClient(receiver, receiverManaged); }
           }
           transfers.push({ id: log.id, productName: log.product.name, unit: log.product.unit, quantity: Math.abs(Number(log.quantity)), createdAt: log.createdAt, status,
             fromAlias: member.alias ?? member.tenant.nomeFantasia ?? member.tenant.name,
             toAlias: target ? target.alias ?? target.tenant.nomeFantasia ?? target.tenant.name : 'Loja removida do grupo' });
         }
       } catch { unavailableTenants.push(member.tenantId); }
-      finally { await client.$disconnect(); }
+      finally { await this.releaseTenantClient(client, managed); }
     }
     return { transfers: transfers.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 5), unavailableTenants };
   }
@@ -427,7 +455,7 @@ export class GroupsService {
     const allProducts: any[] = [];
 
     for (const member of group.members) {
-      const client = this.createTenantClient(member.tenant.databaseUrl);
+      const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
       try {
         const products = await client.product.findMany({
           where: { active: true },
@@ -446,7 +474,7 @@ export class GroupsService {
       } catch (err: any) {
         this.logger.warn(`Products erro tenant ${member.tenantId}: ${err.message}`);
       } finally {
-        await client.$disconnect();
+        await this.releaseTenantClient(client, managed);
       }
     }
 
@@ -461,7 +489,7 @@ export class GroupsService {
     const results: any[] = [];
 
     for (const member of group.members) {
-      const client = this.createTenantClient(member.tenant.databaseUrl);
+      const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
       try {
         // Find or create category
         let category = await client.category.findFirst({ where: { name: body.categoryName } });
@@ -483,12 +511,13 @@ export class GroupsService {
           },
         });
 
+        this.productsService.invalidateCache(member.tenantId);
         results.push({ tenantId: member.tenantId, success: true, productId: product.id });
       } catch (err: any) {
         this.logger.warn(`CreateProduct erro tenant ${member.tenantId}: ${err.message}`);
         results.push({ tenantId: member.tenantId, success: false, error: err.message });
       } finally {
-        await client.$disconnect();
+        await this.releaseTenantClient(client, managed);
       }
     }
 
@@ -503,18 +532,19 @@ export class GroupsService {
     const results: any[] = [];
 
     for (const member of group.members) {
-      const client = this.createTenantClient(member.tenant.databaseUrl);
+      const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
       try {
         const updated = await client.product.updateMany({
           where: { name: body.productName },
           data: { priceSell: body.priceSell },
         });
+        this.productsService.invalidateCache(member.tenantId);
         results.push({ tenantId: member.tenantId, success: true, updatedCount: updated.count });
       } catch (err: any) {
         this.logger.warn(`UpdatePrice erro tenant ${member.tenantId}: ${err.message}`);
         results.push({ tenantId: member.tenantId, success: false, error: err.message });
       } finally {
-        await client.$disconnect();
+        await this.releaseTenantClient(client, managed);
       }
     }
 
@@ -577,7 +607,7 @@ export class GroupsService {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     for (const member of group.members) {
-      const client = this.createTenantClient(member.tenant.databaseUrl);
+      const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
       try {
         const [products, sales30d] = await Promise.all([
           client.product.findMany({ select: { id: true, name: true, unit: true, stock: true, barcode: true }, where: { active: true } }),
@@ -609,7 +639,7 @@ export class GroupsService {
       } catch (err: any) {
         this.logger.warn(`Forecast erro tenant ${member.tenantId}: ${err.message}`);
       } finally {
-        await client.$disconnect();
+        await this.releaseTenantClient(client, managed);
       }
     }
 
@@ -642,7 +672,7 @@ export class GroupsService {
     const member = group.members.find((m) => m.tenantId === tenantId);
     if (!member) throw new NotFoundException('Tenant não faz parte deste grupo');
 
-    const client = this.createTenantClient(member.tenant.databaseUrl);
+    const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
     try {
       const [recentSales, criticalStock] = await Promise.all([
         client.sale.findMany({
@@ -685,7 +715,7 @@ export class GroupsService {
         })),
       };
     } finally {
-      await client.$disconnect();
+      await this.releaseTenantClient(client, managed);
     }
   }
 
@@ -701,7 +731,7 @@ export class GroupsService {
     const group = await this.getGroupWithMembers(groupId);
     const member = group.members.find(m => m.tenantId === body.tenantId);
     if (!member) throw new NotFoundException('Tenant não faz parte deste grupo');
-    const client = this.createTenantClient(member.tenant.databaseUrl);
+    const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
     try {
       await client.$transaction(async tx => {
         const product = await tx.product.findUnique({ where: { id: body.productId } });
@@ -726,7 +756,7 @@ export class GroupsService {
       });
       this.productsService.invalidateCache(body.tenantId);
       return { success: true, newStock: body.newStock };
-    } finally { await client.$disconnect(); }
+    } finally { await this.releaseTenantClient(client, managed); }
   }
 
   // ── Products Catalog (consolidated with prices per tenant) ────────────────
@@ -737,7 +767,7 @@ export class GroupsService {
     const tenantLabels: Record<string, string> = {};
     for (const member of group.members) {
       tenantLabels[member.tenantId] = member.alias;
-      const client = this.createTenantClient(member.tenant.databaseUrl);
+      const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
       try {
         const products = await client.product.findMany({ where: { active: true },
           select: { id: true, name: true, priceSell: true, priceCost: true, stock: true, unit: true, barcode: true, ncm: true, imageUrl: true } });
@@ -753,7 +783,7 @@ export class GroupsService {
       } catch (err: any) {
         this.logger.warn(`Catalog erro tenant ${member.tenantId}: ${err.message}`);
         throw new ServiceUnavailableException(`Não foi possível consultar a loja ${member.alias}. Atualize antes de alterar o catálogo.`);
-      } finally { await client.$disconnect(); }
+      } finally { await this.releaseTenantClient(client, managed); }
     }
     return { groupId, groupName: group.name, tenantLabels, rows: [...catalog.values()].sort((a, b) => a.name.localeCompare(b.name) || a.key.localeCompare(b.key)) };
   }
@@ -771,7 +801,7 @@ export class GroupsService {
       const member = group.members.find((m) => m.tenantId === update.tenantId);
       if (!member) { results.push({ tenantId: update.tenantId, success: false, error: 'Tenant não no grupo' }); continue; }
 
-      const client = this.createTenantClient(member.tenant.databaseUrl);
+      const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
       try {
         if (!Number.isFinite(update.priceSell) || update.priceSell < 0 || (update.priceCost !== undefined && (!Number.isFinite(update.priceCost) || update.priceCost < 0))) throw new BadRequestException('Preço inválido');
         const data: Prisma.ProductUpdateManyMutationInput = { priceSell: update.priceSell };
@@ -784,7 +814,7 @@ export class GroupsService {
       } catch (err: any) {
         results.push({ tenantId: update.tenantId, success: false, error: err.message });
       } finally {
-        await client.$disconnect();
+        await this.releaseTenantClient(client, managed);
       }
     }
     return { groupId, results };
@@ -814,7 +844,7 @@ export class GroupsService {
       const member = group.members.find((m) => m.tenantId === tp.tenantId);
       if (!member) { results.push({ tenantId: tp.tenantId, success: false, error: 'Tenant não no grupo' }); continue; }
 
-      const client = this.createTenantClient(member.tenant.databaseUrl);
+      const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
       try {
         let category = await client.category.findFirst({ where: { name: body.categoryName } });
         if (!category) category = await client.category.create({ data: { name: body.categoryName } });
@@ -840,7 +870,7 @@ export class GroupsService {
       } catch (err: any) {
         results.push({ tenantId: tp.tenantId, success: false, error: err.message });
       } finally {
-        await client.$disconnect();
+        await this.releaseTenantClient(client, managed);
       }
     }
     return { groupId, results };
@@ -876,7 +906,7 @@ export class GroupsService {
 
       for (const member of group.members) {
         if (item.targetTenantIds.includes(member.tenantId) || (item.sourceTenantId && item.sourceTenantId !== member.tenantId)) continue;
-        const client = this.createTenantClient(member.tenant.databaseUrl);
+        const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
         try {
           const candidates = await client.product.findMany({
             where: { ...(item.sourceProductId ? { id: item.sourceProductId } : { name: item.name }), active: true },
@@ -888,7 +918,7 @@ export class GroupsService {
             sourceCategoryName = (p as any).category?.name ?? 'Geral';
             break;
           }
-        } catch { } finally { await client.$disconnect(); }
+        } catch { } finally { await this.releaseTenantClient(client, managed); }
       }
 
       if (!sourceData) { results.push({ name: item.name, success: false, error: 'Produto ausente ou ambíguo na origem. Atualize a seleção.' }); continue; }
@@ -897,7 +927,7 @@ export class GroupsService {
       for (const targetTenantId of item.targetTenantIds) {
         const member = group.members.find((m) => m.tenantId === targetTenantId);
         if (!member) { results.push({ name: item.name, tenantId: targetTenantId, success: false, error: 'Loja não pertence ao grupo' }); continue; }
-        const client = this.createTenantClient(member.tenant.databaseUrl);
+        const { client, managed } = await this.acquireTenantClient(member.tenantId, member.tenant.databaseUrl);
         try {
           let category = await client.category.findFirst({ where: { name: sourceCategoryName } });
           if (!category) category = await client.category.create({ data: { name: sourceCategoryName } });
@@ -923,7 +953,7 @@ export class GroupsService {
         } catch (err: any) {
           results.push({ name: item.name, tenantId: targetTenantId, success: false, error: err.message });
         } finally {
-          await client.$disconnect();
+          await this.releaseTenantClient(client, managed);
         }
       }
     }

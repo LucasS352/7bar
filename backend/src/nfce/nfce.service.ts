@@ -32,7 +32,8 @@ export class NfceService {
     certSenha: string;
     ambiente: number;
   }): Promise<NfceResultado> {
-    const serviceUrl = process.env.NFCE_SERVICE_URL || 'http://nfce-service:8080';
+    const serviceUrl = process.env.NFCE_SERVICE_URL || 'http://nfce-service:80';
+    const internalSecret = process.env.NFCE_INTERNAL_SECRET;
 
     this.logger.log(`Enviando NFC-e ao microsserviço PHP (${payload.ambiente === 1 ? 'PRODUÇÃO' : 'HOMOLOGAÇÃO'}): ${serviceUrl}/emitir`);
 
@@ -40,6 +41,7 @@ export class NfceService {
       const { data } = await firstValueFrom(
         this.httpService.post<NfceResultado>(`${serviceUrl}/emitir`, payload, {
           timeout: 90_000, // SEFAZ pode demorar se houver retentativas
+          headers: internalSecret ? { 'X-Internal-Secret': internalSecret } : undefined,
         }),
       );
       this.logger.log(`NFC-e resultado: ${data.status} | chave: ${data.chave ?? 'N/A'}`);
@@ -56,7 +58,7 @@ export class NfceService {
 
   /** Health check do microsserviço PHP */
   async healthCheck(): Promise<boolean> {
-    const serviceUrl = process.env.NFCE_SERVICE_URL || 'http://nfce-service:8080';
+    const serviceUrl = process.env.NFCE_SERVICE_URL || 'http://nfce-service:80';
     try {
       await firstValueFrom(this.httpService.get(`${serviceUrl}/status`, { timeout: 5_000 }));
       return true;

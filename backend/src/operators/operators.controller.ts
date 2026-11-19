@@ -11,6 +11,9 @@ export class OperatorsController {
 
   @Post()
   create(@Request() req: any, @Body() body: { name: string; pin: string; isManager?: boolean; jobTitle?: string }) {
+    if (!['admin', 'superadmin', 'manager'].includes(req.user.role)) {
+      throw new ForbiddenException('Apenas administradores ou gerentes podem gerenciar colaboradores.');
+    }
     return this.operatorsService.create(req.user.tenantId, body);
   }
 
@@ -56,12 +59,18 @@ export class OperatorsController {
 
   @Patch(':id')
   update(@Request() req: any, @Param('id') id: string, @Body() body: { name?: string; pin?: string; active?: boolean; isManager?: boolean; jobTitle?: string }) {
+    if (!['admin', 'superadmin', 'manager'].includes(req.user.role)) {
+      throw new ForbiddenException('Apenas administradores ou gerentes podem gerenciar colaboradores.');
+    }
     if (body.pin && !['admin', 'superadmin'].includes(req.user.role)) throw new ForbiddenException('Apenas administradores podem trocar o PIN.');
     return this.operatorsService.update(req.user.tenantId, id, body);
   }
 
   @Delete(':id')
   remove(@Request() req: any, @Param('id') id: string) {
+    if (!['admin', 'superadmin', 'manager'].includes(req.user.role)) {
+      throw new ForbiddenException('Apenas administradores ou gerentes podem gerenciar colaboradores.');
+    }
     return this.operatorsService.remove(req.user.tenantId, id);
   }
 }

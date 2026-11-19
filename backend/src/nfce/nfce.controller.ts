@@ -11,6 +11,6 @@ export class NfceController {
   @Get('health')
   async health() {
     const ok = await this.nfceService.healthCheck();
-    return { online: ok, service: process.env.NFCE_SERVICE_URL || 'http://nfce-service:8080' };
+    return { online: ok, service: process.env.NFCE_SERVICE_URL || 'http://nfce-service:80' };
   }
 }
