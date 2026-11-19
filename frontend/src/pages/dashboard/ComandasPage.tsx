@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cart';
 import { syncLoadedComanda } from '@/lib/comanda-cart';
+import { escapeHtml } from '@/lib/escape-html';
 import { useAuthStore } from '@/store/auth';
 import { 
   User, Search, Plus, Trash2, CheckCircle2, AlertCircle, 
@@ -365,7 +366,7 @@ export function ComandasPage() {
     syncLoadedComanda({ ...comanda, items: comanda.items || [] });
 
     toast.info(`Itens da Comanda #${comanda.number} carregados no caixa!`, { duration: 3000 });
-    navigate('/dashboard');
+    navigate('/');
   };
 
   // Extrato de Impressão da Comanda
@@ -373,9 +374,11 @@ export function ComandasPage() {
     const win = window.open('', '_blank', 'width=400,height=600');
     if (!win) return;
 
-    const itemsHtml = (comanda.items || []).map(i => `
+    const itemsHtml = (comanda.items || [])
+      .filter(i => !i.status || i.status === 'active')
+      .map(i => `
       <tr>
-        <td style="padding: 4px 0;">${i.quantity}x ${i.product?.name || 'Item'}</td>
+        <td style="padding: 4px 0;">${i.quantity}x ${escapeHtml(i.product?.name || 'Item')}</td>
         <td style="text-align: right; padding: 4px 0;">R$ ${Number(i.totalPrice).toFixed(2)}</td>
       </tr>
     `).join('');
@@ -383,7 +386,7 @@ export function ComandasPage() {
     win.document.write(`
       <html>
         <head>
-          <title>Extrato Comanda #${comanda.number}</title>
+          <title>Extrato Comanda #${escapeHtml(comanda.number)}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             @page { size: 80mm auto; margin: 4mm 3mm; }
@@ -400,9 +403,9 @@ export function ComandasPage() {
         </head>
         <body>
           <h2>EXTRATO DE CONSUMO</h2>
-          <p style="text-align:center;">Comanda / Mesa: <strong>#${comanda.number}</strong></p>
-          ${comanda.customerName ? `<p style="text-align:center;">Cliente: <strong>${comanda.customerName}</strong></p>` : ''}
-          <p style="text-align:center;">Data: ${new Date(comanda.createdAt).toLocaleString('pt-BR')}</p>
+          <p style="text-align:center;">Comanda / Mesa: <strong>#${escapeHtml(comanda.number)}</strong></p>
+          ${comanda.customerName ? `<p style="text-align:center;">Cliente: <strong>${escapeHtml(comanda.customerName)}</strong></p>` : ''}
+          <p style="text-align:center;">Data: ${escapeHtml(new Date(comanda.createdAt).toLocaleString('pt-BR'))}</p>
           <hr />
           <table>
             <tbody>${itemsHtml}</tbody>

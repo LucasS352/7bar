@@ -38,6 +38,9 @@ export function CameraBarcodeScannerModal({ isOpen, onClose, onScan }: CameraBar
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.12);
+      setTimeout(() => {
+        void ctx.close().catch(() => {});
+      }, 250);
     } catch {
       // Ignora erro de áudio se bloqueado pelo navegador
     }

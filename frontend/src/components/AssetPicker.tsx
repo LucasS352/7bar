@@ -14,7 +14,7 @@ export function AssetPicker({ productId, value, onChange, revision = 0 }: {
       if (loading) return;
       loading = true;
       try {
-        const res = await api.get(`/v1/comandas/assets/${productId}`, { timeout: 10000 });
+        const res = await api.get(`/v1/comandas/assets/${productId}`, { timeout: 10000, headers: { 'X-Silent-Poll': 'true' } });
         if (active) { setData(res.data); setError(''); }
       } catch { if (active) setError('Não foi possível atualizar os equipamentos. Aguarde ou reabra o produto.'); }
       finally { loading = false; }

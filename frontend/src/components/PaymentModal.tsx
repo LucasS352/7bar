@@ -13,6 +13,7 @@ import type { OfflineSale, OfflineSalePayment } from '@/lib/db';
 import { submitDurableCheckout } from '@/lib/durable-checkout';
 import { withSaleOperationLock } from '@/lib/sale-operation-lock';
 import { sendCheckout } from '@/lib/checkout-api';
+import { escapeHtml } from '@/lib/escape-html';
 import {
   CreditCard, Banknote, QrCode, X, Loader2, Plus, Trash2, Delete,
   ShoppingBag, Receipt, CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, User, WifiOff, Tag, Lock, Printer, Settings2, UtensilsCrossed, Search
@@ -99,13 +100,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   const [savedOffline, setSavedOffline] = useState(false);
   const [savedOfflineTotal, setSavedOfflineTotal] = useState(0);
 
-  useEffect(() => {
-    const mql = window.matchMedia('(max-width: 767px)');
-    setIsMobile(mql.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mql.addEventListener('change', handler);
-    return () => mql.removeEventListener('change', handler);
-  }, []);
+  // --- Estado mobile detectado pelo useEffect abaixo ---
 
   // ── Mutex anti-duplicação (useRef é síncrono — imune a race condition de state) ──
   const isSubmittingRef = useRef(false);
@@ -239,9 +234,9 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   };
 
   const totalPaid = payments.reduce((acc, p) => acc + p.value, 0);
-  const effectiveTotal = Math.max(0, total - discountValue);
+  const effectiveTotal = Math.max(0, Math.round((total - discountValue) * 100) / 100);
   const remaining = Math.max(0, Math.round((effectiveTotal - totalPaid) * 100) / 100);
-  const change = payments.filter(p => p.method === 'dinheiro').reduce((acc, p) => acc + (p.given - p.value), 0);
+  const change = Math.max(0, Math.round(payments.filter(p => p.method === 'dinheiro').reduce((acc, p) => acc + (p.given - p.value), 0) * 100) / 100);
 
   // Determina dinamicamente se a venda atual exige emissão de NFC-e conforme a Regra de Prevalência Fiscal
   const willEmitNfce = useMemo(() => {
@@ -271,7 +266,11 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   });
 
   // ── Impressão de cupom 80mm ────────────────────────────────────────────
-  const printReceipt = (saleData: Record<string, unknown>) => {
+  const printReceipt = (
+    saleData: Record<string, unknown>,
+    submittedPayments?: Array<{ method: string; label?: string; value: number; given: number }>,
+    useVariablePricing = false,
+  ) => {
     const now = new Date();
     const dateStr = now.toLocaleDateString('pt-BR');
     const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -282,29 +281,41 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     const phone       = tenantConfig?.phone  || tenantConfig?.telefone  || '';
     const footerMsg   = tenantConfig?.receiptFooter || 'Obrigado pela preferência! Volte sempre!';
 
-    const itemsHtml = items.map((item, idx) => `
+    const itemsHtml = items.map((item, idx) => {
+      const unitPrice = useVariablePricing
+        ? (variablePrices[item.cartKey] ?? variablePrices[item.id] ?? item.effectivePriceSell ?? Number(item.priceSell))
+        : (item.effectivePriceSell ?? Number(item.priceSell));
+      const lineSub = Math.round(unitPrice * item.quantity * 100) / 100;
+      return `
       <div class="item">
         <div class="item-header">
           <span class="item-num">${String(idx + 1).padStart(2, '0')}</span>
-          <span class="item-name">${item.name}</span>
-          <span class="item-total">R$ ${item.subtotal.toFixed(2)}</span>
+          <span class="item-name">${escapeHtml(item.name)}</span>
+          <span class="item-total">R$ ${lineSub.toFixed(2)}</span>
         </div>
         <div class="item-detail">
-          ${item.quantity} UN x R$ ${Number(item.priceSell).toFixed(2)}
+          ${item.quantity} UN x R$ ${Number(unitPrice).toFixed(2)}
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
-    const paymentsHtml = payments.map(p => `
+    const receiptPayments = submittedPayments || payments;
+    const paymentsHtml = receiptPayments.map(p => {
+      const displayLabel = p.label || METHOD_NAMES[p.method] || p.method;
+      return `
       <div class="payment-row">
-        <span>${{ dinheiro: 'DINHEIRO', pix: 'PIX', credito: 'CRÉDITO', debito: 'DÉBITO' }[p.method] || p.method}</span>
+        <span>${escapeHtml(displayLabel)}</span>
         <span>R$ ${p.value.toFixed(2)}</span>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
-    const changeVal = payments
+    const changeVal = receiptPayments
       .filter(p => p.method === 'dinheiro')
-      .reduce((acc, p) => acc + (p.given - p.value), 0);
+      .reduce((acc, p) => acc + Math.max(0, p.given - p.value), 0);
+
+    const printedTotal = Number(saleData.total ?? effectiveTotal);
 
     const receiptHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -350,28 +361,28 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 </head>
 <body>
   <div class="header">
-    <div class="company">${companyName}</div>
-    ${cnpj    ? `<div class="subtitle">CNPJ: ${cnpj}</div>` : ''}
-    ${address ? `<div class="subtitle">${address}</div>`  : ''}
-    ${phone   ? `<div class="subtitle">Tel: ${phone}</div>` : ''}
+    <div class="company">${escapeHtml(companyName)}</div>
+    ${cnpj    ? `<div class="subtitle">CNPJ: ${escapeHtml(cnpj)}</div>` : ''}
+    ${address ? `<div class="subtitle">${escapeHtml(address)}</div>`  : ''}
+    ${phone   ? `<div class="subtitle">Tel: ${escapeHtml(phone)}</div>` : ''}
   </div>
   <div class="divider"></div>
   <div class="label-row">CUPOM NÃO FISCAL</div>
-  <div class="meta"><span>${dateStr} ${timeStr}</span><span>Venda #${String(saleData.id || '—').slice(0, 8)}</span></div>
-  <div class="meta"><span>Operador: ${ (operator?.name || user?.name || 'Operador') }</span></div>
+  <div class="meta"><span>${escapeHtml(dateStr)} ${escapeHtml(timeStr)}</span><span>Venda #${escapeHtml(String(saleData.id || '—').slice(0, 8))}</span></div>
+  <div class="meta"><span>Operador: ${escapeHtml(operator?.name || user?.name || 'Operador')}</span></div>
   <div class="divider"></div>
   ${itemsHtml}
   <div class="divider"></div>
   <div class="totals">
     <div class="totals-row"><span>SUBTOTAL:</span><span>R$ ${total.toFixed(2)}</span></div>
     ${ effectiveTotal < total ? `<div class="totals-row"><span>DESCONTO:</span><span>-R$ ${discountValue.toFixed(2)}</span></div>` : '' }
-    <div class="totals-row grand"><span>TOTAL:</span><span>R$ ${effectiveTotal.toFixed(2)}</span></div>
+    <div class="totals-row grand"><span>TOTAL:</span><span>R$ ${printedTotal.toFixed(2)}</span></div>
   </div>
   <div class="divider"></div>
   ${paymentsHtml}
   ${ changeVal > 0 ? `<div class="change-row"><span>TROCO:</span><span>R$ ${changeVal.toFixed(2)}</span></div>` : '' }
   <div class="divider"></div>
-  <div class="footer">${footerMsg}</div>
+  <div class="footer">${escapeHtml(footerMsg)}</div>
   <br/><br/>
 </body>
 </html>`;
@@ -392,13 +403,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
 
   // ── Detecta viewport mobile via matchMedia ──────────────────────────────
-  useEffect(() => {
-    const mql = window.matchMedia('(max-width: 767px)');
-    setIsMobile(mql.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mql.addEventListener('change', handler);
-    return () => mql.removeEventListener('change', handler);
-  }, []);
+  // --- Estado mobile detectado pelo useEffect abaixo ---
 
   useEffect(() => {
     if (isOpen) {
@@ -641,16 +646,17 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   };
 
   const handleApplyDiscount = () => {
-    const val = parseFloat(pendingDiscountStr);
+    const val = parseFloat(pendingDiscountStr.replace(',', '.'));
     if (isNaN(val) || val < 0) { toast.error('Valor inválido.'); return; }
     if (val >= total) { toast.error('Desconto não pode ser igual ou maior que o total.'); return; }
-    setDiscountValue(val);
+    const rounded = Math.round(val * 100) / 100;
+    setDiscountValue(rounded);
     setPayments([]);
-    setInputValue((total - val).toFixed(2));
+    setInputValue(Math.max(0, total - rounded).toFixed(2));
     setDiscountModalOpen(false);
     setPinVerified(false);
     setPendingDiscountStr('');
-    toast.success(`Desconto de R$ ${val.toFixed(2)} aplicado!`);
+    toast.success(`Desconto de R$ ${rounded.toFixed(2)} aplicado!`);
   };
 
   const handleConfirm = async (mode: PayMode, offlineOnly = false) => {
@@ -676,7 +682,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     
     let finalPayments = [...payments];
     if (isVariablePricingActive) {
-      const val = items.reduce((acc, item) => acc + (variablePrices[item.id] || Number(item.priceSell)) * item.quantity, 0);
+      const val = Math.round(items.reduce((acc, item) => acc + (variablePrices[item.cartKey] ?? variablePrices[item.id] ?? Number(item.effectivePriceSell ?? item.priceSell)) * item.quantity, 0) * 100) / 100;
       finalPayments = [{
         id: 'var_price_payment',
         method: method,
@@ -716,7 +722,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
           // Quando há preço variável (ex: iFood), usa o preço da plataforma configurado;
           // caso contrário, usa o preço efetivo/normal do produto.
           priceUnit: isVariablePricingActive
-            ? (variablePrices[i.id] ?? Number(i.priceSell))
+            ? (variablePrices[i.cartKey] ?? variablePrices[i.id] ?? Number(i.effectivePriceSell ?? i.priceSell))
             : (i.effectivePriceSell ?? i.priceSell),
           modifiers: i.modifiers ? i.modifiers.map(m => ({
             optionId: m.optionId,
@@ -742,7 +748,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
               productId: i.id,
               quantity: i.quantity,
               priceUnit: isVariablePricingActive
-                ? (variablePrices[i.id] ?? Number(i.priceSell))
+                ? (variablePrices[i.cartKey] ?? variablePrices[i.id] ?? Number(i.effectivePriceSell ?? i.priceSell))
                 : (i.effectivePriceSell ?? i.priceSell),
               modifiers: i.modifiers && i.modifiers.length > 0
                 ? i.modifiers.map(m => ({
@@ -766,15 +772,15 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         cashRegisterId: cashRegister?.id,
         comandaId:      activeComandaId || undefined,
         consumedByOperatorId: isConsumo ? selectedOperatorId : undefined,
-        subtotal:       items.reduce((acc, i) => acc + i.subtotal, 0),
+        subtotal:       Math.round(items.reduce((acc, i) => acc + i.subtotal, 0) * 100) / 100,
         discount:       discountValue,
-        total,
+        total:          effectiveTotal,
         items:          items.map(item => ({
           productId:   item.id,
           productName: item.name,
           unit:        'UN',
           quantity:    item.quantity,
-          priceUnit:   Number(item.priceSell),
+          priceUnit:   Number(item.effectivePriceSell ?? item.priceSell),
           discount:    0,
           subtotal:    item.subtotal,
           ncm: null, cest: null, cfop: '5102', origem: 0,
@@ -848,7 +854,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
       else toast.success('Venda finalizada!', { duration: 1500 });
       // Impressão automática do cupom
       if (autoPrint) {
-        setTimeout(() => printReceipt(res.data), 300);
+        setTimeout(() => printReceipt(res.data, finalPayments, Boolean(isVariablePricingActive)), 300);
       }
     } catch (err: unknown) {
       // Storage/lock/local failures are NOT successful contingency.
@@ -1184,17 +1190,30 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                 <label className="text-amber-400 text-sm font-bold flex items-center gap-2 mb-3"><Tag size={16}/> Preços na Plataforma</label>
                 <div className="space-y-2 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-4">
                   {items.map(item => (
-                    <div key={item.id} className="flex flex-col gap-2 bg-zinc-900 p-3 rounded-xl border border-zinc-800">
+                    <div key={item.cartKey} className="flex flex-col gap-2 bg-zinc-900 p-3 rounded-xl border border-zinc-800">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-zinc-300 font-medium truncate">{item.name}</p>
-                        <p className="text-xs text-zinc-500">{item.quantity} UN <span className="mx-1">•</span> Padrão: R$ {Number(item.priceSell).toFixed(2)}</p>
+                        <p className="text-xs text-zinc-500">{item.quantity} UN <span className="mx-1">•</span> Padrão: R$ {Number(item.effectivePriceSell ?? item.priceSell).toFixed(2)}</p>
                       </div>
                       <div className="relative w-full shrink-0">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">R$</span>
                         <input type="number"
+                          step="0.01"
+                          min="0"
                           className="w-full bg-zinc-950 border border-zinc-700 rounded-lg py-2 pl-9 pr-3 text-sm font-bold text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                          value={variablePrices[item.id] ?? ''}
-                          onChange={e => setVariablePrices({...variablePrices, [item.id]: parseFloat(e.target.value) || 0})}
+                          value={variablePrices[item.cartKey] ?? variablePrices[item.id] ?? ''}
+                          onChange={e => {
+                            const raw = e.target.value;
+                            if (raw === '') {
+                              const next = { ...variablePrices };
+                              delete next[item.cartKey];
+                              delete next[item.id];
+                              setVariablePrices(next);
+                            } else {
+                              const val = parseFloat(raw);
+                              if (!isNaN(val)) setVariablePrices({ ...variablePrices, [item.cartKey]: val, [item.id]: val });
+                            }
+                          }}
                         />
                       </div>
                     </div>
@@ -1203,7 +1222,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
                 <div className="flex justify-between items-center bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 mt-auto">
                   <span className="text-amber-400 font-bold text-sm">Novo Total:</span>
                   <span className="text-2xl font-black text-amber-400">
-                    R$ {items.reduce((acc, item) => acc + (variablePrices[item.id] || Number(item.priceSell)) * item.quantity, 0).toFixed(2)}
+                    R$ {(Math.round(items.reduce((acc, item) => acc + (variablePrices[item.cartKey] ?? variablePrices[item.id] ?? Number(item.effectivePriceSell ?? item.priceSell)) * item.quantity, 0) * 100) / 100).toFixed(2)}
                   </span>
                 </div>
               </div>

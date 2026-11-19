@@ -13,7 +13,7 @@ export function KdsReadyOrders({ onDelivered }: { onDelivered: () => void }) {
   const load = useCallback(async () => {
     const request = ++version.current;
     try {
-      const res = await api.get('/v1/kds/tickets', { timeout: 10000 });
+      const res = await api.get('/v1/kds/tickets', { timeout: 10000, headers: { 'X-Silent-Poll': 'true' } });
       if (request === version.current) {
         setItems(res.data);
         setError(false);

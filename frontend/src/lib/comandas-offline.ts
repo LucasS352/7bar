@@ -9,19 +9,23 @@ function assertScope(tenantId: string) {
     throw new Error('A loja mudou. Reabra as comandas.');
 }
 
-/** Retorna true se o erro é de rede/timeout/cancelamento (sem resposta do servidor). */
+/** Retorna true se o erro é de rede/timeout/cancelamento ou 5xx do servidor. */
 function isNetworkError(err: any): boolean {
   if (!err.response) return true; // sem resposta = falha de rede, timeout ou cancelamento
-  return false;
+  return err.response.status >= 500;
 }
 
 async function excludeCharged(tenantId: string, items: any[]) {
-  const sales = await db.offline_sales.where('tenantId').equals(tenantId).toArray();
+  const sales = await db.offline_sales
+    .where('tenantId')
+    .equals(tenantId)
+    .filter(s => s.syncStatus !== 'REVIEW')
+    .toArray();
   const charged = new Set(sales.map(s => s.comandaId).filter(Boolean));
   return items.filter(item => !charged.has(item.id));
 }
 
-export async function readComandas(tenantId: string): Promise<{ items: any[]; savedAt: number; offline: boolean }> {
+export async function readComandas(tenantId: string, options?: { silent?: boolean }): Promise<{ items: any[]; savedAt: number; offline: boolean }> {
   assertScope(tenantId);
   if (flights.has(tenantId)) return flights.get(tenantId)!;
   const request = (async () => {
@@ -32,7 +36,11 @@ export async function readComandas(tenantId: string): Promise<{ items: any[]; sa
       return { items: await excludeCharged(tenantId, cached.items), savedAt: cached.savedAt, offline: true };
     }
     try {
-      const res = await api.get('/v1/comandas?status=open', { timeout: 6000, expectedTenantId: tenantId } as any);
+      const res = await api.get('/v1/comandas?status=open', {
+        timeout: 6000,
+        expectedTenantId: tenantId,
+        ...(options?.silent ? { headers: { 'X-Silent-Poll': 'true' } } : {}),
+      } as any);
       assertScope(tenantId);
       const savedAt = Date.now();
       await db.comandas_cache.put({ tenantId, savedAt, items: res.data });
@@ -53,7 +61,11 @@ export async function readComandas(tenantId: string): Promise<{ items: any[]; sa
 
 export async function readComanda(tenantId: string, id: string) {
   assertScope(tenantId);
-  const charged = await db.offline_sales.where('tenantId').equals(tenantId).filter(s => s.comandaId === id).first();
+  const charged = await db.offline_sales
+    .where('tenantId')
+    .equals(tenantId)
+    .filter(s => s.comandaId === id && s.syncStatus !== 'REVIEW')
+    .first();
   if (charged) throw new Error('Comanda já possui cobrança neste aparelho. Confira as pendências.');
   // Offline detectado imediatamente — vai direto ao cache sem esperar timeout
   if (!navigator.onLine) {

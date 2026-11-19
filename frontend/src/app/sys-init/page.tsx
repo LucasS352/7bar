@@ -1,7 +1,12 @@
 "use client";
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react";
-import { api } from "@/lib/api";
+import axios from "axios";
 import { getFullUrl } from "@/lib/getFullUrl";
+
+// Cliente HTTP próprio do Sys-Init: isolado do interceptor de sessão de loja (/login)
+const api = axios.create({ baseURL: '/api' });
+const quoteIdent = (name: string) => `\`${String(name).replace(/`/g, '``')}\``;
+const escapeSqlLiteral = (value: string) => String(value).replace(/\\/g, '\\\\').replace(/'/g, "''");
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -247,6 +252,16 @@ export default function SysInitPage() {
   const [integrationCreds, setIntegrationCreds] = useState<{clientId: string, clientSecret: string, merchantId: string, allowedCategories?: string[], priceMarkup?: number, syncStock?: boolean}>({ clientId: '', clientSecret: '', merchantId: '', allowedCategories: [], priceMarkup: 0, syncStock: false });
   const [tenantCategories, setTenantCategories] = useState<any[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!logoFile) {
+      setLogoPreviewUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(logoFile);
+    setLogoPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [logoFile]);
   const [modulos, setModulos] = useState<any>({});
   const [editLoading, setEditLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
@@ -345,8 +360,10 @@ export default function SysInitPage() {
       const pin = pinDigits.join('');
       const res = await api.get('/groups/setup/list', { headers: { 'x-setup-pin': pin } });
       setGroups(res.data);
+      return res.data;
     } catch (err) {
       toast.error('Erro ao carregar grupos.');
+      return null;
     } finally {
       setLoadingGroups(false);
     }
@@ -370,7 +387,7 @@ export default function SysInitPage() {
     try {
       const savedPin = sessionStorage.getItem('7bar_sysinit_pin');
       if (savedPin && step === 'pin') {
-        api.post('/tenants/setup/validate-pin', { pin: savedPin })
+        api.post('/tenants/setup/validate-pin', { pin: savedPin }, { timeout: 10_000 })
           .then(() => {
             const next = Array(PIN_LENGTH).fill("");
             savedPin.split("").forEach((c, i) => { if (i < PIN_LENGTH) next[i] = c; });
@@ -429,8 +446,8 @@ export default function SysInitPage() {
       toast.success('Membro adicionado com sucesso!');
       setNewMemberTenantId("");
       setNewMemberAlias("");
-      loadGroups();
-      const updatedGroup = groups.find(g => g.id === selectedGroup.id);
+      const updatedGroups = await loadGroups();
+      const updatedGroup = (updatedGroups || []).find((g: any) => g.id === selectedGroup.id);
       if (updatedGroup) setSelectedGroup(updatedGroup);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Erro ao adicionar membro.');
@@ -494,7 +511,7 @@ export default function SysInitPage() {
     if (pin.length < 4) { setpinError("Digite o PIN completo."); triggerShake(); return; }
     setPinLoading(true); setpinError("");
     try {
-      await api.post("/tenants/setup/validate-pin", { pin });
+      await api.post("/tenants/setup/validate-pin", { pin }, { timeout: 10_000 });
       try { sessionStorage.setItem('7bar_sysinit_pin', pin); } catch {}
       setTimeout(() => setStep("list"), 300);
     } catch {
@@ -665,14 +682,32 @@ export default function SysInitPage() {
   };
 
   // ── SQL EDITOR HANDLER ────────────────────────────────────────────────
-  const handleSqlUnlock = () => {
-    if (sqlPinInput === '43619835') {
+  const handleSqlUnlock = async () => {
+    if (!sqlPinInput.trim()) {
+      setSqlPinError('Digite o PIN do console SQL.');
+      return;
+    }
+    setSqlLoadingTables(true);
+    setSqlPinError('');
+    try {
+      const pin = pinDigits.join('');
+      const res = await api.post(
+        '/tenants/setup/sql',
+        { sql: 'SHOW TABLES', tenantId: sqlSelectedDb.tenantId, useHeart: sqlSelectedDb.useHeart },
+        { headers: { 'x-setup-pin': pin, 'x-sql-pin': sqlPinInput } }
+      );
       setSqlPinUnlocked(true);
-      setSqlPinError('');
-      loadTablesForDb(sqlSelectedDb);
-    } else {
-      setSqlPinError('PIN incorreto.');
+      if (res.data?.type === 'query' && Array.isArray(res.data?.rows)) {
+        const tableList = res.data.rows.map((row: any[]) => String(row[0])).filter(Boolean);
+        setSqlTables(tableList);
+      } else {
+        setSqlTables([]);
+      }
+    } catch (err: any) {
+      setSqlPinError(err?.response?.data?.message || 'PIN incorreto.');
       setSqlPinInput('');
+    } finally {
+      setSqlLoadingTables(false);
     }
   };
 
@@ -684,7 +719,7 @@ export default function SysInitPage() {
       const res = await api.post(
         '/tenants/setup/sql',
         { sql: 'SHOW TABLES', tenantId: db.tenantId, useHeart: db.useHeart },
-        { headers: { 'x-setup-pin': pin, 'x-sql-pin': '43619835' } }
+        { headers: { 'x-setup-pin': pin, 'x-sql-pin': sqlPinInput } }
       );
       if (res.data?.type === 'query' && Array.isArray(res.data?.rows)) {
         const tableList = res.data.rows.map((row: any[]) => String(row[0])).filter(Boolean);
@@ -712,7 +747,7 @@ export default function SysInitPage() {
       const res = await api.post(
         '/tenants/setup/sql',
         { sql: queryToRun, tenantId: db.tenantId, useHeart: db.useHeart },
-        { headers: { 'x-setup-pin': pin, 'x-sql-pin': '43619835' } }
+        { headers: { 'x-setup-pin': pin, 'x-sql-pin': sqlPinInput } }
       );
       setSqlResult(res.data);
       // salvar no histórico
@@ -732,12 +767,12 @@ export default function SysInitPage() {
     if (!confirm(`Deseja realmente FECHAR o caixa ${cashRegisterId.slice(0, 8)}...?`)) return;
     setUpdatingRowId(cashRegisterId);
     try {
-      const q = `UPDATE cash_registers SET status = 'closed', closingTime = NOW(), closingValue = COALESCE(closingValue, openingValue, 0) WHERE id = '${cashRegisterId}'`;
+      const q = `UPDATE cash_registers SET status = 'closed', closingTime = NOW(), closingValue = COALESCE(closingValue, openingValue, 0) WHERE id = '${escapeSqlLiteral(cashRegisterId)}'`;
       const pin = pinDigits.join('');
       await api.post(
         '/tenants/setup/sql',
         { sql: q, tenantId: sqlSelectedDb.tenantId, useHeart: sqlSelectedDb.useHeart },
-        { headers: { 'x-setup-pin': pin, 'x-sql-pin': '43619835' } }
+        { headers: { 'x-setup-pin': pin, 'x-sql-pin': sqlPinInput } }
       );
       toast.success(`Caixa ${cashRegisterId.slice(0, 8)} fechado com sucesso!`);
       await handleExecuteSql(sqlQuery);
@@ -752,12 +787,12 @@ export default function SysInitPage() {
     if (!confirm(`Deseja realmente CANCELAR a venda ${saleId.slice(0, 8)}...?`)) return;
     setUpdatingRowId(saleId);
     try {
-      const q = `UPDATE sales SET status = 'cancelled', cancelledAt = NOW(), cancelReason = 'Cancelamento administrativo' WHERE id = '${saleId}'`;
+      const q = `UPDATE sales SET status = 'cancelled', cancelledAt = NOW(), cancelReason = 'Cancelamento administrativo' WHERE id = '${escapeSqlLiteral(saleId)}'`;
       const pin = pinDigits.join('');
       await api.post(
         '/tenants/setup/sql',
         { sql: q, tenantId: sqlSelectedDb.tenantId, useHeart: sqlSelectedDb.useHeart },
-        { headers: { 'x-setup-pin': pin, 'x-sql-pin': '43619835' } }
+        { headers: { 'x-setup-pin': pin, 'x-sql-pin': sqlPinInput } }
       );
       toast.success(`Venda ${saleId.slice(0, 8)} cancelada com sucesso!`);
       await handleExecuteSql(sqlQuery);
@@ -772,12 +807,12 @@ export default function SysInitPage() {
     if (!confirm(`ATENÇÃO: Deseja realmente EXCLUIR o registro "${rowId}" da tabela "${tableName}"?`)) return;
     setUpdatingRowId(rowId);
     try {
-      const q = `DELETE FROM ${tableName} WHERE id = '${rowId}'`;
+      const q = `DELETE FROM ${quoteIdent(tableName)} WHERE id = '${escapeSqlLiteral(rowId)}'`;
       const pin = pinDigits.join('');
       await api.post(
         '/tenants/setup/sql',
         { sql: q, tenantId: sqlSelectedDb.tenantId, useHeart: sqlSelectedDb.useHeart },
-        { headers: { 'x-setup-pin': pin, 'x-sql-pin': '43619835' } }
+        { headers: { 'x-setup-pin': pin, 'x-sql-pin': sqlPinInput } }
       );
       toast.success(`Registro excluído com sucesso!`);
       await handleExecuteSql(sqlQuery);
@@ -792,13 +827,13 @@ export default function SysInitPage() {
     if (!editingCell) return;
     try {
       const val = editingCell.value;
-      const sqlVal = val === '' || val.toUpperCase() === 'NULL' ? 'NULL' : `'${val.replace(/'/g, "''")}'`;
-      const q = `UPDATE ${tableName} SET ${editingCell.column} = ${sqlVal} WHERE id = '${editingCell.id}'`;
+      const sqlVal = val === '' || val.toUpperCase() === 'NULL' ? 'NULL' : `'${escapeSqlLiteral(val)}'`;
+      const q = `UPDATE ${quoteIdent(tableName)} SET ${quoteIdent(editingCell.column)} = ${sqlVal} WHERE id = '${escapeSqlLiteral(editingCell.id)}'`;
       const pin = pinDigits.join('');
       await api.post(
         '/tenants/setup/sql',
         { sql: q, tenantId: sqlSelectedDb.tenantId, useHeart: sqlSelectedDb.useHeart },
-        { headers: { 'x-setup-pin': pin, 'x-sql-pin': '43619835' } }
+        { headers: { 'x-setup-pin': pin, 'x-sql-pin': sqlPinInput } }
       );
       toast.success(`Campo "${editingCell.column}" atualizado com sucesso!`);
       setEditingCell(null);
@@ -1144,15 +1179,15 @@ export default function SysInitPage() {
                         placeholder="••••••••"
                         className="w-full p-4 bg-zinc-950 border border-zinc-700 rounded-2xl text-white text-center font-mono text-2xl tracking-[0.5em] focus:border-emerald-500 outline-none mb-3 placeholder:tracking-normal placeholder:text-2xl"
                         autoFocus
-                        maxLength={12}
+                        maxLength={64}
                       />
                       {sqlPinError && (
                         <div className="flex items-center gap-2 justify-center text-red-400 text-sm mb-3">
                           <AlertCircle size={14} /> {sqlPinError}
                         </div>
                       )}
-                      <button onClick={handleSqlUnlock} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-2xl transition flex items-center justify-center gap-2">
-                        <Terminal size={18} /> Acessar SQL Editor
+                      <button onClick={handleSqlUnlock} disabled={sqlLoadingTables} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl transition flex items-center justify-center gap-2">
+                        {sqlLoadingTables ? <Loader2 className="animate-spin" size={18} /> : <Terminal size={18} />} Acessar SQL Editor
                       </button>
                     </div>
                   </div>
@@ -1220,7 +1255,7 @@ export default function SysInitPage() {
                               <button
                                 key={tableName}
                                 onClick={() => {
-                                  const q = `SELECT * FROM ${tableName} LIMIT 50`;
+                                  const q = `SELECT * FROM ${quoteIdent(tableName)} LIMIT 50`;
                                   setSqlQuery(q);
                                   handleExecuteSql(q);
                                 }}
@@ -1729,11 +1764,15 @@ export default function SysInitPage() {
                     setDownloadingAll(true);
                     try {
                       const pin = pinDigits.join('');
-                      const response = await api.get(`/sys-init/backups/download-all?pin=${pin}`, { responseType: 'blob' });
+                      const response = await api.get('/sys-init/backups/download-all', {
+                        headers: { 'x-setup-pin': pin },
+                        responseType: 'blob',
+                      });
                       const url = window.URL.createObjectURL(new Blob([response.data]));
                       const link = document.createElement('a'); link.href = url;
                       link.setAttribute('download', `Backups_7bar_${new Date().getTime()}.zip`);
                       document.body.appendChild(link); link.click(); link.parentNode?.removeChild(link);
+                      window.URL.revokeObjectURL(url);
                     } catch (e) { toast.error("Erro ao baixar ZIP"); } finally { setDownloadingAll(false); }
                   }} className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition border border-zinc-700">
                     {downloadingAll ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} className="rotate-180" />}
@@ -1817,9 +1856,10 @@ export default function SysInitPage() {
                                   <td className="px-6 py-3 text-right">
                                     <div className="flex justify-end gap-1">
                                       <button onClick={async () => {
-                                        try { const pin = pinDigits.join(''); const response = await api.get(`/sys-init/backups/download/${file.path}?pin=${pin}`, { responseType: 'blob' });
+                                        try { const pin = pinDigits.join(''); const response = await api.get(`/sys-init/backups/download/${file.path}`, { headers: { 'x-setup-pin': pin }, responseType: 'blob' });
                                           const url = window.URL.createObjectURL(new Blob([response.data])); const link = document.createElement('a'); link.href = url;
                                           link.setAttribute('download', file.filename); document.body.appendChild(link); link.click(); link.parentNode?.removeChild(link);
+                                          window.URL.revokeObjectURL(url);
                                         } catch (e) { toast.error("Erro ao fazer download"); }
                                       }} className="p-1.5 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition" title="Download"><Upload size={16} className="rotate-180" /></button>
                                       <button onClick={async () => {
@@ -1955,8 +1995,8 @@ export default function SysInitPage() {
                       <label className="text-xs text-zinc-400 uppercase tracking-wider mb-2 block">Logotipo (White Label)</label>
                       <div className="flex items-center gap-4">
                         <div className="w-20 h-20 bg-zinc-950 border border-zinc-800 rounded-2xl flex items-center justify-center overflow-hidden">
-                          {logoFile ? (
-                            <img src={URL.createObjectURL(logoFile)} alt="Preview" className="w-full h-full object-cover" />
+                          {logoPreviewUrl ? (
+                            <img src={logoPreviewUrl} alt="Preview" className="w-full h-full object-cover" />
                           ) : editingTenant.logoUrl ? (
                             <img src={getFullUrl(editingTenant.logoUrl)} alt="Logo" className="w-full h-full object-contain p-1" />
                           ) : (

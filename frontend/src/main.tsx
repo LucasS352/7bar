@@ -59,6 +59,53 @@ import { NetworkStatusBanner } from './components/NetworkStatusBanner';
 // Em desenvolvimento (npm run dev), o SW roda em modo simulado se devOptions.enabled=true
 import { registerSW } from 'virtual:pwa-register';
 
+const CHUNK_RELOAD_KEY = '7bar_chunk_reload_at';
+function triggerSafeReload() {
+  try {
+    const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || '0');
+    if (Date.now() - last < 15_000) return;
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
+  } catch { /* ignore */ }
+  window.location.reload();
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', (event) => {
+    event.preventDefault();
+    triggerSafeReload();
+  });
+}
+
+class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center p-6 text-center gap-4">
+          <h1 className="text-xl font-bold">Algo deu errado na interface</h1>
+          <p className="text-sm text-zinc-400 max-w-md">
+            O sistema sofreu uma falha inesperada ou recebeu uma atualização de versão. Recarregue a página para continuar.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold text-sm"
+          >
+            Recarregar sistema
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const updateSW = registerSW({
   // Quando uma nova versão do SW estiver disponível, recarrega silenciosamente
   onNeedRefresh() {
@@ -71,8 +118,16 @@ const updateSW = registerSW({
 
 import { recordTelemetry } from './lib/telemetry';
 
-// Emite telemetria com a versão/script do Service Worker ativo
+// Emite telemetria com a versão/script do Service Worker ativo e sincroniza atualização do controlador
 if ('serviceWorker' in navigator) {
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      triggerSafeReload();
+    }
+  });
+
   navigator.serviceWorker.ready.then((reg) => {
     const swFileName = reg.active?.scriptURL ? reg.active.scriptURL.split('/').pop() : 'sw.js';
     const swVersionId = `pwa-v1.3.0#${swFileName}`;
@@ -122,7 +177,7 @@ function App() {
         {/* Rotas públicas */}
         <Route path="/acesso" element={<StationAccessPage />} />
         <Route path="/login" element={IS_DEMO ? <Navigate to="/demo" replace /> : <LoginPage />} />
-        <Route path="/demo" element={<DemoRegisterPage />} />
+        <Route path="/demo" element={IS_DEMO ? <DemoRegisterPage /> : <Navigate to="/login" replace />} />
         <Route path="/sys-init" element={<SysInitPage />} />
         <Route path="/grupo-portal" element={<GroupPortalPage />} />
         {/* Vitrine Digital — rotas públicas para TV (sem autenticação) */}
@@ -209,6 +264,8 @@ function App() {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   </React.StrictMode>
 );

@@ -8,6 +8,7 @@ import TabTransferencias from './group-portal/Transfers';
 import './group-portal/portal.css';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
+import { api as httpApi } from '@/lib/api';
 import {
   BarChart2, Package, Tag, ArrowLeftRight, LogOut, Building2,
   TrendingUp, Star, RefreshCw, AlertCircle,
@@ -45,8 +46,6 @@ interface TenantDetail {
 const COMPANY_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 const fmt = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number.isFinite(v) ? v : 0);
 const fmtNum = (v: number) => new Intl.NumberFormat('pt-BR').format(Number.isFinite(v) ? v : 0);
-function getToken(): string | null { try { return JSON.parse(localStorage.getItem('7bar-auth') || '{}')?.state?.token ?? null; } catch { return null; } }
-function authHeaders(): Record<string, string> { return { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' }; }
 
 const METHOD_DISPLAY: Record<string, string> = { dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito', outros: 'Outros' };
 
@@ -82,18 +81,20 @@ function TenantDetailDrawer({ tenantId, tenantAlias, color, onClose }: { tenantI
   const [fetchError, setFetchError] = useState('');
 
   useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
     setFetchError('');
-    fetch(`/api/groups/my/tenant-detail/${tenantId}`, { headers: authHeaders() })
-      .then(async r => {
-        const json = await r.json();
-        if (!r.ok) throw new Error(json?.message || `HTTP ${r.status}`);
-        // Validate expected shape
+    httpApi.get(`/groups/my/tenant-detail/${tenantId}`, { signal: controller.signal, timeout: 10_000 })
+      .then(({ data: json }) => {
         if (!Array.isArray(json?.recentSales)) throw new Error('Resposta inválida do servidor');
         setData(json);
       })
-      .catch(e => setFetchError(e.message || 'Erro desconhecido'))
-      .finally(() => setLoading(false));
+      .catch(e => {
+        if (e?.code === 'ERR_CANCELED') return;
+        setFetchError(e?.response?.data?.message || e?.message || 'Erro desconhecido');
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [tenantId]);
 
   return (
@@ -231,11 +232,13 @@ function TabDashboard({ dateFilter }: { dateFilter: string }) {
       if (dateFilter === '7d') { const d = new Date(); d.setDate(d.getDate() - 6); d.setHours(0, 0, 0, 0); q = `?startDate=${d.toISOString()}&endDate=${now.toISOString()}`; }
       else if (dateFilter === '30d') { const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0, 0, 0, 0); q = `?startDate=${d.toISOString()}&endDate=${now.toISOString()}`; }
       else if (dateFilter === 'hoje') { const d = new Date(); d.setHours(0, 0, 0, 0); q = `?startDate=${d.toISOString()}&endDate=${now.toISOString()}`; }
-      const res = await fetch(`/api/groups/my/dashboard${q}`, { headers: authHeaders() });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setData(await res.json());
+      const res = await httpApi.get(`/groups/my/dashboard${q}`, { timeout: 10_000 });
+      setData(res.data);
       setLastRefresh(new Date());
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : String(e)); }
+    } catch (e: unknown) {
+      const msg = (e as any)?.response?.data?.message || (e instanceof Error ? e.message : String(e));
+      setError(msg);
+    }
     finally { setLoading(false); }
   }, [dateFilter]);
 
@@ -478,22 +481,23 @@ type TabId = typeof TABS[number]['id'];
 
 export default function GroupPortalPage() {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { token, user, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [dateFilter, setDateFilter] = useState('30d');
   const [collapsed, setCollapsed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
   const [stockSearch, setStockSearch] = useState('');
+  const authorized = Boolean(token && user && (user.role === 'group_owner' || user.groupId));
   useEffect(() => {
-    if (!getToken() || !user || (user.role !== 'group_owner' && !user.groupId)) navigate('/login', { replace: true });
-  }, [user, navigate]);
+    if (!authorized) navigate('/login', { replace: true });
+  }, [authorized, navigate]);
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
     window.addEventListener('online', update); window.addEventListener('offline', update);
     return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
   }, []);
-  if (!user) return null;
+  if (!authorized || !user) return null;
   const changeTab = (id: TabId) => { setActiveTab(id); setMenuOpen(false); setStockSearch(''); window.scrollTo({ top: 0 }); };
   const exit = () => { logout(); navigate('/login', { replace: true }); };
   const active = TABS.find(t => t.id === activeTab)!;

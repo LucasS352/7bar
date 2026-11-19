@@ -73,7 +73,7 @@ export function KdsPage() {
     fetching.current = true;
     const request = ++version.current;
     try {
-      const res = await api.get('/v1/kds/tickets', { timeout: 10000 });
+      const res = await api.get('/v1/kds/tickets', { timeout: 10000, headers: { 'X-Silent-Poll': 'true' } });
       if (!mounted.current || request !== version.current) return;
       const list: KdsTicket[] = res.data;
       if (

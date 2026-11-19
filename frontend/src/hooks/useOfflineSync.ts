@@ -27,6 +27,7 @@ import {
   countPendingSales,
   getOfflineSale,
   markSaleReview,
+  pruneSyncedOfflineSales,
   type OfflineSale,
 } from '@/lib/db';
 
@@ -39,6 +40,8 @@ export interface OfflineSyncState {
   pendingCount: number;
   /** true enquanto o processo de sync está rodando */
   isSyncing: boolean;
+  /** Atualiza apenas o contador local sem disparar novo envio */
+  refreshPendingCount: () => Promise<void>;
   /** Dispara o sync manualmente (útil para botão "Sincronizar agora") */
   syncNow: () => Promise<void>;
 }
@@ -62,8 +65,10 @@ export function useOfflineSync(): OfflineSyncState {
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [isSyncing,    setIsSyncing]    = useState<boolean>(false);
 
-  // Ref para evitar sincronizações paralelas
+  // Ref para evitar sincronizações paralelas e controlar backoff de erros
   const syncInProgress = useRef<boolean>(false);
+  const retryDelayRef = useRef<number>(30_000);
+  const announcedFailureRef = useRef<boolean>(false);
 
   // ── Atualiza contagem de pendentes ───────────────────────────────────────
   const refreshPendingCount = useCallback(async () => {
@@ -137,7 +142,7 @@ export function useOfflineSync(): OfflineSyncState {
   };
 
   // ── Processo de sincronização ─────────────────────────────────────────────
-  const syncPendingSales = useCallback(async () => {
+  const syncPendingSales = useCallback(async (interactive = true) => {
     if (!tenantId || !operatorId || !operatorToken) return;
     // Guarda contra execuções paralelas
     if (syncInProgress.current) return;
@@ -154,13 +159,18 @@ export function useOfflineSync(): OfflineSyncState {
       const pending = await getPendingSales(tenantId, operatorId);
 
       if (pending.length === 0) {
+        retryDelayRef.current = 30_000;
+        announcedFailureRef.current = false;
+        void pruneSyncedOfflineSales().catch(() => {});
         return;
       }
 
-      toast.info(`Sincronizando ${pending.length} venda(s) offline...`, {
-        id: '7bar-sync',
-        duration: 5000,
-      });
+      if (interactive) {
+        toast.info(`Sincronizando ${pending.length} venda(s) offline...`, {
+          id: '7bar-sync',
+          duration: 5000,
+        });
+      }
 
       let successCount = 0;
       let errorCount   = 0;
@@ -203,7 +213,15 @@ export function useOfflineSync(): OfflineSyncState {
         }
       }
 
-      // Feedback consolidado
+      if (errorCount > 0) {
+        retryDelayRef.current = Math.min(300_000, retryDelayRef.current * 2);
+      } else {
+        retryDelayRef.current = 30_000;
+        announcedFailureRef.current = false;
+        void pruneSyncedOfflineSales().catch(() => {});
+      }
+
+      // Feedback consolidado (sem spam de toast a cada ciclo automático quando falha persiste)
       if (successCount > 0 && errorCount === 0) {
         toast.success(`${successCount} venda(s) sincronizada(s) com sucesso!`, {
           id: '7bar-sync',
@@ -213,7 +231,8 @@ export function useOfflineSync(): OfflineSyncState {
           `${successCount} sincronizada(s), ${errorCount} com erro. Verifique o histórico.`,
           { id: '7bar-sync' }
         );
-      } else if (errorCount > 0) {
+      } else if (errorCount > 0 && (interactive || !announcedFailureRef.current)) {
+        announcedFailureRef.current = true;
         toast.error(
           `Falha ao sincronizar ${errorCount} venda(s). Tente novamente.`,
           { id: '7bar-sync' }
@@ -226,19 +245,23 @@ export function useOfflineSync(): OfflineSyncState {
     }
   }, [refreshPendingCount, tenantId, operatorId, operatorToken]);
 
+  const syncNow = useCallback(() => syncPendingSales(true), [syncPendingSales]);
+
   // ── Listeners de conexão ─────────────────────────────────────────────────
   useEffect(() => {
     let destroyed = false;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     const recover = async () => {
-      try { if (navigator.onLine) await syncPendingSales(); }
-      finally { if (!destroyed) retryTimer = setTimeout(recover, 30_000); }
+      try { if (navigator.onLine) await syncPendingSales(false); }
+      finally { if (!destroyed) retryTimer = setTimeout(recover, retryDelayRef.current); }
     };
     const handleOnline = async () => {
+      retryDelayRef.current = 30_000;
+      announcedFailureRef.current = false;
       setIsOnline(true);
       toast.success('Conexão restaurada!', { duration: 3000 });
       // Dispara sync automaticamente ao reconectar
-      await syncPendingSales();
+      await syncPendingSales(true);
     };
 
     const handleOffline = () => {
@@ -270,6 +293,7 @@ export function useOfflineSync(): OfflineSyncState {
     isOnline,
     pendingCount,
     isSyncing,
-    syncNow: syncPendingSales,
+    refreshPendingCount,
+    syncNow,
   };
 }

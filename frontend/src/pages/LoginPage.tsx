@@ -5,13 +5,6 @@ import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
 import { ShoppingCart, Lock, Mail, Loader2, Zap } from 'lucide-react';
 
-const encodePass = (pass: string) => {
-  try { return btoa(encodeURIComponent(pass)); } catch { return pass; }
-};
-const decodePass = (encoded: string) => {
-  try { return decodeURIComponent(atob(encoded)); } catch { return encoded; }
-};
-
 export function LoginPage() {
   const [email,      setEmail]      = useState('');
   const [password,   setPassword]   = useState('');
@@ -22,19 +15,17 @@ export function LoginPage() {
 
   useEffect(() => {
     try {
+      // Remove qualquer resquício legado de senha codificada em localStorage
+      localStorage.removeItem('pdv_remember_pass');
       const savedRemember = localStorage.getItem('pdv_remember_me') === 'true';
       const savedEmail = localStorage.getItem('pdv_remember_email');
-      const savedPass = localStorage.getItem('pdv_remember_pass');
 
       if (savedRemember && savedEmail) {
         setEmail(savedEmail);
         setRememberMe(true);
-        if (savedPass) {
-          setPassword(decodePass(savedPass));
-        }
       }
     } catch (e) {
-      console.warn('Erro ao carregar credenciais salvas:', e);
+      console.warn('Erro ao carregar preferências salvas:', e);
     }
   }, []);
 
@@ -45,14 +36,13 @@ export function LoginPage() {
       const { data } = await api.post('/auth/login', { email, password });
       login(data.access_token, data.user);
 
+      localStorage.removeItem('pdv_remember_pass');
       if (rememberMe) {
         localStorage.setItem('pdv_remember_me', 'true');
         localStorage.setItem('pdv_remember_email', email);
-        localStorage.setItem('pdv_remember_pass', encodePass(password));
       } else {
         localStorage.removeItem('pdv_remember_me');
         localStorage.removeItem('pdv_remember_email');
-        localStorage.removeItem('pdv_remember_pass');
       }
 
       toast.success(`Bem vindo ao ${data.user.tenant}, ${data.user.name}!`);

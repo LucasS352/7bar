@@ -1,6 +1,7 @@
 "use client";
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { api } from '@/lib/api';
+import { escapeHtml } from '@/lib/escape-html';
 import { ReemitNfceModal } from '@/components/ReemitNfceModal';
 import { PeriodReportModal } from '@/components/PeriodReportModal';
 import { 
@@ -213,17 +214,21 @@ export default function SalesDashboard() {
     return { computedStartDate: sDate, computedEndDate: eDate };
   }, [preset, appliedStartDate, appliedEndDate, startDate, endDate]);
 
-  const fetchDashboardData = async () => {
+  const salesRef = useRef<Sale[]>([]);
+  salesRef.current = sales;
+
+  const fetchDashboardData = async (silent = false) => {
     try {
+      const silentCfg = silent ? { headers: { 'X-Silent-Poll': 'true' } } : undefined;
       // Fetch summary
-      const sumRes = await api.get(`/dashboard/summary?startDate=${computedStartDate}&endDate=${computedEndDate}`);
+      const sumRes = await api.get(`/dashboard/summary?startDate=${computedStartDate}&endDate=${computedEndDate}`, silentCfg);
       setSummary(sumRes.data);
 
-      const { data } = await api.get(`/sales?startDate=${computedStartDate}&endDate=${computedEndDate}&limit=200`);
+      const { data } = await api.get(`/sales?startDate=${computedStartDate}&endDate=${computedEndDate}&limit=200`, silentCfg);
       setSales(data.data || []);
     } catch (error) {
       console.error("Erro ao buscar dados do dashboard", error);
-      toast.error('Erro ao carregar dados. Tente novamente.');
+      if (!silent) toast.error('Erro ao carregar dados. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -234,17 +239,14 @@ export default function SalesDashboard() {
     fetchDashboardData();
 
     // Auto-refresh a cada 60 segundos
-    const intervalId = setInterval(fetchDashboardData, 60000);
+    const intervalId = setInterval(() => fetchDashboardData(true), 60000);
     
-    // Polling rápido para NFC-e pendente
+    // Polling rápido para NFC-e pendente (sem side-effect dentro de state updater)
     const pendingInterval = setInterval(() => {
-      setSales(current => {
-        const hasPending = current.some(s => s.nfceStatus === 'pendente' || s.nfceStatus === 'em_processamento');
-        if (hasPending) {
-          fetchDashboardData();
-        }
-        return current;
-      });
+      const hasPending = salesRef.current.some(s => s.nfceStatus === 'pendente' || s.nfceStatus === 'em_processamento');
+      if (hasPending) {
+        void fetchDashboardData(true);
+      }
     }, 5000);
 
     return () => {
@@ -323,7 +325,7 @@ export default function SalesDashboard() {
       <div class="item">
         <div class="item-header">
           <span class="item-num">${String(idx + 1).padStart(2, '0')}</span>
-          <span class="item-name">${item.product?.name || 'Desconhecido'}</span>
+          <span class="item-name">${escapeHtml(item.product?.name || 'Desconhecido')}</span>
           <span class="item-total">R$ ${Number(item.subtotal || 0).toFixed(2)}</span>
         </div>
         <div class="item-detail">
@@ -334,7 +336,7 @@ export default function SalesDashboard() {
 
     const paymentsHtml = sale.payments.map(p => `
       <div class="payment-row">
-        <span>${{ dinheiro: 'DINHEIRO', pix: 'PIX', credito: 'CRÉDITO', debito: 'DÉBITO' }[p.method] || p.method.toUpperCase()}</span>
+        <span>${escapeHtml({ dinheiro: 'DINHEIRO', pix: 'PIX', credito: 'CRÉDITO', debito: 'DÉBITO' }[p.method] || p.method.toUpperCase())}</span>
         <span>R$ ${Number(p.value || 0).toFixed(2)}</span>
       </div>
     `).join('');
@@ -386,15 +388,15 @@ export default function SalesDashboard() {
 </head>
 <body>
   <div class="header">
-    <div class="company">${companyName}</div>
-    ${cnpj    ? `<div class="subtitle">CNPJ: ${cnpj}</div>` : ''}
-    ${address ? `<div class="subtitle">${address}</div>`  : ''}
-    ${phone   ? `<div class="subtitle">Tel: ${phone}</div>` : ''}
+    <div class="company">${escapeHtml(companyName)}</div>
+    ${cnpj    ? `<div class="subtitle">CNPJ: ${escapeHtml(cnpj)}</div>` : ''}
+    ${address ? `<div class="subtitle">${escapeHtml(address)}</div>`  : ''}
+    ${phone   ? `<div class="subtitle">Tel: ${escapeHtml(phone)}</div>` : ''}
   </div>
   <div class="divider"></div>
   <div class="label-row">REIMPRESSÃO DE CUPOM</div>
-  <div class="meta"><span>${dateStr} ${timeStr}</span><span>Venda #${sale.id.slice(0, 8)}</span></div>
-  <div class="meta"><span>Operador: ${sale.operator?.name || 'Operador'}</span></div>
+  <div class="meta"><span>${escapeHtml(dateStr)} ${escapeHtml(timeStr)}</span><span>Venda #${escapeHtml(sale.id.slice(0, 8))}</span></div>
+  <div class="meta"><span>Operador: ${escapeHtml(sale.operator?.name || 'Operador')}</span></div>
   <div class="divider"></div>
   ${itemsHtml}
   <div class="divider"></div>
@@ -406,7 +408,7 @@ export default function SalesDashboard() {
   <div class="divider"></div>
   ${paymentsHtml}
   <div class="divider"></div>
-  <div class="footer">${footerMsg}</div>
+  <div class="footer">${escapeHtml(footerMsg)}</div>
   <br/><br/>
 </body>
 </html>`;

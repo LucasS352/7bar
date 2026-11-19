@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
@@ -6,11 +7,17 @@ import { ShieldAlert, CheckCircle2, FileText, Lock, Loader2 } from 'lucide-react
 
 export function TermsAcceptanceModal() {
   const { user, setTermsAccepted } = useAuthStore();
+  const { pathname } = useLocation();
   const [loading, setLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
 
-  const shouldShow = user && (user.role === 'admin' || user.role === 'superadmin') && !user.termsAccepted;
+  const isPublicOrSystemRoute =
+    ['/login', '/demo', '/sys-init', '/acesso'].includes(pathname) ||
+    pathname.startsWith('/vitrine/') ||
+    pathname.startsWith('/v/');
+
+  const shouldShow = !isPublicOrSystemRoute && user && (user.role === 'admin' || user.role === 'superadmin') && !user.termsAccepted;
 
   if (!shouldShow) return null;
 

@@ -164,11 +164,11 @@ export function ComandaWorkspaceModal({
     }
   }, [tenantId]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (silent = false) => {
     if (mutating.current) return;
     const request = ++version.current;
     try {
-      const res = await readComandas(tenantId);
+      const res = await readComandas(tenantId, { silent });
       if (request !== version.current) return;
       setComandas(res.items);
       setOfflineAt(res.offline ? res.savedAt : null);
@@ -185,8 +185,8 @@ export function ComandaWorkspaceModal({
     }
   }, [loadDetail, tenantId]);
   useEffect(() => {
-    void refresh();
-    const timer = setInterval(refresh, 15000);
+    void refresh(false);
+    const timer = setInterval(() => void refresh(true), 15000);
     return () => {
       clearInterval(timer);
       version.current++;
@@ -220,7 +220,7 @@ export function ComandaWorkspaceModal({
         const root = confirm ? confirmation.current : panel.current;
         const focusable = Array.from(
           root?.querySelectorAll<HTMLElement>(
-            'button:not(:disabled),input:not(:disabled),[tabindex="0"]',
+            'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]',
           ) || [],
         ).filter((el) => el.getClientRects().length > 0);
         const first = focusable[0],
@@ -423,7 +423,7 @@ export function ComandaWorkspaceModal({
             <button
               type="button"
               disabled={disabled}
-              onClick={refresh}
+              onClick={() => void refresh(false)}
               className="underline shrink-0"
             >
               Tentar novamente
@@ -475,7 +475,7 @@ export function ComandaWorkspaceModal({
                 type="button"
                 aria-label="Atualizar comandas"
                 disabled={disabled}
-                onClick={refresh}
+                onClick={() => void refresh(false)}
                 className="p-3 rounded-xl border border-zinc-700/60 text-zinc-400"
               >
                 <RefreshCw size={18} />
@@ -568,7 +568,7 @@ export function ComandaWorkspaceModal({
                           {money(c.total)}
                         </p>
                         <div className="mt-1 flex flex-wrap gap-x-3 text-[11px] text-zinc-500">
-                          <span>{c.items.length} lançamento(s)</span>
+                          <span>{c.items.filter(i => !i.status || i.status === 'active').length} lançamento(s)</span>
                           <span className="flex gap-1 items-center">
                             <Clock size={11} />
                             {elapsed(c.createdAt)}

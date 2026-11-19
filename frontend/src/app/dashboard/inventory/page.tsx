@@ -340,7 +340,7 @@ export default function InventoryDashboard() {
     if (!lotModalProduct || !registerLotQty || Number(registerLotQty) <= 0) return;
     try {
       setIsRegisteringLot(true);
-      await api.post(`/products/${lotModalProduct.id}/lots`, {
+      await api.post(`/products/lots/register-existing/${lotModalProduct.id}`, {
         quantity: Number(registerLotQty),
         expiresAt: registerLotExpiry || undefined,
         lotNumber: registerLotNumber || undefined

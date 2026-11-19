@@ -11,12 +11,17 @@ export const api = axios.create({
   baseURL: '/api',
 });
 
+let isHandlingInteractive401 = false;
+
 api.interceptors.request.use((config) => {
   const expected = config as any;
   const currentOpId = useOperatorTokenStore.getState().operatorId;
   if ((expected.expectedTenantId && expected.expectedTenantId !== useAuthStore.getState().user?.tenant) ||
-      (expected.expectedOperatorId && currentOpId && expected.expectedOperatorId !== currentOpId)) {
+      (expected.expectedOperatorId && expected.expectedOperatorId !== currentOpId)) {
     return Promise.reject(new axios.CanceledError('Loja ou operador mudou antes do envio. Pedido preservado.'));
+  }
+  if (useAuthStore.getState().token) {
+    isHandlingInteractive401 = false;
   }
   (config as any).__startTime = Date.now();
   const token = useAuthStore.getState().token;
@@ -127,8 +132,11 @@ api.interceptors.response.use(
       }
 
       if (!isAuthEndpoint) {
+        if (isHandlingInteractive401) {
+          return Promise.reject(error);
+        }
+        isHandlingInteractive401 = true;
         // 401 real em endpoint interativo → registra e desloga
-        // (Lote 3 adicionará tentativa de refresh aqui antes do logout)
         recordTelemetry({
           type: 'received_401',
           path,

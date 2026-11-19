@@ -284,7 +284,7 @@ export function GarcomPage() {
     const mutationVersion = localMutationVersionRef.current;
     setLoadingComandas(true);
     try {
-      const res = await api.get('/v1/comandas?status=open');
+      const res = await api.get('/v1/comandas?status=open', { headers: { 'X-Silent-Poll': 'true' } });
       if (fetchVersion !== fetchVersionRef.current || mutationVersion !== localMutationVersionRef.current) return;
       const list: Comanda[] = res.data || [];
       setComandas(list);

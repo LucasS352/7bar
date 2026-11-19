@@ -1,5 +1,6 @@
 import { cloneElement, useEffect, useId, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { X, Loader2 } from 'lucide-react';
+import { api as httpApi } from '@/lib/api';
 
 export interface StockCell { qty: number; productId: string; unit: string }
 export interface StockRow { key?: string; barcode?: string | null; unit?: string; name: string; tenants: Record<string, StockCell> }
@@ -11,12 +12,20 @@ export const money = (n: number) => new Intl.NumberFormat('pt-BR', { style: 'cur
 export const number = (n: number) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 }).format(Number.isFinite(n) ? n : 0);
 export const errorMessage = (e: unknown) => e instanceof Error ? e.message : 'Não foi possível concluir. Tente novamente.';
 export async function api<T>(path: string, body?: unknown, method = 'POST', signal?: AbortSignal): Promise<T> {
-  const token = JSON.parse(localStorage.getItem('7bar-auth') || '{}')?.state?.token;
-  const response = await fetch(`/api/groups/my/${path}`, { method: body === undefined ? 'GET' : method, signal,
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-  const data = await response.json();
-  if (!response.ok) throw new Error(Array.isArray(data.message) ? data.message.join(' · ') : data.message || `Erro HTTP ${response.status}`);
-  return data;
+  try {
+    const res = await httpApi.request<T>({
+      url: `/groups/my/${path}`,
+      method: body === undefined ? 'GET' : method,
+      data: body,
+      signal,
+      timeout: 15_000,
+    });
+    return res.data;
+  } catch (err: any) {
+    const msg = err?.response?.data?.message;
+    const formatted = Array.isArray(msg) ? msg.join(' · ') : msg || err?.message || 'Erro HTTP';
+    throw new Error(formatted);
+  }
 }
 export function useDebounce(value: string) {
   const [debounced, setDebounced] = useState(value);

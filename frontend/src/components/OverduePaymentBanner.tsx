@@ -12,33 +12,36 @@ export function OverduePaymentBanner() {
   const [diasAtraso, setDiasAtraso] = useState(0);
   const [valor, setValor] = useState<number | null>(null);
 
+  const tenantName = useAuthStore((s) => s.user?.tenant || '');
+  const tenantStorageKey = tenantName ? `${STORAGE_KEY}:${tenantName}` : STORAGE_KEY;
+
   const shouldShow = useCallback((dias: number): boolean => {
     if (dias < 0) return false; // não venceu ainda
     if (dias >= 4) {
       // 4+ dias: mostra de hora em hora
-      const lastShown = Number(localStorage.getItem(STORAGE_KEY) || '0');
+      const lastShown = Number(localStorage.getItem(tenantStorageKey) || '0');
       return Date.now() - lastShown > ONE_HOUR_MS;
     }
     // 0-3 dias: mostra 1x por sessão
-    const sessionKey = `${STORAGE_KEY}_session`;
+    const sessionKey = `${tenantStorageKey}_session`;
     if (sessionStorage.getItem(sessionKey)) return false;
     return true;
-  }, []);
+  }, [tenantStorageKey]);
 
   const markShown = useCallback((dias: number) => {
     if (dias >= 4) {
-      localStorage.setItem(STORAGE_KEY, String(Date.now()));
+      localStorage.setItem(tenantStorageKey, String(Date.now()));
     } else {
-      sessionStorage.setItem(`${STORAGE_KEY}_session`, '1');
+      sessionStorage.setItem(`${tenantStorageKey}_session`, '1');
     }
-  }, []);
+  }, [tenantStorageKey]);
 
   useEffect(() => {
     if (!token) return;
 
     const checkStatus = async () => {
       try {
-        const res = await api.get('/auth/tenant-status');
+        const res = await api.get('/auth/tenant-status', { headers: { 'X-Silent-Poll': 'true' } });
         const { diasAtraso: dias, valor: val, status } = res.data;
 
         // Não mostra se tenant está pausado/inativo ou sem atraso
@@ -61,7 +64,7 @@ export function OverduePaymentBanner() {
     // Para 4+ dias: recheck a cada hora via intervalo
     const interval = setInterval(async () => {
       try {
-        const res = await api.get('/auth/tenant-status');
+        const res = await api.get('/auth/tenant-status', { headers: { 'X-Silent-Poll': 'true' } });
         const { diasAtraso: dias, status } = res.data;
         if (status === 'paused' || status === 'inactive') return;
         if (dias >= 4 && shouldShow(dias)) {

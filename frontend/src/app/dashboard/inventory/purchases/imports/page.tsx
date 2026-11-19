@@ -161,7 +161,7 @@ export default function XmlImportPage() {
         api.get('/v1/fiscal/import/history'),
         api.get('/products?limit=2000'),
         api.get('/categories'),
-        api.get('/v1/company/config').catch(() => null)
+        api.get('/tenants/me').catch(() => null)
       ]);
       setPendentes(resPendentes.data || []);
       setHistorico(resHistorico.data || []);
@@ -169,7 +169,7 @@ export default function XmlImportPage() {
       setProductsList(pList);
       setCategoriesList(resCategories.data || []);
 
-      const certConfigured = Boolean(resCompany?.data?.certPfxBase64);
+      const certConfigured = Boolean(resCompany?.data?.hasCertificado);
       setHasCert(certConfigured);
     } catch {
       toast.error('Erro ao carregar dados de importação.');

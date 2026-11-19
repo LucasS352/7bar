@@ -24,7 +24,7 @@ export function ServiceRounds({ onNewRosh }: { onNewRosh: (comandaId: string) =>
     const request = (async () => {
     const start = Date.now();
     try {
-      const res = await api.get('/v1/comandas/service-rounds', { timeout: 10000 });
+      const res = await api.get('/v1/comandas/service-rounds', { timeout: 10000, headers: { 'X-Silent-Poll': 'true' } });
       if (mounted.current) {
         setOffset(new Date(res.data.serverTime).getTime() - (start + Date.now()) / 2);
         setItems(res.data.items); setError(false);

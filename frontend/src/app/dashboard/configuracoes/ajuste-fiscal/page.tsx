@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
+import { createClientUuid } from '@/lib/client-id';
 import { getFullUrl } from '@/lib/getFullUrl';
 import { toast } from 'sonner';
 import {
@@ -82,6 +83,18 @@ export default function AjusteFiscalPage() {
   const [transmissionPhase, setTransmissionPhase] = useState<TransmissionPhase>('idle');
   const [saleResult, setSaleResult] = useState<any>(null);
   const [nfceError, setNfceError] = useState<string | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // ── Cálculos ───────────────────────────────────────────────────────────────
   const subtotal = items.reduce((sum, item) => sum + item.quantity * item.priceUnit, 0);
@@ -215,53 +228,69 @@ export default function AjusteFiscalPage() {
         source: 'ajuste_fiscal',
         customerCpf: customerCpf || undefined,
         customerName: customerName || undefined,
-        idempotencyKey: `ajuste_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`,
+        idempotencyKey: `ajuste_${Date.now()}_${createClientUuid().slice(0, 8)}`,
       };
 
       // Fase 2: Enviando checkout
       setTransmissionPhase('transmitting');
       const res = await api.post('/sales/checkout', body);
       const sale = res.data;
+      if (!mountedRef.current) return;
       setSaleResult(sale);
 
       // Fase 3: Polling de status NFC-e
       setTransmissionPhase('polling');
       let attempts = 0;
       const maxAttempts = 45; // até 90 segundos de polling
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
       await new Promise<void>((resolve) => {
+        const stopPolling = () => {
+          if (pollTimerRef.current) {
+            clearInterval(pollTimerRef.current);
+            pollTimerRef.current = null;
+          }
+          resolve();
+        };
         const interval = setInterval(async () => {
+          if (!mountedRef.current) {
+            stopPolling();
+            return;
+          }
           attempts++;
           try {
-            const statusRes = await api.get(`/sales/${sale.id}/nfce-status`);
+            const statusRes = await api.get(`/sales/${sale.id}/nfce-status`, { headers: { 'X-Silent-Poll': 'true' } });
+            if (!mountedRef.current) {
+              stopPolling();
+              return;
+            }
             const status = statusRes.data.nfceStatus;
             setSaleResult((prev: any) => ({ ...prev, ...statusRes.data }));
 
             if (status === 'autorizada') {
-              clearInterval(interval);
               setTransmissionPhase('done_success');
               toast.success('Nota fiscal autorizada com sucesso!');
-              resolve();
+              stopPolling();
             } else if (status === 'rejeitada' || status === 'nao_emitida') {
-              clearInterval(interval);
               setTransmissionPhase('done_error');
               setNfceError(statusRes.data.nfceMotivoRejeicao || 'Nota não emitida.');
               toast.error('Nota rejeitada pela SEFAZ.');
-              resolve();
+              stopPolling();
             } else if (attempts >= maxAttempts) {
-              clearInterval(interval);
               setTransmissionPhase('done_error');
               setNfceError('Timeout: A SEFAZ não respondeu a tempo. Verifique o status manualmente.');
-              resolve();
+              stopPolling();
             }
           } catch {
-            if (attempts >= maxAttempts) {
-              clearInterval(interval);
-              setTransmissionPhase('done_error');
-              setNfceError('Erro de comunicação durante o polling.');
-              resolve();
+            if (!mountedRef.current || attempts >= maxAttempts) {
+              if (mountedRef.current) {
+                setTransmissionPhase('done_error');
+                setNfceError('Erro de comunicação durante o polling.');
+              }
+              stopPolling();
             }
           }
         }, 2000);
+        pollTimerRef.current = interval;
       });
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Erro ao transmitir ajuste fiscal.';

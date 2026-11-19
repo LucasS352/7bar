@@ -662,7 +662,7 @@ export function CloseRegisterModal({
                                className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white font-bold"
                              />
                              <button 
-                               onClick={handleAudit}
+                               onClick={() => handleAudit()}
                                disabled={submitting}
                                className="bg-amber-500 hover:bg-amber-600 text-black font-bold px-6 rounded-xl flex items-center gap-2"
                              >
@@ -679,7 +679,7 @@ export function CloseRegisterModal({
                          <p className="text-emerald-400 font-black text-2xl mt-4 flex justify-center gap-2 items-center">
                            Declarado: R$ {Number(data.register.closingValue).toFixed(2)}
                          </p>
-                         {Number(data.register.closingValue) !== Number(data.report.expectedDinheiro) && (
+                         {Math.abs(Number(data.register.closingValue) - Number(data.report.expectedDinheiro)) >= 0.005 && (
                             <p className="text-red-400 text-sm mt-4 border border-red-500/30 bg-red-500/10 inline-block px-4 py-2 rounded-full font-bold">
                               <AlertOctagon size={16} className="inline mr-1 -mt-0.5"/> Diferença Constatada (Quebra): R$ {(Number(data.register.closingValue) - Number(data.report.expectedDinheiro)).toFixed(2)}
                             </p>
@@ -907,10 +907,10 @@ export function CloseRegisterModal({
               )}
 
               {/* Banner de Status */}
-              {closingValue > 0 && (() => {
-                const diff = closingValue - Number(data.report.expectedDinheiro);
-                const bateu = Math.abs(diff) < 0.01;
-                const sobra = diff > 0.01;
+              {canSeeTotals && data.report?.expectedDinheiro != null && (() => {
+                const diff = Math.round((closingValue - Number(data.report.expectedDinheiro)) * 100) / 100;
+                const bateu = diff === 0;
+                const sobra = diff > 0;
                 return (
                   <div className={`rounded-xl p-4 border flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-200 ${bateu ? 'bg-emerald-500/10 border-emerald-500/30' : sobra ? 'bg-amber-500/10 border-amber-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
                     <div>

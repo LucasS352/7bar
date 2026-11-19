@@ -102,6 +102,8 @@ function PosPageContent() {
   const [loadingComandas, setLoadingComandas] = useState(false);
   const [selectedComandaId, setSelectedComandaId] = useState<string | null>(null);
   const [newComandaBadge, setNewComandaBadge] = useState(false); // Badge de nova comanda
+  const prevComandasRef = useRef<any[]>([]);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const modules = useMemo(() => {
     try {
@@ -128,40 +130,44 @@ function PosPageContent() {
       if (user?.tenant && Array.isArray(newList)) {
         void db.comandas_cache.put({ tenantId: user.tenant, savedAt: Date.now(), items: newList }).catch(() => {});
       }
-      setOpenComandas(prev => {
-        const prevMap = new Map(prev.map((c: any) => [c.id, c.status]));
-        // Dispara beep e badge somente na TRANSIÇÃO de estado:
-        // 1. Nova comanda que não existia antes (se prev já tinha dados)
-        // 2. Comanda que transitou de open -> waiting_payment
-        const hasTransition = newList.some(c => {
-          const prevStatus = prevMap.get(c.id);
-          const isNewComanda = !prevStatus && prev.length > 0;
-          const isRequestedPayment = prevStatus === 'open' && c.status === 'waiting_payment';
-          return isNewComanda || isRequestedPayment;
-        });
-
-        if (hasTransition) {
-          setNewComandaBadge(true);
-          try {
-            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.frequency.value = 880;
-            gain.gain.setValueAtTime(0.15, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.3);
-          } catch { /* silencia se AudioContext não disponível */ }
-        }
-        return newList;
+      const prev = prevComandasRef.current;
+      const prevMap = new Map(prev.map((c: any) => [c.id, c.status]));
+      // Dispara beep e badge somente na TRANSIÇÃO de estado:
+      // 1. Nova comanda que não existia antes (se prev já tinha dados)
+      // 2. Comanda que transitou de open -> waiting_payment
+      const hasTransition = newList.some(c => {
+        const prevStatus = prevMap.get(c.id);
+        const isNewComanda = !prevStatus && prev.length > 0;
+        const isRequestedPayment = prevStatus === 'open' && c.status === 'waiting_payment';
+        return isNewComanda || isRequestedPayment;
       });
+      prevComandasRef.current = newList;
+      setOpenComandas(newList);
+
+      if (hasTransition) {
+        setNewComandaBadge(true);
+        try {
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.frequency.value = 880;
+          gain.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.3);
+          setTimeout(() => { void ctx.close().catch(() => {}); }, 400);
+        } catch { /* silencia se AudioContext não disponível */ }
+      }
     } catch {
       if (user?.tenant) {
         try {
           const cached = await db.comandas_cache.get(user.tenant);
-          if (cached?.items) setOpenComandas(cached.items);
+          if (cached?.items) {
+            prevComandasRef.current = cached.items;
+            setOpenComandas(cached.items);
+          }
         } catch { /* silencia */ }
       }
     } finally {
@@ -354,7 +360,7 @@ function PosPageContent() {
     // ── PASSO 1: Exibe cache local imediatamente (zero latência de rede) ──────
     // Só mostra spinner se não houver nada em cache para exibir.
     if (!backgroundOnly) {
-      getCachedProducts().then(cached => {
+      getCachedProducts(user?.tenant).then(cached => {
         if (cached.length > 0) {
           setProducts(sortProducts(cached as unknown as Product[]));
           setOfflineCatalog(false);
@@ -369,7 +375,7 @@ function PosPageContent() {
     if (!isOnlineRef.current) {
       // Offline: garante que o cache já foi exibido no Passo 1
       if (backgroundOnly) {
-        getCachedProducts()
+        getCachedProducts(user?.tenant)
           .then(cached => {
             setProducts(sortProducts(cached as unknown as Product[]));
             setOfflineCatalog(true);
@@ -386,32 +392,38 @@ function PosPageContent() {
         setProducts(sorted);
         setVisibleCount(40);
         setOfflineCatalog(false);
-        // Persiste no IndexedDB para próxima abertura (cache-first funcionar)
+        // Persiste no IndexedDB isolado por loja para próxima abertura
         await updateProductsCache(sorted.map((p: any) => ({
           id:         p.id,
+          tenantId:   user?.tenant,
           name:       p.name,
           shortCode:  p.shortCode,
           barcode:    p.barcode,
-          unit:       'UN',
+          unit:       p.unit || 'UN',
           priceSell:  Number(p.priceSell),
-          stock:      Math.round(Number(p.stock)),
+          stock:      Number(p.stock) || 0,
           salesCount: Number(p.salesCount || 0),
           active:     p.active !== false,
           categoryId: p.categoryId,
           category:   p.category,
-          ncm:        null, cest: null, origem: 0,
-          cfop:       '5102', csosn: null, cstIcms: null,
-          aliqIcms:   0, cstPis: '99', aliqPis: 0,
-          cstCofins:  '99', aliqCofins: 0,
+          ncm:        p.ncm ?? null, cest: p.cest ?? null, origem: Number(p.origem ?? 0),
+          cfop:       p.grupoTributacao?.cfopSaida || p.category?.grupoTributacao?.cfopSaida || '5102',
+          csosn:      p.grupoTributacao?.csosn || p.category?.grupoTributacao?.csosn || null,
+          cstIcms:    p.grupoTributacao?.cstIcms || p.category?.grupoTributacao?.cstIcms || null,
+          aliqIcms:   Number(p.grupoTributacao?.aliqIcms ?? p.category?.grupoTributacao?.aliqIcms ?? 0),
+          cstPis:     p.grupoTributacao?.cstPis || p.category?.grupoTributacao?.cstPis || '99',
+          aliqPis:    Number(p.grupoTributacao?.aliqPis ?? p.category?.grupoTributacao?.aliqPis ?? 0),
+          cstCofins:  p.grupoTributacao?.cstCofins || p.category?.grupoTributacao?.cstCofins || '99',
+          aliqCofins: Number(p.grupoTributacao?.aliqCofins ?? p.category?.grupoTributacao?.aliqCofins ?? 0),
           cachedAt:   Date.now(),
           imageUrl:   p.imageUrl,
           isComposite:    p.isComposite ?? false,
           modifierGroups: p.modifierGroups ?? [],
-        })));
+        })), user?.tenant);
       })
       .catch(async () => {
-        // API falhou: garante que o cache está exibido
-        const cached = await getCachedProducts();
+        // API falhou: garante que o cache da loja atual está exibido
+        const cached = await getCachedProducts(user?.tenant);
         if (cached.length > 0) {
           setProducts(sortProducts(cached as unknown as Product[]));
           setOfflineCatalog(true);
@@ -420,7 +432,7 @@ function PosPageContent() {
       .finally(() => setIsLoading(false));
   // isOnlineRef é uma ref — não vai na dependency array
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, navigate]);
+  }, [token, navigate, user?.tenant]);
 
   useEffect(() => {
     loadProducts();
@@ -489,6 +501,18 @@ function PosPageContent() {
     // Limita a exibição na tela para não travar o navegador com milhares de cards
     return filtered.slice(0, 50);
   }, [products, deferredSearch]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisibleCount(c => Math.min(c + 40, displayedProducts.length));
+      }
+    }, { rootMargin: '200px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [visibleCount, displayedProducts.length]);
 
   const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && search.trim() !== '') {
@@ -800,17 +824,8 @@ function PosPageContent() {
               {/* Sentinela de scroll infinito */}
               {visibleCount < displayedProducts.length && (
                 <div
+                  ref={sentinelRef}
                   className="flex items-center justify-center py-6 pb-[200px] lg:pb-12"
-                  ref={el => {
-                    if (!el) return;
-                    const obs = new IntersectionObserver(([entry]) => {
-                      if (entry.isIntersecting) {
-                        setVisibleCount(c => Math.min(c + 40, displayedProducts.length));
-                      }
-                    }, { rootMargin: '200px' });
-                    obs.observe(el);
-                    // Cleanup via GC — ref element será destruído quando não for mais visível
-                  }}
                 >
                   <span className="text-xs text-zinc-600">Mostrando {Math.min(visibleCount, displayedProducts.length)} de {displayedProducts.length} produtos</span>
                 </div>
@@ -1059,8 +1074,9 @@ function PosPageContent() {
 
                     {/* Botão COBRAR */}
                     <button
+                      disabled={totalItemsCount === 0 || !cashRegister || isShiftLoading}
                       onClick={e => { e.stopPropagation(); setInitialOpenComanda(false); setIsPaymentOpen(true); }}
-                      className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm py-2.5 px-5 rounded-xl shadow-lg active:scale-95 transition-transform shrink-0"
+                      className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm py-2.5 px-5 rounded-xl shadow-lg active:scale-95 transition-transform shrink-0"
                     >
                       COBRAR
                     </button>
@@ -1388,8 +1404,8 @@ function PosPageContent() {
         />
       )}
       
-      {/* Abertura de Caixa: SOMENTE quando o operador estiver logado e o servidor CONFIRMAR expressamente que NÃO há caixa aberto */}
-      {operator && !cashRegister && registerStatus === 'closed_confirmed' && (
+      {/* Abertura de Caixa: SOMENTE quando o operador estiver logado, reautenticado e o servidor CONFIRMAR expressamente que NÃO há caixa aberto */}
+      {operator && !needsOperatorReauth && !cashRegister && registerStatus === 'closed_confirmed' && (
         <OpenShiftModal onSuccess={() => {}} />
       )}
 
@@ -1455,7 +1471,7 @@ function PosPageContent() {
           }
         }}
         isOnline={syncState.isOnline}
-        onPendingCountChange={syncState.syncNow}
+        onPendingCountChange={syncState.refreshPendingCount}
         tenantConfig={tenantConfig}
         onSuccess={loadProducts}
       />

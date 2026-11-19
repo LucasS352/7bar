@@ -54,8 +54,9 @@ export function DemoRegisterPage() {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
 
-  // Auto-login se vier com ?token=...&user=... na URL
+  // Auto-login se vier com ?token=...&user=... na URL (estritamente em modo demo)
   useEffect(() => {
+    if (import.meta.env.VITE_APP_MODE !== 'demo') return;
     const params = new URLSearchParams(window.location.search);
     const tokenParam = params.get('token');
     const userParam = params.get('user');

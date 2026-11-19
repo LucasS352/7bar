@@ -60,6 +60,7 @@ export function ExportXmlModal({ isOpen, onClose }: ExportXmlModalProps) {
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
       
       toast.success('Download concluído com sucesso!');
       onClose();

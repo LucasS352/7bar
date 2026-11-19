@@ -45,12 +45,27 @@ interface CartState {
   setActiveComanda: (id: string | null, number: string | null) => void;
 }
 
+function newOperationId(): string {
+  const browserCrypto = typeof crypto !== 'undefined' ? crypto : undefined;
+  if (typeof browserCrypto?.randomUUID === 'function') return browserCrypto.randomUUID();
+  if (typeof browserCrypto?.getRandomValues === 'function') {
+    const bytes = browserCrypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+const roundCents = (v: number): number => Math.round((Number(v) + Number.EPSILON) * 100) / 100;
+
 function buildCartKey(productId: string, modifiers?: CartItemModifier[], fromComanda?: boolean): string {
   const comandaSuffix = fromComanda ? '__comanda' : '';
   if (!modifiers || modifiers.length === 0) return `${productId}${comandaSuffix}`;
-  const modKey = modifiers
-    .sort((a, b) => a.groupId.localeCompare(b.groupId))
-    .map(m => `${m.groupId}:${m.optionId}`)
+  const modKey = [...modifiers]
+    .sort((a, b) => a.groupId.localeCompare(b.groupId) || a.optionId.localeCompare(b.optionId))
+    .map(m => `${m.groupId}:${m.optionId}:${m.quantity ?? 1}`)
     .join('|');
   return `${productId}__${modKey}${comandaSuffix}`;
 }
@@ -63,20 +78,20 @@ export const useCartStore = create<CartState>((set, get) => ({
     let saved: any = null;
     try { saved = scope ? JSON.parse(sessionStorage.getItem(scope) || 'null') : null; } catch { /* empty draft */ }
     const items = Array.isArray(saved?.items) ? saved.items : [];
-    set({ scope, items, total: items.reduce((sum: number, item: CartItem) => sum + item.subtotal, 0),
-      cartOperationId: saved?.cartOperationId || crypto.randomUUID(),
+    set({ scope, items, total: roundCents(items.reduce((sum: number, item: CartItem) => sum + item.subtotal, 0)),
+      cartOperationId: saved?.cartOperationId || newOperationId(),
       activeComandaId: saved?.activeComandaId || null, activeComandaNumber: saved?.activeComandaNumber || null,
       isOperationLocked: false });
   },
   items: [],
   total: 0,
-  cartOperationId: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36),
+  cartOperationId: newOperationId(),
   isOperationLocked: false,
   setOperationLocked: (locked) => set({ isOperationLocked: locked }),
   getOrCreateOperationId: () => {
     const curr = get().cartOperationId;
     if (curr) return curr;
-    const next = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const next = newOperationId();
     set({ cartOperationId: next });
     return next;
   },
@@ -92,27 +107,28 @@ export const useCartStore = create<CartState>((set, get) => ({
     }
     const { items } = get();
     const priceAdjustment = (modifiers || []).reduce((acc, m) => acc + Number(m.priceAdjustment || 0), 0);
-    const effectivePriceSell = Number(product.priceSell) + priceAdjustment;
+    const effectivePriceSell = roundCents(Number(product.priceSell) + priceAdjustment);
     const cartKey = buildCartKey(product.id, modifiers, fromComanda);
     const existing = items.find(i => i.cartKey === cartKey);
 
     let newItems;
     if (existing) {
+      const nextQty = existing.quantity + quantity;
       newItems = items.map(i => i.cartKey === cartKey 
-        ? { ...i, quantity: i.quantity + quantity, subtotal: (i.quantity + quantity) * i.effectivePriceSell } 
+        ? { ...i, quantity: nextQty, subtotal: roundCents(nextQty * i.effectivePriceSell) } 
         : i
       );
     } else {
       newItems = [...items, { 
         ...product, quantity, 
-        subtotal: quantity * effectivePriceSell, 
+        subtotal: roundCents(quantity * effectivePriceSell), 
         cartKey, 
         modifiers,
         effectivePriceSell,
         fromComanda
       }];
     }
-    set({ items: newItems, total: newItems.reduce((acc, i) => acc + i.subtotal, 0) });
+    set({ items: newItems, total: roundCents(newItems.reduce((acc, i) => acc + i.subtotal, 0)) });
   },
   removeItem: (cartKey) => {
     if (get().isOperationLocked) {
@@ -124,7 +140,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       return false; // bloqueia remoção direta no carrinho
     }
     const newItems = get().items.filter(i => i.cartKey !== cartKey);
-    set({ items: newItems, total: newItems.reduce((acc, i) => acc + i.subtotal, 0) });
+    set({ items: newItems, total: roundCents(newItems.reduce((acc, i) => acc + i.subtotal, 0)) });
     return true;
   },
   updateQuantity: (cartKey, quantity) => {
@@ -139,8 +155,8 @@ export const useCartStore = create<CartState>((set, get) => ({
     if (quantity <= 0) {
       return get().removeItem(cartKey);
     }
-    const newItems = get().items.map(i => i.cartKey === cartKey ? { ...i, quantity, subtotal: quantity * i.effectivePriceSell } : i);
-    set({ items: newItems, total: newItems.reduce((acc, i) => acc + i.subtotal, 0) });
+    const newItems = get().items.map(i => i.cartKey === cartKey ? { ...i, quantity, subtotal: roundCents(quantity * i.effectivePriceSell) } : i);
+    set({ items: newItems, total: roundCents(newItems.reduce((acc, i) => acc + i.subtotal, 0)) });
     return true;
   },
   clearCart: () => {
@@ -148,7 +164,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       console.warn('[useCartStore] Operação em andamento — bloqueado clearCart.');
       return;
     }
-    const nextId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const nextId = newOperationId();
     set({
       items: [],
       total: 0,

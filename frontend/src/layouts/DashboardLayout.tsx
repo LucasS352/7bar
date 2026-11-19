@@ -112,7 +112,7 @@ export function DashboardLayout() {
     { name: 'Gestão de Equipe',   to: '/dashboard/equipe',                           icon: Users },
   ];
 
-  const pathname = window.location.pathname;
+  const pathname = location.pathname;
   const isEstoqueBlocked = modules.estoque === false && pathname.startsWith('/dashboard/inventory');
   const isNfceBlocked = (modules.nfce === false && modules.importacaoXml !== true && pathname.startsWith('/dashboard/inventory/purchases/imports')) ||
   (modules.nfce === false && (
@@ -122,9 +122,9 @@ export function DashboardLayout() {
   ));
   const isVitrineBlocked = modules?.vitrineDigital !== true && pathname.startsWith('/dashboard/vitrine');
 
-  // Redirecionar estoquista para inventory se tentar acessar rotas proibidas
+  // Redirecionar estoquista para inventory se tentar acessar qualquer outra rota (inclusive /dashboard)
   const stockistAllowedPaths = ['/dashboard/inventory', '/dashboard/bulk-images'];
-  const isStockistBlocked = isStockist && pathname !== '/dashboard' && !stockistAllowedPaths.some(p => pathname.startsWith(p));
+  const isStockistBlocked = isStockist && !stockistAllowedPaths.some(p => pathname.startsWith(p));
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-zinc-950 text-white font-sans overflow-hidden">
@@ -156,14 +156,16 @@ export function DashboardLayout() {
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <NavLink
-            to="/"
-            className="px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 text-blue-400 font-bold text-xs rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm shrink-0"
-          >
-            <ArrowLeft size={14} /> PDV
-          </NavLink>
-        </div>
+        {!isStockist && (
+          <div className="flex items-center gap-2">
+            <NavLink
+              to="/"
+              className="px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 text-blue-400 font-bold text-xs rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm shrink-0"
+            >
+              <ArrowLeft size={14} /> PDV
+            </NavLink>
+          </div>
+        )}
       </header>
 
       {/* Sidebar — hidden on mobile, visible md+ */}
@@ -396,13 +398,15 @@ export function DashboardLayout() {
               className="p-3 border-t border-zinc-800 bg-zinc-950/50 space-y-1.5 shrink-0"
               style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
             >
-              <NavLink
-                to="/"
-                onClick={() => setIsMobileDrawerOpen(false)}
-                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition active:scale-95"
-              >
-                <ArrowLeft size={16} /> Frente de Caixa (PDV)
-              </NavLink>
+              {!isStockist && (
+                <NavLink
+                  to="/"
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition active:scale-95"
+                >
+                  <ArrowLeft size={16} /> Frente de Caixa (PDV)
+                </NavLink>
+              )}
               <button
                 onClick={() => { setIsMobileDrawerOpen(false); handleLogout(); }}
                 className="flex items-center justify-center gap-2 w-full py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-bold text-xs transition active:scale-95"

@@ -27,6 +27,7 @@ export function OperationalRoute({ module, children }: { module: 'waiter' | 'kds
         const { data } = await api.get('/auth/access/config', {
           timeout: 10_000,
           params: { _ts: Date.now() },
+          headers: { 'X-Silent-Poll': 'true' },
         });
         if (active) setAllowed(module === 'waiter' ? data.waiter === true : data.stations.some((s: string) => s !== 'WAITER'));
       } catch (error: any) {
