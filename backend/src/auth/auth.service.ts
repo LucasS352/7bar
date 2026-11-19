@@ -58,7 +58,7 @@ export class AuthService {
           context,
           ...(secret ? { pinVersion: pinVersion(operator.pin, secret) } : {}),
         },
-        { expiresIn: '30m' }
+        { expiresIn: '8h' }
       );
 
       return {
