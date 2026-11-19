@@ -16,6 +16,7 @@ describe('transactional sale identity', () => {
     const stop = new Error('consulta conferida');
     const tx = {
       $executeRaw: jest.fn().mockResolvedValue(1),
+      $executeRawUnsafe: jest.fn().mockResolvedValue(1),
       tenantSettings: { findUnique: jest.fn().mockResolvedValue({}) },
       cashRegister: { findUnique: jest.fn().mockResolvedValue({ id: 'caixa', status: 'open' }) },
       comanda: {

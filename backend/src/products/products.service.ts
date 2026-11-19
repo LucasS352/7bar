@@ -935,7 +935,7 @@ export class ProductsService {
             (item.barcode   ? byBarcode.get(item.barcode)     : undefined) ??
             null;
 
-          const stockToAdd = parseInt(String(item.stockToAdd ?? 0)) || 0;
+          const stockToAdd = Math.max(0, Number(item.stockToAdd ?? 0) || 0);
 
           if (existing) {
             // Produto já existe — atualiza preços e soma estoque

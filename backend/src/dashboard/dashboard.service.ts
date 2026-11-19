@@ -25,10 +25,14 @@ export class DashboardService {
     const todayStart = new Date(`${todayStr}T00:00:00-03:00`);
     const todayEnd   = new Date(`${todayStr}T23:59:59-03:00`);
 
-    // Início da semana (segunda-feira)
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
-    weekStart.setHours(0, 0, 0, 0);
+    // Início da semana (segunda-feira) — fuso BRT -03:00
+    const weekDayBr = nowBr.getDay(); // 0=dom, 1=seg … 6=sab
+    const weekOffsetDays = weekDayBr === 0 ? -6 : 1 - weekDayBr;
+    const weekStartStr = new Date(nowBr);
+    weekStartStr.setDate(nowBr.getDate() + weekOffsetDays);
+    const weekStart = new Date(
+      `${weekStartStr.toLocaleDateString('en-CA')}T00:00:00-03:00`,
+    );
 
     // Semana anterior
     const prevWeekStart = new Date(weekStart);
@@ -36,8 +40,10 @@ export class DashboardService {
     const prevWeekEnd = new Date(weekStart);
     prevWeekEnd.setMilliseconds(-1);
 
-    // Início do mês
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Início do mês — fuso BRT -03:00
+    const monthStart = new Date(
+      `${nowBr.getFullYear()}-${String(nowBr.getMonth() + 1).padStart(2, '0')}-01T00:00:00-03:00`,
+    );
 
     // ── Janela de período customizado do filtro (Ajustado para fuso -03:00) ──
     const periodStart = new Date(`${startDate}T00:00:00-03:00`);

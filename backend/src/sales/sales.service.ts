@@ -197,9 +197,14 @@ export class SalesService {
 
       let cashRegister: any = null;
       if (targetCashRegisterId) {
+        // FOR UPDATE para serializar checkouts simultâneos no mesmo caixa
         cashRegister = await tx.cashRegister.findUnique({
           where: { id: targetCashRegisterId }
         });
+        await tx.$executeRawUnsafe(
+          'SELECT id FROM cash_registers WHERE id = ? FOR UPDATE',
+          targetCashRegisterId,
+        );
 
         if (!cashRegister || cashRegister.status !== 'open') {
           throw new BadRequestException('O caixa selecionado está fechado ou é inválido. Abra o caixa primeiro.');
@@ -336,10 +341,19 @@ export class SalesService {
       const discount = new Prisma.Decimal(data.discount || 0);
       let total = subtotal.sub(discount);
 
+      // ─── Validações financeiras básicas ──────────────────────────────────────
+      if (discount.lt(0) || discount.gt(subtotal)) {
+        throw new BadRequestException(
+          `Desconto inválido: R$ ${discount.toFixed(2)} (subtotal: R$ ${subtotal.toFixed(2)}).`,
+        );
+      }
+
       // Calcular total pago para detectar acréscimo (ex: iFood com valor maior que o carrinho)
       let paymentsTotal = new Prisma.Decimal(0);
-      const paymentsData = data.payments.map((pay: any) => {
-        paymentsTotal = paymentsTotal.add(new Prisma.Decimal(pay.value));
+      const paymentsData = (data.payments || []).map((pay: any) => {
+        const pv = new Prisma.Decimal(pay.value);
+        if (pv.lt(0)) throw new BadRequestException(`Pagamento com valor negativo: ${pay.method}`);
+        paymentsTotal = paymentsTotal.add(pv);
         return {
           tPag:   TPAG_MAP[pay.method] ?? '99',
           method: pay.method,
@@ -353,8 +367,13 @@ export class SalesService {
       if (paymentsTotal.gt(total)) {
         addition = paymentsTotal.sub(total);
         total = paymentsTotal;
+      } else if (!isConsumption && !isAjusteFiscal && paymentsTotal.add(new Prisma.Decimal('0.01')).lt(total)) {
+        // Pagamento insuficiente: tolerância de R$ 0,01 para arredondamentos
+        throw new BadRequestException(
+          `Pagamentos insuficientes: R$ ${paymentsTotal.toFixed(2)} para uma venda de R$ ${total.toFixed(2)}.`,
+        );
       }
-      
+
       const finalTotalStr = total.toDecimalPlaces(2);
 
 
@@ -416,7 +435,8 @@ export class SalesService {
           initialNfceStatus = 'nao_emitida';
           initialNfceMotivo = 'Forma de pagamento não fiscal (sem emissão).';
         } else {
-          const serie = data.nfceSerie ?? 1;
+          // Série: preferência do frontend → configuração do tenant → padrão 1
+          const serie = data.nfceSerie ?? tenantSettings?.nfceSerie ?? 1;
           const numeracao = await tx.numeracaoNfce.upsert({
             where: { serie },
             update: { ultimo: { increment: 1 } },
@@ -696,6 +716,8 @@ export class SalesService {
           }
           // ─── Movimentação de estoque (desabilitada em Ajuste Fiscal sem estoque) ───
           if (shouldMoveStock) {
+            // salesCount é Int no banco: converter quantidade fracionada (ex: 1.5kg) para inteiro seguro
+            const salesCountIncrement = Math.max(1, Math.round(Math.abs(qty)));
             if (!allowNegativeStock) {
               const updateResult = await tx.product.updateMany({
                 where: {
@@ -704,7 +726,7 @@ export class SalesService {
                 },
                 data: {
                   stock: { decrement: new Prisma.Decimal(qty) },
-                  salesCount: { increment: qty }
+                  salesCount: { increment: salesCountIncrement }
                 }
               });
               if (updateResult.count === 0) {
@@ -715,7 +737,7 @@ export class SalesService {
                 where: { id: item.productId },
                 data: { 
                   stock: { decrement: new Prisma.Decimal(qty) },
-                  salesCount: { increment: qty }
+                  salesCount: { increment: salesCountIncrement }
                 },
               });
             }
@@ -924,13 +946,15 @@ export class SalesService {
       }
 
       // Recalcular os totais tributados da nota
-      const totalNfce = filteredItems.reduce((acc: number, i: any) => acc + Number(i.subtotal), 0);
+      const grossSubtotal = filteredItems.reduce((acc: number, i: any) => acc + Number(i.subtotal), 0);
       let discountNfce = 0;
-      if (Number(sale.discount) > 0 && Number(sale.total) > 0) {
-        const ratio = totalNfce / Number(sale.total);
+      if (Number(sale.discount) > 0 && Number(sale.subtotal) > 0) {
+        // Rateio proporcional sobre o subtotal BRUTO (não o total líquido com desconto),
+        // para que a soma dos itens + desconto rateado = totalNfce exato na SEFAZ.
+        const ratio = grossSubtotal / Number(sale.subtotal);
         discountNfce = Number((Number(sale.discount) * ratio).toFixed(2));
       }
-      const finalTotalNfce = Number((totalNfce - discountNfce).toFixed(2));
+      const finalTotalNfce = Number((grossSubtotal - discountNfce).toFixed(2));
 
       const resultado = await this.nfceService.emitir({
         ambiente: tenant.nfceAmbiente ?? 2,
@@ -1391,6 +1415,9 @@ export class SalesService {
     const prisma = await this.getPrisma();
 
     const sale = await prisma.$transaction(async (tx: any) => {
+      // FOR UPDATE na venda — previne duplo cancelamento concorrente
+      await tx.$executeRawUnsafe('SELECT id FROM sales WHERE id = ? FOR UPDATE', saleId);
+
       const existingSale = await tx.sale.findUnique({
         where: { id: saleId },
         include: {
@@ -1414,14 +1441,17 @@ export class SalesService {
         throw new BadRequestException('Esta venda já está cancelada.');
       }
 
+      // Bloquear produtos envolvidos antes de estornar (previne race com checkout simultâneo)
+      const productIds = Array.from(new Set<string>(existingSale.items.map((i: any) => i.productId).filter(Boolean)));
+      await lockProducts(tx, productIds);
+
       // Estornar cada item consumido de volta aos lotes e produtos
       for (const item of existingSale.items) {
-        // Reduzir contagem de vendas do produto pai
-        // Nota: item.quantity vem como Prisma.Decimal; salesCount é Integer,
-        // por isso o cast explícito com Number() é necessário.
+        // salesCount é Integer — usar Math.max(1, Math.round) para evitar decrement fracionado
+        const salesCountDecrement = Math.max(1, Math.round(Math.abs(Number(item.quantity))));
         await tx.product.update({
           where: { id: item.productId },
-          data: { salesCount: { decrement: Number(item.quantity) } }
+          data: { salesCount: { decrement: salesCountDecrement } }
         });
 
         for (const consumption of item.lotConsumptions) {
@@ -1450,14 +1480,20 @@ export class SalesService {
         }
       }
 
-      // Marcar venda como cancelada
+      // Desvincular consumo de operador se existir
+      await tx.operatorConsumption.deleteMany({ where: { saleId } });
+
+      // Marcar venda como cancelada — só marca nfceStatus: 'cancelada' se havia NFC-e
       const updatedSale = await tx.sale.update({
         where: { id: saleId },
         data: {
           status: 'cancelled',
           cancelReason: reason,
           cancelledAt: new Date(),
-          nfceStatus: 'cancelada'
+          // Não alterar nfceStatus de vendas sem NFC-e (nfceStatus null ou 'nao_emitida')
+          ...(existingSale.emitirNfce && existingSale.nfceStatus && existingSale.nfceStatus !== 'nao_emitida'
+            ? { nfceStatus: 'cancelada' }
+            : {}),
         },
         include: {
           items: true,
@@ -1466,7 +1502,7 @@ export class SalesService {
       });
 
       return updatedSale;
-    });
+    }, { timeout: 15000 });
 
     try {
       this.productsService.invalidateCache(tenantId);

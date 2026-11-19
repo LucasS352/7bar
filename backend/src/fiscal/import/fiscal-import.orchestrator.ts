@@ -73,11 +73,19 @@ export class FiscalImportOrchestrator {
       throw new BadRequestException(`NF-e já processada (status: ${nfeEntrada.status}).`);
     }
 
-    // Atualizar status para IMPORTANDO (lock otimista)
-    await prisma.nfeEntrada.update({
-      where: { id: dto.nfeEntradaId },
-      data:  { status: 'IMPORTANDO' as any },
+    // Lock atômico contra duplo clique: só avança se status for PROCESSANDO ou ERRO (não IMPORTANDO)
+    const claimResult = await prisma.nfeEntrada.updateMany({
+      where: {
+        id: dto.nfeEntradaId,
+        status: { notIn: ['IMPORTANDO', 'IMPORTADA', 'CANCELADA'] as any[] },
+      },
+      data: { status: 'IMPORTANDO' as any },
     });
+    if (claimResult.count === 0) {
+      throw new BadRequestException(
+        `Esta NF-e já está sendo processada (status: ${nfeEntrada.status}). Aguarde e tente novamente.`,
+      );
+    }
 
     // Filtrar apenas os itens selecionados (suporte a importação parcial)
     const itensSelecionados = nfeEntrada.itens.filter((item: any) =>

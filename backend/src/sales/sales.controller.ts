@@ -1,4 +1,4 @@
-import { Controller, Post, Put, Get, Body, UseGuards, Request, Param, NotFoundException, BadRequestException, Query, Res } from '@nestjs/common';
+import { Controller, Post, Put, Get, Body, UseGuards, Request, Param, NotFoundException, BadRequestException, ForbiddenException, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { SalesService } from './sales.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -47,17 +47,25 @@ export class SalesController {
   /** Resumo e estatísticas fiscais de NFC-e */
   @Get('fiscal/summary')
   getFiscalSummary(
+    @Request() req: any,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
+    if (!['admin', 'manager', 'superadmin', 'operator'].includes(req.user?.role)) {
+      throw new ForbiddenException('Permissão insuficiente para acessar dados fiscais.');
+    }
     return this.salesService.getFiscalSummary(startDate, endDate);
   }
 
   /** Histórico e listagem de vendas fiscais com filtros */
   @Get('fiscal/list')
   getFiscalSales(
+    @Request() req: any,
     @Query() query: any,
   ) {
+    if (!['admin', 'manager', 'superadmin', 'operator'].includes(req.user?.role)) {
+      throw new ForbiddenException('Permissão insuficiente para acessar dados fiscais.');
+    }
     return this.salesService.getFiscalSales(query);
   }
 
@@ -76,7 +84,10 @@ export class SalesController {
 
   /** Exportar XMLs em lote para contabilidade */
   @Get('export/xmls')
-  async exportXmls(@Query('startDate') startDate: string, @Query('endDate') endDate: string, @Res() res: Response) {
+  async exportXmls(@Request() req: any, @Query('startDate') startDate: string, @Query('endDate') endDate: string, @Res() res: Response) {
+    if (!['admin', 'manager', 'superadmin'].includes(req.user?.role)) {
+      throw new ForbiddenException('Apenas administradores e gerentes podem exportar XMLs fiscais.');
+    }
     if (!startDate || !endDate) {
       throw new BadRequestException('As datas inicial e final são obrigatórias.');
     }
@@ -91,10 +102,14 @@ export class SalesController {
   /** Exportar XMLs em lote e enviar diretamente por e-mail */
   @Post('export/xmls/send-email')
   async exportXmlsAndSendEmail(
+    @Request() req: any,
     @Body('startDate') startDate: string,
     @Body('endDate') endDate: string,
     @Body('email') email?: string,
   ) {
+    if (!['admin', 'manager', 'superadmin'].includes(req.user?.role)) {
+      throw new ForbiddenException('Apenas administradores e gerentes podem exportar XMLs fiscais.');
+    }
     if (!startDate || !endDate) {
       throw new BadRequestException('As datas inicial e final são obrigatórias.');
     }
@@ -103,9 +118,13 @@ export class SalesController {
 
   @Post(':id/cancel')
   async cancelSale(
+    @Request() req: any,
     @Param('id') id: string,
     @Body('reason') reason: string,
   ) {
+    if (!['admin', 'manager', 'superadmin'].includes(req.user?.role)) {
+      throw new ForbiddenException('Apenas administradores e gerentes podem cancelar vendas.');
+    }
     if (!reason || reason.trim() === '') {
       throw new BadRequestException('O motivo do cancelamento é obrigatório.');
     }

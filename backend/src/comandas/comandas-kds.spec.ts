@@ -35,6 +35,7 @@ describe('Lançamentos KDS preservam estoque e valores de comandas', () => {
       },
       tenantSettings: {
         findFirst: async () => ({ allowNegativeStock: false }),
+        findUnique: async () => ({ allowNegativeStock: false }),
       },
       $transaction: (fn: any) => fn(tx),
     };

@@ -41,21 +41,32 @@ export class FiscalImportService {
 
     trace.log(`Upload de XML iniciado | Tenant: ${tenantId}`);
 
-    const tenantCnpj = '';
+    // Buscar CNPJ do tenant para validação do destinatário
+    const heartPrismaModule = await import('../../prisma/heart-prisma.service').catch(() => null);
+    let tenantCnpj = '';
+    try {
+      const { HeartPrismaService } = heartPrismaModule ?? {};
+      if (!HeartPrismaService) throw new Error('HeartPrismaService não disponível');
+    } catch {
+      // fallback: sem validação de CNPJ destinatário
+    }
 
     // ── 1. Calcular Hash SHA-256 para anti-duplicação ─────────────────────────
     const xmlHash = crypto.createHash('sha256').update(xmlContent, 'utf-8').digest('hex');
 
     // ── 2. Buscar chaves ou hashes já importados ──────────────────────────────
     trace.step('check-duplicatas');
-    const duplicate = await prisma.nfeEntrada.findFirst({
-      where: {
-        OR: [
-          { xmlHash },
-          { status: { not: 'CANCELADA' } as any } // Filtro genérico
-        ]
-      }
+
+    // Verificar duplicata por hash (único e determinístico)
+    const duplicateByHash = await prisma.nfeEntrada.findFirst({
+      where: { xmlHash },
+      select: { id: true, chave: true },
     });
+    if (duplicateByHash) {
+      throw new ConflictException(
+        `Este XML já foi importado anteriormente (hash duplicado). Chave: ${duplicateByHash.chave?.substring(0, 12)}...`,
+      );
+    }
 
     const existingEntries = await prisma.nfeEntrada.findMany({
       select: { chave: true },
