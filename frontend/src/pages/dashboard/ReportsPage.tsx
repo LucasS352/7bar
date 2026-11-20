@@ -612,18 +612,6 @@ function SalesReports() {
         </div>
       )}
 
-      {/* TELA DEDICADA: CADASTRO RÁPIDO DE PREÇO DE CUSTO */}
-      {costEditor.open ? (
-        <UncostedProductsView
-          startDate={query.startDate}
-          endDate={query.endDate}
-          initialScope={costEditor.scope}
-          initialSearch={costEditor.search}
-          onBack={() => setCostEditor((c) => ({ ...c, open: false }))}
-          onSaved={() => setQuery((q) => ({ ...q, version: q.version + 1 }))}
-        />
-      ) : (
-        <>
       {/* ABA 1: LUCRO & EVOLUÇÃO */}
       {activeTab === 'overview' && (
         <section aria-live="polite" aria-busy={loading} className="space-y-4">
@@ -1752,7 +1740,17 @@ function SalesReports() {
           {insights && <AdegaInsightsPanel data={insights} />}
         </section>
       )}
-        </>
+
+      {/* MODAL INLINE DE CADASTRO RÁPIDO DE PREÇO DE CUSTO (sem sair da tela) */}
+      {costEditor.open && (
+        <UncostedProductsView
+          startDate={query.startDate}
+          endDate={query.endDate}
+          initialScope={costEditor.scope}
+          initialSearch={costEditor.search}
+          onBack={() => setCostEditor((c) => ({ ...c, open: false }))}
+          onSaved={() => setQuery((q) => ({ ...q, version: q.version + 1 }))}
+        />
       )}
     </div>
   );

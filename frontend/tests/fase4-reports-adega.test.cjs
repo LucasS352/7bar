@@ -66,6 +66,8 @@ test('AdegaInsightsPanel, SalesEvolution e ReportsPage exibem lucro real, grafic
   assert.match(balloon, /fixed inset-x-3 bottom-20/);
   assert.match(thumb, /LazyImage/);
   assert.match(thumb, /getFullUrl/);
+  assert.match(editor, /role="dialog"/);
+  assert.match(editor, /aria-modal="true"/);
   assert.match(editor, /ProductThumb/);
   assert.match(editor, /\/reports\/uncosted-products/);
   assert.match(editor, /\/reports\/product-costs/);
