@@ -92,6 +92,16 @@ describe('Reports read model (sales, profit, ranking & adega insights)', () => {
       [{ date: '2026-01-01', revenue: decimal('100.01'), transactions: 3n }],
       // dailyCostRows
       [{ date: '2026-01-01', totalCost: decimal('60.01') }],
+      // uncostedRows
+      [
+        {
+          productId: 'p2',
+          name: 'Gelo 5kg',
+          unit: 'UN',
+          quantity: decimal('2.000'),
+          itemSubtotal: decimal('10.00'),
+        },
+      ],
     ];
 
     const result = await run(() => service.sales('2026-01-01', '2026-01-02'));
@@ -112,6 +122,15 @@ describe('Reports read model (sales, profit, ranking & adega insights)', () => {
       uncostedRevenue: '10.00',
       uncostedItemsCount: 1,
     });
+    expect(result.uncostedProducts).toEqual([
+      {
+        productId: 'p2',
+        name: 'Gelo 5kg',
+        unit: 'UN',
+        quantity: '2.000',
+        itemSubtotal: '10.00',
+      },
+    ]);
     expect(result.products[0]).toEqual({
       productId: 'p1',
       name: 'Heineken Long Neck 330ml',

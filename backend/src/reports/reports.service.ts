@@ -135,6 +135,14 @@ interface RawTopProductRow {
   totalCost: Prisma.Decimal | null;
 }
 
+interface RawUncostedProductRow {
+  productId: string;
+  name: string;
+  unit: string;
+  quantity: Prisma.Decimal | null;
+  itemSubtotal: Prisma.Decimal | null;
+}
+
 interface RawRankingRow {
   productId: string;
   name: string;
@@ -186,7 +194,7 @@ export class ReportsService {
 
     // Todas as leituras usam o mesmo snapshot RepeatableRead; custos e vendas
     // são agregados separadamente para evitar multiplicação de totais por joins.
-    const [salesAgg, costRows, topProductsRows, dailySalesRows, dailyCostRows] = await prisma.$transaction(
+    const [salesAgg, costRows, topProductsRows, dailySalesRows, dailyCostRows, uncostedRows] = await prisma.$transaction(
       [
         prisma.sale.aggregate({
           where,
@@ -241,6 +249,24 @@ export class ReportsService {
           WHERE s.createdAt >= ${previous.start} AND s.createdAt < ${period.endExclusive}
             AND s.status = 'completed' AND (s.source IS NULL OR s.source <> 'ajuste_fiscal')
           GROUP BY date ORDER BY date
+        `),
+        prisma.$queryRaw<RawUncostedProductRow[]>(Prisma.sql`
+          SELECT
+            si.productId AS productId,
+            COALESCE(p.name, MAX(si.productName)) AS name,
+            COALESCE(p.unit, MAX(si.unit)) AS unit,
+            COALESCE(SUM(si.quantity), 0) AS quantity,
+            COALESCE(SUM(si.subtotal), 0) AS itemSubtotal
+          FROM sale_items si
+          INNER JOIN sales s ON s.id = si.saleId
+          LEFT JOIN products p ON p.id = si.productId
+          WHERE s.createdAt >= ${period.start} AND s.createdAt < ${period.endExclusive}
+            AND s.status = 'completed' AND (s.source IS NULL OR s.source <> 'ajuste_fiscal')
+            AND (si.priceCost IS NULL OR si.priceCost <= 0)
+            AND (p.priceCost IS NULL OR p.priceCost <= 0)
+          GROUP BY si.productId, p.name, p.unit
+          ORDER BY itemSubtotal DESC, name ASC
+          LIMIT 20
         `),
       ],
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
@@ -315,6 +341,13 @@ export class ReportsService {
           marginPercent: computeMarginPercent(profit, sub),
         };
       }),
+      uncostedProducts: uncostedRows.map((u) => ({
+        productId: u.productId,
+        name: u.name,
+        unit: u.unit,
+        quantity: toDec(u.quantity).toFixed(3),
+        itemSubtotal: toDec(u.itemSubtotal).toFixed(2),
+      })),
     };
   }
 

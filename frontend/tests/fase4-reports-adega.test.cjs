@@ -37,14 +37,22 @@ test('ReportsPage consulta endpoints de lucro, ranking e insights com AbortContr
   assert.match(page, /days < 1 \|\| days > 92/);
 });
 
-test('AdegaInsightsPanel e SalesEvolution renderizam lucro real e graficos sem dangerouslySetInnerHTML', () => {
+test('AdegaInsightsPanel, SalesEvolution e ReportsPage exibem lucro real, graficos e baloes explicativos com seguranca', () => {
   const panel = readSrc('pages/dashboard/AdegaInsightsPanel.tsx');
   const evolution = readSrc('pages/dashboard/SalesEvolution.tsx');
+  const page = readSrc('pages/dashboard/ReportsPage.tsx');
+  const balloon = readSrc('components/InfoBalloon.tsx');
   assert.doesNotMatch(panel, /dangerouslySetInnerHTML|innerHTML/);
   assert.doesNotMatch(evolution, /dangerouslySetInnerHTML|innerHTML/);
+  assert.doesNotMatch(balloon, /dangerouslySetInnerHTML|innerHTML/);
   assert.match(panel, /Lucro/i);
   assert.match(panel, /Risco de Ruptura/);
   assert.match(panel, /Capital Parado/);
   assert.match(evolution, /grossProfit/);
   assert.match(evolution, /totalCost/);
+  assert.match(evolution, /PeriodComparisonBar/);
+  assert.match(evolution, /FinancialEvolutionChart/);
+  assert.match(page, /InfoBalloon/);
+  assert.match(page, /uncostedProducts/);
+  assert.match(balloon, /role="tooltip"/);
 });

@@ -68,6 +68,14 @@ export interface SalesTopProductItem {
   marginPercent: string | null;
 }
 
+export interface UncostedProductItem {
+  productId: string;
+  name: string;
+  unit: string;
+  quantity: string;
+  itemSubtotal: string;
+}
+
 export interface SalesReportResponse {
   period: ReportPeriodInfo;
   daily: DailySalesPoint[];
@@ -75,6 +83,7 @@ export interface SalesReportResponse {
   summary: SalesSummaryMetrics;
   productLimit: number;
   products: SalesTopProductItem[];
+  uncostedProducts: UncostedProductItem[];
 }
 
 export interface ProductRankingQuery {

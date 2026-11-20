@@ -9,6 +9,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { InfoBalloon } from '@/components/InfoBalloon';
 
 export interface ProductRankingRow {
   rank: number;
@@ -156,11 +157,18 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
   return (
     <div className="space-y-6">
       {/* KPIs Específicos da Adega */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-          <p className="text-xs text-zinc-400 flex items-center gap-1.5">
-            <Clock size={14} className="text-amber-400" /> Turno Noturno (18h–02h)
-          </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-zinc-400 flex items-center gap-1.5">
+              <Clock size={14} className="text-amber-400" /> Turno Noturno (18h–02h)
+            </p>
+            <InfoBalloon
+              align="left"
+              title="Turno Noturno (18h–02h)"
+              description="Percentual do faturamento da adega que aconteceu entre 18h e 02h59 (fuso UTC−03:00), além do horário de maior movimento."
+            />
+          </div>
           <p className="text-xl font-bold text-white mt-1.5">
             {data.kpis.nightRevenueSharePercent !== null ? `${num(data.kpis.nightRevenueSharePercent, 1)}%` : '—'}
           </p>
@@ -171,10 +179,17 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
           </p>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-          <p className="text-xs text-zinc-400 flex items-center gap-1.5">
-            <Flame size={14} className="text-blue-400" /> Fim de Semana (Sex–Dom)
-          </p>
+        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-zinc-400 flex items-center gap-1.5">
+              <Flame size={14} className="text-blue-400" /> Fim de Semana (Sex–Dom)
+            </p>
+            <InfoBalloon
+              align="center"
+              title="Fim de Semana (Sex–Dom)"
+              description="Quanto do faturamento veio de sexta-feira a domingo e qual foi o dia da semana mais forte em receita."
+            />
+          </div>
           <p className="text-xl font-bold text-white mt-1.5">
             {data.kpis.weekendRevenueSharePercent !== null ? `${num(data.kpis.weekendRevenueSharePercent, 1)}%` : '—'}
           </p>
@@ -185,20 +200,35 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
           </p>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-          <p className="text-xs text-zinc-400 flex items-center gap-1.5">
-            <AlertTriangle size={14} className="text-rose-400" /> Itens em Risco de Ruptura
-          </p>
+        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-zinc-400 flex items-center gap-1.5">
+              <AlertTriangle size={14} className="text-rose-400" /> Risco de Ruptura
+            </p>
+            <InfoBalloon
+              align="center"
+              title="Itens em Risco de Ruptura"
+              description="Quantidade de produtos com saída no período que já zeraram no estoque, ficaram abaixo do mínimo ou têm previsão para acabar em até 5 dias no ritmo atual."
+            />
+          </div>
           <p className="text-xl font-bold text-rose-400 mt-1.5">
             {data.kpis.stockoutRisksCount}
           </p>
           <p className="text-xs text-zinc-400 mt-1">Mais vendidos com estoque &le; 5 dias</p>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-          <p className="text-xs text-zinc-400 flex items-center gap-1.5">
-            <PackageX size={14} className="text-amber-400" /> Capital Parado (Sem Giro)
-          </p>
+        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-zinc-400 flex items-center gap-1.5">
+              <PackageX size={14} className="text-amber-400" /> Capital Parado
+            </p>
+            <InfoBalloon
+              align="right"
+              title="Capital Parado (Sem Giro)"
+              description="Soma do valor de custo em estoque (quantidade × preço de custo) de produtos ativos que não tiveram nenhuma venda neste período."
+              formula="Σ (estoque atual × custo unitário)"
+            />
+          </div>
           <p className="text-xl font-bold text-amber-300 mt-1.5">
             {money(data.kpis.totalTiedCapitalSlowMoving)}
           </p>

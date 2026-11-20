@@ -1,23 +1,49 @@
-import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   Award,
-  BarChart2,
+  BarChart3,
+  Calendar,
+  CheckCircle2,
+  ChevronDown,
+  Database,
   Download,
+  ExternalLink,
+  Layers,
+  Lightbulb,
+  Percent,
+  Receipt,
   RefreshCw,
   Search,
-  Sparkles,
+  ShoppingCart,
+  Tag,
+  TrendingDown,
   TrendingUp,
+  X,
 } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
-import { SalesEvolution, type DailySales, type SalesComparison } from './SalesEvolution';
+import { InfoBalloon } from '@/components/InfoBalloon';
+import {
+  FinancialEvolutionChart,
+  PeriodComparisonBar,
+  type DailySales,
+  type SalesComparison,
+} from './SalesEvolution';
 import {
   AdegaInsightsPanel,
   type AdegaInsightsData,
   type ProductRankingRow,
 } from './AdegaInsightsPanel';
+
+interface UncostedProduct {
+  productId: string;
+  name: string;
+  unit: string;
+  quantity: string;
+  itemSubtotal: string;
+}
 
 interface SalesReport {
   period: { startDate: string; endDate: string; days: number; timezone: string; includesOpenDays?: boolean };
@@ -52,6 +78,7 @@ interface SalesReport {
     grossProfit: string;
     marginPercent: string | null;
   }[];
+  uncostedProducts?: UncostedProduct[];
 }
 
 interface ProductRankingResponse {
@@ -76,9 +103,19 @@ interface ProductRankingResponse {
 
 type ReportTab = 'overview' | 'ranking' | 'insights';
 type SortOption = 'profit' | 'revenue' | 'quantity' | 'margin' | 'cost';
+type PresetKey = 'today' | 'yesterday' | '7d' | '15d' | '30d' | 'month';
 
 const money = (value: string | number | null | undefined) =>
   Number(value ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+const formatQty = (value: string | number | null | undefined) =>
+  Number(value ?? 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+
+const formatPct = (value: string | number | null | undefined, digits = 2) =>
+  Number(value ?? 0).toLocaleString('pt-BR', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
 
 const dateLabel = (value: string) => value.split('-').reverse().join('/');
 
@@ -90,6 +127,19 @@ const shiftDaysBrt = (daysOffset: number) => {
   const ms = Date.parse(`${base}T12:00:00Z`) + daysOffset * 86_400_000;
   return new Date(ms).toISOString().slice(0, 10);
 };
+
+function resolvePresetDates(preset: PresetKey): { start: string; end: string } {
+  const todayStr = toIsoBrt(new Date());
+  if (preset === 'today') return { start: todayStr, end: todayStr };
+  if (preset === 'yesterday') {
+    const y = shiftDaysBrt(-1);
+    return { start: y, end: y };
+  }
+  if (preset === '7d') return { start: shiftDaysBrt(-6), end: todayStr };
+  if (preset === '15d') return { start: shiftDaysBrt(-14), end: todayStr };
+  if (preset === '30d') return { start: shiftDaysBrt(-29), end: todayStr };
+  return { start: `${todayStr.slice(0, 8)}01`, end: todayStr };
+}
 
 function sanitizeCsvCell(value: string | number | null | undefined): string {
   const raw = String(value ?? '');
@@ -166,6 +216,15 @@ const stockBadge: Record<ProductRankingRow['stockAlert'], { label: string; cls: 
   unknown: { label: 'Combo/N/A', cls: 'text-zinc-500' },
 };
 
+const PRESETS: { id: PresetKey; label: string }[] = [
+  { id: 'today', label: 'Hoje' },
+  { id: 'yesterday', label: 'Ontem' },
+  { id: '7d', label: '7 dias' },
+  { id: '15d', label: '15 dias' },
+  { id: '30d', label: '30 dias' },
+  { id: 'month', label: 'Este mês' },
+];
+
 export default function ReportsPage() {
   const user = useAuthStore((state) => state.user);
   return ['admin', 'superadmin'].includes(user?.role ?? '') ? (
@@ -176,11 +235,20 @@ export default function ReportsPage() {
 }
 
 function SalesReports() {
-  const initialToday = toIsoBrt(new Date());
+  const navigate = useNavigate();
+  const initialRange = useMemo(() => resolvePresetDates('7d'), []);
   const [activeTab, setActiveTab] = useState<ReportTab>('overview');
-  const [startDate, setStartDate] = useState(initialToday);
-  const [endDate, setEndDate] = useState(initialToday);
-  const [query, setQuery] = useState(() => ({ startDate: initialToday, endDate: initialToday, version: 0 }));
+  const [startDate, setStartDate] = useState(initialRange.start);
+  const [endDate, setEndDate] = useState(initialRange.end);
+  const [query, setQuery] = useState(() => ({
+    startDate: initialRange.start,
+    endDate: initialRange.end,
+    version: 0,
+  }));
+
+  const [dateMenuOpen, setDateMenuOpen] = useState(false);
+  const [uncostedModalOpen, setUncostedModalOpen] = useState(false);
+  const datePickerRef = useRef<HTMLDivElement>(null);
 
   const [report, setReport] = useState<SalesReport | null>(null);
   const [ranking, setRanking] = useState<ProductRankingResponse | null>(null);
@@ -197,6 +265,26 @@ function SalesReports() {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [error, setError] = useState('');
   const [validation, setValidation] = useState('');
+
+  useEffect(() => {
+    if (!dateMenuOpen) return;
+    const onOutside = (event: MouseEvent | TouchEvent) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+        setDateMenuOpen(false);
+      }
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setDateMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onOutside);
+    document.addEventListener('touchstart', onOutside);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onOutside);
+      document.removeEventListener('touchstart', onOutside);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [dateMenuOpen]);
 
   // 1. Relatório principal (Lucro Real & Evolução)
   useEffect(() => {
@@ -224,7 +312,7 @@ function SalesReports() {
     return () => controller.abort();
   }, [query]);
 
-  // 2. Ranking Detalhado de Produtos (carrega na aba ranking ou quando filtros mudam)
+  // 2. Ranking Detalhado de Produtos
   useEffect(() => {
     if (activeTab !== 'ranking') return;
     const controller = new AbortController();
@@ -285,6 +373,14 @@ function SalesReports() {
     return () => controller.abort();
   }, [activeTab, query]);
 
+  const activePreset = useMemo(() => {
+    for (const preset of PRESETS) {
+      const range = resolvePresetDates(preset.id);
+      if (range.start === query.startDate && range.end === query.endDate) return preset.id;
+    }
+    return null;
+  }, [query.startDate, query.endDate]);
+
   function applyRange(nextStart = startDate, nextEnd = endDate) {
     const days = (Date.parse(nextEnd) - Date.parse(nextStart)) / 86_400_000 + 1;
     if (!Number.isFinite(days) || days < 1 || days > 92) {
@@ -294,133 +390,181 @@ function SalesReports() {
     setValidation('');
     setStartDate(nextStart);
     setEndDate(nextEnd);
+    setDateMenuOpen(false);
     setQuery((prev) => ({ startDate: nextStart, endDate: nextEnd, version: prev.version + 1 }));
   }
 
-  function applyPreset(preset: 'today' | 'yesterday' | '7d' | '15d' | '30d' | 'month') {
-    const todayStr = toIsoBrt(new Date());
-    if (preset === 'today') return applyRange(todayStr, todayStr);
-    if (preset === 'yesterday') {
-      const y = shiftDaysBrt(-1);
-      return applyRange(y, y);
-    }
-    if (preset === '7d') return applyRange(shiftDaysBrt(-6), todayStr);
-    if (preset === '15d') return applyRange(shiftDaysBrt(-14), todayStr);
-    if (preset === '30d') return applyRange(shiftDaysBrt(-29), todayStr);
-    const monthStart = `${todayStr.slice(0, 8)}01`;
-    return applyRange(monthStart, todayStr);
+  function applyPreset(preset: PresetKey) {
+    const { start, end } = resolvePresetDates(preset);
+    applyRange(start, end);
   }
 
+  const coveragePct = Number(report?.summary.costCoveragePercent ?? 100);
+  const profitPositive = Number(report?.summary.grossProfit ?? 0) >= 0;
+  const profitCompPct =
+    report?.comparison.grossProfitChangePercent !== null &&
+    report?.comparison.grossProfitChangePercent !== undefined
+      ? Number(report.comparison.grossProfitChangePercent)
+      : null;
+  const profitCompDiff = Number(report?.comparison.grossProfitDifference ?? 0);
+
   return (
-    <div className="pb-8 max-w-7xl mx-auto w-full space-y-6">
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <BarChart2 className="text-blue-400" /> Relatórios Financeiros &amp; Adega
+    <div className="pb-10 max-w-7xl mx-auto w-full space-y-5">
+      {/* Breadcrumb + Título + Abas */}
+      <div className="space-y-2">
+        <nav aria-label="Navegação estrutural" className="flex items-center gap-1.5 text-xs text-zinc-500">
+          <Link to="/" className="hover:text-zinc-300 transition">PDV</Link>
+          <span>/</span>
+          <Link to="/dashboard" className="hover:text-zinc-300 transition">Analytics</Link>
+          <span>/</span>
+          <span className="text-zinc-300 font-medium">Relatórios</span>
+        </nav>
+
+        <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-2.5 tracking-tight">
+            <span className="p-2 rounded-xl bg-blue-500/15 border border-blue-500/25 text-blue-400">
+              <BarChart3 size={22} />
+            </span>
+            Relatórios Financeiros &amp; Adega
           </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Lucro real (Receita − CMV), ranking detalhado de produtos e inteligência de giro.
-          </p>
-        </div>
 
-        {/* Navegação de Abas */}
-        <div
-          role="tablist"
-          aria-label="Seções do relatório"
-          className="inline-flex bg-zinc-900 border border-zinc-800 p-1 rounded-xl gap-1 self-start"
-        >
-          {[
-            { id: 'overview', label: 'Lucro & Evolução', icon: TrendingUp },
-            { id: 'ranking', label: 'Ranking de Produtos', icon: Award },
-            { id: 'insights', label: 'Insights da Adega', icon: Sparkles },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setActiveTab(tab.id as ReportTab)}
-                className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                  active ? 'bg-blue-600 text-white shadow' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <Icon size={15} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </header>
+          <div
+            role="tablist"
+            aria-label="Seções do relatório"
+            className="inline-flex bg-zinc-900/90 border border-zinc-800 p-1 rounded-xl gap-1 self-start lg:self-auto"
+          >
+            {[
+              { id: 'overview', label: 'Lucro & Evolução', icon: TrendingUp },
+              { id: 'ranking', label: 'Ranking de Produtos', icon: Award },
+              { id: 'insights', label: 'Insights da Adega', icon: Lightbulb },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setActiveTab(tab.id as ReportTab)}
+                  className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                    active
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
+                  }`}
+                >
+                  <Icon size={15} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </header>
+      </div>
 
-      {/* Filtro de Período + Atalhos */}
+      {/* Barra Unificada de Filtro de Período */}
       <form
         onSubmit={(event) => {
           event.preventDefault();
           applyRange();
         }}
-        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3"
+        className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2.5"
       >
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { id: 'today', label: 'Hoje' },
-            { id: 'yesterday', label: 'Ontem' },
-            { id: '7d', label: '7 dias' },
-            { id: '15d', label: '15 dias' },
-            { id: '30d', label: '30 dias' },
-            { id: 'month', label: 'Este mês' },
-          ].map((preset) => (
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {PRESETS.map((preset) => {
+            const isSelected = activePreset === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => applyPreset(preset.id)}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition cursor-pointer ${
+                  isSelected
+                    ? 'bg-zinc-800 border-zinc-600 text-white shadow-sm'
+                    : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:text-white hover:border-zinc-700'
+                }`}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+
+          <span className="hidden md:block h-6 w-px bg-zinc-800 mx-1" aria-hidden="true" />
+
+          {/* Seletor compacto de intervalo de datas */}
+          <div ref={datePickerRef} className="relative">
             <button
-              key={preset.id}
               type="button"
-              onClick={() => applyPreset(preset.id as 'today' | 'yesterday' | '7d' | '15d' | '30d' | 'month')}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 hover:border-blue-500/50 text-zinc-300 hover:text-white transition cursor-pointer"
+              onClick={() => setDateMenuOpen((prev) => !prev)}
+              aria-expanded={dateMenuOpen}
+              className="flex items-center gap-2 bg-zinc-950/90 hover:bg-zinc-950 border border-zinc-700/80 rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium text-zinc-200 transition cursor-pointer"
             >
-              {preset.label}
+              <Calendar size={14} className="text-zinc-400" />
+              <span>
+                {dateLabel(startDate)} — {dateLabel(endDate)}
+              </span>
+              <ChevronDown size={14} className={`text-zinc-400 transition-transform ${dateMenuOpen ? 'rotate-180' : ''}`} />
             </button>
-          ))}
+
+            {dateMenuOpen && (
+              <div className="absolute left-0 top-full mt-2 w-72 bg-zinc-950 border border-zinc-700 rounded-2xl p-4 shadow-2xl z-40 space-y-3">
+                <p className="text-xs font-bold text-zinc-200">Selecionar intervalo (até 92 dias)</p>
+                <label className="text-xs text-zinc-400 flex flex-col gap-1">
+                  Data inicial
+                  <input
+                    required
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-2 text-sm text-white [color-scheme:dark]"
+                  />
+                </label>
+                <label className="text-xs text-zinc-400 flex flex-col gap-1">
+                  Data final
+                  <input
+                    required
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-2 text-sm text-white [color-scheme:dark]"
+                  />
+                </label>
+                <p className="text-[11px] text-zinc-500">Fuso comercial UTC−03:00.</p>
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setDateMenuOpen(false)}
+                    className="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-white cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyRange(startDate, endDate)}
+                    className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white cursor-pointer"
+                  >
+                    Aplicar período
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="text-sm text-zinc-300 flex flex-col gap-1">
-            Data inicial
-            <input
-              required
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="bg-zinc-950 border border-zinc-700 rounded-lg p-2 text-white [color-scheme:dark]"
-            />
-          </label>
-          <label className="text-sm text-zinc-300 flex flex-col gap-1">
-            Data final
-            <input
-              required
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="bg-zinc-950 border border-zinc-700 rounded-lg p-2 text-white [color-scheme:dark]"
-            />
-          </label>
-          <button
-            type="submit"
-            className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-2 font-semibold flex items-center gap-2 transition cursor-pointer"
-          >
-            <RefreshCw size={16} /> Consultar
-          </button>
-        </div>
-
-        <p className="text-xs text-zinc-400">
-          Até 92 dias por consulta · Dia comercial UTC−03:00 · Cancelamentos e ajustes fiscais ficam excluídos automaticamente.
-        </p>
-        {validation && (
-          <p role="alert" className="text-amber-300 text-sm">
-            {validation}
-          </p>
-        )}
+        <button
+          type="submit"
+          className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-4 py-2 font-semibold text-xs sm:text-sm inline-flex items-center gap-2 shadow-sm shadow-blue-600/20 transition cursor-pointer ml-auto"
+        >
+          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+          Consultar
+        </button>
       </form>
+
+      {validation && (
+        <p role="alert" className="text-amber-300 text-sm bg-amber-500/10 border border-amber-500/25 rounded-xl px-4 py-2.5">
+          {validation}
+        </p>
+      )}
 
       {error && (
         <div role="alert" className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 text-rose-300">
@@ -428,159 +572,482 @@ function SalesReports() {
           <button
             type="button"
             onClick={() => setQuery((q) => ({ ...q, version: q.version + 1 }))}
-            className="mt-2 underline text-sm font-semibold"
+            className="mt-2 underline text-sm font-semibold cursor-pointer"
           >
             Tentar novamente
           </button>
         </div>
       )}
 
-      {/* ABA 1: LUCRO REAL & EVOLUÇÃO */}
+      {/* ABA 1: LUCRO & EVOLUÇÃO */}
       {activeTab === 'overview' && (
-        <section aria-live="polite" aria-busy={loading} className="space-y-5">
-          {loading && !report && <p role="status" className="text-zinc-400">Calculando faturamento, custos e lucro real…</p>}
+        <section aria-live="polite" aria-busy={loading} className="space-y-4">
+          {loading && !report && (
+            <p role="status" className="text-zinc-400 text-sm py-4">
+              Calculando faturamento, custos e lucro real…
+            </p>
+          )}
 
           {report && (
             <>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-semibold text-white">
-                  Período de {dateLabel(report.period.startDate)} a {dateLabel(report.period.endDate)}
-                </h2>
-                <span className="text-xs px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300">
-                  Cobertura de custo: <strong className="text-white">{Number(report.summary.costCoveragePercent).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</strong>
-                </span>
+              {/* Cabeçalho Resumo do Período + Badge Cobertura */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <div>
+                  <h2 className="text-lg font-bold text-white">Resumo do período</h2>
+                  <p className="text-xs text-zinc-400">
+                    Panorama do desempenho no período de {dateLabel(report.period.startDate)} a{' '}
+                    {dateLabel(report.period.endDate)}.
+                  </p>
+                </div>
+
+                <div
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold ${
+                    coveragePct >= 95
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                      : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                  }`}
+                >
+                  <CheckCircle2 size={14} />
+                  <span>Cobertura de custos {formatPct(coveragePct, 1)}%</span>
+                  <InfoBalloon
+                    align="right"
+                    title="Cobertura de custos"
+                    description="Percentual do faturamento que possui custo cadastrado (por lote FIFO ou preço de custo do catálogo). Quanto mais perto de 100%, mais exato é o seu lucro real."
+                    formula="(Receita com custo ÷ Receita total de itens) × 100"
+                  />
+                </div>
               </div>
 
-              {Number(report.summary.uncostedRevenue) > 0 && (
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 text-xs sm:text-sm text-amber-200 flex items-start gap-2.5">
-                  <AlertTriangle size={18} className="text-amber-400 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="text-white">Atenção à precisão do custo:</strong>{' '}
-                    {money(report.summary.uncostedRevenue)} em faturamento ({report.summary.uncostedItemsCount} produto(s)) vieram de itens com preço de custo zerado. Para esses itens, o CMV considerado é R&#36; 0,00.
+              {/* LINHA 1 — 4 KPIs PRINCIPAIS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
+                {/* 1. Faturamento líquido */}
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-4 flex flex-col justify-between">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 shrink-0">
+                        <Database size={16} />
+                      </span>
+                      <span className="text-sm font-medium text-zinc-300 truncate">Faturamento líquido</span>
+                    </div>
+                    <InfoBalloon
+                      align="left"
+                      title="Faturamento líquido"
+                      description="Soma de todas as vendas concluídas no caixa e comandas do período, já considerando descontos aplicados e acréscimos/taxas. Vendas canceladas e ajustes fiscais ficam de fora."
+                      formula="Σ total das vendas concluídas"
+                    />
                   </div>
-                </div>
-              )}
-
-              {/* KPIs Principais */}
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
-                  <p className="text-xs sm:text-sm text-zinc-400">Faturamento Líquido</p>
-                  <p className="text-xl md:text-2xl font-bold text-white mt-1.5 break-words">
+                  <p className="text-2xl sm:text-[26px] font-extrabold text-white mt-3 tracking-tight break-words">
                     {money(report.summary.revenue)}
                   </p>
-                  <p className="text-xs text-zinc-500 mt-1">
-                    {report.summary.transactions.toLocaleString('pt-BR')} vendas · Ticket {money(report.summary.averageTicket)}
+                  <p className="text-xs text-zinc-400 mt-1.5">
+                    {report.summary.transactions.toLocaleString('pt-BR')} vendas · Ticket{' '}
+                    {money(report.summary.averageTicket)}
                   </p>
                 </div>
 
-                <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
-                  <p className="text-xs sm:text-sm text-zinc-400">Custo das Mercadorias (CMV)</p>
-                  <p className="text-xl md:text-2xl font-bold text-amber-300 mt-1.5 break-words">
-                    {money(report.summary.totalCost)}
-                  </p>
-                  <p className="text-xs text-zinc-500 mt-1">
-                    FIFO Lotes: {money(report.summary.historicalCostRevenue)} · Catálogo: {money(report.summary.fallbackCostRevenue)}
-                  </p>
-                </div>
-
-                <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-2xl col-span-2 lg:col-span-1">
-                  <p className="text-xs sm:text-sm text-emerald-300 font-medium">Lucro Real das Vendas</p>
+                {/* 2. Lucro das vendas (destaque esmeralda) */}
+                <div
+                  className={`rounded-2xl p-4 border flex flex-col justify-between shadow-lg ${
+                    profitPositive
+                      ? 'bg-gradient-to-br from-emerald-950/65 via-zinc-900 to-zinc-900 border-emerald-500/40 shadow-emerald-950/30'
+                      : 'bg-gradient-to-br from-rose-950/60 via-zinc-900 to-zinc-900 border-rose-500/40 shadow-rose-950/30'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className={`p-2 rounded-xl border shrink-0 ${
+                          profitPositive
+                            ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                            : 'bg-rose-500/15 border-rose-500/30 text-rose-400'
+                        }`}
+                      >
+                        <TrendingUp size={16} />
+                      </span>
+                      <span
+                        className={`text-sm font-semibold truncate ${
+                          profitPositive ? 'text-emerald-200' : 'text-rose-200'
+                        }`}
+                      >
+                        Lucro das vendas
+                      </span>
+                    </div>
+                    <InfoBalloon
+                      align="center"
+                      title="Lucro das vendas (Lucro Bruto Real)"
+                      description="É quanto efetivamente sobrou da operação de vendas após pagar o custo das mercadorias vendidas (CMV) e abater descontos. Despesas fixas (aluguel, energia, folha) não entram aqui."
+                      formula="Faturamento líquido − CMV"
+                    />
+                  </div>
                   <p
-                    className={`text-xl md:text-2xl font-bold mt-1.5 break-words ${
-                      Number(report.summary.grossProfit) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                    className={`text-2xl sm:text-[26px] font-extrabold mt-3 tracking-tight break-words ${
+                      profitPositive ? 'text-emerald-400' : 'text-rose-400'
                     }`}
                   >
                     {money(report.summary.grossProfit)}
                   </p>
-                  <p className="text-xs text-emerald-200/80 mt-1">
-                    Margem:{' '}
-                    <strong>
-                      {report.summary.marginPercent !== null ? `${report.summary.marginPercent}%` : '—'}
-                    </strong>
-                    {report.summary.markupPercent !== null && ` · Markup: ${report.summary.markupPercent}%`}
+                  <p className="text-xs text-zinc-400 mt-1.5">
+                    Resultado das vendas no período
+                    {report.summary.markupPercent !== null ? ` · Markup ${formatPct(report.summary.markupPercent)}%` : ''}
                   </p>
                 </div>
 
-                <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
-                  <p className="text-xs sm:text-sm text-zinc-400">Lucro Médio por Venda</p>
-                  <p className="text-lg md:text-xl font-bold text-white mt-1.5">
-                    {money(report.summary.averageProfitPerSale)}
+                {/* 3. Margem */}
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-4 flex flex-col justify-between">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="p-2 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 shrink-0">
+                        <Percent size={16} />
+                      </span>
+                      <span className="text-sm font-medium text-zinc-300 truncate">Margem</span>
+                    </div>
+                    <InfoBalloon
+                      align="center"
+                      title="Margem de Lucro"
+                      description="Indica quantos % de cada real faturado viraram lucro bruto após pagar a mercadoria. Ex.: margem de 33% significa que a cada R$ 100 vendidos, R$ 33 são lucro bruto."
+                      formula="(Lucro das vendas ÷ Faturamento líquido) × 100"
+                    />
+                  </div>
+                  <p className="text-2xl sm:text-[26px] font-extrabold text-white mt-3 tracking-tight">
+                    {report.summary.marginPercent !== null ? `${formatPct(report.summary.marginPercent)}%` : '—'}
                   </p>
+                  <p className="text-xs text-zinc-400 mt-1.5">Lucro sobre o faturamento</p>
                 </div>
 
-                <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
-                  <p className="text-xs sm:text-sm text-zinc-400">Descontos Aplicados</p>
-                  <p className="text-lg md:text-xl font-bold text-rose-300 mt-1.5">
-                    − {money(report.summary.saleDiscounts)}
+                {/* 4. Vendas realizadas */}
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-4 flex flex-col justify-between">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="p-2 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 shrink-0">
+                        <ShoppingCart size={16} />
+                      </span>
+                      <span className="text-sm font-medium text-zinc-300 truncate">Vendas realizadas</span>
+                    </div>
+                    <InfoBalloon
+                      align="right"
+                      title="Vendas realizadas"
+                      description="Total de cupons/vendas concluídas no PDV ou em comandas fechadas dentro do período selecionado."
+                    />
+                  </div>
+                  <p className="text-2xl sm:text-[26px] font-extrabold text-white mt-3 tracking-tight">
+                    {report.summary.transactions.toLocaleString('pt-BR')}
                   </p>
-                </div>
-
-                <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
-                  <p className="text-xs sm:text-sm text-zinc-400">Acréscimos / Taxas</p>
-                  <p className="text-lg md:text-xl font-bold text-blue-300 mt-1.5">
-                    + {money(report.summary.saleAdditions)}
-                  </p>
+                  <p className="text-xs text-zinc-400 mt-1.5">Quantidade de vendas no período</p>
                 </div>
               </div>
 
-              <SalesEvolution
+              {/* LINHA 2 — 4 CARDS COMPACTOS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
+                {/* CMV */}
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl px-4 py-3.5 flex items-center gap-3">
+                  <span className="p-2 rounded-xl bg-zinc-800/90 border border-zinc-700/70 text-zinc-300 shrink-0">
+                    <Tag size={15} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs text-zinc-400 font-medium">CMV</span>
+                      <InfoBalloon
+                        align="left"
+                        title="CMV — Custo das Mercadorias Vendidas"
+                        description="Soma do custo das unidades vendidas (usando o custo do lote FIFO no momento da venda ou o custo do cadastro quando não havia lote)."
+                        formula={`FIFO: ${money(report.summary.historicalCostRevenue)} · Catálogo: ${money(report.summary.fallbackCostRevenue)}`}
+                      />
+                    </div>
+                    <p className="text-lg font-extrabold text-amber-400 mt-0.5 truncate">
+                      {money(report.summary.totalCost)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Ticket médio */}
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl px-4 py-3.5 flex items-center gap-3">
+                  <span className="p-2 rounded-xl bg-zinc-800/90 border border-zinc-700/70 text-zinc-300 shrink-0">
+                    <Receipt size={15} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs text-zinc-400 font-medium">Ticket médio</span>
+                      <InfoBalloon
+                        align="center"
+                        title="Ticket médio"
+                        description="Quanto cada cliente gasta em média por compra no período. Aumentar o ticket médio (com combos e adicionais) faz faturar mais sem precisar de mais clientes."
+                        formula="Faturamento líquido ÷ Vendas realizadas"
+                      />
+                    </div>
+                    <p className="text-lg font-extrabold text-white mt-0.5 truncate">
+                      {money(report.summary.averageTicket)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Descontos */}
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl px-4 py-3.5 flex items-center gap-3">
+                  <span className="p-2 rounded-xl bg-zinc-800/90 border border-zinc-700/70 text-zinc-300 shrink-0">
+                    <Percent size={15} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs text-zinc-400 font-medium">Descontos</span>
+                      <InfoBalloon
+                        align="center"
+                        title="Descontos aplicados"
+                        description="Soma dos descontos concedidos no fechamento das vendas deste período (já abatidos do faturamento líquido)."
+                        formula={
+                          Number(report.summary.saleAdditions) > 0
+                            ? `Acréscimos/taxas somados: + ${money(report.summary.saleAdditions)}`
+                            : undefined
+                        }
+                      />
+                    </div>
+                    <p className="text-lg font-extrabold text-rose-400 mt-0.5 truncate">
+                      {money(report.summary.saleDiscounts)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Lucro por venda */}
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl px-4 py-3.5 flex items-center gap-3">
+                  <span className="p-2 rounded-xl bg-zinc-800/90 border border-zinc-700/70 text-zinc-300 shrink-0">
+                    <Layers size={15} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs text-zinc-400 font-medium">Lucro por venda</span>
+                      <InfoBalloon
+                        align="right"
+                        title="Lucro médio por venda"
+                        description="Valor médio de lucro bruto que cada venda deixa no caixa depois de descontar o custo dos produtos vendidos."
+                        formula="Lucro das vendas ÷ Vendas realizadas"
+                      />
+                    </div>
+                    <p
+                      className={`text-lg font-extrabold mt-0.5 truncate ${
+                        Number(report.summary.averageProfitPerSale) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                      }`}
+                    >
+                      {money(report.summary.averageProfitPerSale)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* LINHA 3 — COMPARAÇÃO COM PERÍODO ANTERIOR */}
+              <PeriodComparisonBar
                 daily={report.daily}
+                currentRevenue={report.summary.revenue}
+                currentGrossProfit={report.summary.grossProfit}
                 comparison={report.comparison}
                 includesOpenDays={report.period.includesOpenDays ?? false}
               />
 
-              {/* Resumo Rápido Top 20 por Faturamento com Custo e Lucro */}
-              <section className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                <div className="p-4 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+              {/* LINHA 4 — EVOLUÇÃO FINANCEIRA (8 COL) + ATENÇÃO E OPORTUNIDADES (4 COL) */}
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
+                <div className="xl:col-span-8 min-w-0">
+                  <FinancialEvolutionChart daily={report.daily} />
+                </div>
+
+                <aside
+                  aria-label="Atenção e oportunidades"
+                  className="xl:col-span-4 bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-3.5"
+                >
+                  <div className="space-y-3.5">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <h2 className="text-base font-bold text-white flex items-center gap-2">
+                          <Lightbulb size={17} className="text-amber-400" /> Atenção e oportunidades
+                        </h2>
+                        <InfoBalloon
+                          align="right"
+                          title="Atenção e oportunidades"
+                          description="Destaca automaticamente falhas no cadastro de custos que distorcem seu lucro e resume o ganho ou queda frente ao período anterior."
+                        />
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-1">
+                        Pontos que merecem sua atenção neste período.
+                      </p>
+                    </div>
+
+                    {/* Alerta de produtos sem custo ou confirmação 100% */}
+                    {Number(report.summary.uncostedRevenue) > 0 || report.summary.uncostedItemsCount > 0 ? (
+                      <div className="rounded-xl border border-amber-500/35 bg-amber-500/5 p-3.5 space-y-2">
+                        <div className="flex items-start gap-2.5">
+                          <AlertTriangle size={17} className="text-amber-400 shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-amber-200">
+                              {report.summary.uncostedItemsCount}{' '}
+                              {report.summary.uncostedItemsCount === 1
+                                ? 'produto sem custo cadastrado'
+                                : 'produtos sem custo cadastrado'}
+                            </p>
+                            <p className="text-xs text-zinc-300 mt-0.5">
+                              {money(report.summary.uncostedRevenue)} em vendas sem custo.
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setUncostedModalOpen(true)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300 pl-6 cursor-pointer"
+                        >
+                          <ExternalLink size={13} /> Revisar cadastro
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3.5 flex items-start gap-2.5">
+                        <CheckCircle2 size={17} className="text-emerald-400 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-bold text-emerald-200">Custos 100% cobertos</p>
+                          <p className="text-xs text-zinc-300 mt-0.5">
+                            Todos os produtos vendidos no período têm custo registrado.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Card variação de lucro */}
+                    <div
+                      className={`rounded-xl border p-3.5 flex items-start gap-2.5 ${
+                        profitCompDiff >= 0
+                          ? 'border-emerald-500/30 bg-emerald-500/5'
+                          : 'border-rose-500/30 bg-rose-500/5'
+                      }`}
+                    >
+                      {profitCompDiff >= 0 ? (
+                        <TrendingUp size={17} className="text-emerald-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <TrendingDown size={17} className="text-rose-400 shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        <p className="text-sm font-bold text-white">
+                          {profitCompPct !== null
+                            ? profitCompDiff >= 0
+                              ? `Lucro cresceu ${formatPct(profitCompPct)}% no período`
+                              : `Lucro recuou ${formatPct(Math.abs(profitCompPct))}% no período`
+                            : 'Comparativo de lucro sem base anterior'}
+                        </p>
+                        <p className="text-xs text-zinc-300 mt-1 leading-relaxed">
+                          Variação de{' '}
+                          <strong className={profitCompDiff >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
+                            {profitCompDiff > 0 ? '+' : ''}
+                            {money(profitCompDiff)}
+                          </strong>{' '}
+                          em relação ao período anterior ({money(report.comparison.grossProfit ?? 0)}).
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('insights')}
+                    className="w-full py-2.5 px-3 rounded-xl bg-zinc-950/80 hover:bg-zinc-800 border border-zinc-800 text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center justify-between transition cursor-pointer"
+                  >
+                    <span>Ver horários de pico, rupturas e insights da adega</span>
+                    <span>&rarr;</span>
+                  </button>
+                </aside>
+              </div>
+
+              {/* LINHA 5 — TABELA PRODUTOS POR FATURAMENTO */}
+              <section className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl overflow-hidden">
+                <div className="p-4 sm:px-5 border-b border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h2 className="font-semibold text-white">Top {report.productLimit} Produtos por Faturamento</h2>
-                    <p className="text-xs text-zinc-400 mt-1">
-                      Descontos gerais da venda são deduzidos no Lucro Real acima; na tabela abaixo exibimos receita vs CMV de cada item.
+                    <div className="flex items-center gap-1.5">
+                      <h2 className="text-base font-bold text-white">Produtos por faturamento</h2>
+                      <InfoBalloon
+                        align="left"
+                        title="Produtos por faturamento"
+                        description="Top 20 itens por receita no período, mostrando custo (CMV), lucro bruto individual e barra visual de margem para identificar rapidamente produtos campeões de venda vs campeões de lucro."
+                      />
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Principais produtos por faturamento no período (receita vs CMV por item).
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setActiveTab('ranking')}
-                    className="text-xs font-semibold text-blue-400 hover:text-blue-300 underline cursor-pointer"
+                    className="text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer"
                   >
-                    Abrir Ranking Completo &amp; Filtros &rarr;
+                    Ver ranking completo &rarr;
                   </button>
                 </div>
+
                 {report.products.length === 0 ? (
-                  <p className="p-6 text-zinc-400">Nenhum produto vendido neste período.</p>
+                  <p className="p-6 text-sm text-zinc-400">Nenhum produto vendido neste período.</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                      <thead className="text-zinc-400 text-xs uppercase border-b border-zinc-800">
+                      <thead className="text-zinc-400 text-[11px] uppercase tracking-wider border-b border-zinc-800/80 bg-zinc-950/40">
                         <tr>
-                          <th className="p-3.5">Produto</th>
-                          <th className="p-3.5 text-right">Qtd</th>
-                          <th className="p-3.5 text-right">Faturamento</th>
-                          <th className="p-3.5 text-right">Custo (CMV)</th>
-                          <th className="p-3.5 text-right">Lucro Real</th>
-                          <th className="p-3.5 text-right">Margem</th>
+                          <th className="py-3 px-4 sm:px-5 font-semibold">Produto</th>
+                          <th className="py-3 px-3 text-right font-semibold">Qtd.</th>
+                          <th className="py-3 px-3 text-right font-semibold">Faturamento</th>
+                          <th className="py-3 px-3 text-right font-semibold">Custo (CMV)</th>
+                          <th className="py-3 px-3 text-right font-semibold">Lucro</th>
+                          <th className="py-3 px-4 sm:px-5 text-right font-semibold">Margem</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {report.products.map((p) => (
-                          <tr
-                            key={`${p.productId}-${p.name}-${p.unit}`}
-                            className="border-t border-zinc-800/80 hover:bg-zinc-800/30"
-                          >
-                            <td className="p-3.5 font-medium text-white">
-                              {p.name} <span className="text-xs text-zinc-500">({p.unit})</span>
-                            </td>
-                            <td className="p-3.5 text-right text-zinc-300">
-                              {Number(p.quantity).toLocaleString('pt-BR', { maximumFractionDigits: 3 })}
-                            </td>
-                            <td className="p-3.5 text-right text-white font-medium">{money(p.itemSubtotal)}</td>
-                            <td className="p-3.5 text-right text-amber-300">{money(p.totalCost)}</td>
-                            <td className="p-3.5 text-right font-semibold text-emerald-400">{money(p.grossProfit)}</td>
-                            <td className="p-3.5 text-right text-zinc-300">
-                              {p.marginPercent !== null ? `${p.marginPercent}%` : '—'}
-                            </td>
-                          </tr>
-                        ))}
+                        {report.products.map((p) => {
+                          const marginVal = p.marginPercent !== null ? Number(p.marginPercent) : null;
+                          const barWidth =
+                            marginVal !== null ? Math.max(4, Math.min(100, Math.abs(marginVal))) : 0;
+                          const profitPos = Number(p.grossProfit) >= 0;
+                          return (
+                            <tr
+                              key={`${p.productId}-${p.name}-${p.unit}`}
+                              className="border-t border-zinc-800/70 hover:bg-zinc-800/30 transition-colors"
+                            >
+                              <td className="py-3 px-4 sm:px-5 font-semibold text-white">
+                                {p.name}{' '}
+                                <span className="text-xs font-normal text-zinc-400">({p.unit})</span>
+                              </td>
+                              <td className="py-3 px-3 text-right text-zinc-300 tabular-nums">
+                                {formatQty(p.quantity)}
+                              </td>
+                              <td className="py-3 px-3 text-right text-white font-medium tabular-nums">
+                                {money(p.itemSubtotal)}
+                              </td>
+                              <td className="py-3 px-3 text-right text-amber-400 font-medium tabular-nums">
+                                {money(p.totalCost)}
+                              </td>
+                              <td
+                                className={`py-3 px-3 text-right font-bold tabular-nums ${
+                                  profitPos ? 'text-emerald-400' : 'text-rose-400'
+                                }`}
+                              >
+                                {money(p.grossProfit)}
+                              </td>
+                              <td className="py-3 px-4 sm:px-5 text-right tabular-nums">
+                                {marginVal !== null ? (
+                                  <div className="inline-flex items-center justify-end gap-2.5">
+                                    <span className="text-zinc-200 font-medium">
+                                      {formatPct(marginVal)}%
+                                    </span>
+                                    <span
+                                      aria-hidden="true"
+                                      className="hidden sm:inline-block w-16 h-2 rounded-full bg-zinc-800 overflow-hidden"
+                                    >
+                                      <span
+                                        className={`block h-full rounded-full ${
+                                          marginVal >= 25
+                                            ? 'bg-emerald-400'
+                                            : marginVal >= 10
+                                              ? 'bg-amber-400'
+                                              : 'bg-rose-400'
+                                        }`}
+                                        style={{ width: `${barWidth}%` }}
+                                      />
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-zinc-500">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -595,7 +1062,7 @@ function SalesReports() {
       {activeTab === 'ranking' && (
         <section aria-live="polite" aria-busy={rankingLoading} className="space-y-4">
           {/* Barra de Filtros do Ranking */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex flex-wrap items-end gap-3">
+          <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 flex flex-wrap items-end gap-3">
             <label className="text-xs text-zinc-400 flex flex-col gap-1 flex-1 min-w-[200px]">
               Buscar produto
               <div className="relative flex gap-2">
@@ -625,7 +1092,7 @@ function SalesReports() {
               </div>
             </label>
 
-            <label className="text-xs text-zinc-400 flex flex-col gap-1 min-w-[170px]">
+            <label className="text-xs text-zinc-400 flex flex-col gap-1 min-w-[175px]">
               Ordenar ranking por
               <select
                 value={sortBy}
@@ -681,53 +1148,90 @@ function SalesReports() {
           </div>
 
           {rankingLoading && !ranking && (
-            <p role="status" className="text-zinc-400">Montando ranking detalhado…</p>
+            <p role="status" className="text-zinc-400 text-sm">
+              Montando ranking detalhado…
+            </p>
           )}
 
           {ranking && (
             <>
-              {/* Totais do Filtro */}
+              {/* Totais do Filtro com balãozinho */}
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3.5">
-                  <p className="text-xs text-zinc-400">Itens no filtro</p>
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <p className="text-xs text-zinc-400">Itens no filtro</p>
+                    <InfoBalloon
+                      align="left"
+                      title="Itens distintos no filtro"
+                      description="Quantidade total de produtos diferentes vendidos dentro da busca/categoria selecionada."
+                    />
+                  </div>
                   <p className="text-lg font-bold text-white mt-1">
                     {ranking.totals.distinctProducts.toLocaleString('pt-BR')}
                   </p>
                 </div>
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3.5">
-                  <p className="text-xs text-zinc-400">Unidades vendidas</p>
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <p className="text-xs text-zinc-400">Unidades vendidas</p>
+                    <InfoBalloon
+                      align="center"
+                      title="Unidades vendidas"
+                      description="Soma das quantidades vendidas (unidades, litros ou kg) considerando os filtros atuais."
+                    />
+                  </div>
                   <p className="text-lg font-bold text-white mt-1">
-                    {Number(ranking.totals.totalUnitsSold).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
+                    {formatQty(ranking.totals.totalUnitsSold)}
                   </p>
                 </div>
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3.5">
-                  <p className="text-xs text-zinc-400">Faturamento itens</p>
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <p className="text-xs text-zinc-400">Faturamento itens</p>
+                    <InfoBalloon
+                      align="center"
+                      title="Faturamento dos itens"
+                      description="Soma dos subtotais dos produtos filtrados antes de descontos ou acréscimos gerais do cupom."
+                    />
+                  </div>
                   <p className="text-lg font-bold text-white mt-1">{money(ranking.totals.totalRevenue)}</p>
                 </div>
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3.5">
-                  <p className="text-xs text-zinc-400">CMV total</p>
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <p className="text-xs text-zinc-400">CMV total</p>
+                    <InfoBalloon
+                      align="center"
+                      title="CMV do ranking"
+                      description="Custo total das mercadorias vendidas para os produtos exibidos no filtro."
+                    />
+                  </div>
                   <p className="text-lg font-bold text-amber-300 mt-1">{money(ranking.totals.totalCost)}</p>
                 </div>
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3.5 col-span-2 lg:col-span-1">
-                  <p className="text-xs text-zinc-400">Lucro Bruto Itens</p>
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5 col-span-2 lg:col-span-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <p className="text-xs text-zinc-400">Lucro Bruto Itens</p>
+                    <InfoBalloon
+                      align="right"
+                      title="Lucro Bruto dos Itens"
+                      description="Diferença entre o faturamento dos produtos filtrados e seu respectivo CMV, com a margem média ponderada."
+                    />
+                  </div>
                   <p className="text-lg font-bold text-emerald-400 mt-1">
                     {money(ranking.totals.totalGrossProfit)}
                     {ranking.totals.averageMarginPercent !== null && (
                       <span className="text-xs font-normal text-zinc-400 ml-1">
-                        ({ranking.totals.averageMarginPercent}%)
+                        ({formatPct(ranking.totals.averageMarginPercent)}%)
                       </span>
                     )}
                   </p>
                 </div>
               </div>
 
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden">
                 {ranking.items.length === 0 ? (
                   <p className="p-6 text-zinc-400">Nenhum produto encontrado para os filtros aplicados.</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                      <thead className="text-zinc-400 text-xs uppercase border-b border-zinc-800">
+                      <thead className="text-zinc-400 text-[11px] uppercase border-b border-zinc-800 bg-zinc-950/40">
                         <tr>
                           <th className="p-3">#</th>
                           <th className="p-3">Produto / Categoria</th>
@@ -759,26 +1263,26 @@ function SalesReports() {
                                   </span>
                                 </div>
                               </td>
-                              <td className="p-3 text-right whitespace-nowrap text-zinc-200">
-                                {Number(item.quantity).toLocaleString('pt-BR', { maximumFractionDigits: 3 })}{' '}
+                              <td className="p-3 text-right whitespace-nowrap text-zinc-200 tabular-nums">
+                                {formatQty(item.quantity)}{' '}
                                 <span className="text-xs text-zinc-500">{item.unit}</span>
                               </td>
-                              <td className="p-3 text-right whitespace-nowrap text-zinc-300">
+                              <td className="p-3 text-right whitespace-nowrap text-zinc-300 tabular-nums">
                                 {money(item.avgSalePrice)}
                               </td>
-                              <td className="p-3 text-right whitespace-nowrap text-zinc-400">
+                              <td className="p-3 text-right whitespace-nowrap text-zinc-400 tabular-nums">
                                 {money(item.avgUnitCost)}
                               </td>
-                              <td className="p-3 text-right whitespace-nowrap">
+                              <td className="p-3 text-right whitespace-nowrap tabular-nums">
                                 <p className="font-medium text-white">{money(item.itemSubtotal)}</p>
                                 {item.revenueSharePercent && (
-                                  <p className="text-[11px] text-zinc-500">{item.revenueSharePercent}% rec.</p>
+                                  <p className="text-[11px] text-zinc-500">{formatPct(item.revenueSharePercent)}% rec.</p>
                                 )}
                               </td>
-                              <td className="p-3 text-right whitespace-nowrap text-amber-300">
+                              <td className="p-3 text-right whitespace-nowrap text-amber-300 tabular-nums">
                                 {money(item.totalCost)}
                               </td>
-                              <td className="p-3 text-right whitespace-nowrap">
+                              <td className="p-3 text-right whitespace-nowrap tabular-nums">
                                 <p
                                   className={`font-bold ${
                                     Number(item.grossProfit) >= 0 ? 'text-emerald-400' : 'text-rose-400'
@@ -787,16 +1291,16 @@ function SalesReports() {
                                   {money(item.grossProfit)}
                                 </p>
                                 {item.profitSharePercent && (
-                                  <p className="text-[11px] text-zinc-500">{item.profitSharePercent}% luc.</p>
+                                  <p className="text-[11px] text-zinc-500">{formatPct(item.profitSharePercent)}% luc.</p>
                                 )}
                               </td>
-                              <td className="p-3 text-right whitespace-nowrap text-zinc-200">
-                                {item.marginPercent !== null ? `${item.marginPercent}%` : '—'}
+                              <td className="p-3 text-right whitespace-nowrap text-zinc-200 tabular-nums">
+                                {item.marginPercent !== null ? `${formatPct(item.marginPercent)}%` : '—'}
                               </td>
-                              <td className="p-3 text-right whitespace-nowrap">
+                              <td className="p-3 text-right whitespace-nowrap tabular-nums">
                                 <p className={`text-xs ${sBadge.cls}`}>
                                   {item.currentStock !== null
-                                    ? `${Number(item.currentStock).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${item.unit}`
+                                    ? `${formatQty(item.currentStock)} ${item.unit}`
                                     : sBadge.label}
                                 </p>
                                 {item.stockAlert !== 'ok' && item.stockAlert !== 'unknown' && (
@@ -820,10 +1324,92 @@ function SalesReports() {
       {activeTab === 'insights' && (
         <section aria-live="polite" aria-busy={insightsLoading} className="space-y-4">
           {insightsLoading && !insights && (
-            <p role="status" className="text-zinc-400">Analisando horários de pico, rupturas e oportunidades da adega…</p>
+            <p role="status" className="text-zinc-400 text-sm">
+              Analisando horários de pico, rupturas e oportunidades da adega…
+            </p>
           )}
           {insights && <AdegaInsightsPanel data={insights} />}
         </section>
+      )}
+
+      {/* MODAL REVISAR PRODUTOS SEM CUSTO CADASTRADO */}
+      {uncostedModalOpen && report && (
+        <div
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setUncostedModalOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="uncosted-modal-title"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-zinc-950 border border-zinc-800 rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden"
+          >
+            <div className="p-4 sm:p-5 border-b border-zinc-800 flex items-start justify-between gap-3">
+              <div>
+                <h3 id="uncosted-modal-title" className="font-bold text-white flex items-center gap-2">
+                  <AlertTriangle size={18} className="text-amber-400" />
+                  Produtos vendidos sem custo cadastrado
+                </h3>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Estes itens foram vendidos entre {dateLabel(report.period.startDate)} e{' '}
+                  {dateLabel(report.period.endDate)} com custo R&#36; 0,00 ({money(report.summary.uncostedRevenue)} em faturamento).
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Fechar"
+                onClick={() => setUncostedModalOpen(false)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="max-h-72 overflow-y-auto divide-y divide-zinc-800/70">
+              {(report.uncostedProducts ?? []).length === 0 ? (
+                <p className="p-5 text-sm text-zinc-400">
+                  Consulte a aba <strong>Insights da Adega</strong> ou o <strong>Ranking de Produtos</strong> filtrado por &ldquo;Sem custo&rdquo;.
+                </p>
+              ) : (
+                (report.uncostedProducts ?? []).map((item) => (
+                  <div key={item.productId} className="px-5 py-3 flex items-center justify-between gap-3 text-sm">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-white truncate">{item.name}</p>
+                      <p className="text-xs text-zinc-400">
+                        Qtd vendida: {formatQty(item.quantity)} {item.unit}
+                      </p>
+                    </div>
+                    <span className="font-bold text-amber-300 shrink-0">{money(item.itemSubtotal)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-4 bg-zinc-900/80 border-t border-zinc-800 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setUncostedModalOpen(false);
+                  navigate('/dashboard/inventory');
+                }}
+                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 cursor-pointer"
+              >
+                Abrir Catálogo
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUncostedModalOpen(false);
+                  navigate('/dashboard/inventory/mass-edit');
+                }}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white cursor-pointer"
+              >
+                Editar custos em massa
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
