@@ -61,6 +61,7 @@ export interface SalesTopProductItem {
   productId: string;
   name: string;
   unit: string;
+  imageUrl: string | null;
   quantity: string;
   itemSubtotal: string;
   totalCost: string;
@@ -72,6 +73,7 @@ export interface UncostedProductItem {
   productId: string;
   name: string;
   unit: string;
+  imageUrl: string | null;
   quantity: string;
   itemSubtotal: string;
 }
@@ -100,6 +102,7 @@ export interface ProductRankingItem {
   productId: string;
   name: string;
   unit: string;
+  imageUrl: string | null;
   categoryId: string | null;
   categoryName: string;
   salesCount: number;
@@ -152,6 +155,7 @@ export interface UncostedProductEditorItem {
   shortCode: string | null;
   barcode: string | null;
   unit: string;
+  imageUrl: string | null;
   categoryId: string | null;
   categoryName: string;
   priceSell: string;
@@ -229,6 +233,7 @@ export interface StockoutRiskItem {
   productId: string;
   name: string;
   unit: string;
+  imageUrl: string | null;
   categoryName: string;
   soldQuantity: string;
   dailyVelocity: string;
@@ -244,6 +249,7 @@ export interface SlowMovingProductItem {
   productId: string;
   name: string;
   unit: string;
+  imageUrl: string | null;
   categoryName: string;
   currentStock: string;
   unitCost: string;

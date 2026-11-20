@@ -10,12 +10,14 @@ import {
 } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { InfoBalloon } from '@/components/InfoBalloon';
+import { ProductThumb } from '@/components/ProductThumb';
 
 export interface ProductRankingRow {
   rank: number;
   productId: string;
   name: string;
   unit: string;
+  imageUrl?: string | null;
   categoryId: string | null;
   categoryName: string;
   salesCount: number;
@@ -95,6 +97,7 @@ export interface AdegaInsightsData {
     productId: string;
     name: string;
     unit: string;
+    imageUrl?: string | null;
     categoryName: string;
     soldQuantity: string;
     dailyVelocity: string;
@@ -109,6 +112,7 @@ export interface AdegaInsightsData {
     productId: string;
     name: string;
     unit: string;
+    imageUrl?: string | null;
     categoryName: string;
     currentStock: string;
     unitCost: string;
@@ -490,14 +494,17 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
             <div className="divide-y divide-zinc-800/70">
               {data.topProfitDrivers.map((item) => (
                 <div key={item.productId} className="p-3.5 px-4 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium text-white text-sm truncate">
-                      <span className="text-emerald-400 font-bold mr-2">#{item.rank}</span>
-                      {item.name}
-                    </p>
-                    <p className="text-xs text-zinc-400">
-                      {num(item.quantity, 2)} {item.unit} · Receita {money(item.itemSubtotal)} · CMV {money(item.totalCost)}
-                    </p>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ProductThumb src={item.imageUrl} alt={item.name} size="sm" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-white text-sm truncate">
+                        <span className="text-emerald-400 font-bold mr-2">#{item.rank}</span>
+                        {item.name}
+                      </p>
+                      <p className="text-xs text-zinc-400">
+                        {num(item.quantity, 2)} {item.unit} · Receita {money(item.itemSubtotal)} · CMV {money(item.totalCost)}
+                      </p>
+                    </div>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-bold text-emerald-400 text-sm">{money(item.grossProfit)}</p>
@@ -524,11 +531,14 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
             <div className="divide-y divide-zinc-800/70">
               {data.highMarginOpportunities.map((item) => (
                 <div key={item.productId} className="p-3.5 px-4 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium text-white text-sm truncate">{item.name}</p>
-                    <p className="text-xs text-zinc-400">
-                      {item.categoryName} · {num(item.quantity, 2)} {item.unit} vendidos
-                    </p>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ProductThumb src={item.imageUrl} alt={item.name} size="sm" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-white text-sm truncate">{item.name}</p>
+                      <p className="text-xs text-zinc-400">
+                        {item.categoryName} · {num(item.quantity, 2)} {item.unit} vendidos
+                      </p>
+                    </div>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-bold text-amber-300 text-sm">{num(item.marginPercent, 1)}% margem</p>
@@ -566,15 +576,18 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
             <>
               <div className="sm:hidden divide-y divide-zinc-800/70">
                 {data.stockoutRisks.map((risk) => (
-                  <div key={risk.productId} className="p-3.5 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-medium text-white text-sm truncate">{risk.name}</p>
-                      <p className="text-xs text-zinc-400">
-                        Saída {num(risk.dailyVelocity, 2)}/{risk.unit}/dia · Est:{' '}
-                        <strong className={risk.severity === 'critical' ? 'text-rose-400' : 'text-amber-300'}>
-                          {num(risk.currentStock, 2)} {risk.unit}
-                        </strong>
-                      </p>
+                  <div key={risk.productId} className="p-3.5 flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <ProductThumb src={risk.imageUrl} alt={risk.name} size="sm" />
+                      <div className="min-w-0">
+                        <p className="font-medium text-white text-sm truncate">{risk.name}</p>
+                        <p className="text-xs text-zinc-400">
+                          Saída {num(risk.dailyVelocity, 2)}/{risk.unit}/dia · Est:{' '}
+                          <strong className={risk.severity === 'critical' ? 'text-rose-400' : 'text-amber-300'}>
+                            {num(risk.currentStock, 2)} {risk.unit}
+                          </strong>
+                        </p>
+                      </div>
                     </div>
                     <span
                       className={`shrink-0 text-xs font-bold px-2.5 py-0.5 rounded-full ${
@@ -606,8 +619,13 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
                     {data.stockoutRisks.map((risk) => (
                       <tr key={risk.productId} className="border-t border-zinc-800/70">
                         <td className="py-2.5 px-4">
-                          <p className="font-medium text-white">{risk.name}</p>
-                          <p className="text-xs text-zinc-500">{risk.categoryName}</p>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <ProductThumb src={risk.imageUrl} alt={risk.name} size="sm" />
+                            <div className="min-w-0">
+                              <p className="font-medium text-white truncate">{risk.name}</p>
+                              <p className="text-xs text-zinc-500">{risk.categoryName}</p>
+                            </div>
+                          </div>
                         </td>
                         <td className="py-2.5 px-2 text-right text-zinc-300">
                           {num(risk.dailyVelocity, 2)}/{risk.unit}
@@ -665,12 +683,15 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
             <>
               <div className="sm:hidden divide-y divide-zinc-800/70">
                 {data.slowMovingProducts.map((item) => (
-                  <div key={item.productId} className="p-3.5 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-medium text-white text-sm truncate">{item.name}</p>
-                      <p className="text-xs text-zinc-400">
-                        Est: {num(item.currentStock, 2)} {item.unit} · Custo {money(item.unitCost)}
-                      </p>
+                  <div key={item.productId} className="p-3.5 flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <ProductThumb src={item.imageUrl} alt={item.name} size="sm" />
+                      <div className="min-w-0">
+                        <p className="font-medium text-white text-sm truncate">{item.name}</p>
+                        <p className="text-xs text-zinc-400">
+                          Est: {num(item.currentStock, 2)} {item.unit} · Custo {money(item.unitCost)}
+                        </p>
+                      </div>
                     </div>
                     <span className="font-bold text-amber-300 text-sm shrink-0">
                       {money(item.tiedCapital)}
@@ -692,8 +713,13 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
                     {data.slowMovingProducts.map((item) => (
                       <tr key={item.productId} className="border-t border-zinc-800/70">
                         <td className="py-2.5 px-4">
-                          <p className="font-medium text-white">{item.name}</p>
-                          <p className="text-xs text-zinc-500">{item.categoryName}</p>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <ProductThumb src={item.imageUrl} alt={item.name} size="sm" />
+                            <div className="min-w-0">
+                              <p className="font-medium text-white truncate">{item.name}</p>
+                              <p className="text-xs text-zinc-500">{item.categoryName}</p>
+                            </div>
+                          </div>
                         </td>
                         <td className="py-2.5 px-2 text-right text-zinc-300">
                           {num(item.currentStock, 2)} {item.unit}

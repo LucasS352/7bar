@@ -45,6 +45,12 @@ function toDec(value: unknown): Prisma.Decimal {
   return new Prisma.Decimal(String(value));
 }
 
+function normalizeImageUrl(url: string | null | undefined): string | null {
+  if (typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 function clampRankingLimit(rawLimit: unknown): number {
   if (rawLimit === undefined || rawLimit === null || rawLimit === '') return 50;
   const n = Number(rawLimit);
@@ -135,6 +141,7 @@ interface RawTopProductRow {
   productId: string;
   name: string;
   unit: string;
+  imageUrl?: string | null;
   quantity: Prisma.Decimal | null;
   itemSubtotal: Prisma.Decimal | null;
   totalCost: Prisma.Decimal | null;
@@ -144,6 +151,7 @@ interface RawUncostedProductRow {
   productId: string;
   name: string;
   unit: string;
+  imageUrl?: string | null;
   quantity: Prisma.Decimal | null;
   itemSubtotal: Prisma.Decimal | null;
 }
@@ -152,6 +160,7 @@ interface RawRankingRow {
   productId: string;
   name: string;
   unit: string;
+  imageUrl?: string | null;
   categoryId: string | null;
   categoryName: string;
   salesCount: bigint | number;
@@ -182,6 +191,7 @@ interface RawUncostedEditorRow {
   shortCode: string | null;
   barcode: string | null;
   unit: string;
+  imageUrl?: string | null;
   categoryId: string | null;
   categoryName: string;
   priceSell: Prisma.Decimal | null;
@@ -245,6 +255,7 @@ export class ReportsService {
             si.productId AS productId,
             si.productName AS name,
             si.unit AS unit,
+            MAX(p.imageUrl) AS imageUrl,
             COALESCE(SUM(si.quantity), 0) AS quantity,
             COALESCE(SUM(si.subtotal), 0) AS itemSubtotal,
             COALESCE(SUM(si.quantity * (CASE WHEN si.priceCost > 0 THEN si.priceCost WHEN p.priceCost > 0 THEN p.priceCost ELSE 0 END)), 0) AS totalCost
@@ -280,6 +291,7 @@ export class ReportsService {
             si.productId AS productId,
             COALESCE(p.name, MAX(si.productName)) AS name,
             COALESCE(p.unit, MAX(si.unit)) AS unit,
+            MAX(p.imageUrl) AS imageUrl,
             COALESCE(SUM(si.quantity), 0) AS quantity,
             COALESCE(SUM(si.subtotal), 0) AS itemSubtotal
           FROM sale_items si
@@ -359,6 +371,7 @@ export class ReportsService {
           productId: p.productId,
           name: p.name,
           unit: p.unit,
+          imageUrl: normalizeImageUrl(p.imageUrl),
           quantity: toDec(p.quantity).toFixed(3),
           itemSubtotal: sub.toFixed(2),
           totalCost: cost.toFixed(2),
@@ -370,6 +383,7 @@ export class ReportsService {
         productId: u.productId,
         name: u.name,
         unit: u.unit,
+        imageUrl: normalizeImageUrl(u.imageUrl),
         quantity: toDec(u.quantity).toFixed(3),
         itemSubtotal: toDec(u.itemSubtotal).toFixed(2),
       })),
@@ -432,6 +446,7 @@ export class ReportsService {
             si.productId AS productId,
             COALESCE(p.name, MAX(si.productName)) AS name,
             COALESCE(p.unit, MAX(si.unit)) AS unit,
+            MAX(p.imageUrl) AS imageUrl,
             p.categoryId AS categoryId,
             COALESCE(c.name, 'Sem Categoria') AS categoryName,
             COUNT(DISTINCT si.saleId) AS salesCount,
@@ -564,6 +579,7 @@ export class ReportsService {
                 p.shortCode AS shortCode,
                 p.barcode AS barcode,
                 COALESCE(p.unit, MAX(si.unit)) AS unit,
+                MAX(p.imageUrl) AS imageUrl,
                 p.categoryId AS categoryId,
                 COALESCE(c.name, 'Sem Categoria') AS categoryName,
                 COALESCE(p.priceSell, 0) AS priceSell,
@@ -595,6 +611,7 @@ export class ReportsService {
                 p.shortCode AS shortCode,
                 p.barcode AS barcode,
                 p.unit AS unit,
+                p.imageUrl AS imageUrl,
                 p.categoryId AS categoryId,
                 COALESCE(c.name, 'Sem Categoria') AS categoryName,
                 COALESCE(p.priceSell, 0) AS priceSell,
@@ -635,6 +652,7 @@ export class ReportsService {
       shortCode: r.shortCode ?? null,
       barcode: r.barcode ?? null,
       unit: r.unit,
+      imageUrl: normalizeImageUrl(r.imageUrl),
       categoryId: r.categoryId ?? null,
       categoryName: r.categoryName,
       priceSell: toDec(r.priceSell).toFixed(2),
@@ -740,6 +758,7 @@ export class ReportsService {
       productId: row.productId,
       name: row.name,
       unit: row.unit,
+      imageUrl: normalizeImageUrl(row.imageUrl),
       categoryId: row.categoryId,
       categoryName: row.categoryName,
       salesCount: Number(row.salesCount ?? 0),
@@ -882,6 +901,7 @@ export class ReportsService {
             si.productId AS productId,
             COALESCE(p.name, MAX(si.productName)) AS name,
             COALESCE(p.unit, MAX(si.unit)) AS unit,
+            MAX(p.imageUrl) AS imageUrl,
             p.categoryId AS categoryId,
             COALESCE(c.name, 'Sem Categoria') AS categoryName,
             COUNT(DISTINCT si.saleId) AS salesCount,
@@ -910,6 +930,7 @@ export class ReportsService {
             productId: string;
             name: string;
             unit: string;
+            imageUrl?: string | null;
             categoryName: string;
             currentStock: Prisma.Decimal;
             unitCost: Prisma.Decimal;
@@ -921,6 +942,7 @@ export class ReportsService {
             p.id AS productId,
             p.name AS name,
             p.unit AS unit,
+            p.imageUrl AS imageUrl,
             COALESCE(c.name, 'Sem Categoria') AS categoryName,
             p.stock AS currentStock,
             p.priceCost AS unitCost,
@@ -1109,6 +1131,7 @@ export class ReportsService {
           productId: item.productId,
           name: item.name,
           unit: item.unit,
+          imageUrl: item.imageUrl,
           categoryName: item.categoryName,
           soldQuantity: soldQty.toFixed(3),
           dailyVelocity: dailyVelocity.toFixed(2),
@@ -1131,6 +1154,7 @@ export class ReportsService {
       productId: row.productId,
       name: row.name,
       unit: row.unit,
+      imageUrl: normalizeImageUrl(row.imageUrl),
       categoryName: row.categoryName,
       currentStock: toDec(row.currentStock).toFixed(3),
       unitCost: toDec(row.unitCost).toFixed(2),

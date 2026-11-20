@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner';
 import { api, apiGet } from '@/lib/api';
 import { InfoBalloon } from '@/components/InfoBalloon';
+import { ProductThumb } from '@/components/ProductThumb';
 
 export interface UncostedEditorItem {
   productId: string;
@@ -20,6 +21,7 @@ export interface UncostedEditorItem {
   shortCode: string | null;
   barcode: string | null;
   unit: string;
+  imageUrl?: string | null;
   categoryId: string | null;
   categoryName: string;
   priceSell: string;
@@ -329,13 +331,16 @@ export function UncostedProductsView({
 
               return (
                 <div key={item.productId} className="p-3.5 space-y-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-white text-sm leading-snug">{item.name}</p>
-                      <p className="text-[11px] text-zinc-400">
-                        {item.categoryName}
-                        {item.currentStock !== null ? ` · Est: ${formatQty(item.currentStock)} ${item.unit}` : ''}
-                      </p>
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <ProductThumb src={item.imageUrl} alt={item.name} size="sm" />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-white text-sm leading-snug">{item.name}</p>
+                        <p className="text-[11px] text-zinc-400">
+                          {item.categoryName}
+                          {item.currentStock !== null ? ` · Est: ${formatQty(item.currentStock)} ${item.unit}` : ''}
+                        </p>
+                      </div>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-[10px] text-zinc-500 uppercase">Venda</p>
@@ -428,13 +433,18 @@ export function UncostedProductsView({
 
                   return (
                     <tr key={item.productId} className="border-t border-zinc-800/80 hover:bg-zinc-800/25">
-                      <td className="py-3 px-4">
-                        <p className="font-semibold text-white">{item.name}</p>
-                        <p className="text-xs text-zinc-500">
-                          {item.categoryName}
-                          {item.shortCode ? ` · Cód. ${item.shortCode}` : ''}
-                          {item.barcode ? ` · EAN ${item.barcode}` : ''}
-                        </p>
+                      <td className="py-2.5 px-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <ProductThumb src={item.imageUrl} alt={item.name} size="sm" />
+                          <div className="min-w-0">
+                            <p className="font-semibold text-white">{item.name}</p>
+                            <p className="text-xs text-zinc-500">
+                              {item.categoryName}
+                              {item.shortCode ? ` · Cód. ${item.shortCode}` : ''}
+                              {item.barcode ? ` · EAN ${item.barcode}` : ''}
+                            </p>
+                          </div>
+                        </div>
                       </td>
                       <td className="py-3 px-3 text-right whitespace-nowrap text-zinc-300 tabular-nums">
                         {item.currentStock !== null ? `${formatQty(item.currentStock)} ${item.unit}` : 'Combo'}

@@ -25,6 +25,7 @@ import {
 import { apiGet } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { InfoBalloon } from '@/components/InfoBalloon';
+import { ProductThumb } from '@/components/ProductThumb';
 import { UncostedProductsView } from './UncostedProductsView';
 import {
   FinancialEvolutionChart,
@@ -42,6 +43,7 @@ interface UncostedProduct {
   productId: string;
   name: string;
   unit: string;
+  imageUrl?: string | null;
   quantity: string;
   itemSubtotal: string;
 }
@@ -73,6 +75,7 @@ interface SalesReport {
     productId: string;
     name: string;
     unit: string;
+    imageUrl?: string | null;
     quantity: string;
     itemSubtotal: string;
     totalCost: string;
@@ -1026,11 +1029,14 @@ function SalesReports() {
                         const profitPos = Number(p.grossProfit) >= 0;
                         return (
                           <div key={`${p.productId}-${p.name}-${p.unit}`} className="p-3.5 space-y-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <p className="font-semibold text-white text-sm leading-snug">
-                                {p.name}{' '}
-                                <span className="text-xs font-normal text-zinc-400">({p.unit})</span>
-                              </p>
+                            <div className="flex items-start justify-between gap-2.5">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <ProductThumb src={p.imageUrl} alt={p.name} size="sm" />
+                                <p className="font-semibold text-white text-sm leading-snug min-w-0">
+                                  {p.name}{' '}
+                                  <span className="text-xs font-normal text-zinc-400">({p.unit})</span>
+                                </p>
+                              </div>
                               <span
                                 className={`shrink-0 text-sm font-extrabold ${
                                   profitPos ? 'text-emerald-400' : 'text-rose-400'
@@ -1103,9 +1109,14 @@ function SalesReports() {
                                 key={`${p.productId}-${p.name}-${p.unit}`}
                                 className="border-t border-zinc-800/70 hover:bg-zinc-800/30 transition-colors"
                               >
-                                <td className="py-3 px-4 sm:px-5 font-semibold text-white">
-                                  {p.name}{' '}
-                                  <span className="text-xs font-normal text-zinc-400">({p.unit})</span>
+                                <td className="py-2.5 px-4 sm:px-5 font-semibold text-white">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <ProductThumb src={p.imageUrl} alt={p.name} size="sm" />
+                                    <span className="truncate">
+                                      {p.name}{' '}
+                                      <span className="text-xs font-normal text-zinc-400">({p.unit})</span>
+                                    </span>
+                                  </div>
                                 </td>
                                 <td className="py-3 px-3 text-right text-zinc-300 tabular-nums">
                                   {formatQty(p.quantity)}
@@ -1502,38 +1513,41 @@ function SalesReports() {
                         const isUntracked = item.costSource === 'untracked';
                         return (
                           <div key={item.productId} className="p-3.5 space-y-2.5">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className="font-semibold text-white text-sm leading-snug">
-                                  <span className="text-blue-400 font-bold mr-1.5">#{item.rank}</span>
-                                  {item.name}
-                                </p>
-                                <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                  <span className="text-[11px] text-zinc-400">{item.categoryName}</span>
-                                  {isUntracked ? (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setCostEditor({
-                                          open: true,
-                                          scope: 'period',
-                                          search: item.name,
-                                        })
-                                      }
-                                      className="text-[10px] px-2 py-0.5 rounded border bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border-rose-500/35 font-semibold cursor-pointer"
-                                    >
-                                      Sem custo · Inserir
-                                    </button>
-                                  ) : (
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${cBadge.cls}`}>
-                                      {cBadge.label}
-                                    </span>
-                                  )}
-                                  {item.currentStock !== null && (
-                                    <span className={`text-[11px] ${sBadge.cls}`}>
-                                      · Est: {formatQty(item.currentStock)} {item.unit}
-                                    </span>
-                                  )}
+                            <div className="flex items-start justify-between gap-2.5">
+                              <div className="flex items-start gap-2.5 min-w-0">
+                                <ProductThumb src={item.imageUrl} alt={item.name} size="md" className="mt-0.5" />
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-white text-sm leading-snug">
+                                    <span className="text-blue-400 font-bold mr-1.5">#{item.rank}</span>
+                                    {item.name}
+                                  </p>
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                    <span className="text-[11px] text-zinc-400">{item.categoryName}</span>
+                                    {isUntracked ? (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setCostEditor({
+                                            open: true,
+                                            scope: 'period',
+                                            search: item.name,
+                                          })
+                                        }
+                                        className="text-[10px] px-2 py-0.5 rounded border bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border-rose-500/35 font-semibold cursor-pointer"
+                                      >
+                                        Sem custo · Inserir
+                                      </button>
+                                    ) : (
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded border ${cBadge.cls}`}>
+                                        {cBadge.label}
+                                      </span>
+                                    )}
+                                    {item.currentStock !== null && (
+                                      <span className={`text-[11px] ${sBadge.cls}`}>
+                                        · Est: {formatQty(item.currentStock)} {item.unit}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                               <div className="text-right shrink-0">
@@ -1601,32 +1615,37 @@ function SalesReports() {
                             return (
                               <tr key={item.productId} className="border-t border-zinc-800/80 hover:bg-zinc-800/30">
                                 <td className="p-3 font-bold text-zinc-400">#{item.rank}</td>
-                                <td className="p-3">
-                                  <p className="font-semibold text-white">{item.name}</p>
-                                  <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                                    <span className="text-xs text-zinc-500">
-                                      {item.categoryName} · {item.salesCount} vendas
-                                    </span>
-                                    {isUntracked ? (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setCostEditor({
-                                            open: true,
-                                            scope: 'period',
-                                            search: item.name,
-                                          })
-                                        }
-                                        className="text-[10px] px-2 py-0.5 rounded border bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 border-rose-500/35 font-semibold cursor-pointer transition"
-                                        title="Clique para inserir o preço de custo deste produto"
-                                      >
-                                        Sem custo · Inserir
-                                      </button>
-                                    ) : (
-                                      <span className={`text-[10px] px-1.5 py-0.5 rounded border ${cBadge.cls}`}>
-                                        {cBadge.label}
-                                      </span>
-                                    )}
+                                <td className="py-2.5 px-3">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <ProductThumb src={item.imageUrl} alt={item.name} size="md" />
+                                    <div className="min-w-0">
+                                      <p className="font-semibold text-white leading-snug">{item.name}</p>
+                                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                        <span className="text-xs text-zinc-500">
+                                          {item.categoryName} · {item.salesCount} vendas
+                                        </span>
+                                        {isUntracked ? (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setCostEditor({
+                                                open: true,
+                                                scope: 'period',
+                                                search: item.name,
+                                              })
+                                            }
+                                            className="text-[10px] px-2 py-0.5 rounded border bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 border-rose-500/35 font-semibold cursor-pointer transition"
+                                            title="Clique para inserir o preço de custo deste produto"
+                                          >
+                                            Sem custo · Inserir
+                                          </button>
+                                        ) : (
+                                          <span className={`text-[10px] px-1.5 py-0.5 rounded border ${cBadge.cls}`}>
+                                            {cBadge.label}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 </td>
                                 <td className="p-3 text-right whitespace-nowrap text-zinc-200 tabular-nums">
