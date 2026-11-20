@@ -156,12 +156,12 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
 
   return (
     <div className="space-y-6">
-      {/* KPIs Específicos da Adega */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-zinc-400 flex items-center gap-1.5">
-              <Clock size={14} className="text-amber-400" /> Turno Noturno (18h–02h)
+      {/* KPIs Específicos da Adega (2x2 no celular) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-1.5">
+            <p className="text-[11px] sm:text-xs text-zinc-400 flex items-center gap-1.5 min-w-0">
+              <Clock size={14} className="text-amber-400 shrink-0" /> <span className="truncate">Turno Noturno</span>
             </p>
             <InfoBalloon
               align="left"
@@ -169,58 +169,58 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
               description="Percentual do faturamento da adega que aconteceu entre 18h e 02h59 (fuso UTC−03:00), além do horário de maior movimento."
             />
           </div>
-          <p className="text-xl font-bold text-white mt-1.5">
+          <p className="text-lg sm:text-xl font-bold text-white mt-1.5">
             {data.kpis.nightRevenueSharePercent !== null ? `${num(data.kpis.nightRevenueSharePercent, 1)}%` : '—'}
           </p>
-          <p className="text-xs text-zinc-400 mt-1">
+          <p className="text-[11px] sm:text-xs text-zinc-400 mt-1 truncate">
             {data.kpis.peakHour
               ? `Pico às ${data.kpis.peakHour.label} (${money(data.kpis.peakHour.revenue)})`
               : 'Sem pico no período'}
           </p>
         </div>
 
-        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-zinc-400 flex items-center gap-1.5">
-              <Flame size={14} className="text-blue-400" /> Fim de Semana (Sex–Dom)
+        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-1.5">
+            <p className="text-[11px] sm:text-xs text-zinc-400 flex items-center gap-1.5 min-w-0">
+              <Flame size={14} className="text-blue-400 shrink-0" /> <span className="truncate">Fim de Semana</span>
             </p>
             <InfoBalloon
-              align="center"
+              align="right"
               title="Fim de Semana (Sex–Dom)"
               description="Quanto do faturamento veio de sexta-feira a domingo e qual foi o dia da semana mais forte em receita."
             />
           </div>
-          <p className="text-xl font-bold text-white mt-1.5">
+          <p className="text-lg sm:text-xl font-bold text-white mt-1.5">
             {data.kpis.weekendRevenueSharePercent !== null ? `${num(data.kpis.weekendRevenueSharePercent, 1)}%` : '—'}
           </p>
-          <p className="text-xs text-zinc-400 mt-1">
+          <p className="text-[11px] sm:text-xs text-zinc-400 mt-1 truncate">
             {data.kpis.bestWeekday
               ? `Líder: ${data.kpis.bestWeekday.label}`
               : 'Sem vendas no período'}
           </p>
         </div>
 
-        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-zinc-400 flex items-center gap-1.5">
-              <AlertTriangle size={14} className="text-rose-400" /> Risco de Ruptura
+        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-1.5">
+            <p className="text-[11px] sm:text-xs text-zinc-400 flex items-center gap-1.5 min-w-0">
+              <AlertTriangle size={14} className="text-rose-400 shrink-0" /> <span className="truncate">Risco Ruptura</span>
             </p>
             <InfoBalloon
-              align="center"
+              align="left"
               title="Itens em Risco de Ruptura"
               description="Quantidade de produtos com saída no período que já zeraram no estoque, ficaram abaixo do mínimo ou têm previsão para acabar em até 5 dias no ritmo atual."
             />
           </div>
-          <p className="text-xl font-bold text-rose-400 mt-1.5">
+          <p className="text-lg sm:text-xl font-bold text-rose-400 mt-1.5">
             {data.kpis.stockoutRisksCount}
           </p>
-          <p className="text-xs text-zinc-400 mt-1">Mais vendidos com estoque &le; 5 dias</p>
+          <p className="text-[11px] sm:text-xs text-zinc-400 mt-1">Estoque &le; 5 dias</p>
         </div>
 
-        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-zinc-400 flex items-center gap-1.5">
-              <PackageX size={14} className="text-amber-400" /> Capital Parado
+        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-1.5">
+            <p className="text-[11px] sm:text-xs text-zinc-400 flex items-center gap-1.5 min-w-0">
+              <PackageX size={14} className="text-amber-400 shrink-0" /> <span className="truncate">Capital Parado</span>
             </p>
             <InfoBalloon
               align="right"
@@ -229,10 +229,10 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
               formula="Σ (estoque atual × custo unitário)"
             />
           </div>
-          <p className="text-xl font-bold text-amber-300 mt-1.5">
+          <p className="text-lg sm:text-xl font-bold text-amber-300 mt-1.5 truncate">
             {money(data.kpis.totalTiedCapitalSlowMoving)}
           </p>
-          <p className="text-xs text-zinc-400 mt-1">Custo em estoque com 0 vendas no período</p>
+          <p className="text-[11px] sm:text-xs text-zinc-400 mt-1">0 vendas no período</p>
         </div>
       </div>
 
@@ -269,36 +269,70 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
 
       {/* Horários de Pico (24h) & Performance por Dia da Semana */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-5 min-w-0">
-          <h3 className="font-semibold text-white">Mapa de Horários (00h–23h · BRT)</h3>
+        <section className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 sm:p-5 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-semibold text-white">Mapa de Horários (00h–23h · BRT)</h3>
+            <InfoBalloon
+              align="right"
+              title="Mapa de Horários (00h–23h)"
+              description="Distribuição do faturamento hora a hora ao longo do dia no horário de Brasília. Mostra exatamente quando sua adega vende mais."
+            />
+          </div>
           <p className="text-xs text-zinc-400 mt-1 mb-4">
             Identifique os horários de maior giro para planejar abastecimento de geladeira e equipe.
           </p>
-          <ResponsiveContainer width="100%" height={230}>
-            <BarChart data={hourlyChart} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="label" tick={{ fill: '#a1a1aa', fontSize: 10 }} interval={1} />
-              <YAxis
-                width={52}
-                tick={{ fill: '#a1a1aa', fontSize: 11 }}
-                tickFormatter={(v) => Number(v).toLocaleString('pt-BR', { notation: 'compact' })}
-              />
-              <Tooltip
-                formatter={(value) => [money(Number(value ?? 0)), 'Faturamento']}
-                contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 12 }}
-                labelStyle={{ color: '#e4e4e7', fontWeight: 700 }}
-                cursor={{ fill: '#27272a' }}
-              />
-              <Bar dataKey="revenueNum" fill="#f59e0b" radius={[4, 4, 0, 0]} isAnimationActive={false} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="overflow-x-auto custom-scrollbar -mx-1 px-1">
+            <div className="min-w-[520px] sm:min-w-0">
+              <ResponsiveContainer width="100%" height={230}>
+                <BarChart data={hourlyChart} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fill: '#a1a1aa', fontSize: 10 }} interval={1} />
+                  <YAxis
+                    width={52}
+                    tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                    tickFormatter={(v) => Number(v).toLocaleString('pt-BR', { notation: 'compact' })}
+                  />
+                  <Tooltip
+                    formatter={(value) => [money(Number(value ?? 0)), 'Faturamento']}
+                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 12 }}
+                    labelStyle={{ color: '#e4e4e7', fontWeight: 700 }}
+                    cursor={{ fill: '#27272a' }}
+                  />
+                  <Bar dataKey="revenueNum" fill="#f59e0b" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </section>
 
-        <section className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          <div className="p-4 border-b border-zinc-800">
+        <section className="bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden">
+          <div className="p-4 border-b border-zinc-800 flex items-center justify-between gap-2">
             <h3 className="font-semibold text-white">Lucro &amp; Faturamento por Dia da Semana</h3>
+            <InfoBalloon
+              align="right"
+              title="Desempenho por Dia da Semana"
+              description="Agrupa todas as vendas e lucros por dia da semana (segunda a domingo) no período consultado."
+            />
           </div>
-          <div className="overflow-x-auto">
+          <div className="sm:hidden divide-y divide-zinc-800/70">
+            {data.byWeekday.map((day) => (
+              <div key={day.dayOfWeek} className="p-3.5 flex items-center justify-between gap-2">
+                <div>
+                  <p className="font-semibold text-white text-sm">{day.label}</p>
+                  <p className="text-[11px] text-zinc-400">
+                    {day.transactions} vendas · Fat. {money(day.revenue)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-emerald-400 text-sm">{money(day.grossProfit)}</p>
+                  <p className="text-[11px] text-zinc-400">
+                    {day.marginPercent !== null ? `${num(day.marginPercent, 1)}% margem` : '—'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="text-xs uppercase text-zinc-400 border-b border-zinc-800">
                 <tr>
@@ -331,47 +365,79 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
 
       {/* Categorias & Pagamentos */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <section className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          <div className="p-4 border-b border-zinc-800 flex items-center gap-2">
-            <TrendingUp size={16} className="text-emerald-400" />
-            <h3 className="font-semibold text-white">Rentabilidade por Categoria</h3>
+        <section className="bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden">
+          <div className="p-4 border-b border-zinc-800 flex items-center justify-between gap-2">
+            <h3 className="font-semibold text-white flex items-center gap-2">
+              <TrendingUp size={16} className="text-emerald-400" /> Rentabilidade por Categoria
+            </h3>
+            <InfoBalloon
+              align="right"
+              title="Rentabilidade por Categoria"
+              description="Compara receita, CMV, lucro real e margem % entre cada categoria cadastrada (ex.: Cervejas, Destilados, Gelo, Conveniência)."
+            />
           </div>
           {data.categoryMix.length === 0 ? (
             <p className="p-5 text-sm text-zinc-400">Sem categorias vendidas no período.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs uppercase text-zinc-400 border-b border-zinc-800">
-                  <tr>
-                    <th className="py-2.5 px-4">Categoria</th>
-                    <th className="py-2.5 px-3 text-right">Receita</th>
-                    <th className="py-2.5 px-3 text-right">CMV</th>
-                    <th className="py-2.5 px-3 text-right">Lucro Real</th>
-                    <th className="py-2.5 px-4 text-right">Margem</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.categoryMix.map((cat) => (
-                    <tr key={cat.categoryId ?? cat.categoryName} className="border-t border-zinc-800/70">
-                      <td className="py-2.5 px-4">
-                        <p className="font-medium text-white">{cat.categoryName}</p>
-                        <p className="text-xs text-zinc-500">
+            <>
+              <div className="sm:hidden divide-y divide-zinc-800/70">
+                {data.categoryMix.map((cat) => (
+                  <div key={cat.categoryId ?? cat.categoryName} className="p-3.5 space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-white text-sm">{cat.categoryName}</p>
+                        <p className="text-[11px] text-zinc-400">
                           {num(cat.quantity, 2)} un · {cat.revenueSharePercent ?? '0'}% do total
                         </p>
-                      </td>
-                      <td className="py-2.5 px-3 text-right text-white">{money(cat.revenue)}</td>
-                      <td className="py-2.5 px-3 text-right text-amber-300">{money(cat.totalCost)}</td>
-                      <td className="py-2.5 px-3 text-right font-semibold text-emerald-400">
-                        {money(cat.grossProfit)}
-                      </td>
-                      <td className="py-2.5 px-4 text-right text-zinc-300">
-                        {cat.marginPercent !== null ? `${num(cat.marginPercent, 1)}%` : '—'}
-                      </td>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-emerald-400 text-sm">{money(cat.grossProfit)}</p>
+                        <p className="text-[11px] text-zinc-400">
+                          {cat.marginPercent !== null ? `${num(cat.marginPercent, 1)}%` : '—'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex justify-between text-xs text-zinc-400">
+                      <span>Receita: <strong className="text-white">{money(cat.revenue)}</strong></span>
+                      <span>CMV: <strong className="text-amber-300">{money(cat.totalCost)}</strong></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs uppercase text-zinc-400 border-b border-zinc-800">
+                    <tr>
+                      <th className="py-2.5 px-4">Categoria</th>
+                      <th className="py-2.5 px-3 text-right">Receita</th>
+                      <th className="py-2.5 px-3 text-right">CMV</th>
+                      <th className="py-2.5 px-3 text-right">Lucro Real</th>
+                      <th className="py-2.5 px-4 text-right">Margem</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {data.categoryMix.map((cat) => (
+                      <tr key={cat.categoryId ?? cat.categoryName} className="border-t border-zinc-800/70">
+                        <td className="py-2.5 px-4">
+                          <p className="font-medium text-white">{cat.categoryName}</p>
+                          <p className="text-xs text-zinc-500">
+                            {num(cat.quantity, 2)} un · {cat.revenueSharePercent ?? '0'}% do total
+                          </p>
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-white">{money(cat.revenue)}</td>
+                        <td className="py-2.5 px-3 text-right text-amber-300">{money(cat.totalCost)}</td>
+                        <td className="py-2.5 px-3 text-right font-semibold text-emerald-400">
+                          {money(cat.grossProfit)}
+                        </td>
+                        <td className="py-2.5 px-4 text-right text-zinc-300">
+                          {cat.marginPercent !== null ? `${num(cat.marginPercent, 1)}%` : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
 
@@ -477,109 +543,171 @@ export function AdegaInsightsPanel({ data }: { data: AdegaInsightsData }) {
 
       {/* Risco de Ruptura & Capital Parado */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <section className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          <div className="p-4 border-b border-zinc-800">
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <AlertTriangle size={16} className="text-rose-400" /> Risco de Ruptura nos Campeões de Giro
-            </h3>
-            <p className="text-xs text-zinc-400 mt-1">
-              Produtos vendidos no período cujo estoque atual está zerado, abaixo do mínimo ou dura &le; 5 dias no ritmo atual.
-            </p>
+        <section className="bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden">
+          <div className="p-4 border-b border-zinc-800 flex items-start justify-between gap-2">
+            <div>
+              <h3 className="font-semibold text-white flex items-center gap-2">
+                <AlertTriangle size={16} className="text-rose-400" /> Risco de Ruptura nos Campeões de Giro
+              </h3>
+              <p className="text-xs text-zinc-400 mt-1">
+                Produtos vendidos no período cujo estoque está zerado, abaixo do mínimo ou dura &le; 5 dias.
+              </p>
+            </div>
+            <InfoBalloon
+              align="right"
+              title="Risco de Ruptura"
+              description="Calcula quantos dias ainda restam de estoque dividindo o saldo atual pela média de vendas diárias no período selecionado."
+              formula="Dias = Estoque atual ÷ (Qtd vendida ÷ Dias do período)"
+            />
           </div>
           {data.stockoutRisks.length === 0 ? (
             <p className="p-5 text-sm text-zinc-400">Nenhum produto em risco iminente de ruptura.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs uppercase text-zinc-400 border-b border-zinc-800">
-                  <tr>
-                    <th className="py-2.5 px-4">Produto</th>
-                    <th className="py-2.5 px-2 text-right">Saída/dia</th>
-                    <th className="py-2.5 px-2 text-right">Estoque</th>
-                    <th className="py-2.5 px-4 text-right">Duração</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.stockoutRisks.map((risk) => (
-                    <tr key={risk.productId} className="border-t border-zinc-800/70">
-                      <td className="py-2.5 px-4">
-                        <p className="font-medium text-white">{risk.name}</p>
-                        <p className="text-xs text-zinc-500">{risk.categoryName}</p>
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-zinc-300">
-                        {num(risk.dailyVelocity, 2)}/{risk.unit}
-                      </td>
-                      <td
-                        className={`py-2.5 px-2 text-right font-bold ${
-                          risk.severity === 'critical' ? 'text-rose-400' : 'text-amber-300'
-                        }`}
-                      >
-                        {num(risk.currentStock, 2)} {risk.unit}
-                      </td>
-                      <td className="py-2.5 px-4 text-right">
-                        <span
-                          className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                            risk.severity === 'critical'
-                              ? 'bg-rose-500/20 text-rose-300'
-                              : 'bg-amber-500/20 text-amber-300'
+            <>
+              <div className="sm:hidden divide-y divide-zinc-800/70">
+                {data.stockoutRisks.map((risk) => (
+                  <div key={risk.productId} className="p-3.5 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-white text-sm truncate">{risk.name}</p>
+                      <p className="text-xs text-zinc-400">
+                        Saída {num(risk.dailyVelocity, 2)}/{risk.unit}/dia · Est:{' '}
+                        <strong className={risk.severity === 'critical' ? 'text-rose-400' : 'text-amber-300'}>
+                          {num(risk.currentStock, 2)} {risk.unit}
+                        </strong>
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                        risk.severity === 'critical'
+                          ? 'bg-rose-500/20 text-rose-300'
+                          : 'bg-amber-500/20 text-amber-300'
+                      }`}
+                    >
+                      {Number(risk.currentStock) <= 0
+                        ? 'Esgotado'
+                        : risk.daysOfSupply
+                          ? `~${risk.daysOfSupply} d`
+                          : 'Baixo'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs uppercase text-zinc-400 border-b border-zinc-800">
+                    <tr>
+                      <th className="py-2.5 px-4">Produto</th>
+                      <th className="py-2.5 px-2 text-right">Saída/dia</th>
+                      <th className="py-2.5 px-2 text-right">Estoque</th>
+                      <th className="py-2.5 px-4 text-right">Duração</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.stockoutRisks.map((risk) => (
+                      <tr key={risk.productId} className="border-t border-zinc-800/70">
+                        <td className="py-2.5 px-4">
+                          <p className="font-medium text-white">{risk.name}</p>
+                          <p className="text-xs text-zinc-500">{risk.categoryName}</p>
+                        </td>
+                        <td className="py-2.5 px-2 text-right text-zinc-300">
+                          {num(risk.dailyVelocity, 2)}/{risk.unit}
+                        </td>
+                        <td
+                          className={`py-2.5 px-2 text-right font-bold ${
+                            risk.severity === 'critical' ? 'text-rose-400' : 'text-amber-300'
                           }`}
                         >
-                          {Number(risk.currentStock) <= 0
-                            ? 'Esgotado'
-                            : risk.daysOfSupply
-                              ? `~${risk.daysOfSupply} d`
-                              : 'Abaixo mín.'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          {num(risk.currentStock, 2)} {risk.unit}
+                        </td>
+                        <td className="py-2.5 px-4 text-right">
+                          <span
+                            className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                              risk.severity === 'critical'
+                                ? 'bg-rose-500/20 text-rose-300'
+                                : 'bg-amber-500/20 text-amber-300'
+                            }`}
+                          >
+                            {Number(risk.currentStock) <= 0
+                              ? 'Esgotado'
+                              : risk.daysOfSupply
+                                ? `~${risk.daysOfSupply} d`
+                                : 'Abaixo mín.'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
 
-        <section className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          <div className="p-4 border-b border-zinc-800">
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <PackageX size={16} className="text-amber-400" /> Capital Parado (Produtos Sem Saída)
-            </h3>
-            <p className="text-xs text-zinc-400 mt-1">
-              Maiores valores de custo empatados em prateleira sem nenhuma venda no período.
-            </p>
+        <section className="bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden">
+          <div className="p-4 border-b border-zinc-800 flex items-start justify-between gap-2">
+            <div>
+              <h3 className="font-semibold text-white flex items-center gap-2">
+                <PackageX size={16} className="text-amber-400" /> Capital Parado (Produtos Sem Saída)
+              </h3>
+              <p className="text-xs text-zinc-400 mt-1">
+                Maiores valores de custo empatados em prateleira sem nenhuma venda no período.
+              </p>
+            </div>
+            <InfoBalloon
+              align="right"
+              title="Capital Parado na Prateleira"
+              description="Mostra dinheiro investido em estoque que não girou neste período. Bom alvo para criar combos casados ou promoções."
+            />
           </div>
           {data.slowMovingProducts.length === 0 ? (
             <p className="p-5 text-sm text-zinc-400">Todo o estoque custeado teve saída neste período.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs uppercase text-zinc-400 border-b border-zinc-800">
-                  <tr>
-                    <th className="py-2.5 px-4">Produto</th>
-                    <th className="py-2.5 px-2 text-right">Estoque</th>
-                    <th className="py-2.5 px-2 text-right">Custo Unit.</th>
-                    <th className="py-2.5 px-4 text-right">Parado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.slowMovingProducts.map((item) => (
-                    <tr key={item.productId} className="border-t border-zinc-800/70">
-                      <td className="py-2.5 px-4">
-                        <p className="font-medium text-white">{item.name}</p>
-                        <p className="text-xs text-zinc-500">{item.categoryName}</p>
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-zinc-300">
-                        {num(item.currentStock, 2)} {item.unit}
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-zinc-400">{money(item.unitCost)}</td>
-                      <td className="py-2.5 px-4 text-right font-bold text-amber-300">
-                        {money(item.tiedCapital)}
-                      </td>
+            <>
+              <div className="sm:hidden divide-y divide-zinc-800/70">
+                {data.slowMovingProducts.map((item) => (
+                  <div key={item.productId} className="p-3.5 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-white text-sm truncate">{item.name}</p>
+                      <p className="text-xs text-zinc-400">
+                        Est: {num(item.currentStock, 2)} {item.unit} · Custo {money(item.unitCost)}
+                      </p>
+                    </div>
+                    <span className="font-bold text-amber-300 text-sm shrink-0">
+                      {money(item.tiedCapital)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs uppercase text-zinc-400 border-b border-zinc-800">
+                    <tr>
+                      <th className="py-2.5 px-4">Produto</th>
+                      <th className="py-2.5 px-2 text-right">Estoque</th>
+                      <th className="py-2.5 px-2 text-right">Custo Unit.</th>
+                      <th className="py-2.5 px-4 text-right">Parado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {data.slowMovingProducts.map((item) => (
+                      <tr key={item.productId} className="border-t border-zinc-800/70">
+                        <td className="py-2.5 px-4">
+                          <p className="font-medium text-white">{item.name}</p>
+                          <p className="text-xs text-zinc-500">{item.categoryName}</p>
+                        </td>
+                        <td className="py-2.5 px-2 text-right text-zinc-300">
+                          {num(item.currentStock, 2)} {item.unit}
+                        </td>
+                        <td className="py-2.5 px-2 text-right text-zinc-400">{money(item.unitCost)}</td>
+                        <td className="py-2.5 px-4 text-right font-bold text-amber-300">
+                          {money(item.tiedCapital)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
       </div>

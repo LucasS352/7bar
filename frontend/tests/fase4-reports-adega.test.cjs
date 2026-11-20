@@ -54,5 +54,7 @@ test('AdegaInsightsPanel, SalesEvolution e ReportsPage exibem lucro real, grafic
   assert.match(evolution, /FinancialEvolutionChart/);
   assert.match(page, /InfoBalloon/);
   assert.match(page, /uncostedProducts/);
+  assert.doesNotMatch(page, /max-w-7xl\s+mx-auto/);
   assert.match(balloon, /role="tooltip"/);
+  assert.match(balloon, /fixed inset-x-3 bottom-20/);
 });

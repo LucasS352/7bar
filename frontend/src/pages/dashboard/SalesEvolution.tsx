@@ -75,7 +75,7 @@ function MiniSparkline({
   const points = data.length >= 2 ? data : [{ [dataKey]: 0 }, ...data];
 
   return (
-    <div className="w-20 h-9 shrink-0" aria-hidden="true">
+    <div className="w-16 sm:w-20 h-8 sm:h-9 shrink-0" aria-hidden="true">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={points} margin={{ top: 3, right: 2, left: 2, bottom: 2 }}>
           <defs>
@@ -137,30 +137,47 @@ export function PeriodComparisonBar({
   return (
     <section
       aria-label="Comparação com período anterior"
-      className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl px-4 sm:px-5 py-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+      className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-3.5 sm:px-5 sm:py-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4"
     >
-      <div className="min-w-0 shrink-0">
-        <div className="flex items-center gap-1.5">
-          <h2 className="text-sm sm:text-base font-bold text-white">Comparação com período anterior</h2>
-          <InfoBalloon
-            align="left"
-            title="Comparação com período anterior"
-            description="Compara faturamento e lucro do período atual contra o mesmo número de dias corridos imediatamente anteriores (ex: últimos 7 dias vs 7 dias antes deles)."
-          />
+      <div className="flex items-start justify-between gap-2 lg:block min-w-0 shrink-0">
+        <div>
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-sm sm:text-base font-bold text-white">Comparação com período anterior</h2>
+            <InfoBalloon
+              align="left"
+              title="Comparação com período anterior"
+              description="Compara faturamento e lucro do período atual contra o mesmo número de dias corridos imediatamente anteriores (ex: últimos 7 dias vs 7 dias antes deles)."
+            />
+          </div>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            Anterior: {shortDateLabel(comparison.startDate)} a {shortDateLabel(comparison.endDate)} ·{' '}
+            {comparison.transactions.toLocaleString('pt-BR')} vendas
+          </p>
         </div>
-        <p className="text-xs text-zinc-400 mt-0.5">
-          Período anterior: {shortDateLabel(comparison.startDate)} a {shortDateLabel(comparison.endDate)} ·{' '}
-          {comparison.transactions.toLocaleString('pt-BR')} vendas
-        </p>
+
+        {/* Badge no mobile fica alinhado no topo direito */}
+        <div className="lg:hidden shrink-0">
+          {isPartial ? (
+            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-semibold">
+              <AlertTriangle size={12} />
+              <span>Parcial</span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold">
+              <CheckCircle2 size={12} />
+              <span>Completo</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 lg:max-w-2xl">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 flex-1">
         {/* Bloco Faturamento */}
         <div className="bg-zinc-950/70 border border-zinc-800/90 rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-medium text-zinc-400">Faturamento</p>
             <p
-              className={`text-lg font-extrabold leading-tight mt-0.5 ${
+              className={`text-base sm:text-lg font-extrabold leading-tight mt-0.5 ${
                 revPct === null ? 'text-zinc-200' : revPositive ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
@@ -188,7 +205,7 @@ export function PeriodComparisonBar({
           <div className="min-w-0">
             <p className="text-[11px] font-medium text-zinc-400">Lucro</p>
             <p
-              className={`text-lg font-extrabold leading-tight mt-0.5 ${
+              className={`text-base sm:text-lg font-extrabold leading-tight mt-0.5 ${
                 profitPct === null ? 'text-zinc-200' : profitPositive ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
@@ -212,8 +229,8 @@ export function PeriodComparisonBar({
         </div>
       </div>
 
-      {/* Badge Parcial / Completo */}
-      <div className="shrink-0 flex items-center">
+      {/* Badge Parcial / Completo Desktop */}
+      <div className="hidden lg:flex shrink-0 items-center">
         {isPartial ? (
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
             <AlertTriangle size={14} />
@@ -257,7 +274,6 @@ export function FinancialEvolutionChart({ daily }: { daily: DailySales[] }) {
       }));
     }
 
-    // Agrupamento semanal em blocos de segunda a domingo no fuso comercial
     const buckets: {
       key: string;
       start: string;
@@ -270,7 +286,7 @@ export function FinancialEvolutionChart({ daily }: { daily: DailySales[] }) {
 
     for (const day of daily) {
       const dt = new Date(`${day.date}T12:00:00Z`);
-      const wd = dt.getUTCDay(); // 0=dom, 1=seg...
+      const wd = dt.getUTCDay();
       const offsetToMonday = wd === 0 ? -6 : 1 - wd;
       const monday = new Date(dt.getTime() + offsetToMonday * 86_400_000);
       const weekKey = monday.toISOString().slice(0, 10);
@@ -307,23 +323,25 @@ export function FinancialEvolutionChart({ daily }: { daily: DailySales[] }) {
     }));
   }, [daily, granularity]);
 
+  const needsMobileScroll = series.length > 10;
+
   return (
     <section
       aria-label="Evolução financeira"
-      className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-4 sm:p-5 min-w-0 flex flex-col justify-between"
+      className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-3.5 sm:p-5 min-w-0 flex flex-col justify-between h-full"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+      <div className="flex flex-wrap items-start justify-between gap-2.5 mb-3 sm:mb-4">
         <div>
           <div className="flex items-center gap-1.5">
-            <h2 className="text-base font-bold text-white">Evolução financeira</h2>
+            <h2 className="text-sm sm:text-base font-bold text-white">Evolução financeira</h2>
             <InfoBalloon
               align="left"
               title="Evolução financeira"
               description="Mostra barra a barra o comportamento da Receita Líquida (azul), Custo das Mercadorias — CMV (amarelo) e Lucro Real (verde). Alterne entre visão Diária e Semanal."
             />
           </div>
-          <p className="text-xs text-zinc-400 mt-1">
-            Receita, CMV e lucro {granularity === 'daily' ? 'diários' : 'semanais'} no período selecionado (UTC−03:00).
+          <p className="text-xs text-zinc-400 mt-0.5 sm:mt-1">
+            Receita, CMV e lucro {granularity === 'daily' ? 'diários' : 'semanais'} (UTC−03:00).
           </p>
         </div>
 
@@ -349,86 +367,89 @@ export function FinancialEvolutionChart({ daily }: { daily: DailySales[] }) {
         </div>
       </div>
 
-      <div aria-hidden="true">
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart
-            data={series}
-            accessibilityLayer={false}
-            barGap={3}
-            barCategoryGap="22%"
-            margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-          >
-            <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" vertical={false} />
-            <XAxis
-              dataKey="label"
-              tick={{ fill: '#94a3b8', fontSize: 11 }}
-              axisLine={{ stroke: '#1e293b' }}
-              tickLine={false}
-              minTickGap={16}
-            />
-            <YAxis
-              width={54}
-              tick={{ fill: '#94a3b8', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={formatCompactYAxis}
-            />
-            <Tooltip
-              labelFormatter={(_, payload) => payload?.[0]?.payload?.fullLabel ?? ''}
-              formatter={(value, name) => {
-                const labels: Record<string, string> = {
-                  revenueNum: 'Receita (faturamento)',
-                  costNum: 'CMV (custo das mercadorias)',
-                  profitNum: 'Lucro real',
-                };
-                return [money(Number(value ?? 0)), labels[String(name)] ?? String(name)];
-              }}
-              contentStyle={{
-                background: '#09090b',
-                border: '1px solid #3f3f46',
-                borderRadius: 12,
-                boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-              }}
-              labelStyle={{ color: '#f4f4f5', fontWeight: 700, marginBottom: 4 }}
-              cursor={{ fill: 'rgba(39, 39, 42, 0.45)' }}
-            />
-            <Bar
-              dataKey="revenueNum"
-              name="revenueNum"
-              fill="#3b82f6"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={20}
-              isAnimationActive={false}
-            />
-            <Bar
-              dataKey="costNum"
-              name="costNum"
-              fill="#f59e0b"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={20}
-              isAnimationActive={false}
-            />
-            <Bar
-              dataKey="profitNum"
-              name="profitNum"
-              fill="#10b981"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={20}
-              isAnimationActive={false}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+      {/* Em telas pequenas com muitos dias, permite arrastar o gráfico sem espremer as barras */}
+      <div aria-hidden="true" className="overflow-x-auto custom-scrollbar -mx-1 px-1">
+        <div className={needsMobileScroll ? 'min-w-[540px] sm:min-w-0' : 'w-full'}>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart
+              data={series}
+              accessibilityLayer={false}
+              barGap={2}
+              barCategoryGap="20%"
+              margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+            >
+              <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="label"
+                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                axisLine={{ stroke: '#1e293b' }}
+                tickLine={false}
+                minTickGap={14}
+              />
+              <YAxis
+                width={52}
+                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={formatCompactYAxis}
+              />
+              <Tooltip
+                labelFormatter={(_, payload) => payload?.[0]?.payload?.fullLabel ?? ''}
+                formatter={(value, name) => {
+                  const labels: Record<string, string> = {
+                    revenueNum: 'Receita (faturamento)',
+                    costNum: 'CMV (custo das mercadorias)',
+                    profitNum: 'Lucro real',
+                  };
+                  return [money(Number(value ?? 0)), labels[String(name)] ?? String(name)];
+                }}
+                contentStyle={{
+                  background: '#09090b',
+                  border: '1px solid #3f3f46',
+                  borderRadius: 12,
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                }}
+                labelStyle={{ color: '#f4f4f5', fontWeight: 700, marginBottom: 4 }}
+                cursor={{ fill: 'rgba(39, 39, 42, 0.45)' }}
+              />
+              <Bar
+                dataKey="revenueNum"
+                name="revenueNum"
+                fill="#3b82f6"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={20}
+                isAnimationActive={false}
+              />
+              <Bar
+                dataKey="costNum"
+                name="costNum"
+                fill="#f59e0b"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={20}
+                isAnimationActive={false}
+              />
+              <Bar
+                dataKey="profitNum"
+                name="profitNum"
+                fill="#10b981"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={20}
+                isAnimationActive={false}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
-      {/* Legenda centralizada idêntica ao mockup */}
-      <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mt-3 pt-2 text-xs text-zinc-300">
+      {/* Legenda centralizada */}
+      <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 mt-3 pt-2 text-[11px] sm:text-xs text-zinc-300">
         <span className="inline-flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
           Receita (faturamento)
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-          CMV (custo das mercadorias)
+          CMV (custo)
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />

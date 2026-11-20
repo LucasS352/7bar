@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, X } from 'lucide-react';
 
 interface InfoBalloonProps {
   title: string;
@@ -40,12 +40,12 @@ export function InfoBalloon({
     };
   }, [pinned]);
 
-  const positionClass =
+  const desktopPositionClass =
     align === 'left'
-      ? 'left-0'
+      ? 'sm:left-0 sm:right-auto'
       : align === 'center'
-        ? 'left-1/2 -translate-x-1/2'
-        : 'right-0';
+        ? 'sm:left-1/2 sm:right-auto sm:-translate-x-1/2'
+        : 'sm:right-0 sm:left-auto';
 
   const arrowPositionClass =
     align === 'left'
@@ -82,23 +82,53 @@ export function InfoBalloon({
       </button>
 
       {isOpen && (
-        <div
-          id={tooltipId}
-          role="tooltip"
-          className={`absolute bottom-full mb-2.5 ${positionClass} w-56 sm:w-72 p-3 rounded-xl bg-zinc-950/95 backdrop-blur-md border border-zinc-700/90 shadow-2xl shadow-black/70 text-left z-50 pointer-events-auto`}
-        >
-          <p className="text-xs font-bold text-blue-300 mb-1">{title}</p>
-          <p className="text-[11.5px] leading-relaxed text-zinc-200">{description}</p>
-          {formula && (
-            <p className="mt-2 pt-1.5 border-t border-zinc-800 text-[10.5px] font-mono text-zinc-400">
-              {formula}
-            </p>
+        <>
+          {/* Overlay sutil somente no mobile quando aberto por toque */}
+          {pinned && (
+            <div
+              aria-hidden="true"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPinned(false);
+              }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-[1px] z-40 sm:hidden"
+            />
           )}
-          <span
-            aria-hidden="true"
-            className={`absolute top-full -mt-px ${arrowPositionClass} w-2.5 h-2.5 rotate-45 bg-zinc-950 border-r border-b border-zinc-700/90`}
-          />
-        </div>
+
+          {/* Mobile: card fixo legível acima da BottomNav; Desktop: balão ancorado acima do ícone */}
+          <div
+            id={tooltipId}
+            role="tooltip"
+            onClick={(e) => e.stopPropagation()}
+            className={`fixed inset-x-3 bottom-20 sm:inset-x-auto sm:bottom-full sm:mb-2.5 sm:absolute ${desktopPositionClass} sm:w-72 p-3.5 sm:p-3 rounded-2xl sm:rounded-xl bg-zinc-950/95 backdrop-blur-md border border-zinc-700/90 shadow-2xl shadow-black/80 text-left z-50 pointer-events-auto`}
+          >
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <p className="text-xs font-bold text-blue-300">{title}</p>
+              <button
+                type="button"
+                aria-label="Fechar explicação"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPinned(false);
+                  setHovered(false);
+                }}
+                className="sm:hidden p-0.5 rounded text-zinc-400 hover:text-white"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <p className="text-xs sm:text-[11.5px] leading-relaxed text-zinc-200">{description}</p>
+            {formula && (
+              <p className="mt-2 pt-1.5 border-t border-zinc-800 text-[11px] sm:text-[10.5px] font-mono text-zinc-400">
+                {formula}
+              </p>
+            )}
+            <span
+              aria-hidden="true"
+              className={`hidden sm:block absolute top-full -mt-px ${arrowPositionClass} w-2.5 h-2.5 rotate-45 bg-zinc-950 border-r border-b border-zinc-700/90`}
+            />
+          </div>
+        </>
       )}
     </div>
   );

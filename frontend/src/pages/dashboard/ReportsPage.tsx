@@ -409,8 +409,8 @@ function SalesReports() {
   const profitCompDiff = Number(report?.comparison.grossProfitDifference ?? 0);
 
   return (
-    <div className="pb-10 max-w-7xl mx-auto w-full space-y-5">
-      {/* Breadcrumb + Título + Abas */}
+    <div className="w-full pb-8 sm:pb-10 space-y-4 sm:space-y-5">
+      {/* Breadcrumb + Título + Abas (100% fluido sem margens laterais vazias) */}
       <div className="space-y-2">
         <nav aria-label="Navegação estrutural" className="flex items-center gap-1.5 text-xs text-zinc-500">
           <Link to="/" className="hover:text-zinc-300 transition">PDV</Link>
@@ -421,22 +421,23 @@ function SalesReports() {
         </nav>
 
         <header className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-2.5 tracking-tight">
-            <span className="p-2 rounded-xl bg-blue-500/15 border border-blue-500/25 text-blue-400">
-              <BarChart3 size={22} />
+          <h1 className="text-xl sm:text-3xl font-bold text-white flex items-center gap-2.5 tracking-tight">
+            <span className="p-2 rounded-xl bg-blue-500/15 border border-blue-500/25 text-blue-400 shrink-0">
+              <BarChart3 size={20} className="sm:w-[22px] sm:h-[22px]" />
             </span>
-            Relatórios Financeiros &amp; Adega
+            <span className="truncate">Relatórios Financeiros &amp; Adega</span>
           </h1>
 
+          {/* Abas responsivas: grid de 3 colunas no celular, inline-flex no desktop */}
           <div
             role="tablist"
             aria-label="Seções do relatório"
-            className="inline-flex bg-zinc-900/90 border border-zinc-800 p-1 rounded-xl gap-1 self-start lg:self-auto"
+            className="grid grid-cols-3 sm:inline-flex bg-zinc-900/90 border border-zinc-800 p-1 rounded-xl gap-1 w-full lg:w-auto"
           >
             {[
-              { id: 'overview', label: 'Lucro & Evolução', icon: TrendingUp },
-              { id: 'ranking', label: 'Ranking de Produtos', icon: Award },
-              { id: 'insights', label: 'Insights da Adega', icon: Lightbulb },
+              { id: 'overview', label: 'Lucro & Evolução', shortLabel: 'Lucro', icon: TrendingUp },
+              { id: 'ranking', label: 'Ranking de Produtos', shortLabel: 'Ranking', icon: Award },
+              { id: 'insights', label: 'Insights da Adega', shortLabel: 'Insights', icon: Lightbulb },
             ].map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -447,14 +448,15 @@ function SalesReports() {
                   role="tab"
                   aria-selected={active}
                   onClick={() => setActiveTab(tab.id as ReportTab)}
-                  className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                  className={`px-2 sm:px-3.5 py-2 rounded-lg text-[11px] sm:text-sm font-semibold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer ${
                     active
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
                       : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
                   }`}
                 >
-                  <Icon size={15} />
-                  <span>{tab.label}</span>
+                  <Icon size={15} className="shrink-0" />
+                  <span className="hidden sm:inline whitespace-nowrap">{tab.label}</span>
+                  <span className="sm:hidden leading-none">{tab.shortLabel}</span>
                 </button>
               );
             })}
@@ -462,98 +464,116 @@ function SalesReports() {
         </header>
       </div>
 
-      {/* Barra Unificada de Filtro de Período */}
+      {/* Barra Unificada de Filtro de Período (otimizada p/ mobile e desktop widescreen) */}
       <form
         onSubmit={(event) => {
           event.preventDefault();
           applyRange();
         }}
-        className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2.5"
+        className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-2.5 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5"
       >
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {PRESETS.map((preset) => {
-            const isSelected = activePreset === preset.id;
-            return (
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 flex-1">
+          {/* No mobile, grade 3x2 ultra limpa; no desktop, pílulas em linha */}
+          <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5">
+            {PRESETS.map((preset) => {
+              const isSelected = activePreset === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => applyPreset(preset.id)}
+                  className={`text-xs font-semibold px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-lg border transition cursor-pointer text-center ${
+                    isSelected
+                      ? 'bg-zinc-800 border-zinc-600 text-white shadow-sm'
+                      : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:text-white hover:border-zinc-700'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <span className="hidden md:block h-6 w-px bg-zinc-800 mx-0.5" aria-hidden="true" />
+
+          {/* Seletor de datas + Botão Consultar no mobile ficam alinhados na mesma linha */}
+          <div className="flex items-center gap-2 w-full sm:w-auto flex-1 lg:flex-initial justify-between">
+            <div ref={datePickerRef} className="relative flex-1 sm:flex-initial">
               <button
-                key={preset.id}
                 type="button"
-                onClick={() => applyPreset(preset.id)}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition cursor-pointer ${
-                  isSelected
-                    ? 'bg-zinc-800 border-zinc-600 text-white shadow-sm'
-                    : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:text-white hover:border-zinc-700'
-                }`}
+                onClick={() => setDateMenuOpen((prev) => !prev)}
+                aria-expanded={dateMenuOpen}
+                className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 bg-zinc-950/90 hover:bg-zinc-950 border border-zinc-700/80 rounded-xl px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-medium text-zinc-200 transition cursor-pointer"
               >
-                {preset.label}
+                <span className="flex items-center gap-2 truncate">
+                  <Calendar size={14} className="text-zinc-400 shrink-0" />
+                  <span className="truncate">
+                    {dateLabel(startDate)} — {dateLabel(endDate)}
+                  </span>
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`text-zinc-400 shrink-0 transition-transform ${dateMenuOpen ? 'rotate-180' : ''}`}
+                />
               </button>
-            );
-          })}
 
-          <span className="hidden md:block h-6 w-px bg-zinc-800 mx-1" aria-hidden="true" />
-
-          {/* Seletor compacto de intervalo de datas */}
-          <div ref={datePickerRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setDateMenuOpen((prev) => !prev)}
-              aria-expanded={dateMenuOpen}
-              className="flex items-center gap-2 bg-zinc-950/90 hover:bg-zinc-950 border border-zinc-700/80 rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium text-zinc-200 transition cursor-pointer"
-            >
-              <Calendar size={14} className="text-zinc-400" />
-              <span>
-                {dateLabel(startDate)} — {dateLabel(endDate)}
-              </span>
-              <ChevronDown size={14} className={`text-zinc-400 transition-transform ${dateMenuOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {dateMenuOpen && (
-              <div className="absolute left-0 top-full mt-2 w-72 bg-zinc-950 border border-zinc-700 rounded-2xl p-4 shadow-2xl z-40 space-y-3">
-                <p className="text-xs font-bold text-zinc-200">Selecionar intervalo (até 92 dias)</p>
-                <label className="text-xs text-zinc-400 flex flex-col gap-1">
-                  Data inicial
-                  <input
-                    required
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-2 text-sm text-white [color-scheme:dark]"
-                  />
-                </label>
-                <label className="text-xs text-zinc-400 flex flex-col gap-1">
-                  Data final
-                  <input
-                    required
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-2 text-sm text-white [color-scheme:dark]"
-                  />
-                </label>
-                <p className="text-[11px] text-zinc-500">Fuso comercial UTC−03:00.</p>
-                <div className="flex justify-end gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setDateMenuOpen(false)}
-                    className="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    Fechar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyRange(startDate, endDate)}
-                    className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white cursor-pointer"
-                  >
-                    Aplicar período
-                  </button>
+              {dateMenuOpen && (
+                <div className="absolute left-0 right-0 sm:right-auto top-full mt-2 sm:w-72 bg-zinc-950 border border-zinc-700 rounded-2xl p-4 shadow-2xl z-40 space-y-3">
+                  <p className="text-xs font-bold text-zinc-200">Selecionar intervalo (até 92 dias)</p>
+                  <label className="text-xs text-zinc-400 flex flex-col gap-1">
+                    Data inicial
+                    <input
+                      required
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-2 text-sm text-white [color-scheme:dark]"
+                    />
+                  </label>
+                  <label className="text-xs text-zinc-400 flex flex-col gap-1">
+                    Data final
+                    <input
+                      required
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-2 text-sm text-white [color-scheme:dark]"
+                    />
+                  </label>
+                  <p className="text-[11px] text-zinc-500">Fuso comercial UTC−03:00.</p>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setDateMenuOpen(false)}
+                      className="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-white cursor-pointer"
+                    >
+                      Fechar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyRange(startDate, endDate)}
+                      className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white cursor-pointer"
+                    >
+                      Aplicar período
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="lg:hidden shrink-0 bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-3.5 py-2 font-semibold text-xs inline-flex items-center gap-1.5 shadow-sm shadow-blue-600/20 transition cursor-pointer"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              Consultar
+            </button>
           </div>
         </div>
 
         <button
           type="submit"
-          className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-4 py-2 font-semibold text-xs sm:text-sm inline-flex items-center gap-2 shadow-sm shadow-blue-600/20 transition cursor-pointer ml-auto"
+          className="hidden lg:inline-flex shrink-0 bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-4 py-2 font-semibold text-sm items-center gap-2 shadow-sm shadow-blue-600/20 transition cursor-pointer"
         >
           <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           Consultar
@@ -591,17 +611,16 @@ function SalesReports() {
           {report && (
             <>
               {/* Cabeçalho Resumo do Período + Badge Cobertura */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
                 <div>
-                  <h2 className="text-lg font-bold text-white">Resumo do período</h2>
+                  <h2 className="text-base sm:text-lg font-bold text-white">Resumo do período</h2>
                   <p className="text-xs text-zinc-400">
-                    Panorama do desempenho no período de {dateLabel(report.period.startDate)} a{' '}
-                    {dateLabel(report.period.endDate)}.
+                    Desempenho de {dateLabel(report.period.startDate)} a {dateLabel(report.period.endDate)}.
                   </p>
                 </div>
 
                 <div
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl border text-xs font-semibold ${
                     coveragePct >= 95
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
                       : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
@@ -618,16 +637,16 @@ function SalesReports() {
                 </div>
               </div>
 
-              {/* LINHA 1 — 4 KPIs PRINCIPAIS */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
+              {/* LINHA 1 — 4 KPIs PRINCIPAIS (2x2 no celular, 4 colunas no desktop) */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
                 {/* 1. Faturamento líquido */}
-                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-4 flex flex-col justify-between">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 shrink-0">
-                        <Database size={16} />
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-3 sm:p-4 flex flex-col justify-between">
+                  <div className="flex items-start justify-between gap-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 shrink-0">
+                        <Database size={14} className="sm:w-4 sm:h-4" />
                       </span>
-                      <span className="text-sm font-medium text-zinc-300 truncate">Faturamento líquido</span>
+                      <span className="text-xs sm:text-sm font-medium text-zinc-300 truncate">Faturamento</span>
                     </div>
                     <InfoBalloon
                       align="left"
@@ -636,92 +655,91 @@ function SalesReports() {
                       formula="Σ total das vendas concluídas"
                     />
                   </div>
-                  <p className="text-2xl sm:text-[26px] font-extrabold text-white mt-3 tracking-tight break-words">
+                  <p className="text-lg sm:text-2xl xl:text-[26px] font-extrabold text-white mt-2.5 sm:mt-3 tracking-tight break-words">
                     {money(report.summary.revenue)}
                   </p>
-                  <p className="text-xs text-zinc-400 mt-1.5">
-                    {report.summary.transactions.toLocaleString('pt-BR')} vendas · Ticket{' '}
-                    {money(report.summary.averageTicket)}
+                  <p className="text-[11px] sm:text-xs text-zinc-400 mt-1 leading-snug">
+                    {report.summary.transactions.toLocaleString('pt-BR')} vendas · Ticket {money(report.summary.averageTicket)}
                   </p>
                 </div>
 
                 {/* 2. Lucro das vendas (destaque esmeralda) */}
                 <div
-                  className={`rounded-2xl p-4 border flex flex-col justify-between shadow-lg ${
+                  className={`rounded-2xl p-3 sm:p-4 border flex flex-col justify-between shadow-lg ${
                     profitPositive
                       ? 'bg-gradient-to-br from-emerald-950/65 via-zinc-900 to-zinc-900 border-emerald-500/40 shadow-emerald-950/30'
                       : 'bg-gradient-to-br from-rose-950/60 via-zinc-900 to-zinc-900 border-rose-500/40 shadow-rose-950/30'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-start justify-between gap-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
                       <span
-                        className={`p-2 rounded-xl border shrink-0 ${
+                        className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl border shrink-0 ${
                           profitPositive
                             ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
                             : 'bg-rose-500/15 border-rose-500/30 text-rose-400'
                         }`}
                       >
-                        <TrendingUp size={16} />
+                        <TrendingUp size={14} className="sm:w-4 sm:h-4" />
                       </span>
                       <span
-                        className={`text-sm font-semibold truncate ${
+                        className={`text-xs sm:text-sm font-semibold truncate ${
                           profitPositive ? 'text-emerald-200' : 'text-rose-200'
                         }`}
                       >
-                        Lucro das vendas
+                        Lucro vendas
                       </span>
                     </div>
                     <InfoBalloon
-                      align="center"
+                      align="right"
                       title="Lucro das vendas (Lucro Bruto Real)"
                       description="É quanto efetivamente sobrou da operação de vendas após pagar o custo das mercadorias vendidas (CMV) e abater descontos. Despesas fixas (aluguel, energia, folha) não entram aqui."
                       formula="Faturamento líquido − CMV"
                     />
                   </div>
                   <p
-                    className={`text-2xl sm:text-[26px] font-extrabold mt-3 tracking-tight break-words ${
+                    className={`text-lg sm:text-2xl xl:text-[26px] font-extrabold mt-2.5 sm:mt-3 tracking-tight break-words ${
                       profitPositive ? 'text-emerald-400' : 'text-rose-400'
                     }`}
                   >
                     {money(report.summary.grossProfit)}
                   </p>
-                  <p className="text-xs text-zinc-400 mt-1.5">
-                    Resultado das vendas no período
+                  <p className="text-[11px] sm:text-xs text-zinc-400 mt-1 leading-snug">
+                    Resultado líquido
                     {report.summary.markupPercent !== null ? ` · Markup ${formatPct(report.summary.markupPercent)}%` : ''}
                   </p>
                 </div>
 
                 {/* 3. Margem */}
-                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-4 flex flex-col justify-between">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="p-2 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 shrink-0">
-                        <Percent size={16} />
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-3 sm:p-4 flex flex-col justify-between">
+                  <div className="flex items-start justify-between gap-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 shrink-0">
+                        <Percent size={14} className="sm:w-4 sm:h-4" />
                       </span>
-                      <span className="text-sm font-medium text-zinc-300 truncate">Margem</span>
+                      <span className="text-xs sm:text-sm font-medium text-zinc-300 truncate">Margem</span>
                     </div>
                     <InfoBalloon
-                      align="center"
+                      align="left"
                       title="Margem de Lucro"
                       description="Indica quantos % de cada real faturado viraram lucro bruto após pagar a mercadoria. Ex.: margem de 33% significa que a cada R$ 100 vendidos, R$ 33 são lucro bruto."
                       formula="(Lucro das vendas ÷ Faturamento líquido) × 100"
                     />
                   </div>
-                  <p className="text-2xl sm:text-[26px] font-extrabold text-white mt-3 tracking-tight">
+                  <p className="text-lg sm:text-2xl xl:text-[26px] font-extrabold text-white mt-2.5 sm:mt-3 tracking-tight">
                     {report.summary.marginPercent !== null ? `${formatPct(report.summary.marginPercent)}%` : '—'}
                   </p>
-                  <p className="text-xs text-zinc-400 mt-1.5">Lucro sobre o faturamento</p>
+                  <p className="text-[11px] sm:text-xs text-zinc-400 mt-1">Sobre o faturamento</p>
                 </div>
 
                 {/* 4. Vendas realizadas */}
-                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-4 flex flex-col justify-between">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="p-2 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 shrink-0">
-                        <ShoppingCart size={16} />
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-3 sm:p-4 flex flex-col justify-between">
+                  <div className="flex items-start justify-between gap-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-300 shrink-0">
+                        <ShoppingCart size={14} className="sm:w-4 sm:h-4" />
                       </span>
-                      <span className="text-sm font-medium text-zinc-300 truncate">Vendas realizadas</span>
+                      <span className="text-xs sm:text-sm font-medium text-zinc-300 truncate">Vendas</span>
                     </div>
                     <InfoBalloon
                       align="right"
@@ -729,23 +747,23 @@ function SalesReports() {
                       description="Total de cupons/vendas concluídas no PDV ou em comandas fechadas dentro do período selecionado."
                     />
                   </div>
-                  <p className="text-2xl sm:text-[26px] font-extrabold text-white mt-3 tracking-tight">
+                  <p className="text-lg sm:text-2xl xl:text-[26px] font-extrabold text-white mt-2.5 sm:mt-3 tracking-tight">
                     {report.summary.transactions.toLocaleString('pt-BR')}
                   </p>
-                  <p className="text-xs text-zinc-400 mt-1.5">Quantidade de vendas no período</p>
+                  <p className="text-[11px] sm:text-xs text-zinc-400 mt-1">Concluídas no período</p>
                 </div>
               </div>
 
-              {/* LINHA 2 — 4 CARDS COMPACTOS */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
+              {/* LINHA 2 — 4 CARDS COMPACTOS (2x2 no celular, 4 colunas no desktop) */}
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3.5">
                 {/* CMV */}
-                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl px-4 py-3.5 flex items-center gap-3">
-                  <span className="p-2 rounded-xl bg-zinc-800/90 border border-zinc-700/70 text-zinc-300 shrink-0">
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-3 sm:px-4 sm:py-3.5 flex items-center gap-2.5 sm:gap-3">
+                  <span className="hidden sm:flex p-2 rounded-xl bg-zinc-800/90 border border-zinc-700/70 text-zinc-300 shrink-0">
                     <Tag size={15} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs text-zinc-400 font-medium">CMV</span>
+                      <span className="text-[11px] sm:text-xs text-zinc-400 font-medium">CMV (Custo)</span>
                       <InfoBalloon
                         align="left"
                         title="CMV — Custo das Mercadorias Vendidas"
@@ -753,43 +771,43 @@ function SalesReports() {
                         formula={`FIFO: ${money(report.summary.historicalCostRevenue)} · Catálogo: ${money(report.summary.fallbackCostRevenue)}`}
                       />
                     </div>
-                    <p className="text-lg font-extrabold text-amber-400 mt-0.5 truncate">
+                    <p className="text-base sm:text-lg font-extrabold text-amber-400 mt-0.5 truncate">
                       {money(report.summary.totalCost)}
                     </p>
                   </div>
                 </div>
 
                 {/* Ticket médio */}
-                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl px-4 py-3.5 flex items-center gap-3">
-                  <span className="p-2 rounded-xl bg-zinc-800/90 border border-zinc-700/70 text-zinc-300 shrink-0">
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-3 sm:px-4 sm:py-3.5 flex items-center gap-2.5 sm:gap-3">
+                  <span className="hidden sm:flex p-2 rounded-xl bg-zinc-800/90 border border-zinc-700/70 text-zinc-300 shrink-0">
                     <Receipt size={15} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs text-zinc-400 font-medium">Ticket médio</span>
+                      <span className="text-[11px] sm:text-xs text-zinc-400 font-medium">Ticket médio</span>
                       <InfoBalloon
-                        align="center"
+                        align="right"
                         title="Ticket médio"
                         description="Quanto cada cliente gasta em média por compra no período. Aumentar o ticket médio (com combos e adicionais) faz faturar mais sem precisar de mais clientes."
                         formula="Faturamento líquido ÷ Vendas realizadas"
                       />
                     </div>
-                    <p className="text-lg font-extrabold text-white mt-0.5 truncate">
+                    <p className="text-base sm:text-lg font-extrabold text-white mt-0.5 truncate">
                       {money(report.summary.averageTicket)}
                     </p>
                   </div>
                 </div>
 
                 {/* Descontos */}
-                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl px-4 py-3.5 flex items-center gap-3">
-                  <span className="p-2 rounded-xl bg-zinc-800/90 border border-zinc-700/70 text-zinc-300 shrink-0">
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-3 sm:px-4 sm:py-3.5 flex items-center gap-2.5 sm:gap-3">
+                  <span className="hidden sm:flex p-2 rounded-xl bg-zinc-800/90 border border-zinc-700/70 text-zinc-300 shrink-0">
                     <Percent size={15} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs text-zinc-400 font-medium">Descontos</span>
+                      <span className="text-[11px] sm:text-xs text-zinc-400 font-medium">Descontos</span>
                       <InfoBalloon
-                        align="center"
+                        align="left"
                         title="Descontos aplicados"
                         description="Soma dos descontos concedidos no fechamento das vendas deste período (já abatidos do faturamento líquido)."
                         formula={
@@ -799,20 +817,20 @@ function SalesReports() {
                         }
                       />
                     </div>
-                    <p className="text-lg font-extrabold text-rose-400 mt-0.5 truncate">
+                    <p className="text-base sm:text-lg font-extrabold text-rose-400 mt-0.5 truncate">
                       {money(report.summary.saleDiscounts)}
                     </p>
                   </div>
                 </div>
 
                 {/* Lucro por venda */}
-                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl px-4 py-3.5 flex items-center gap-3">
-                  <span className="p-2 rounded-xl bg-zinc-800/90 border border-zinc-700/70 text-zinc-300 shrink-0">
+                <div className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-3 sm:px-4 sm:py-3.5 flex items-center gap-2.5 sm:gap-3">
+                  <span className="hidden sm:flex p-2 rounded-xl bg-zinc-800/90 border border-zinc-700/70 text-zinc-300 shrink-0">
                     <Layers size={15} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs text-zinc-400 font-medium">Lucro por venda</span>
+                      <span className="text-[11px] sm:text-xs text-zinc-400 font-medium">Lucro por venda</span>
                       <InfoBalloon
                         align="right"
                         title="Lucro médio por venda"
@@ -821,7 +839,7 @@ function SalesReports() {
                       />
                     </div>
                     <p
-                      className={`text-lg font-extrabold mt-0.5 truncate ${
+                      className={`text-base sm:text-lg font-extrabold mt-0.5 truncate ${
                         Number(report.summary.averageProfitPerSale) >= 0 ? 'text-emerald-400' : 'text-rose-400'
                       }`}
                     >
@@ -853,7 +871,7 @@ function SalesReports() {
                   <div className="space-y-3.5">
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <h2 className="text-base font-bold text-white flex items-center gap-2">
+                        <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                           <Lightbulb size={17} className="text-amber-400" /> Atenção e oportunidades
                         </h2>
                         <InfoBalloon
@@ -867,7 +885,6 @@ function SalesReports() {
                       </p>
                     </div>
 
-                    {/* Alerta de produtos sem custo ou confirmação 100% */}
                     {Number(report.summary.uncostedRevenue) > 0 || report.summary.uncostedItemsCount > 0 ? (
                       <div className="rounded-xl border border-amber-500/35 bg-amber-500/5 p-3.5 space-y-2">
                         <div className="flex items-start gap-2.5">
@@ -904,7 +921,6 @@ function SalesReports() {
                       </div>
                     )}
 
-                    {/* Card variação de lucro */}
                     <div
                       className={`rounded-xl border p-3.5 flex items-start gap-2.5 ${
                         profitCompDiff >= 0
@@ -948,12 +964,12 @@ function SalesReports() {
                 </aside>
               </div>
 
-              {/* LINHA 5 — TABELA PRODUTOS POR FATURAMENTO */}
+              {/* LINHA 5 — PRODUTOS POR FATURAMENTO (Desktop tabela + Mobile cards sem scroll lateral) */}
               <section className="bg-zinc-900/90 border border-zinc-800/90 rounded-2xl overflow-hidden">
                 <div className="p-4 sm:px-5 border-b border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <h2 className="text-base font-bold text-white">Produtos por faturamento</h2>
+                      <h2 className="text-sm sm:text-base font-bold text-white">Produtos por faturamento</h2>
                       <InfoBalloon
                         align="left"
                         title="Produtos por faturamento"
@@ -961,7 +977,7 @@ function SalesReports() {
                       />
                     </div>
                     <p className="text-xs text-zinc-400 mt-0.5">
-                      Principais produtos por faturamento no período (receita vs CMV por item).
+                      Principais produtos no período (receita vs CMV por item).
                     </p>
                   </div>
                   <button
@@ -976,81 +992,146 @@ function SalesReports() {
                 {report.products.length === 0 ? (
                   <p className="p-6 text-sm text-zinc-400">Nenhum produto vendido neste período.</p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                      <thead className="text-zinc-400 text-[11px] uppercase tracking-wider border-b border-zinc-800/80 bg-zinc-950/40">
-                        <tr>
-                          <th className="py-3 px-4 sm:px-5 font-semibold">Produto</th>
-                          <th className="py-3 px-3 text-right font-semibold">Qtd.</th>
-                          <th className="py-3 px-3 text-right font-semibold">Faturamento</th>
-                          <th className="py-3 px-3 text-right font-semibold">Custo (CMV)</th>
-                          <th className="py-3 px-3 text-right font-semibold">Lucro</th>
-                          <th className="py-3 px-4 sm:px-5 text-right font-semibold">Margem</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {report.products.map((p) => {
-                          const marginVal = p.marginPercent !== null ? Number(p.marginPercent) : null;
-                          const barWidth =
-                            marginVal !== null ? Math.max(4, Math.min(100, Math.abs(marginVal))) : 0;
-                          const profitPos = Number(p.grossProfit) >= 0;
-                          return (
-                            <tr
-                              key={`${p.productId}-${p.name}-${p.unit}`}
-                              className="border-t border-zinc-800/70 hover:bg-zinc-800/30 transition-colors"
-                            >
-                              <td className="py-3 px-4 sm:px-5 font-semibold text-white">
+                  <>
+                    {/* Mobile Cards (< md) */}
+                    <div className="md:hidden divide-y divide-zinc-800/70">
+                      {report.products.map((p) => {
+                        const marginVal = p.marginPercent !== null ? Number(p.marginPercent) : null;
+                        const barWidth =
+                          marginVal !== null ? Math.max(4, Math.min(100, Math.abs(marginVal))) : 0;
+                        const profitPos = Number(p.grossProfit) >= 0;
+                        return (
+                          <div key={`${p.productId}-${p.name}-${p.unit}`} className="p-3.5 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="font-semibold text-white text-sm leading-snug">
                                 {p.name}{' '}
                                 <span className="text-xs font-normal text-zinc-400">({p.unit})</span>
-                              </td>
-                              <td className="py-3 px-3 text-right text-zinc-300 tabular-nums">
-                                {formatQty(p.quantity)}
-                              </td>
-                              <td className="py-3 px-3 text-right text-white font-medium tabular-nums">
-                                {money(p.itemSubtotal)}
-                              </td>
-                              <td className="py-3 px-3 text-right text-amber-400 font-medium tabular-nums">
-                                {money(p.totalCost)}
-                              </td>
-                              <td
-                                className={`py-3 px-3 text-right font-bold tabular-nums ${
+                              </p>
+                              <span
+                                className={`shrink-0 text-sm font-extrabold ${
                                   profitPos ? 'text-emerald-400' : 'text-rose-400'
                                 }`}
                               >
                                 {money(p.grossProfit)}
-                              </td>
-                              <td className="py-3 px-4 sm:px-5 text-right tabular-nums">
-                                {marginVal !== null ? (
-                                  <div className="inline-flex items-center justify-end gap-2.5">
-                                    <span className="text-zinc-200 font-medium">
-                                      {formatPct(marginVal)}%
-                                    </span>
-                                    <span
-                                      aria-hidden="true"
-                                      className="hidden sm:inline-block w-16 h-2 rounded-full bg-zinc-800 overflow-hidden"
-                                    >
+                              </span>
+                            </div>
+
+                            {marginVal !== null && (
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${
+                                      marginVal >= 25
+                                        ? 'bg-emerald-400'
+                                        : marginVal >= 10
+                                          ? 'bg-amber-400'
+                                          : 'bg-rose-400'
+                                    }`}
+                                    style={{ width: `${barWidth}%` }}
+                                  />
+                                </div>
+                                <span className="text-[11px] font-semibold text-zinc-300 shrink-0">
+                                  {formatPct(marginVal)}% margem
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-3 gap-2 pt-1 text-xs">
+                              <div>
+                                <p className="text-[10px] text-zinc-500 uppercase">Qtd.</p>
+                                <p className="font-semibold text-zinc-200">{formatQty(p.quantity)}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-zinc-500 uppercase">Faturamento</p>
+                                <p className="font-semibold text-white">{money(p.itemSubtotal)}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-[10px] text-zinc-500 uppercase">CMV</p>
+                                <p className="font-semibold text-amber-400">{money(p.totalCost)}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop Table (>= md) */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead className="text-zinc-400 text-[11px] uppercase tracking-wider border-b border-zinc-800/80 bg-zinc-950/40">
+                          <tr>
+                            <th className="py-3 px-4 sm:px-5 font-semibold">Produto</th>
+                            <th className="py-3 px-3 text-right font-semibold">Qtd.</th>
+                            <th className="py-3 px-3 text-right font-semibold">Faturamento</th>
+                            <th className="py-3 px-3 text-right font-semibold">Custo (CMV)</th>
+                            <th className="py-3 px-3 text-right font-semibold">Lucro</th>
+                            <th className="py-3 px-4 sm:px-5 text-right font-semibold">Margem</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {report.products.map((p) => {
+                            const marginVal = p.marginPercent !== null ? Number(p.marginPercent) : null;
+                            const barWidth =
+                              marginVal !== null ? Math.max(4, Math.min(100, Math.abs(marginVal))) : 0;
+                            const profitPos = Number(p.grossProfit) >= 0;
+                            return (
+                              <tr
+                                key={`${p.productId}-${p.name}-${p.unit}`}
+                                className="border-t border-zinc-800/70 hover:bg-zinc-800/30 transition-colors"
+                              >
+                                <td className="py-3 px-4 sm:px-5 font-semibold text-white">
+                                  {p.name}{' '}
+                                  <span className="text-xs font-normal text-zinc-400">({p.unit})</span>
+                                </td>
+                                <td className="py-3 px-3 text-right text-zinc-300 tabular-nums">
+                                  {formatQty(p.quantity)}
+                                </td>
+                                <td className="py-3 px-3 text-right text-white font-medium tabular-nums">
+                                  {money(p.itemSubtotal)}
+                                </td>
+                                <td className="py-3 px-3 text-right text-amber-400 font-medium tabular-nums">
+                                  {money(p.totalCost)}
+                                </td>
+                                <td
+                                  className={`py-3 px-3 text-right font-bold tabular-nums ${
+                                    profitPos ? 'text-emerald-400' : 'text-rose-400'
+                                  }`}
+                                >
+                                  {money(p.grossProfit)}
+                                </td>
+                                <td className="py-3 px-4 sm:px-5 text-right tabular-nums">
+                                  {marginVal !== null ? (
+                                    <div className="inline-flex items-center justify-end gap-2.5">
+                                      <span className="text-zinc-200 font-medium">
+                                        {formatPct(marginVal)}%
+                                      </span>
                                       <span
-                                        className={`block h-full rounded-full ${
-                                          marginVal >= 25
-                                            ? 'bg-emerald-400'
-                                            : marginVal >= 10
-                                              ? 'bg-amber-400'
-                                              : 'bg-rose-400'
-                                        }`}
-                                        style={{ width: `${barWidth}%` }}
-                                      />
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-zinc-500">—</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                                        aria-hidden="true"
+                                        className="w-16 h-2 rounded-full bg-zinc-800 overflow-hidden"
+                                      >
+                                        <span
+                                          className={`block h-full rounded-full ${
+                                            marginVal >= 25
+                                              ? 'bg-emerald-400'
+                                              : marginVal >= 10
+                                                ? 'bg-amber-400'
+                                                : 'bg-rose-400'
+                                          }`}
+                                          style={{ width: `${barWidth}%` }}
+                                        />
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-zinc-500">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
               </section>
             </>
@@ -1061,9 +1142,9 @@ function SalesReports() {
       {/* ABA 2: RANKING DETALHADO DE PRODUTOS */}
       {activeTab === 'ranking' && (
         <section aria-live="polite" aria-busy={rankingLoading} className="space-y-4">
-          {/* Barra de Filtros do Ranking */}
-          <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 flex flex-wrap items-end gap-3">
-            <label className="text-xs text-zinc-400 flex flex-col gap-1 flex-1 min-w-[200px]">
+          {/* Barra de Filtros do Ranking (Mobile 100% alinhado + Desktop barra única) */}
+          <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end gap-3">
+            <label className="text-xs text-zinc-400 flex flex-col gap-1 sm:col-span-2 lg:flex-1 lg:min-w-[220px]">
               Buscar produto
               <div className="relative flex gap-2">
                 <div className="relative flex-1">
@@ -1085,14 +1166,14 @@ function SalesReports() {
                 <button
                   type="button"
                   onClick={() => setAppliedSearch(searchInput.trim())}
-                  className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-white cursor-pointer"
+                  className="px-3.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-white cursor-pointer shrink-0"
                 >
                   Filtrar
                 </button>
               </div>
             </label>
 
-            <label className="text-xs text-zinc-400 flex flex-col gap-1 min-w-[175px]">
+            <label className="text-xs text-zinc-400 flex flex-col gap-1 lg:min-w-[175px]">
               Ordenar ranking por
               <select
                 value={sortBy}
@@ -1107,7 +1188,7 @@ function SalesReports() {
               </select>
             </label>
 
-            <label className="text-xs text-zinc-400 flex flex-col gap-1 min-w-[160px]">
+            <label className="text-xs text-zinc-400 flex flex-col gap-1 lg:min-w-[160px]">
               Categoria
               <select
                 value={categoryId}
@@ -1123,28 +1204,30 @@ function SalesReports() {
               </select>
             </label>
 
-            <label className="text-xs text-zinc-400 flex flex-col gap-1 w-24">
-              Exibir
-              <select
-                value={limit}
-                onChange={(e) => setLimit(Number(e.target.value))}
-                className="bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
-              >
-                <option value={25}>Top 25</option>
-                <option value={50}>Top 50</option>
-                <option value={100}>Top 100</option>
-              </select>
-            </label>
+            <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
+              <label className="text-xs text-zinc-400 flex flex-col gap-1 w-28">
+                Exibir
+                <select
+                  value={limit}
+                  onChange={(e) => setLimit(Number(e.target.value))}
+                  className="bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                >
+                  <option value={25}>Top 25</option>
+                  <option value={50}>Top 50</option>
+                  <option value={100}>Top 100</option>
+                </select>
+              </label>
 
-            {ranking && ranking.items.length > 0 && (
-              <button
-                type="button"
-                onClick={() => downloadRankingCsv(ranking.items, query.startDate, query.endDate)}
-                className="px-3.5 py-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-              >
-                <Download size={15} /> Exportar CSV
-              </button>
-            )}
+              {ranking && ranking.items.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => downloadRankingCsv(ranking.items, query.startDate, query.endDate)}
+                  className="flex-1 lg:flex-initial justify-center px-3.5 py-2.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download size={15} /> Exportar CSV
+                </button>
+              )}
+            </div>
           </div>
 
           {rankingLoading && !ranking && (
@@ -1156,65 +1239,65 @@ function SalesReports() {
           {ranking && (
             <>
               {/* Totais do Filtro com balãozinho */}
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3">
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5">
                   <div className="flex items-center justify-between gap-1">
-                    <p className="text-xs text-zinc-400">Itens no filtro</p>
+                    <p className="text-[11px] sm:text-xs text-zinc-400">Itens no filtro</p>
                     <InfoBalloon
                       align="left"
                       title="Itens distintos no filtro"
                       description="Quantidade total de produtos diferentes vendidos dentro da busca/categoria selecionada."
                     />
                   </div>
-                  <p className="text-lg font-bold text-white mt-1">
+                  <p className="text-base sm:text-lg font-bold text-white mt-1">
                     {ranking.totals.distinctProducts.toLocaleString('pt-BR')}
                   </p>
                 </div>
-                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5">
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5">
                   <div className="flex items-center justify-between gap-1">
-                    <p className="text-xs text-zinc-400">Unidades vendidas</p>
+                    <p className="text-[11px] sm:text-xs text-zinc-400">Unidades vendidas</p>
                     <InfoBalloon
-                      align="center"
+                      align="right"
                       title="Unidades vendidas"
                       description="Soma das quantidades vendidas (unidades, litros ou kg) considerando os filtros atuais."
                     />
                   </div>
-                  <p className="text-lg font-bold text-white mt-1">
+                  <p className="text-base sm:text-lg font-bold text-white mt-1">
                     {formatQty(ranking.totals.totalUnitsSold)}
                   </p>
                 </div>
-                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5">
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5">
                   <div className="flex items-center justify-between gap-1">
-                    <p className="text-xs text-zinc-400">Faturamento itens</p>
+                    <p className="text-[11px] sm:text-xs text-zinc-400">Faturamento itens</p>
                     <InfoBalloon
-                      align="center"
+                      align="left"
                       title="Faturamento dos itens"
                       description="Soma dos subtotais dos produtos filtrados antes de descontos ou acréscimos gerais do cupom."
                     />
                   </div>
-                  <p className="text-lg font-bold text-white mt-1">{money(ranking.totals.totalRevenue)}</p>
+                  <p className="text-base sm:text-lg font-bold text-white mt-1">{money(ranking.totals.totalRevenue)}</p>
                 </div>
-                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5">
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5">
                   <div className="flex items-center justify-between gap-1">
-                    <p className="text-xs text-zinc-400">CMV total</p>
+                    <p className="text-[11px] sm:text-xs text-zinc-400">CMV total</p>
                     <InfoBalloon
-                      align="center"
+                      align="right"
                       title="CMV do ranking"
                       description="Custo total das mercadorias vendidas para os produtos exibidos no filtro."
                     />
                   </div>
-                  <p className="text-lg font-bold text-amber-300 mt-1">{money(ranking.totals.totalCost)}</p>
+                  <p className="text-base sm:text-lg font-bold text-amber-300 mt-1">{money(ranking.totals.totalCost)}</p>
                 </div>
-                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5 col-span-2 lg:col-span-1">
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5 col-span-2 lg:col-span-1">
                   <div className="flex items-center justify-between gap-1">
-                    <p className="text-xs text-zinc-400">Lucro Bruto Itens</p>
+                    <p className="text-[11px] sm:text-xs text-zinc-400">Lucro Bruto Itens</p>
                     <InfoBalloon
                       align="right"
                       title="Lucro Bruto dos Itens"
                       description="Diferença entre o faturamento dos produtos filtrados e seu respectivo CMV, com a margem média ponderada."
                     />
                   </div>
-                  <p className="text-lg font-bold text-emerald-400 mt-1">
+                  <p className="text-base sm:text-lg font-bold text-emerald-400 mt-1">
                     {money(ranking.totals.totalGrossProfit)}
                     {ranking.totals.averageMarginPercent !== null && (
                       <span className="text-xs font-normal text-zinc-400 ml-1">
@@ -1229,90 +1312,155 @@ function SalesReports() {
                 {ranking.items.length === 0 ? (
                   <p className="p-6 text-zinc-400">Nenhum produto encontrado para os filtros aplicados.</p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                      <thead className="text-zinc-400 text-[11px] uppercase border-b border-zinc-800 bg-zinc-950/40">
-                        <tr>
-                          <th className="p-3">#</th>
-                          <th className="p-3">Produto / Categoria</th>
-                          <th className="p-3 text-right">Qtd</th>
-                          <th className="p-3 text-right">Preço Méd.</th>
-                          <th className="p-3 text-right">Custo Méd.</th>
-                          <th className="p-3 text-right">Faturamento</th>
-                          <th className="p-3 text-right">CMV</th>
-                          <th className="p-3 text-right">Lucro Real</th>
-                          <th className="p-3 text-right">Margem</th>
-                          <th className="p-3 text-right">Estoque</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {ranking.items.map((item) => {
-                          const cBadge = costBadge[item.costSource];
-                          const sBadge = stockBadge[item.stockAlert];
-                          return (
-                            <tr key={item.productId} className="border-t border-zinc-800/80 hover:bg-zinc-800/30">
-                              <td className="p-3 font-bold text-zinc-400">#{item.rank}</td>
-                              <td className="p-3">
-                                <p className="font-semibold text-white">{item.name}</p>
-                                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                                  <span className="text-xs text-zinc-500">
-                                    {item.categoryName} · {item.salesCount} vendas
-                                  </span>
+                  <>
+                    {/* Cards Mobile (< md) */}
+                    <div className="md:hidden divide-y divide-zinc-800/70">
+                      {ranking.items.map((item) => {
+                        const cBadge = costBadge[item.costSource];
+                        const sBadge = stockBadge[item.stockAlert];
+                        return (
+                          <div key={item.productId} className="p-3.5 space-y-2.5">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-semibold text-white text-sm leading-snug">
+                                  <span className="text-blue-400 font-bold mr-1.5">#{item.rank}</span>
+                                  {item.name}
+                                </p>
+                                <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                  <span className="text-[11px] text-zinc-400">{item.categoryName}</span>
                                   <span className={`text-[10px] px-1.5 py-0.5 rounded border ${cBadge.cls}`}>
                                     {cBadge.label}
                                   </span>
+                                  {item.currentStock !== null && (
+                                    <span className={`text-[11px] ${sBadge.cls}`}>
+                                      · Est: {formatQty(item.currentStock)} {item.unit}
+                                    </span>
+                                  )}
                                 </div>
-                              </td>
-                              <td className="p-3 text-right whitespace-nowrap text-zinc-200 tabular-nums">
-                                {formatQty(item.quantity)}{' '}
-                                <span className="text-xs text-zinc-500">{item.unit}</span>
-                              </td>
-                              <td className="p-3 text-right whitespace-nowrap text-zinc-300 tabular-nums">
-                                {money(item.avgSalePrice)}
-                              </td>
-                              <td className="p-3 text-right whitespace-nowrap text-zinc-400 tabular-nums">
-                                {money(item.avgUnitCost)}
-                              </td>
-                              <td className="p-3 text-right whitespace-nowrap tabular-nums">
-                                <p className="font-medium text-white">{money(item.itemSubtotal)}</p>
-                                {item.revenueSharePercent && (
-                                  <p className="text-[11px] text-zinc-500">{formatPct(item.revenueSharePercent)}% rec.</p>
-                                )}
-                              </td>
-                              <td className="p-3 text-right whitespace-nowrap text-amber-300 tabular-nums">
-                                {money(item.totalCost)}
-                              </td>
-                              <td className="p-3 text-right whitespace-nowrap tabular-nums">
+                              </div>
+                              <div className="text-right shrink-0">
                                 <p
-                                  className={`font-bold ${
+                                  className={`text-sm font-extrabold ${
                                     Number(item.grossProfit) >= 0 ? 'text-emerald-400' : 'text-rose-400'
                                   }`}
                                 >
                                   {money(item.grossProfit)}
                                 </p>
-                                {item.profitSharePercent && (
-                                  <p className="text-[11px] text-zinc-500">{formatPct(item.profitSharePercent)}% luc.</p>
-                                )}
-                              </td>
-                              <td className="p-3 text-right whitespace-nowrap text-zinc-200 tabular-nums">
-                                {item.marginPercent !== null ? `${formatPct(item.marginPercent)}%` : '—'}
-                              </td>
-                              <td className="p-3 text-right whitespace-nowrap tabular-nums">
-                                <p className={`text-xs ${sBadge.cls}`}>
-                                  {item.currentStock !== null
-                                    ? `${formatQty(item.currentStock)} ${item.unit}`
-                                    : sBadge.label}
+                                <p className="text-[11px] text-zinc-400">
+                                  {item.marginPercent !== null ? `${formatPct(item.marginPercent)}%` : '—'}
                                 </p>
-                                {item.stockAlert !== 'ok' && item.stockAlert !== 'unknown' && (
-                                  <p className={`text-[10px] ${sBadge.cls}`}>{sBadge.label}</p>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-2 pt-1 text-[11px]">
+                              <div>
+                                <p className="text-[10px] text-zinc-500">Qtd</p>
+                                <p className="font-semibold text-zinc-200">{formatQty(item.quantity)}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-zinc-500">Preço Méd</p>
+                                <p className="font-semibold text-zinc-300">{money(item.avgSalePrice)}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-zinc-500">Fat.</p>
+                                <p className="font-semibold text-white">{money(item.itemSubtotal)}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-[10px] text-zinc-500">CMV</p>
+                                <p className="font-semibold text-amber-300">{money(item.totalCost)}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Tabela Completa Desktop (>= md) */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead className="text-zinc-400 text-[11px] uppercase border-b border-zinc-800 bg-zinc-950/40">
+                          <tr>
+                            <th className="p-3">#</th>
+                            <th className="p-3">Produto / Categoria</th>
+                            <th className="p-3 text-right">Qtd</th>
+                            <th className="p-3 text-right">Preço Méd.</th>
+                            <th className="p-3 text-right">Custo Méd.</th>
+                            <th className="p-3 text-right">Faturamento</th>
+                            <th className="p-3 text-right">CMV</th>
+                            <th className="p-3 text-right">Lucro Real</th>
+                            <th className="p-3 text-right">Margem</th>
+                            <th className="p-3 text-right">Estoque</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ranking.items.map((item) => {
+                            const cBadge = costBadge[item.costSource];
+                            const sBadge = stockBadge[item.stockAlert];
+                            return (
+                              <tr key={item.productId} className="border-t border-zinc-800/80 hover:bg-zinc-800/30">
+                                <td className="p-3 font-bold text-zinc-400">#{item.rank}</td>
+                                <td className="p-3">
+                                  <p className="font-semibold text-white">{item.name}</p>
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                    <span className="text-xs text-zinc-500">
+                                      {item.categoryName} · {item.salesCount} vendas
+                                    </span>
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${cBadge.cls}`}>
+                                      {cBadge.label}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="p-3 text-right whitespace-nowrap text-zinc-200 tabular-nums">
+                                  {formatQty(item.quantity)}{' '}
+                                  <span className="text-xs text-zinc-500">{item.unit}</span>
+                                </td>
+                                <td className="p-3 text-right whitespace-nowrap text-zinc-300 tabular-nums">
+                                  {money(item.avgSalePrice)}
+                                </td>
+                                <td className="p-3 text-right whitespace-nowrap text-zinc-400 tabular-nums">
+                                  {money(item.avgUnitCost)}
+                                </td>
+                                <td className="p-3 text-right whitespace-nowrap tabular-nums">
+                                  <p className="font-medium text-white">{money(item.itemSubtotal)}</p>
+                                  {item.revenueSharePercent && (
+                                    <p className="text-[11px] text-zinc-500">{formatPct(item.revenueSharePercent)}% rec.</p>
+                                  )}
+                                </td>
+                                <td className="p-3 text-right whitespace-nowrap text-amber-300 tabular-nums">
+                                  {money(item.totalCost)}
+                                </td>
+                                <td className="p-3 text-right whitespace-nowrap tabular-nums">
+                                  <p
+                                    className={`font-bold ${
+                                      Number(item.grossProfit) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                                    }`}
+                                  >
+                                    {money(item.grossProfit)}
+                                  </p>
+                                  {item.profitSharePercent && (
+                                    <p className="text-[11px] text-zinc-500">{formatPct(item.profitSharePercent)}% luc.</p>
+                                  )}
+                                </td>
+                                <td className="p-3 text-right whitespace-nowrap text-zinc-200 tabular-nums">
+                                  {item.marginPercent !== null ? `${formatPct(item.marginPercent)}%` : '—'}
+                                </td>
+                                <td className="p-3 text-right whitespace-nowrap tabular-nums">
+                                  <p className={`text-xs ${sBadge.cls}`}>
+                                    {item.currentStock !== null
+                                      ? `${formatQty(item.currentStock)} ${item.unit}`
+                                      : sBadge.label}
+                                  </p>
+                                  {item.stockAlert !== 'ok' && item.stockAlert !== 'unknown' && (
+                                    <p className={`text-[10px] ${sBadge.cls}`}>{sBadge.label}</p>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
               </div>
             </>
