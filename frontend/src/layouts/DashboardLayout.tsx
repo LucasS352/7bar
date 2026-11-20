@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, History, ArrowLeft, LogOut, Settings, FileText,
   Building2, Users, ChevronLeft, ChevronRight, AlertTriangle, Truck, ShoppingCart,
   Banknote, CreditCard, FileSpreadsheet, Images, FileDown, ReceiptText, Tv2, Menu, X,
-  UtensilsCrossed
+  UtensilsCrossed, BarChart3
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useDemoMissionsStore } from '@/store/demoMissions';
@@ -63,7 +63,10 @@ export function DashboardLayout() {
   const isStockist = user?.role === 'stockist';
 
   const navItems = [
-    ...(!isStockist ? [{ name: 'Analytics', to: '/dashboard', icon: LayoutDashboard }] : []),
+    ...(!isStockist ? [
+      { name: 'Analytics',          to: '/dashboard',         icon: LayoutDashboard },
+      { name: 'Relatórios & Lucro', to: '/dashboard/reports', icon: BarChart3 },
+    ] : []),
     ...(modules.estoque !== false ? [
       { name: 'Catálogo e Estoque', to: '/dashboard/inventory',             icon: Package },
       ...(!isStockist ? [

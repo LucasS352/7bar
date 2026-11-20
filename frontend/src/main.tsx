@@ -35,6 +35,7 @@ import AjusteFiscalPage from './app/dashboard/configuracoes/ajuste-fiscal/page';
 import FiscalManagementPage from './app/dashboard/fiscal/gestao/page';
 import BulkImagesPage from './pages/dashboard/BulkImagesPage';
 import VitrinePage from './pages/dashboard/VitrinePage';
+import ReportsPage from './pages/dashboard/ReportsPage';
 import VitrineTvPage from './pages/VitrineTvPage';
 import { KdsPage } from './pages/KdsPage';
 import { GarcomPage } from './pages/GarcomPage';
@@ -236,6 +237,7 @@ function App() {
           <Route path="fiscal/gestao" element={<FiscalManagementPage />} />
           <Route path="bulk-images" element={<BulkImagesPage />} />
           <Route path="vitrine" element={<VitrinePage />} />
+          <Route path="reports" element={<ReportsPage />} />
         </Route>
 
         {/* Fallback */}

@@ -30,6 +30,7 @@ import { IntegrationsModule } from './integrations/integrations.module';
 import { BackupsModule } from './backups/backups.module';
 import { DemoModule } from './demo/demo.module';
 import { ImageMaintenanceModule } from './maintenance/image-maintenance.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { ImageMaintenanceModule } from './maintenance/image-maintenance.module';
     FiscalModule,
     ComandasModule,
     VitrineModule,
+    ReportsModule,
     // Demo — só carrega quando APP_MODE=demo (servidor Smartek)
     ...(process.env.APP_MODE === 'demo' ? [DemoModule] : []),
   ],

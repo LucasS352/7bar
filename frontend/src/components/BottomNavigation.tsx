@@ -174,6 +174,20 @@ export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
 
             {/* Links organizados por módulos */}
             <div className="space-y-4 mb-4">
+              {user?.role !== 'stockist' && (
+                <button
+                  type="button"
+                  onClick={() => { setProfileOpen(false); navigate('/dashboard/reports'); }}
+                  className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-blue-600/20 to-emerald-600/20 border border-blue-500/30 text-white font-bold text-xs flex items-center justify-between active:scale-95 transition cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <BarChart2 size={17} className="text-emerald-400" />
+                    Relatórios de Lucro, Ranking &amp; Insights Adega
+                  </span>
+                  <ArrowRight size={15} className="text-blue-400" />
+                </button>
+              )}
+
               {/* Vitrine Digital TV */}
               {modules?.vitrineDigital === true && (
                 <div className="p-3.5 bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-blue-500/10 rounded-2xl border border-amber-500/30">
