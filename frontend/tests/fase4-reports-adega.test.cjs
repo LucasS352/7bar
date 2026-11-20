@@ -50,8 +50,13 @@ test('AdegaInsightsPanel, SalesEvolution e ReportsPage exibem lucro real, grafic
   assert.doesNotMatch(thumb, /dangerouslySetInnerHTML|innerHTML/);
   assert.doesNotMatch(editor, /dangerouslySetInnerHTML|innerHTML/);
   assert.match(panel, /Lucro/i);
-  assert.match(panel, /Risco de Ruptura/);
-  assert.match(panel, /Capital Parado/);
+  assert.match(panel, /Panorama estratégico/);
+  assert.match(panel, /Prioridades que merecem atenção/);
+  assert.match(panel, /Oportunidades de crescimento/);
+  assert.match(panel, /Comportamento das vendas/);
+  assert.match(panel, /Produtos e estoque/);
+  assert.match(panel, /Risco de ruptura/);
+  assert.match(panel, /Capital parado/);
   assert.match(panel, /ProductThumb/);
   assert.match(evolution, /grossProfit/);
   assert.match(evolution, /totalCost/);

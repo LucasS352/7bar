@@ -1737,7 +1737,21 @@ function SalesReports() {
               Analisando horários de pico, rupturas e oportunidades da adega…
             </p>
           )}
-          {insights && <AdegaInsightsPanel data={insights} />}
+          {insights && (
+            <AdegaInsightsPanel
+              data={insights}
+              onOpenCostEditor={(search) =>
+                setCostEditor({ open: true, scope: 'period', search: search ?? '' })
+              }
+              onGoToRanking={(sort) => {
+                if (sort) {
+                  setSortBy(sort);
+                }
+                setActiveTab('ranking');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          )}
         </section>
       )}
 
