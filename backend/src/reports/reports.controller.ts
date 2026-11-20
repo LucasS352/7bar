@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Get, Header, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Header, Patch, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { ReportsService } from './reports.service';
@@ -56,5 +56,35 @@ export class ReportsController {
   ) {
     this.assertAuthorized(user);
     return this.reports.adegaInsights(startDate, endDate);
+  }
+
+  @Get('uncosted-products')
+  @Header('Cache-Control', 'private, no-store')
+  uncostedProducts(
+    @CurrentUser() user: { role?: string; type?: string },
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('scope') scope?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('search') search?: string,
+  ) {
+    this.assertAuthorized(user);
+    return this.reports.uncostedProducts({
+      startDate,
+      endDate,
+      scope,
+      categoryId,
+      search,
+    });
+  }
+
+  @Patch('product-costs')
+  @Header('Cache-Control', 'private, no-store')
+  updateProductCosts(
+    @CurrentUser() user: { role?: string; type?: string },
+    @Body() body?: { items?: unknown },
+  ) {
+    this.assertAuthorized(user);
+    return this.reports.updateProductCosts(body?.items);
   }
 }

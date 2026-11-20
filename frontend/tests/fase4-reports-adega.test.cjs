@@ -42,9 +42,11 @@ test('AdegaInsightsPanel, SalesEvolution e ReportsPage exibem lucro real, grafic
   const evolution = readSrc('pages/dashboard/SalesEvolution.tsx');
   const page = readSrc('pages/dashboard/ReportsPage.tsx');
   const balloon = readSrc('components/InfoBalloon.tsx');
+  const editor = readSrc('pages/dashboard/UncostedProductsView.tsx');
   assert.doesNotMatch(panel, /dangerouslySetInnerHTML|innerHTML/);
   assert.doesNotMatch(evolution, /dangerouslySetInnerHTML|innerHTML/);
   assert.doesNotMatch(balloon, /dangerouslySetInnerHTML|innerHTML/);
+  assert.doesNotMatch(editor, /dangerouslySetInnerHTML|innerHTML/);
   assert.match(panel, /Lucro/i);
   assert.match(panel, /Risco de Ruptura/);
   assert.match(panel, /Capital Parado/);
@@ -53,8 +55,11 @@ test('AdegaInsightsPanel, SalesEvolution e ReportsPage exibem lucro real, grafic
   assert.match(evolution, /PeriodComparisonBar/);
   assert.match(evolution, /FinancialEvolutionChart/);
   assert.match(page, /InfoBalloon/);
-  assert.match(page, /uncostedProducts/);
+  assert.match(page, /UncostedProductsView/);
+  assert.match(page, /uncostedInPeriodCount/);
   assert.doesNotMatch(page, /max-w-7xl\s+mx-auto/);
   assert.match(balloon, /role="tooltip"/);
   assert.match(balloon, /fixed inset-x-3 bottom-20/);
+  assert.match(editor, /\/reports\/uncosted-products/);
+  assert.match(editor, /\/reports\/product-costs/);
 });

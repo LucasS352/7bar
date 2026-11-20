@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
+import { ProductsService } from '../products/products.service';
 import { reportPeriod } from './reports.period';
 import { computeMarginPercent, DailySalesRow, previousReportPeriod, salesTrends } from './reports.trends';
 import type {
@@ -19,6 +20,10 @@ import type {
   SlowMovingProductItem,
   StockAlertStatus,
   StockoutRiskItem,
+  UncostedProductEditorItem,
+  UncostedProductsResponse,
+  UncostedScope,
+  UpdateProductCostsResponse,
   WeekdayMovementBucket,
 } from './reports.types';
 
@@ -167,6 +172,25 @@ interface RawRankingTotalsRow {
   totalUnitsSold: Prisma.Decimal | null;
   totalRevenue: Prisma.Decimal | null;
   totalCost: Prisma.Decimal | null;
+  uncostedInPeriodCount: bigint | number;
+  uncostedInPeriodRevenue: Prisma.Decimal | null;
+}
+
+interface RawUncostedEditorRow {
+  productId: string;
+  name: string;
+  shortCode: string | null;
+  barcode: string | null;
+  unit: string;
+  categoryId: string | null;
+  categoryName: string;
+  priceSell: Prisma.Decimal | null;
+  priceCost: Prisma.Decimal | null;
+  currentStock: Prisma.Decimal | null;
+  isComposite: number | boolean;
+  soldQuantity: Prisma.Decimal | null;
+  itemSubtotal: Prisma.Decimal | null;
+  salesCount: bigint | number;
 }
 
 @Injectable()
@@ -174,6 +198,7 @@ export class ReportsService {
   constructor(
     private readonly tenantManager: TenantConnectionManager,
     private readonly tenantContext: TenantContextService,
+    @Optional() private readonly productsService?: ProductsService,
   ) {}
 
   private async getClient() {
@@ -384,14 +409,16 @@ export class ReportsService {
       }
     })();
 
-    const [totalsRows, rankingRows, categories] = await prisma.$transaction(
+    const [totalsRows, rankingRows, categories, uncostedCatalogCount] = await prisma.$transaction(
       [
         prisma.$queryRaw<RawRankingTotalsRow[]>(Prisma.sql`
           SELECT
             COUNT(DISTINCT si.productId) AS distinctProducts,
             COALESCE(SUM(si.quantity), 0) AS totalUnitsSold,
             COALESCE(SUM(si.subtotal), 0) AS totalRevenue,
-            COALESCE(SUM(si.quantity * (CASE WHEN si.priceCost > 0 THEN si.priceCost WHEN p.priceCost > 0 THEN p.priceCost ELSE 0 END)), 0) AS totalCost
+            COALESCE(SUM(si.quantity * (CASE WHEN si.priceCost > 0 THEN si.priceCost WHEN p.priceCost > 0 THEN p.priceCost ELSE 0 END)), 0) AS totalCost,
+            COALESCE(COUNT(DISTINCT CASE WHEN (si.priceCost IS NULL OR si.priceCost <= 0) AND (p.priceCost IS NULL OR p.priceCost <= 0) THEN si.productId ELSE NULL END), 0) AS uncostedInPeriodCount,
+            COALESCE(SUM(CASE WHEN (si.priceCost IS NULL OR si.priceCost <= 0) AND (p.priceCost IS NULL OR p.priceCost <= 0) THEN si.subtotal ELSE 0 END), 0) AS uncostedInPeriodRevenue
           FROM sale_items si
           INNER JOIN sales s ON s.id = si.saleId
           LEFT JOIN products p ON p.id = si.productId
@@ -434,6 +461,14 @@ export class ReportsService {
           select: { id: true, name: true },
           orderBy: { name: 'asc' },
         }),
+        prisma.product.count({
+          where: {
+            active: true,
+            priceCost: { lte: 0 },
+            ...(categoryId ? { categoryId } : {}),
+            ...(search ? { name: { contains: search } } : {}),
+          },
+        }),
       ],
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
@@ -467,9 +502,218 @@ export class ReportsService {
         totalCost: totalCost.toFixed(2),
         totalGrossProfit: totalGrossProfit.toFixed(2),
         averageMarginPercent: computeMarginPercent(totalGrossProfit, totalRevenue),
+        uncostedInPeriodCount: Number(totalsRow?.uncostedInPeriodCount ?? 0),
+        uncostedInPeriodRevenue: toDec(totalsRow?.uncostedInPeriodRevenue).toFixed(2),
+        uncostedCatalogCount: Number(uncostedCatalogCount ?? 0),
       },
       categories,
       items,
+    };
+  }
+
+  async uncostedProducts(query: {
+    startDate?: unknown;
+    endDate?: unknown;
+    scope?: unknown;
+    categoryId?: unknown;
+    search?: unknown;
+  }): Promise<UncostedProductsResponse> {
+    const todayStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+    const period = reportPeriod(query.startDate ?? todayStr, query.endDate ?? todayStr);
+    const scope: UncostedScope = query.scope === 'catalog' ? 'catalog' : 'period';
+    const categoryId =
+      typeof query.categoryId === 'string' && query.categoryId.trim() ? query.categoryId.trim() : null;
+    const search =
+      typeof query.search === 'string' && query.search.trim() ? query.search.trim().slice(0, 60) : null;
+
+    const prisma = await this.getClient();
+    const categoryFilterSql = categoryId ? Prisma.sql`AND p.categoryId = ${categoryId}` : Prisma.empty;
+    const searchPattern = search ? `%${search}%` : null;
+    const periodSearchSql = searchPattern
+      ? Prisma.sql`AND (p.name LIKE ${searchPattern} OR p.barcode LIKE ${searchPattern} OR p.shortCode LIKE ${searchPattern})`
+      : Prisma.empty;
+    const catalogSearchSql = searchPattern
+      ? Prisma.sql`AND (p.name LIKE ${searchPattern} OR p.barcode LIKE ${searchPattern} OR p.shortCode LIKE ${searchPattern})`
+      : Prisma.empty;
+
+    const [inPeriodCountRows, catalogCount, categories, rows] = await prisma.$transaction(
+      [
+        prisma.$queryRaw<{ cnt: bigint | number }[]>(Prisma.sql`
+          SELECT COUNT(DISTINCT si.productId) AS cnt
+          FROM sale_items si
+          INNER JOIN sales s ON s.id = si.saleId
+          INNER JOIN products p ON p.id = si.productId
+          WHERE s.createdAt >= ${period.start} AND s.createdAt < ${period.endExclusive}
+            AND s.status = 'completed' AND (s.source IS NULL OR s.source <> 'ajuste_fiscal')
+            AND p.active = 1
+            AND (si.priceCost IS NULL OR si.priceCost <= 0)
+            AND (p.priceCost IS NULL OR p.priceCost <= 0)
+        `),
+        prisma.product.count({
+          where: { active: true, priceCost: { lte: 0 } },
+        }),
+        prisma.category.findMany({
+          select: { id: true, name: true },
+          orderBy: { name: 'asc' },
+        }),
+        scope === 'period'
+          ? prisma.$queryRaw<RawUncostedEditorRow[]>(Prisma.sql`
+              SELECT
+                p.id AS productId,
+                COALESCE(p.name, MAX(si.productName)) AS name,
+                p.shortCode AS shortCode,
+                p.barcode AS barcode,
+                COALESCE(p.unit, MAX(si.unit)) AS unit,
+                p.categoryId AS categoryId,
+                COALESCE(c.name, 'Sem Categoria') AS categoryName,
+                COALESCE(p.priceSell, 0) AS priceSell,
+                COALESCE(p.priceCost, 0) AS priceCost,
+                p.stock AS currentStock,
+                COALESCE(p.isComposite, 0) AS isComposite,
+                COALESCE(SUM(si.quantity), 0) AS soldQuantity,
+                COALESCE(SUM(si.subtotal), 0) AS itemSubtotal,
+                COUNT(DISTINCT si.saleId) AS salesCount
+              FROM sale_items si
+              INNER JOIN sales s ON s.id = si.saleId
+              INNER JOIN products p ON p.id = si.productId
+              LEFT JOIN categories c ON c.id = p.categoryId
+              WHERE s.createdAt >= ${period.start} AND s.createdAt < ${period.endExclusive}
+                AND s.status = 'completed' AND (s.source IS NULL OR s.source <> 'ajuste_fiscal')
+                AND p.active = 1
+                AND (si.priceCost IS NULL OR si.priceCost <= 0)
+                AND (p.priceCost IS NULL OR p.priceCost <= 0)
+                ${categoryFilterSql}
+                ${periodSearchSql}
+              GROUP BY p.id, p.name, p.shortCode, p.barcode, p.unit, p.categoryId, c.name, p.priceSell, p.priceCost, p.stock, p.isComposite
+              ORDER BY itemSubtotal DESC, name ASC
+              LIMIT 200
+            `)
+          : prisma.$queryRaw<RawUncostedEditorRow[]>(Prisma.sql`
+              SELECT
+                p.id AS productId,
+                p.name AS name,
+                p.shortCode AS shortCode,
+                p.barcode AS barcode,
+                p.unit AS unit,
+                p.categoryId AS categoryId,
+                COALESCE(c.name, 'Sem Categoria') AS categoryName,
+                COALESCE(p.priceSell, 0) AS priceSell,
+                COALESCE(p.priceCost, 0) AS priceCost,
+                p.stock AS currentStock,
+                COALESCE(p.isComposite, 0) AS isComposite,
+                COALESCE(salesAgg.soldQuantity, 0) AS soldQuantity,
+                COALESCE(salesAgg.itemSubtotal, 0) AS itemSubtotal,
+                COALESCE(salesAgg.salesCount, 0) AS salesCount
+              FROM products p
+              LEFT JOIN categories c ON c.id = p.categoryId
+              LEFT JOIN (
+                SELECT
+                  si.productId AS productId,
+                  COALESCE(SUM(si.quantity), 0) AS soldQuantity,
+                  COALESCE(SUM(si.subtotal), 0) AS itemSubtotal,
+                  COUNT(DISTINCT si.saleId) AS salesCount
+                FROM sale_items si
+                INNER JOIN sales s ON s.id = si.saleId
+                WHERE s.createdAt >= ${period.start} AND s.createdAt < ${period.endExclusive}
+                  AND s.status = 'completed' AND (s.source IS NULL OR s.source <> 'ajuste_fiscal')
+                GROUP BY si.productId
+              ) salesAgg ON salesAgg.productId = p.id
+              WHERE p.active = 1
+                AND (p.priceCost IS NULL OR p.priceCost <= 0)
+                ${categoryFilterSql}
+                ${catalogSearchSql}
+              ORDER BY itemSubtotal DESC, p.name ASC
+              LIMIT 300
+            `),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+
+    const items: UncostedProductEditorItem[] = rows.map((r) => ({
+      productId: r.productId,
+      name: r.name,
+      shortCode: r.shortCode ?? null,
+      barcode: r.barcode ?? null,
+      unit: r.unit,
+      categoryId: r.categoryId ?? null,
+      categoryName: r.categoryName,
+      priceSell: toDec(r.priceSell).toFixed(2),
+      priceCost: toDec(r.priceCost).toFixed(2),
+      currentStock: r.currentStock !== null && r.currentStock !== undefined ? toDec(r.currentStock).toFixed(3) : null,
+      isComposite: Boolean(r.isComposite),
+      soldQuantity: toDec(r.soldQuantity).toFixed(3),
+      itemSubtotal: toDec(r.itemSubtotal).toFixed(2),
+      salesCount: Number(r.salesCount ?? 0),
+    }));
+
+    return {
+      period: {
+        startDate: period.startDate,
+        endDate: period.endDate,
+        days: period.days,
+        timezone: period.timezone,
+      },
+      scope,
+      counts: {
+        inPeriod: Number(inPeriodCountRows[0]?.cnt ?? 0),
+        catalog: Number(catalogCount ?? 0),
+      },
+      categories,
+      items,
+    };
+  }
+
+  async updateProductCosts(rawItems: unknown): Promise<UpdateProductCostsResponse> {
+    if (!Array.isArray(rawItems) || rawItems.length === 0) {
+      throw new BadRequestException('Informe ao menos um produto para atualizar o preço de custo.');
+    }
+    if (rawItems.length > 200) {
+      throw new BadRequestException('Limite máximo de 200 produtos por envio.');
+    }
+
+    const dedup = new Map<string, Prisma.Decimal>();
+    for (const entry of rawItems) {
+      if (!entry || typeof entry !== 'object') {
+        throw new BadRequestException('Item inválido na atualização de custos.');
+      }
+      const { productId, priceCost } = entry as { productId?: unknown; priceCost?: unknown };
+      if (typeof productId !== 'string' || !productId.trim()) {
+        throw new BadRequestException('productId inválido.');
+      }
+      const numCost = Number(priceCost);
+      if (!Number.isFinite(numCost) || numCost < 0 || numCost > 9_999_999.99) {
+        throw new BadRequestException(`Preço de custo inválido para o produto ${productId}.`);
+      }
+      dedup.set(productId.trim(), new Prisma.Decimal(numCost).toDecimalPlaces(4));
+    }
+
+    const { tenantId, databaseUrl } = this.tenantContext.get();
+    const prisma = await this.tenantManager.getTenantClient(tenantId, databaseUrl);
+    const ids = Array.from(dedup.keys());
+
+    const existing = await prisma.product.findMany({
+      where: { id: { in: ids } },
+      select: { id: true },
+    });
+    const existingSet = new Set(existing.map((p) => p.id));
+    const notFoundIds = ids.filter((id) => !existingSet.has(id));
+    const validUpdates = ids.filter((id) => existingSet.has(id));
+
+    if (validUpdates.length > 0) {
+      await prisma.$transaction(
+        validUpdates.map((id) =>
+          prisma.product.update({
+            where: { id },
+            data: { priceCost: dedup.get(id)! },
+          }),
+        ),
+      );
+      this.productsService?.invalidateCache?.(tenantId);
+    }
+
+    return {
+      updatedCount: validUpdates.length,
+      notFoundIds,
     };
   }
 

@@ -37,10 +37,12 @@ describe('Reports read model (sales, profit, ranking & adega insights)', () => {
   let prisma: any;
   let manager: any;
   let service: ReportsService;
+  let productsServiceMock: { invalidateCache: jest.Mock };
   let queryQueue: any[];
 
   beforeEach(() => {
     queryQueue = [];
+    productsServiceMock = { invalidateCache: jest.fn() };
     prisma = {
       sale: {
         aggregate: jest.fn().mockResolvedValue({
@@ -54,11 +56,16 @@ describe('Reports read model (sales, profit, ranking & adega insights)', () => {
           { id: 'cat-2', name: 'Destilados' },
         ]),
       },
+      product: {
+        count: jest.fn().mockResolvedValue(4),
+        findMany: jest.fn().mockResolvedValue([{ id: 'p2' }]),
+        update: jest.fn().mockResolvedValue({ id: 'p2', priceCost: decimal('3.50') }),
+      },
       $transaction: jest.fn(async (queries) => Promise.all(queries)),
       $queryRaw: jest.fn().mockImplementation(() => Promise.resolve(queryQueue.shift() ?? [])),
     };
     manager = { getTenantClient: jest.fn().mockResolvedValue(prisma) };
-    service = new ReportsService(manager, context);
+    service = new ReportsService(manager, context, productsServiceMock as any);
   });
 
   const run = <T>(fn: () => Promise<T>) =>
@@ -176,6 +183,8 @@ describe('Reports read model (sales, profit, ranking & adega insights)', () => {
           totalUnitsSold: decimal('15.000'),
           totalRevenue: decimal('200.00'),
           totalCost: decimal('90.00'),
+          uncostedInPeriodCount: 1n,
+          uncostedInPeriodRevenue: decimal('50.00'),
         },
       ],
       // rankingRows
@@ -231,6 +240,9 @@ describe('Reports read model (sales, profit, ranking & adega insights)', () => {
     expect(result.filters.limit).toBe(100);
     expect(result.totals.totalGrossProfit).toBe('110.00');
     expect(result.totals.averageMarginPercent).toBe('55.00');
+    expect(result.totals.uncostedInPeriodCount).toBe(1);
+    expect(result.totals.uncostedInPeriodRevenue).toBe('50.00');
+    expect(result.totals.uncostedCatalogCount).toBe(4);
     expect(result.items[0]).toMatchObject({
       rank: 1,
       productId: 'p1',
@@ -366,6 +378,59 @@ describe('Reports read model (sales, profit, ranking & adega insights)', () => {
         'payment-mix',
       ]),
     );
+  });
+
+  it('lists uncosted products and saves batch priceCost updates with cache invalidation', async () => {
+    queryQueue = [
+      [{ cnt: 1n }],
+      [
+        {
+          productId: 'p2',
+          name: 'Gelo 5kg',
+          shortCode: 'G5',
+          barcode: '7890001',
+          unit: 'UN',
+          categoryId: 'cat-1',
+          categoryName: 'Cervejas',
+          priceSell: decimal('10.00'),
+          priceCost: decimal('0.00'),
+          currentStock: decimal('12.000'),
+          isComposite: false,
+          soldQuantity: decimal('5.000'),
+          itemSubtotal: decimal('50.00'),
+          salesCount: 3n,
+        },
+      ],
+    ];
+
+    const list = await run(() =>
+      service.uncostedProducts({ startDate: '2026-01-01', endDate: '2026-01-07', scope: 'period' }),
+    );
+    expect(list.counts).toEqual({ inPeriod: 1, catalog: 4 });
+    expect(list.items[0]).toMatchObject({
+      productId: 'p2',
+      name: 'Gelo 5kg',
+      priceSell: '10.00',
+      priceCost: '0.00',
+      itemSubtotal: '50.00',
+    });
+
+    const updated = await run(() =>
+      service.updateProductCosts([
+        { productId: 'p2', priceCost: 3.5 },
+        { productId: 'missing', priceCost: 1.0 },
+      ]),
+    );
+    expect(updated).toEqual({ updatedCount: 1, notFoundIds: ['missing'] });
+    expect(prisma.product.update).toHaveBeenCalledTimes(1);
+    expect(productsServiceMock.invalidateCache).toHaveBeenCalledWith('tenant-a');
+  });
+
+  it('rejects invalid batch priceCost inputs', async () => {
+    await expect(run(() => service.updateProductCosts([]))).rejects.toThrow(BadRequestException);
+    await expect(
+      run(() => service.updateProductCosts([{ productId: 'p1', priceCost: -5 }])),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('rejects invalid dates before acquiring any tenant connection', async () => {

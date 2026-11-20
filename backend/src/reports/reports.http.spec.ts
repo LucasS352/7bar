@@ -23,6 +23,8 @@ describe('Reports HTTP authorization and tenant context', () => {
   const sales = jest.fn(async () => ({ tenantId: context.get().tenantId }));
   const productsRanking = jest.fn(async () => ({ tenantId: context.get().tenantId }));
   const adegaInsights = jest.fn(async () => ({ tenantId: context.get().tenantId }));
+  const uncostedProducts = jest.fn(async () => ({ tenantId: context.get().tenantId }));
+  const updateProductCosts = jest.fn(async () => ({ tenantId: context.get().tenantId }));
 
   const token = (role: string, tenantId = 'a', extra: Record<string, unknown> = {}) =>
     jwt.sign({ sub: 'user', role, tenantId, ...extra });
@@ -39,7 +41,10 @@ describe('Reports HTTP authorization and tenant context', () => {
         StationAccessService,
         TenantInterceptor,
         { provide: JwtService, useValue: jwt },
-        { provide: ReportsService, useValue: { sales, productsRanking, adegaInsights } },
+        {
+          provide: ReportsService,
+          useValue: { sales, productsRanking, adegaInsights, uncostedProducts, updateProductCosts },
+        },
         { provide: TenantContextService, useValue: context },
         {
           provide: HeartPrismaService,
@@ -63,6 +68,8 @@ describe('Reports HTTP authorization and tenant context', () => {
     sales.mockClear();
     productsRanking.mockClear();
     adegaInsights.mockClear();
+    uncostedProducts.mockClear();
+    updateProductCosts.mockClear();
   });
 
   afterAll(async () => {
@@ -76,6 +83,7 @@ describe('Reports HTTP authorization and tenant context', () => {
     '/api/reports/sales?startDate=2026-01-01&endDate=2026-01-02',
     '/api/reports/products-ranking?startDate=2026-01-01&endDate=2026-01-02&sortBy=profit',
     '/api/reports/adega-insights?startDate=2026-01-01&endDate=2026-01-02',
+    '/api/reports/uncosted-products?startDate=2026-01-01&endDate=2026-01-02&scope=period',
   ];
 
   it.each(endpoints)('rejects missing or invalid authentication on %s', async (url) => {
@@ -84,6 +92,25 @@ describe('Reports HTTP authorization and tenant context', () => {
     expect(sales).not.toHaveBeenCalled();
     expect(productsRanking).not.toHaveBeenCalled();
     expect(adegaInsights).not.toHaveBeenCalled();
+    expect(uncostedProducts).not.toHaveBeenCalled();
+  });
+
+  it('protects PATCH /api/reports/product-costs by RBAC', async () => {
+    const patchUrl = '/api/reports/product-costs';
+    await request(app.getHttpServer()).patch(patchUrl).send({ items: [] }).expect(401);
+    await request(app.getHttpServer())
+      .patch(patchUrl)
+      .auth(token('stockist'), { type: 'bearer' })
+      .send({ items: [] })
+      .expect(403);
+    expect(updateProductCosts).not.toHaveBeenCalled();
+
+    await request(app.getHttpServer())
+      .patch(patchUrl)
+      .auth(token('admin'), { type: 'bearer' })
+      .send({ items: [{ productId: 'p1', priceCost: 5 }] })
+      .expect(200, { tenantId: 'a' });
+    expect(updateProductCosts).toHaveBeenCalledWith([{ productId: 'p1', priceCost: 5 }]);
   });
 
   it.each(['stockist', 'cashier', 'operator', 'station'])(
@@ -95,6 +122,7 @@ describe('Reports HTTP authorization and tenant context', () => {
       expect(sales).not.toHaveBeenCalled();
       expect(productsRanking).not.toHaveBeenCalled();
       expect(adegaInsights).not.toHaveBeenCalled();
+      expect(uncostedProducts).not.toHaveBeenCalled();
     },
   );
 
@@ -116,6 +144,13 @@ describe('Reports HTTP authorization and tenant context', () => {
       limit: undefined,
     });
     expect(adegaInsights).toHaveBeenCalledWith('2026-01-01', '2026-01-02');
+    expect(uncostedProducts).toHaveBeenCalledWith({
+      startDate: '2026-01-01',
+      endDate: '2026-01-02',
+      scope: 'period',
+      categoryId: undefined,
+      search: undefined,
+    });
   });
 
   it('isolates concurrent tenants and ignores a forged tenant query', async () => {

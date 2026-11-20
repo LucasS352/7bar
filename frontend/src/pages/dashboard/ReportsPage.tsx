@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import {
   AlertTriangle,
   Award,
@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Layers,
   Lightbulb,
+  Package,
   Percent,
   Receipt,
   RefreshCw,
@@ -20,11 +21,11 @@ import {
   Tag,
   TrendingDown,
   TrendingUp,
-  X,
 } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { InfoBalloon } from '@/components/InfoBalloon';
+import { UncostedProductsView } from './UncostedProductsView';
 import {
   FinancialEvolutionChart,
   PeriodComparisonBar,
@@ -96,6 +97,9 @@ interface ProductRankingResponse {
     totalCost: string;
     totalGrossProfit: string;
     averageMarginPercent: string | null;
+    uncostedInPeriodCount: number;
+    uncostedInPeriodRevenue: string;
+    uncostedCatalogCount: number;
   };
   categories: { id: string; name: string }[];
   items: ProductRankingRow[];
@@ -235,7 +239,6 @@ export default function ReportsPage() {
 }
 
 function SalesReports() {
-  const navigate = useNavigate();
   const initialRange = useMemo(() => resolvePresetDates('7d'), []);
   const [activeTab, setActiveTab] = useState<ReportTab>('overview');
   const [startDate, setStartDate] = useState(initialRange.start);
@@ -247,7 +250,11 @@ function SalesReports() {
   }));
 
   const [dateMenuOpen, setDateMenuOpen] = useState(false);
-  const [uncostedModalOpen, setUncostedModalOpen] = useState(false);
+  const [costEditor, setCostEditor] = useState<{
+    open: boolean;
+    scope: 'period' | 'catalog';
+    search: string;
+  }>({ open: false, scope: 'period', search: '' });
   const datePickerRef = useRef<HTMLDivElement>(null);
 
   const [report, setReport] = useState<SalesReport | null>(null);
@@ -447,7 +454,10 @@ function SalesReports() {
                   type="button"
                   role="tab"
                   aria-selected={active}
-                  onClick={() => setActiveTab(tab.id as ReportTab)}
+                  onClick={() => {
+                    setCostEditor((c) => ({ ...c, open: false }));
+                    setActiveTab(tab.id as ReportTab);
+                  }}
                   className={`px-2 sm:px-3.5 py-2 rounded-lg text-[11px] sm:text-sm font-semibold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer ${
                     active
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
@@ -599,6 +609,18 @@ function SalesReports() {
         </div>
       )}
 
+      {/* TELA DEDICADA: CADASTRO RÁPIDO DE PREÇO DE CUSTO */}
+      {costEditor.open ? (
+        <UncostedProductsView
+          startDate={query.startDate}
+          endDate={query.endDate}
+          initialScope={costEditor.scope}
+          initialSearch={costEditor.search}
+          onBack={() => setCostEditor((c) => ({ ...c, open: false }))}
+          onSaved={() => setQuery((q) => ({ ...q, version: q.version + 1 }))}
+        />
+      ) : (
+        <>
       {/* ABA 1: LUCRO & EVOLUÇÃO */}
       {activeTab === 'overview' && (
         <section aria-live="polite" aria-busy={loading} className="space-y-4">
@@ -903,10 +925,12 @@ function SalesReports() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => setUncostedModalOpen(true)}
+                          onClick={() =>
+                            setCostEditor({ open: true, scope: 'period', search: '' })
+                          }
                           className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300 pl-6 cursor-pointer"
                         >
-                          <ExternalLink size={13} /> Revisar cadastro
+                          <ExternalLink size={13} /> Inserir custos agora
                         </button>
                       </div>
                     ) : (
@@ -1238,77 +1262,234 @@ function SalesReports() {
 
           {ranking && (
             <>
-              {/* Totais do Filtro com balãozinho */}
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3">
-                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5">
-                  <div className="flex items-center justify-between gap-1">
-                    <p className="text-[11px] sm:text-xs text-zinc-400">Itens no filtro</p>
+              {/* Row de 6 Cards (inclui card interativo "Sem preço de custo") */}
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2.5 sm:gap-3">
+                {/* 1. Produtos no filtro */}
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between">
+                  <div className="flex items-start justify-between gap-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="p-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 shrink-0">
+                        <Package size={14} />
+                      </span>
+                      <p className="text-[11px] sm:text-xs text-zinc-400 truncate">Produtos no filtro</p>
+                    </div>
                     <InfoBalloon
                       align="left"
-                      title="Itens distintos no filtro"
+                      title="Produtos distintos no filtro"
                       description="Quantidade total de produtos diferentes vendidos dentro da busca/categoria selecionada."
                     />
                   </div>
-                  <p className="text-base sm:text-lg font-bold text-white mt-1">
+                  <p className="text-lg sm:text-xl font-extrabold text-white mt-2">
                     {ranking.totals.distinctProducts.toLocaleString('pt-BR')}
                   </p>
                 </div>
-                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5">
-                  <div className="flex items-center justify-between gap-1">
-                    <p className="text-[11px] sm:text-xs text-zinc-400">Unidades vendidas</p>
+
+                {/* 2. Unidades vendidas */}
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between">
+                  <div className="flex items-start justify-between gap-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="p-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 shrink-0">
+                        <ShoppingCart size={14} />
+                      </span>
+                      <p className="text-[11px] sm:text-xs text-zinc-400 truncate">Unidades vendidas</p>
+                    </div>
                     <InfoBalloon
                       align="right"
                       title="Unidades vendidas"
                       description="Soma das quantidades vendidas (unidades, litros ou kg) considerando os filtros atuais."
                     />
                   </div>
-                  <p className="text-base sm:text-lg font-bold text-white mt-1">
+                  <p className="text-lg sm:text-xl font-extrabold text-white mt-2">
                     {formatQty(ranking.totals.totalUnitsSold)}
                   </p>
                 </div>
-                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5">
-                  <div className="flex items-center justify-between gap-1">
-                    <p className="text-[11px] sm:text-xs text-zinc-400">Faturamento itens</p>
+
+                {/* 3. Faturamento dos itens */}
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between">
+                  <div className="flex items-start justify-between gap-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="p-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 shrink-0">
+                        <Database size={14} />
+                      </span>
+                      <p className="text-[11px] sm:text-xs text-zinc-400 truncate">Faturamento itens</p>
+                    </div>
                     <InfoBalloon
                       align="left"
                       title="Faturamento dos itens"
                       description="Soma dos subtotais dos produtos filtrados antes de descontos ou acréscimos gerais do cupom."
                     />
                   </div>
-                  <p className="text-base sm:text-lg font-bold text-white mt-1">{money(ranking.totals.totalRevenue)}</p>
+                  <p className="text-base sm:text-lg font-extrabold text-white mt-2 truncate">
+                    {money(ranking.totals.totalRevenue)}
+                  </p>
                 </div>
-                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5">
-                  <div className="flex items-center justify-between gap-1">
-                    <p className="text-[11px] sm:text-xs text-zinc-400">CMV total</p>
+
+                {/* 4. Custo total (CMV) */}
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between">
+                  <div className="flex items-start justify-between gap-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="p-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 shrink-0">
+                        <Tag size={14} />
+                      </span>
+                      <p className="text-[11px] sm:text-xs text-zinc-400 truncate">Custo total (CMV)</p>
+                    </div>
                     <InfoBalloon
                       align="right"
                       title="CMV do ranking"
                       description="Custo total das mercadorias vendidas para os produtos exibidos no filtro."
                     />
                   </div>
-                  <p className="text-base sm:text-lg font-bold text-amber-300 mt-1">{money(ranking.totals.totalCost)}</p>
+                  <p className="text-base sm:text-lg font-extrabold text-amber-300 mt-2 truncate">
+                    {money(ranking.totals.totalCost)}
+                  </p>
                 </div>
-                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5 col-span-2 lg:col-span-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <p className="text-[11px] sm:text-xs text-zinc-400">Lucro Bruto Itens</p>
+
+                {/* 5. Lucro bruto dos itens */}
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between">
+                  <div className="flex items-start justify-between gap-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="p-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shrink-0">
+                        <BarChart3 size={14} />
+                      </span>
+                      <p className="text-[11px] sm:text-xs text-zinc-400 truncate">Lucro bruto itens</p>
+                    </div>
                     <InfoBalloon
-                      align="right"
+                      align="left"
                       title="Lucro Bruto dos Itens"
                       description="Diferença entre o faturamento dos produtos filtrados e seu respectivo CMV, com a margem média ponderada."
                     />
                   </div>
-                  <p className="text-base sm:text-lg font-bold text-emerald-400 mt-1">
-                    {money(ranking.totals.totalGrossProfit)}
+                  <div className="mt-2">
+                    <p className="text-base sm:text-lg font-extrabold text-emerald-400 truncate">
+                      {money(ranking.totals.totalGrossProfit)}
+                    </p>
                     {ranking.totals.averageMarginPercent !== null && (
-                      <span className="text-xs font-normal text-zinc-400 ml-1">
-                        ({formatPct(ranking.totals.averageMarginPercent)}%)
-                      </span>
+                      <p className="text-[11px] text-emerald-300/80">
+                        Margem {formatPct(ranking.totals.averageMarginPercent)}%
+                      </p>
                     )}
-                  </p>
+                  </div>
                 </div>
+
+                {/* 6. CARD CLICÁVEL: Sem preço de custo */}
+                {(() => {
+                  const inPeriod = ranking.totals.uncostedInPeriodCount ?? 0;
+                  const inCatalog = ranking.totals.uncostedCatalogCount ?? 0;
+                  const hasPending = inPeriod > 0 || inCatalog > 0;
+                  return (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() =>
+                        setCostEditor({
+                          open: true,
+                          scope: inPeriod > 0 ? 'period' : 'catalog',
+                          search: '',
+                        })
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setCostEditor({
+                            open: true,
+                            scope: inPeriod > 0 ? 'period' : 'catalog',
+                            search: '',
+                          });
+                        }
+                      }}
+                      className={`rounded-2xl p-3 sm:p-3.5 border flex flex-col justify-between transition cursor-pointer text-left ${
+                        hasPending
+                          ? 'bg-gradient-to-br from-amber-950/60 via-zinc-900 to-zinc-900 border-amber-500/45 hover:border-amber-400 shadow-lg shadow-amber-950/20'
+                          : 'bg-gradient-to-br from-emerald-950/45 via-zinc-900 to-zinc-900 border-emerald-500/35 hover:border-emerald-400'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-1.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={`p-1.5 rounded-lg border shrink-0 ${
+                              hasPending
+                                ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                                : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                            }`}
+                          >
+                            {hasPending ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
+                          </span>
+                          <p
+                            className={`text-[11px] sm:text-xs font-semibold truncate ${
+                              hasPending ? 'text-amber-200' : 'text-emerald-200'
+                            }`}
+                          >
+                            Sem preço de custo
+                          </p>
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <InfoBalloon
+                            align="right"
+                            title="Produtos sem preço de custo"
+                            description="Mostra quantos produtos vendidos neste filtro estão sem custo cadastrado (R$ 0,00) e o total do catálogo ativo nessa situação. Clique no card para abrir a tela exclusiva e digitar os custos."
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-2">
+                        <p
+                          className={`text-lg sm:text-xl font-extrabold leading-tight ${
+                            hasPending ? 'text-amber-300' : 'text-emerald-400'
+                          }`}
+                        >
+                          {inPeriod > 0
+                            ? `${inPeriod} vendido${inPeriod === 1 ? '' : 's'}`
+                            : inCatalog > 0
+                              ? `${inCatalog} no catálogo`
+                              : '0 pendentes'}
+                        </p>
+                        <p className="text-[11px] text-zinc-300 mt-0.5 flex items-center justify-between gap-1">
+                          <span className="truncate">
+                            {inPeriod > 0
+                              ? `${inCatalog} no catálogo`
+                              : hasPending
+                                ? 'Catálogo ativo'
+                                : 'Tudo preenchido'}
+                          </span>
+                          <span
+                            className={`font-bold shrink-0 ${
+                              hasPending ? 'text-amber-300' : 'text-emerald-300'
+                            }`}
+                          >
+                            {hasPending ? 'Inserir \u2192' : 'Ver \u2192'}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden">
+                {/* Cabeçalho interno da lista de Ranking */}
+                <div className="p-4 border-b border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-sm sm:text-base font-bold text-white">Ranking de produtos</h2>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Produtos ordenados no período selecionado · clique em <strong>Sem custo</strong> para preencher direto.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {(ranking.totals.uncostedInPeriodCount ?? 0) > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setCostEditor({ open: true, scope: 'period', search: '' })}
+                        className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-300 text-xs font-semibold cursor-pointer transition"
+                      >
+                        + Inserir custos ({ranking.totals.uncostedInPeriodCount})
+                      </button>
+                    )}
+                    <span className="px-2.5 py-1 rounded-lg bg-zinc-950 border border-zinc-800 text-xs font-semibold text-zinc-300">
+                      {ranking.items.length} de {ranking.totals.distinctProducts} resultados
+                    </span>
+                  </div>
+                </div>
+
                 {ranking.items.length === 0 ? (
                   <p className="p-6 text-zinc-400">Nenhum produto encontrado para os filtros aplicados.</p>
                 ) : (
@@ -1318,6 +1499,7 @@ function SalesReports() {
                       {ranking.items.map((item) => {
                         const cBadge = costBadge[item.costSource];
                         const sBadge = stockBadge[item.stockAlert];
+                        const isUntracked = item.costSource === 'untracked';
                         return (
                           <div key={item.productId} className="p-3.5 space-y-2.5">
                             <div className="flex items-start justify-between gap-2">
@@ -1328,9 +1510,25 @@ function SalesReports() {
                                 </p>
                                 <div className="flex flex-wrap items-center gap-1.5 mt-1">
                                   <span className="text-[11px] text-zinc-400">{item.categoryName}</span>
-                                  <span className={`text-[10px] px-1.5 py-0.5 rounded border ${cBadge.cls}`}>
-                                    {cBadge.label}
-                                  </span>
+                                  {isUntracked ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setCostEditor({
+                                          open: true,
+                                          scope: 'period',
+                                          search: item.name,
+                                        })
+                                      }
+                                      className="text-[10px] px-2 py-0.5 rounded border bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border-rose-500/35 font-semibold cursor-pointer"
+                                    >
+                                      Sem custo · Inserir
+                                    </button>
+                                  ) : (
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${cBadge.cls}`}>
+                                      {cBadge.label}
+                                    </span>
+                                  )}
                                   {item.currentStock !== null && (
                                     <span className={`text-[11px] ${sBadge.cls}`}>
                                       · Est: {formatQty(item.currentStock)} {item.unit}
@@ -1382,12 +1580,12 @@ function SalesReports() {
                           <tr>
                             <th className="p-3">#</th>
                             <th className="p-3">Produto / Categoria</th>
-                            <th className="p-3 text-right">Qtd</th>
-                            <th className="p-3 text-right">Preço Méd.</th>
-                            <th className="p-3 text-right">Custo Méd.</th>
+                            <th className="p-3 text-right">Qtd.</th>
+                            <th className="p-3 text-right">Preço méd.</th>
+                            <th className="p-3 text-right">Custo méd.</th>
                             <th className="p-3 text-right">Faturamento</th>
                             <th className="p-3 text-right">CMV</th>
-                            <th className="p-3 text-right">Lucro Real</th>
+                            <th className="p-3 text-right">Lucro</th>
                             <th className="p-3 text-right">Margem</th>
                             <th className="p-3 text-right">Estoque</th>
                           </tr>
@@ -1395,7 +1593,11 @@ function SalesReports() {
                         <tbody>
                           {ranking.items.map((item) => {
                             const cBadge = costBadge[item.costSource];
-                            const sBadge = stockBadge[item.stockAlert];
+                            const isUntracked = item.costSource === 'untracked';
+                            const marginVal = item.marginPercent !== null ? Number(item.marginPercent) : null;
+                            const barWidth =
+                              marginVal !== null ? Math.max(4, Math.min(100, Math.abs(marginVal))) : 0;
+                            const stockNum = item.currentStock !== null ? Number(item.currentStock) : null;
                             return (
                               <tr key={item.productId} className="border-t border-zinc-800/80 hover:bg-zinc-800/30">
                                 <td className="p-3 font-bold text-zinc-400">#{item.rank}</td>
@@ -1405,9 +1607,26 @@ function SalesReports() {
                                     <span className="text-xs text-zinc-500">
                                       {item.categoryName} · {item.salesCount} vendas
                                     </span>
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${cBadge.cls}`}>
-                                      {cBadge.label}
-                                    </span>
+                                    {isUntracked ? (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setCostEditor({
+                                            open: true,
+                                            scope: 'period',
+                                            search: item.name,
+                                          })
+                                        }
+                                        className="text-[10px] px-2 py-0.5 rounded border bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 border-rose-500/35 font-semibold cursor-pointer transition"
+                                        title="Clique para inserir o preço de custo deste produto"
+                                      >
+                                        Sem custo · Inserir
+                                      </button>
+                                    ) : (
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded border ${cBadge.cls}`}>
+                                        {cBadge.label}
+                                      </span>
+                                    )}
                                   </div>
                                 </td>
                                 <td className="p-3 text-right whitespace-nowrap text-zinc-200 tabular-nums">
@@ -1421,7 +1640,7 @@ function SalesReports() {
                                   {money(item.avgUnitCost)}
                                 </td>
                                 <td className="p-3 text-right whitespace-nowrap tabular-nums">
-                                  <p className="font-medium text-white">{money(item.itemSubtotal)}</p>
+                                  <p className="font-semibold text-white">{money(item.itemSubtotal)}</p>
                                   {item.revenueSharePercent && (
                                     <p className="text-[11px] text-zinc-500">{formatPct(item.revenueSharePercent)}% rec.</p>
                                   )}
@@ -1441,17 +1660,52 @@ function SalesReports() {
                                     <p className="text-[11px] text-zinc-500">{formatPct(item.profitSharePercent)}% luc.</p>
                                   )}
                                 </td>
-                                <td className="p-3 text-right whitespace-nowrap text-zinc-200 tabular-nums">
-                                  {item.marginPercent !== null ? `${formatPct(item.marginPercent)}%` : '—'}
+                                <td className="p-3 text-right whitespace-nowrap tabular-nums">
+                                  {marginVal !== null ? (
+                                    <div className="inline-flex items-center justify-end gap-2">
+                                      <span className="text-zinc-200 font-medium">
+                                        {formatPct(marginVal)}%
+                                      </span>
+                                      <span
+                                        aria-hidden="true"
+                                        className="w-14 h-2 rounded-full bg-zinc-800 overflow-hidden"
+                                      >
+                                        <span
+                                          className={`block h-full rounded-full ${
+                                            marginVal >= 25
+                                              ? 'bg-emerald-400'
+                                              : marginVal >= 10
+                                                ? 'bg-amber-400'
+                                                : 'bg-rose-400'
+                                          }`}
+                                          style={{ width: `${barWidth}%` }}
+                                        />
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-zinc-500">—</span>
+                                  )}
                                 </td>
                                 <td className="p-3 text-right whitespace-nowrap tabular-nums">
-                                  <p className={`text-xs ${sBadge.cls}`}>
-                                    {item.currentStock !== null
-                                      ? `${formatQty(item.currentStock)} ${item.unit}`
-                                      : sBadge.label}
-                                  </p>
-                                  {item.stockAlert !== 'ok' && item.stockAlert !== 'unknown' && (
-                                    <p className={`text-[10px] ${sBadge.cls}`}>{sBadge.label}</p>
+                                  {stockNum === null ? (
+                                    <span className="text-xs text-zinc-500">Combo</span>
+                                  ) : stockNum < 0 ? (
+                                    <div>
+                                      <p className="text-xs font-bold text-rose-400">
+                                        {formatQty(stockNum)} {item.unit}
+                                      </p>
+                                      <p className="text-[10px] text-rose-400/90">Estoque negativo</p>
+                                    </div>
+                                  ) : stockNum === 0 ? (
+                                    <span className="text-xs text-zinc-500">0 {item.unit}</span>
+                                  ) : (
+                                    <span
+                                      className={`text-xs font-semibold ${
+                                        item.stockAlert === 'low' ? 'text-amber-300' : 'text-emerald-400'
+                                      }`}
+                                    >
+                                      {formatQty(stockNum)} {item.unit}
+                                    </span>
                                   )}
                                 </td>
                               </tr>
@@ -1479,85 +1733,7 @@ function SalesReports() {
           {insights && <AdegaInsightsPanel data={insights} />}
         </section>
       )}
-
-      {/* MODAL REVISAR PRODUTOS SEM CUSTO CADASTRADO */}
-      {uncostedModalOpen && report && (
-        <div
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setUncostedModalOpen(false)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="uncosted-modal-title"
-            onClick={(e) => e.stopPropagation()}
-            className="bg-zinc-950 border border-zinc-800 rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden"
-          >
-            <div className="p-4 sm:p-5 border-b border-zinc-800 flex items-start justify-between gap-3">
-              <div>
-                <h3 id="uncosted-modal-title" className="font-bold text-white flex items-center gap-2">
-                  <AlertTriangle size={18} className="text-amber-400" />
-                  Produtos vendidos sem custo cadastrado
-                </h3>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Estes itens foram vendidos entre {dateLabel(report.period.startDate)} e{' '}
-                  {dateLabel(report.period.endDate)} com custo R&#36; 0,00 ({money(report.summary.uncostedRevenue)} em faturamento).
-                </p>
-              </div>
-              <button
-                type="button"
-                aria-label="Fechar"
-                onClick={() => setUncostedModalOpen(false)}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="max-h-72 overflow-y-auto divide-y divide-zinc-800/70">
-              {(report.uncostedProducts ?? []).length === 0 ? (
-                <p className="p-5 text-sm text-zinc-400">
-                  Consulte a aba <strong>Insights da Adega</strong> ou o <strong>Ranking de Produtos</strong> filtrado por &ldquo;Sem custo&rdquo;.
-                </p>
-              ) : (
-                (report.uncostedProducts ?? []).map((item) => (
-                  <div key={item.productId} className="px-5 py-3 flex items-center justify-between gap-3 text-sm">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-white truncate">{item.name}</p>
-                      <p className="text-xs text-zinc-400">
-                        Qtd vendida: {formatQty(item.quantity)} {item.unit}
-                      </p>
-                    </div>
-                    <span className="font-bold text-amber-300 shrink-0">{money(item.itemSubtotal)}</span>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="p-4 bg-zinc-900/80 border-t border-zinc-800 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setUncostedModalOpen(false);
-                  navigate('/dashboard/inventory');
-                }}
-                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 cursor-pointer"
-              >
-                Abrir Catálogo
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUncostedModalOpen(false);
-                  navigate('/dashboard/inventory/mass-edit');
-                }}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white cursor-pointer"
-              >
-                Editar custos em massa
-              </button>
-            </div>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

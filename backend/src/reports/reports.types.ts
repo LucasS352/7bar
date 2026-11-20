@@ -136,9 +136,52 @@ export interface ProductRankingResponse {
     totalCost: string;
     totalGrossProfit: string;
     averageMarginPercent: string | null;
+    uncostedInPeriodCount: number;
+    uncostedInPeriodRevenue: string;
+    uncostedCatalogCount: number;
   };
   categories: { id: string; name: string }[];
   items: ProductRankingItem[];
+}
+
+export type UncostedScope = 'period' | 'catalog';
+
+export interface UncostedProductEditorItem {
+  productId: string;
+  name: string;
+  shortCode: string | null;
+  barcode: string | null;
+  unit: string;
+  categoryId: string | null;
+  categoryName: string;
+  priceSell: string;
+  priceCost: string;
+  currentStock: string | null;
+  isComposite: boolean;
+  soldQuantity: string;
+  itemSubtotal: string;
+  salesCount: number;
+}
+
+export interface UncostedProductsResponse {
+  period: ReportPeriodInfo;
+  scope: UncostedScope;
+  counts: {
+    inPeriod: number;
+    catalog: number;
+  };
+  categories: { id: string; name: string }[];
+  items: UncostedProductEditorItem[];
+}
+
+export interface UpdateProductCostItem {
+  productId: string;
+  priceCost: number;
+}
+
+export interface UpdateProductCostsResponse {
+  updatedCount: number;
+  notFoundIds: string[];
 }
 
 export interface HourlyMovementBucket {
