@@ -1,5 +1,6 @@
-import { Injectable, UnauthorizedException, BadRequestException, ForbiddenException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ForbiddenException, NotFoundException, Logger, Optional } from '@nestjs/common';
 import { randomInt } from 'crypto';
+import sharp from 'sharp';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { Prisma as HeartPrisma } from '../generated/heart-client';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
@@ -10,6 +11,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
 import { upgradeTenantSchema } from './tenant-schema-upgrade';
+import { LeadgerService } from '../leadger/leadger.service';
 
 const execAsync = promisify(exec);
 
@@ -56,7 +58,8 @@ export class TenantsService {
   constructor(
     private heartPrisma: HeartPrismaService,
     private tenantManager: TenantConnectionManager,
-    private tenantContext: TenantContextService
+    private tenantContext: TenantContextService,
+    @Optional() private readonly leadgerService?: LeadgerService,
   ) {}
 
   private sanitizeTenantRecord<T extends Record<string, any>>(tenant: T) {
@@ -233,12 +236,14 @@ export class TenantsService {
             },
           });
         });
+        await this.leadgerService?.onTenantUpdated(tenantId);
         return this.sanitizeTenantRecord(updated);
       }
       const updated = await this.heartPrisma.tenant.update({
         where: { id: tenantId },
         data: safeData,
       });
+      await this.leadgerService?.onTenantUpdated(tenantId);
       return this.sanitizeTenantRecord(updated);
     } catch (err: any) {
       if (err instanceof ForbiddenException || err instanceof BadRequestException || err instanceof NotFoundException) throw err;
@@ -252,19 +257,32 @@ export class TenantsService {
   }
 
   async uploadLogo(tenantId: string, file: Express.Multer.File) {
+    let normalizedBuffer: Buffer;
+    try {
+      normalizedBuffer = await sharp(file.buffer, { animated: false, limitInputPixels: 16_000_000 })
+        .rotate()
+        .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 88 })
+        .toBuffer();
+    } catch {
+      throw new BadRequestException('Imagem de logotipo inválida, corrompida ou acima do limite permitido.');
+    }
+
     const image = await this.heartPrisma.image.create({
       data: {
-        data: Buffer.from(file.buffer),
-        mimeType: file.mimetype,
-      }
+        data: new Uint8Array(normalizedBuffer),
+        mimeType: 'image/webp',
+      },
     });
-    
+
     const logoUrl = `/api/tenants/uploads/logos/${image.id}`;
-    
-    return this.heartPrisma.tenant.update({
+
+    const updated = await this.heartPrisma.tenant.update({
       where: { id: tenantId },
       data: { logoUrl },
-    }).then(() => ({ message: 'Logo atualizado com sucesso.', logoUrl }));
+    });
+    await this.leadgerService?.onTenantLogoUpdated(tenantId, image.id);
+    return { message: 'Logo atualizado com sucesso.', logoUrl: updated.logoUrl ?? logoUrl };
   }
 
   async uploadCertificado(tenantId: string, pfxBuffer: Buffer, senha: string) {
@@ -906,7 +924,7 @@ export class TenantsService {
     return d;
   }
 
-  async registrarPagamento(tenantId: string, observacao?: string) {
+  async registrarPagamento(tenantId: string, observacao?: string, paymentMethod?: string) {
     const tenant = await this.heartPrisma.tenant.findUnique({
       where: { id: tenantId }
     });
@@ -914,16 +932,17 @@ export class TenantsService {
 
     const vencimentoAntes = tenant.mensalidadeVencimento ? new Date(tenant.mensalidadeVencimento) : new Date();
     const vencimentoApos = this.addOneMonthSafe(vencimentoAntes);
+    const valorNum = Number(tenant.mensalidadeValor) || 0;
 
     // Grava o log de pagamento e atualiza o vencimento atomicamente
-    const [_, updatedTenant] = await this.heartPrisma.$transaction([
+    const [paymentLog, updatedTenant] = await this.heartPrisma.$transaction([
       this.heartPrisma.paymentLog.create({
         data: {
           tenantId,
-          valor: Number(tenant.mensalidadeValor) || 0,
+          valor: valorNum,
           vencimentoAntes,
           vencimentoApos,
-          observacao: observacao || null,
+          observacao: observacao || (paymentMethod ? `Pago via ${paymentMethod}` : null),
         }
       }),
       this.heartPrisma.tenant.update({
@@ -931,6 +950,15 @@ export class TenantsService {
         data: { mensalidadeVencimento: vencimentoApos }
       })
     ]);
+
+    await this.leadgerService?.onTenantPaymentRegistered({
+      tenantId,
+      paymentLogId: paymentLog.id,
+      amountReais: valorNum,
+      vencimentoAntes,
+      vencimentoApos,
+      paymentMethod: paymentMethod ?? null,
+    });
 
     return this.sanitizeTenantRecord(updatedTenant);
   }

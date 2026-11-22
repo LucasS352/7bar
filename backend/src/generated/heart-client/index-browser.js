@@ -337,6 +337,84 @@ exports.Prisma.LeadScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.BillingClientScalarFieldEnum = {
+  id: 'id',
+  externalId: 'externalId',
+  version: 'version',
+  name: 'name',
+  document: 'document',
+  email: 'email',
+  phone: 'phone',
+  status: 'status',
+  notes: 'notes',
+  photoLogoId: 'photoLogoId',
+  photoVersion: 'photoVersion',
+  lastSyncedPhotoVersion: 'lastSyncedPhotoVersion',
+  photoRemoved: 'photoRemoved',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.BillingBaseConfigScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  billingClientId: 'billingClientId',
+  baseExternalId: 'baseExternalId',
+  baseName: 'baseName',
+  baseVersion: 'baseVersion',
+  monthlyAmountCents: 'monthlyAmountCents',
+  billingDay: 'billingDay',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  effectiveDate: 'effectiveDate',
+  status: 'status',
+  syncEnabled: 'syncEnabled',
+  baseSyncedAt: 'baseSyncedAt',
+  lastDeliveredBaseVersion: 'lastDeliveredBaseVersion',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.BillingInvoiceScalarFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  baseConfigId: 'baseConfigId',
+  externalId: 'externalId',
+  version: 'version',
+  description: 'description',
+  amountCents: 'amountCents',
+  dueDate: 'dueDate',
+  referenceMonth: 'referenceMonth',
+  status: 'status',
+  paidAt: 'paidAt',
+  paymentMethod: 'paymentMethod',
+  paymentLogId: 'paymentLogId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.LeadgerOutboxEventScalarFieldEnum = {
+  id: 'id',
+  eventId: 'eventId',
+  eventType: 'eventType',
+  entityType: 'entityType',
+  entityExternalId: 'entityExternalId',
+  baseExternalId: 'baseExternalId',
+  entityVersion: 'entityVersion',
+  payloadJson: 'payloadJson',
+  status: 'status',
+  attempts: 'attempts',
+  nextAttemptAt: 'nextAttemptAt',
+  lockedAt: 'lockedAt',
+  deliveredAt: 'deliveredAt',
+  lastHttpStatus: 'lastHttpStatus',
+  lastErrorCode: 'lastErrorCode',
+  lastErrorMessage: 'lastErrorMessage',
+  responseJson: 'responseJson',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -535,6 +613,57 @@ exports.Prisma.LeadOrderByRelevanceFieldEnum = {
   notes: 'notes'
 };
 
+exports.Prisma.BillingClientOrderByRelevanceFieldEnum = {
+  id: 'id',
+  externalId: 'externalId',
+  name: 'name',
+  document: 'document',
+  email: 'email',
+  phone: 'phone',
+  status: 'status',
+  notes: 'notes',
+  photoLogoId: 'photoLogoId'
+};
+
+exports.Prisma.BillingBaseConfigOrderByRelevanceFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  billingClientId: 'billingClientId',
+  baseExternalId: 'baseExternalId',
+  baseName: 'baseName',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  effectiveDate: 'effectiveDate',
+  status: 'status'
+};
+
+exports.Prisma.BillingInvoiceOrderByRelevanceFieldEnum = {
+  id: 'id',
+  tenantId: 'tenantId',
+  baseConfigId: 'baseConfigId',
+  externalId: 'externalId',
+  description: 'description',
+  dueDate: 'dueDate',
+  referenceMonth: 'referenceMonth',
+  status: 'status',
+  paymentMethod: 'paymentMethod',
+  paymentLogId: 'paymentLogId'
+};
+
+exports.Prisma.LeadgerOutboxEventOrderByRelevanceFieldEnum = {
+  id: 'id',
+  eventId: 'eventId',
+  eventType: 'eventType',
+  entityType: 'entityType',
+  entityExternalId: 'entityExternalId',
+  baseExternalId: 'baseExternalId',
+  payloadJson: 'payloadJson',
+  status: 'status',
+  lastErrorCode: 'lastErrorCode',
+  lastErrorMessage: 'lastErrorMessage',
+  responseJson: 'responseJson'
+};
+
 
 exports.Prisma.ModelName = {
   Tenant: 'Tenant',
@@ -553,7 +682,11 @@ exports.Prisma.ModelName = {
   FiscalProfileHistory: 'FiscalProfileHistory',
   FiscalFavorite: 'FiscalFavorite',
   PaymentLog: 'PaymentLog',
-  Lead: 'Lead'
+  Lead: 'Lead',
+  BillingClient: 'BillingClient',
+  BillingBaseConfig: 'BillingBaseConfig',
+  BillingInvoice: 'BillingInvoice',
+  LeadgerOutboxEvent: 'LeadgerOutboxEvent'
 };
 
 /**

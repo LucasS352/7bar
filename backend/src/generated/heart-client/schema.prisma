@@ -84,6 +84,8 @@ model Tenant {
   groupMembers       TenantGroupMember[]
   paymentLogs        PaymentLog[]
   stationAccessLinks StationAccessLink[]
+  billingBaseConfig  BillingBaseConfig?
+  billingInvoices    BillingInvoice[]
 
   @@map("tenants")
 }
@@ -349,4 +351,112 @@ model Lead {
   @@index([status])
   @@index([createdAt])
   @@map("leads")
+}
+
+// ------------------------------------------------------------
+//  Teltech Leadger Webhook v1 — Cliente Titular, Base, Faturas & Outbox
+// ------------------------------------------------------------
+
+model BillingClient {
+  id                     String   @id @default(uuid())
+  externalId             String   @unique @map("external_id") @db.VarChar(120)
+  version                Int      @default(1)
+  name                   String   @db.VarChar(200)
+  document               String?  @db.VarChar(32)
+  email                  String?  @db.VarChar(200)
+  phone                  String?  @db.VarChar(40)
+  status                 String   @default("active") @db.VarChar(20) // active | inactive
+  notes                  String?  @db.Text
+  photoLogoId            String?  @map("photo_logo_id") @db.VarChar(120)
+  photoVersion           Int      @default(0) @map("photo_version")
+  lastSyncedPhotoVersion Int      @default(0) @map("last_synced_photo_version")
+  photoRemoved           Boolean  @default(false) @map("photo_removed")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  bases BillingBaseConfig[]
+
+  @@index([document])
+  @@index([email])
+  @@map("billing_clients")
+}
+
+model BillingBaseConfig {
+  id                       String        @id @default(uuid())
+  tenantId                 String        @unique @map("tenant_id")
+  tenant                   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  billingClientId          String        @map("billing_client_id")
+  billingClient            BillingClient @relation(fields: [billingClientId], references: [id], onDelete: Restrict)
+  baseExternalId           String        @unique @map("base_external_id") @db.VarChar(120)
+  baseName                 String        @map("base_name") @db.VarChar(200)
+  baseVersion              Int           @default(1) @map("base_version")
+  monthlyAmountCents       Int           @default(0) @map("monthly_amount_cents")
+  billingDay               Int           @default(10) @map("billing_day") // 1..31
+  startDate                String        @map("start_date") @db.VarChar(10) // YYYY-MM-DD
+  endDate                  String?       @map("end_date") @db.VarChar(10) // YYYY-MM-DD
+  effectiveDate            String        @map("effective_date") @db.VarChar(10) // YYYY-MM-DD
+  status                   String        @default("active") @db.VarChar(20) // active | paused | cancelled
+  syncEnabled              Boolean       @default(false) @map("sync_enabled")
+  baseSyncedAt             DateTime?     @map("base_synced_at")
+  lastDeliveredBaseVersion Int           @default(0) @map("last_delivered_base_version")
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+
+  invoices BillingInvoice[]
+
+  @@index([billingClientId])
+  @@index([syncEnabled])
+  @@map("billing_base_configs")
+}
+
+model BillingInvoice {
+  id             String            @id @default(uuid())
+  tenantId       String            @map("tenant_id")
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  baseConfigId   String            @map("base_config_id")
+  baseConfig     BillingBaseConfig @relation(fields: [baseConfigId], references: [id], onDelete: Cascade)
+  externalId     String            @unique @map("external_id") @db.VarChar(120)
+  version        Int               @default(1)
+  description    String            @db.VarChar(300)
+  amountCents    Int               @map("amount_cents")
+  dueDate        String            @map("due_date") @db.VarChar(10) // YYYY-MM-DD
+  referenceMonth String            @map("reference_month") @db.VarChar(7) // YYYY-MM
+  status         String            @default("pending") @db.VarChar(20) // pending | paid | cancelled
+  paidAt         DateTime?         @map("paid_at")
+  paymentMethod  String?           @map("payment_method") @db.VarChar(30) // pix | boleto | credit_card | bank_transfer | cash
+  paymentLogId   String?           @map("payment_log_id") @db.VarChar(120)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([tenantId, referenceMonth])
+  @@index([baseConfigId, status])
+  @@index([dueDate])
+  @@map("billing_invoices")
+}
+
+model LeadgerOutboxEvent {
+  id               String    @id @default(uuid())
+  eventId          String    @unique @map("event_id") @db.VarChar(120)
+  eventType        String    @map("event_type") @db.VarChar(40) // base.upsert | invoice.upsert | client.upsert
+  entityType       String    @map("entity_type") @db.VarChar(20) // base | invoice | client
+  entityExternalId String    @map("entity_external_id") @db.VarChar(120)
+  baseExternalId   String?   @map("base_external_id") @db.VarChar(120)
+  entityVersion    Int       @map("entity_version")
+  payloadJson      String    @map("payload_json") @db.LongText
+  status           String    @default("PENDING") @db.VarChar(30) // PENDING | PROCESSING | DELIVERED | FAILED_ACTION_REQUIRED | DEAD_LETTER
+  attempts         Int       @default(0)
+  nextAttemptAt    DateTime  @default(now()) @map("next_attempt_at")
+  lockedAt         DateTime? @map("locked_at")
+  deliveredAt      DateTime? @map("delivered_at")
+  lastHttpStatus   Int?      @map("last_http_status")
+  lastErrorCode    String?   @map("last_error_code") @db.VarChar(120)
+  lastErrorMessage String?   @map("last_error_message") @db.Text
+  responseJson     String?   @map("response_json") @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([baseExternalId, status])
+  @@index([createdAt])
+  @@map("leadger_outbox_events")
 }

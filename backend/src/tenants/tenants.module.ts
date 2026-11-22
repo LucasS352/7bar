@@ -4,10 +4,12 @@ import { TenantsService } from './tenants.service';
 import { TenantsController } from './tenants.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { jwtConstants } from '../auth/jwt.strategy';
+import { LeadgerModule } from '../leadger/leadger.module';
 
 @Module({
   imports: [
     PrismaModule,
+    LeadgerModule,
     JwtModule.register({
       secret: jwtConstants.secret,
     }),

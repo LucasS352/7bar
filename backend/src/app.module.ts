@@ -31,6 +31,7 @@ import { BackupsModule } from './backups/backups.module';
 import { DemoModule } from './demo/demo.module';
 import { ImageMaintenanceModule } from './maintenance/image-maintenance.module';
 import { ReportsModule } from './reports/reports.module';
+import { LeadgerModule } from './leadger/leadger.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { ReportsModule } from './reports/reports.module';
     CategoriesModule,
     CustomersModule,
     TenantsModule,
+    LeadgerModule,
     SalesModule,
     CashRegistersModule,
     UsersModule,

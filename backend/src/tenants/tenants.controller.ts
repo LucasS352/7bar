@@ -347,7 +347,7 @@ export class TenantsController {
     const pin = req.headers['x-setup-pin'] as string;
     const valid = await this.tenantsService.validatePin(pin);
     if (!valid) throw new UnauthorizedException('PIN inválido.');
-    return this.tenantsService.registrarPagamento(id, body?.observacao);
+    return this.tenantsService.registrarPagamento(id, body?.observacao, body?.paymentMethod);
   }
 
   /** Retorna histórico de pagamentos do tenant via sys-init (protegido por PIN) */

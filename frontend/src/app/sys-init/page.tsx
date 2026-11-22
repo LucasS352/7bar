@@ -20,6 +20,7 @@ import {
 import { exportTelemetry, clearTelemetry } from "@/lib/telemetry";
 import { db } from "@/lib/db";
 import { TenantBillingCalendar } from "@/components/TenantBillingCalendar";
+import { LeadgerPanel, TenantLeadgerFinanceSection } from "@/components/LeadgerPanel";
 const ImageOptimizationPanel = lazy(() => import("@/components/ImageOptimizationPanel"));
 
 
@@ -99,7 +100,7 @@ export default function SysInitPage() {
   const isDemoMode = import.meta.env.VITE_APP_MODE === 'demo' ||
     (typeof window !== 'undefined' && window.location.hostname.includes('demo'));
 
-  const [activeTab, setActiveTab] = useState<"tenants" | "groups" | "leads" | "sql">("tenants");
+  const [activeTab, setActiveTab] = useState<"tenants" | "groups" | "leads" | "sql" | "leadger">("tenants");
 
   // ── SQL EDITOR STATE ──────────────────────────────────────────────────
   const [sqlPinUnlocked, setSqlPinUnlocked] = useState(false);
@@ -278,6 +279,7 @@ export default function SysInitPage() {
   const [loadingPaymentHistory, setLoadingPaymentHistory] = useState(false);
   const [registeringPayment, setRegisteringPayment] = useState(false);
   const [paymentObservacao, setPaymentObservacao] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("pix");
 
   // Backups State
   const [backupsList, setBackupsList] = useState<any[]>([]);
@@ -625,11 +627,11 @@ export default function SysInitPage() {
     }
   };
 
-  const handleRegistrarPagamento = async (tenantId: string, observacao?: string) => {
+  const handleRegistrarPagamento = async (tenantId: string, observacao?: string, method = paymentMethod) => {
     setRegisteringPayment(true);
     try {
       const pin = pinDigits.join('');
-      await api.post(`/tenants/setup/${tenantId}/registrar-pagamento`, { observacao }, { headers: { 'x-setup-pin': pin } });
+      await api.post(`/tenants/setup/${tenantId}/registrar-pagamento`, { observacao, paymentMethod: method }, { headers: { 'x-setup-pin': pin } });
       toast.success("Pagamento registrado! Vencimento avançado 1 mês.");
       loadTenants();
       if (editingTenant?.id === tenantId) {
@@ -967,6 +969,8 @@ export default function SysInitPage() {
                     ? 'Gestão de Tenants'
                     : activeTab === 'groups'
                     ? 'Gestão de Grupos'
+                    : activeTab === 'leadger'
+                    ? 'Integração Teltech Leadger'
                     : activeTab === 'sql'
                     ? '⚡ SQL Editor'
                     : '🎯 Leads de Demonstração'}
@@ -976,6 +980,8 @@ export default function SysInitPage() {
                     ? 'Clientes, vencimentos e gestão da sua operação.'
                     : activeTab === 'groups'
                     ? 'Gerencie os grupos de lojas e redes corporativas.'
+                    : activeTab === 'leadger'
+                    ? 'Webhook financeiro v1, clientes titulares (1:N), conciliação inicial e fila de eventos.'
                     : activeTab === 'sql'
                     ? 'Execute consultas, audite registros e realize alterações diretamente nos bancos de dados.'
                     : 'Contatos capturados através do ambiente de demonstração gratuita.'}
@@ -1019,9 +1025,12 @@ export default function SysInitPage() {
             </div>}
 
             {/* Tabs */}
-            <div className="flex gap-4 mb-6 border-b border-zinc-800">
+            <div className="flex flex-wrap gap-3 sm:gap-4 mb-6 border-b border-zinc-800">
               <button onClick={() => setActiveTab('tenants')} className={`py-2 px-4 font-bold border-b-2 transition-colors ${activeTab === 'tenants' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}>Tenants</button>
               <button onClick={() => setActiveTab('groups')} className={`py-2 px-4 font-bold border-b-2 transition-colors ${activeTab === 'groups' ? 'border-violet-500 text-violet-400' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}>Grupos</button>
+              <button onClick={() => setActiveTab('leadger')} className={`py-2 px-4 font-bold border-b-2 transition-colors ${activeTab === 'leadger' ? 'border-blue-500 text-blue-400' : 'border-transparent text-zinc-500 hover:text-zinc-300'} flex items-center gap-1.5`}>
+                <Database size={15} /> Teltech Leadger
+              </button>
               {isDemoMode && (
                 <button onClick={() => setActiveTab('leads')} className={`py-2 px-4 font-bold border-b-2 transition-colors ${activeTab === 'leads' ? 'border-amber-500 text-amber-400' : 'border-transparent text-zinc-500 hover:text-zinc-300'} flex items-center gap-2`}>
                   🎯 Leads Demo {leads.length > 0 && <span className="bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-mono">{leads.length}</span>}
@@ -1661,6 +1670,14 @@ export default function SysInitPage() {
                   </div>
                 )}
               </div>
+            ) : activeTab === 'leadger' ? (
+              <LeadgerPanel
+                pin={pinDigits.join('')}
+                onOpenMigrationHeart={() => {
+                  setIncludeHeart(true);
+                  setActiveTab('tenants');
+                }}
+              />
             ) : (
               /* Leads Tab — mantido igual */
               <div className="flex-1 flex flex-col gap-6 overflow-hidden">
@@ -2182,8 +2199,22 @@ export default function SysInitPage() {
                     <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4">
                       <h3 className="font-bold text-emerald-400 mb-3 flex items-center gap-2"><DollarSign size={16} /> Registrar Pagamento Recebido</h3>
                       <div className="space-y-3">
-                        <input type="text" placeholder="Observação (opcional, ex: Pix recebido)" value={paymentObservacao} onChange={e => setPaymentObservacao(e.target.value)} className="w-full p-3 bg-zinc-950 border border-zinc-700 rounded-xl text-white text-sm focus:border-emerald-500 outline-none" />
-                        <button disabled={registeringPayment} onClick={() => handleRegistrarPagamento(editingTenant.id, paymentObservacao)} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <select
+                            value={paymentMethod}
+                            onChange={(e) => setPaymentMethod(e.target.value)}
+                            aria-label="Forma de pagamento da mensalidade"
+                            className="p-3 bg-zinc-950 border border-zinc-700 rounded-xl text-white text-sm focus:border-emerald-500 outline-none"
+                          >
+                            <option value="pix">PIX</option>
+                            <option value="boleto">Boleto</option>
+                            <option value="credit_card">Cartão de Crédito</option>
+                            <option value="bank_transfer">Transferência</option>
+                            <option value="cash">Dinheiro</option>
+                          </select>
+                          <input type="text" placeholder="Observação (opcional, ex: Pix recebido)" value={paymentObservacao} onChange={e => setPaymentObservacao(e.target.value)} className="sm:col-span-2 p-3 bg-zinc-950 border border-zinc-700 rounded-xl text-white text-sm focus:border-emerald-500 outline-none" />
+                        </div>
+                        <button disabled={registeringPayment} onClick={() => handleRegistrarPagamento(editingTenant.id, paymentObservacao, paymentMethod)} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
                           {registeringPayment ? <Loader2 className="animate-spin" size={18} /> : <><DollarSign size={18} /> Confirmar Pagamento & Avançar Vencimento</>}
                         </button>
                       </div>
@@ -2216,6 +2247,16 @@ export default function SysInitPage() {
                         </div>
                       )}
                     </div>
+
+                    {/* Faturas & Integração Teltech Leadger */}
+                    <TenantLeadgerFinanceSection
+                      tenantId={editingTenant.id}
+                      pin={pinDigits.join('')}
+                      onChanged={() => {
+                        loadTenants();
+                        loadPaymentHistory(editingTenant.id);
+                      }}
+                    />
                   </div>
                 )}
 
