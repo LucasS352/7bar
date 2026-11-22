@@ -101,7 +101,7 @@ export default function ManagePackagingsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90dvh]">
         {/* Header */}
         <div className="p-5 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/90 backdrop-blur-sm z-10 sticky top-0">
           <div className="flex items-center gap-2.5">

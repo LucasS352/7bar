@@ -113,14 +113,14 @@ export function ExportXmlModal({ isOpen, onClose }: ExportXmlModalProps) {
         <div className="p-6 space-y-5">
           <p className="text-zinc-400 text-sm">Selecione o período das Notas Fiscais (NFC-e) autorizadas para exportação.</p>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="min-w-0">
               <label className="text-sm font-medium text-zinc-300 block mb-1">Data Inicial</label>
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blue-500" />
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blue-500 [color-scheme:dark]" />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="text-sm font-medium text-zinc-300 block mb-1">Data Final</label>
-              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blue-500" />
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blue-500 [color-scheme:dark]" />
             </div>
           </div>
 

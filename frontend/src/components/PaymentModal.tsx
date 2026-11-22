@@ -956,8 +956,8 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   // ── Tela: Venda salva offline ────────────────────────────────────────────
   if (savedOffline) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 pt-[max(1rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-md max-h-[90dvh] overflow-y-auto shadow-2xl">
           <div className="p-8 text-center space-y-4">
             <div className="w-20 h-20 rounded-full bg-orange-500/10 border-2 border-orange-500/30 flex items-center justify-center mx-auto">
               <WifiOff className="text-orange-400" size={36} />
@@ -985,8 +985,8 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   if (saleResult) {
     const status = saleResult.nfceStatus as NfceStatus;
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 pt-[max(1rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-md max-h-[90dvh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-200">
           <div className="p-8 text-center">
             {saleResult.emitirNfce ? (
               <>
@@ -1062,10 +1062,13 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
   // ── Tela principal ───────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md ${isMobile ? 'p-0' : 'p-4'}`}>
 
-      <div className={`bg-zinc-900 border border-zinc-800 w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col ${isMobile ? 'rounded-none max-w-none max-h-none h-full' : 'rounded-3xl max-w-2xl max-h-[95vh]'}`}>
-        <div className="flex justify-between items-center p-4 md:p-6 border-b border-zinc-800 bg-zinc-900/50 shrink-0">
+      <div className={`bg-zinc-900 border border-zinc-800 w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col ${isMobile ? 'rounded-none border-0 max-w-none max-h-none ios-viewport' : 'rounded-3xl max-w-2xl max-h-[95dvh]'}`}>
+        <div
+          className="flex justify-between items-center p-4 md:p-6 border-b border-zinc-800 bg-zinc-900/50 shrink-0"
+          style={isMobile ? { paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' } : undefined}
+        >
           <div>
             <h2 className="text-2xl font-bold text-white tracking-tight">Finalizar Pagamento</h2>
             {!isOnline && (
@@ -1279,7 +1282,10 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         </div>
 
         {/* Footer */}
-        <div className="p-4 md:p-6 border-t border-zinc-800 bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
+        <div
+          className="p-4 md:p-6 border-t border-zinc-800 bg-zinc-900/50 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0"
+          style={isMobile ? { paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' } : undefined}
+        >
           <div className="flex-1 w-full flex flex-col gap-2">
             {isMobile && (
               <button 

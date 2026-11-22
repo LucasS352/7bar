@@ -42,7 +42,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ];
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-white font-sans overflow-hidden">
+    <div className="flex ios-viewport bg-zinc-950 text-white font-sans overflow-hidden">
       {/* Sidebar */}
       <aside className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col">
         <div className="p-6 border-b border-zinc-800">
@@ -101,7 +101,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-zinc-950 p-8 custom-scrollbar">
+      <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-zinc-950 p-8 custom-scrollbar">
         {children}
       </main>
     </div>

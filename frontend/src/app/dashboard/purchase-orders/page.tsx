@@ -601,7 +601,7 @@ export default function PurchaseOrdersPage() {
       {/* MODAL NOVO PEDIDO */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-zinc-900 border border-zinc-800 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+          <div className="bg-zinc-900 border border-zinc-800 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90dvh]">
             <div className="p-5 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/80 backdrop-blur-sm z-10 sticky top-0">
               <h2 className="font-bold text-white flex items-center gap-2">
                 <Plus size={18} className="text-emerald-500" /> Novo Pedido de Compra
@@ -723,7 +723,7 @@ export default function PurchaseOrdersPage() {
       {/* MODAL RECEBER PEDIDO */}
       {showReceiveModal && receivingOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-zinc-900 border border-zinc-800 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+          <div className="bg-zinc-900 border border-zinc-800 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90dvh]">
             <div className="p-5 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/80 backdrop-blur-sm z-10 sticky top-0">
               <div>
                 <h2 className="font-bold text-white flex items-center gap-2">

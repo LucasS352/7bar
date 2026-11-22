@@ -623,7 +623,7 @@ export default function SalesDashboard() {
   if (loading && !summary) return <div className="flex h-full items-center justify-center"><Loader2 className="animate-spin text-blue-500" size={48} /></div>;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-12">
+    <div className="min-w-0 space-y-6 animate-in fade-in duration-500 pb-12">
       {/* --- HEADER & FILTROS --- */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
@@ -631,14 +631,14 @@ export default function SalesDashboard() {
           <p className="text-zinc-400 mt-1 hidden md:block">Acompanhe o desempenho do seu negócio em tempo real.</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-          <div className="flex flex-col lg:flex-row bg-zinc-900 p-2 rounded-2xl border border-zinc-800 gap-2 overflow-x-auto custom-scrollbar">
-            <div className="flex bg-zinc-950 p-1 rounded-xl min-w-max">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto min-w-0">
+          <div className="flex flex-col lg:flex-row bg-zinc-900 p-2 rounded-2xl border border-zinc-800 gap-2 w-full sm:w-auto min-w-0">
+            <div className="grid grid-cols-4 sm:flex bg-zinc-950 p-1 rounded-xl gap-1 w-full sm:w-auto">
             {(['today', 'week', 'month', 'custom'] as const).map(p => (
               <button 
                 key={p} 
                 onClick={() => setPreset(p)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${preset === p ? 'bg-blue-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors text-center truncate ${preset === p ? 'bg-blue-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
               >
                 {p === 'today' ? 'Hoje' : p === 'week' ? 'Semana' : p === 'month' ? 'Mês' : 'Personalizado'}
               </button>
@@ -646,26 +646,26 @@ export default function SalesDashboard() {
           </div>
 
           {preset === 'custom' && (
-            <div className="flex items-center gap-2 px-1 py-1 overflow-x-auto min-w-max">
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 px-1 py-1 w-full sm:w-auto min-w-0">
               <input 
                 type="date" 
                 value={startDate} 
                 onChange={e => setStartDate(e.target.value)}
-                className="bg-zinc-950 border border-zinc-800 text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none"
+                className="flex-1 sm:flex-initial min-w-0 bg-zinc-950 border border-zinc-800 text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none [color-scheme:dark]"
               />
-              <span className="text-zinc-500">até</span>
+              <span className="text-zinc-500 text-xs sm:text-sm shrink-0">até</span>
               <input 
                 type="date" 
                 value={endDate} 
                 onChange={e => setEndDate(e.target.value)}
-                className="bg-zinc-950 border border-zinc-800 text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none"
+                className="flex-1 sm:flex-initial min-w-0 bg-zinc-950 border border-zinc-800 text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none [color-scheme:dark]"
               />
               <button
                 onClick={() => {
                   setAppliedStartDate(startDate);
                   setAppliedEndDate(endDate);
                 }}
-                className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg transition-colors cursor-pointer"
+                className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg transition-colors cursor-pointer shrink-0"
                 title="Procurar"
               >
                 <Search size={18} />
@@ -710,31 +710,31 @@ export default function SalesDashboard() {
       )}
 
       {/* --- KPI CARDS --- */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+      <div className="grid min-w-0 grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         
         {/* Cards de Caixas Abertos — dinâmico */}
         {preset === 'today' && (summary?.openRegisters ?? []).length > 0 ? (
           (summary!.openRegisters).map((reg, idx) => (
-            <div key={reg.cashRegisterId} className="col-span-2 lg:col-span-1 relative overflow-hidden p-4 md:p-6 rounded-2xl border bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl flex flex-col justify-between">
+            <div key={reg.cashRegisterId} className="col-span-2 lg:col-span-1 relative overflow-hidden min-w-0 p-3 md:p-6 rounded-2xl border bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl flex flex-col justify-between">
               {/* Badge ABERTO */}
-              <div className="absolute top-0 right-0 p-4 flex items-center gap-2">
+              <div className="absolute top-0 right-0 p-3 sm:p-4 flex items-center gap-1.5 sm:gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-xs font-bold text-emerald-500 tracking-wider">ABERTO</span>
+                <span className="text-[11px] sm:text-xs font-bold text-emerald-500 tracking-wider">ABERTO</span>
               </div>
-              <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
-                <DollarSign size={20} className="text-emerald-400" />
-                <span>Caixa #{reg.code ?? (idx + 1)}</span>
+              <div className="flex items-center gap-2 text-xs sm:text-sm md:text-base text-zinc-400 font-medium mb-2 sm:mb-3 pr-20 min-w-0">
+                <DollarSign size={18} className="text-emerald-400 shrink-0" />
+                <span className="truncate">Caixa #{reg.code ?? (idx + 1)}</span>
               </div>
-              <div>
-                <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+              <div className="min-w-0">
+                <h3 className="text-lg min-[390px]:text-xl md:text-3xl font-black text-white tracking-tight truncate">
                   {formatCurrency(reg.total)}
                 </h3>
-                <p className="text-sm text-zinc-400 mt-2 flex items-center gap-1.5 font-semibold">
-                  <UserIcon size={14} className="text-blue-400" />
-                  {reg.operatorName}
+                <p className="text-xs sm:text-sm text-zinc-400 mt-2 flex items-center gap-1.5 font-semibold min-w-0">
+                  <UserIcon size={14} className="text-blue-400 shrink-0" />
+                  <span className="truncate">{reg.operatorName}</span>
                 </p>
-                <p className="text-xs text-zinc-600 mt-1 flex items-center gap-1.5">
-                  <Receipt size={12} />
+                <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5">
+                  <Receipt size={12} className="shrink-0" />
                   {reg.salesCount} venda{reg.salesCount !== 1 ? 's' : ''} · desde {new Date(reg.openedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
@@ -742,55 +742,55 @@ export default function SalesDashboard() {
           ))
         ) : preset !== 'today' ? (
           /* Fora do filtro "Hoje", mostra card genérico desativado */
-          <div className="col-span-2 lg:col-span-1 relative overflow-hidden p-4 md:p-6 rounded-2xl border bg-zinc-900/50 border-zinc-800/50 opacity-60 flex flex-col justify-between">
-            <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
-              <DollarSign size={20} className="text-zinc-500" /> Caixa Atual
+          <div className="col-span-2 lg:col-span-1 relative overflow-hidden min-w-0 p-3 md:p-6 rounded-2xl border bg-zinc-900/50 border-zinc-800/50 opacity-60 flex flex-col justify-between">
+            <div className="flex items-center gap-2 text-xs sm:text-sm md:text-base text-zinc-400 font-medium mb-2 sm:mb-3 min-w-0">
+              <DollarSign size={18} className="text-zinc-500 shrink-0" /> <span className="truncate">Caixa Atual</span>
             </div>
             <div>
-              <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">N/A</h3>
-              <p className="text-sm text-zinc-500 mt-2">Mude para &quot;Hoje&quot;</p>
+              <h3 className="text-lg min-[390px]:text-xl md:text-3xl font-black text-white tracking-tight">N/A</h3>
+              <p className="text-xs sm:text-sm text-zinc-500 mt-2">Mude para &quot;Hoje&quot;</p>
             </div>
           </div>
         ) : (
           /* Hoje selecionado mas nenhum caixa aberto */
-          <div className="col-span-2 lg:col-span-1 relative overflow-hidden p-4 md:p-6 rounded-2xl border bg-zinc-900/50 border-zinc-800/50 flex flex-col justify-between">
-            <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
-              <DollarSign size={20} className="text-zinc-500" /> Caixa Atual
+          <div className="col-span-2 lg:col-span-1 relative overflow-hidden min-w-0 p-3 md:p-6 rounded-2xl border bg-zinc-900/50 border-zinc-800/50 flex flex-col justify-between">
+            <div className="flex items-center gap-2 text-xs sm:text-sm md:text-base text-zinc-400 font-medium mb-2 sm:mb-3 min-w-0">
+              <DollarSign size={18} className="text-zinc-500 shrink-0" /> <span className="truncate">Caixa Atual</span>
             </div>
             <div>
-              <h3 className="text-2xl md:text-3xl font-black text-zinc-600 tracking-tight">Fechado</h3>
-              <p className="text-sm text-zinc-600 mt-2">Nenhum caixa aberto</p>
+              <h3 className="text-lg min-[390px]:text-xl md:text-3xl font-black text-zinc-600 tracking-tight">Fechado</h3>
+              <p className="text-xs sm:text-sm text-zinc-600 mt-2">Nenhum caixa aberto</p>
             </div>
           </div>
         )}
 
         {/* Card 2: Hoje */}
-        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg">
-          <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
-            <Calendar size={20} className="text-blue-400" /> Hoje
+        <div className="bg-zinc-900 border border-zinc-800 min-w-0 p-3 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg">
+          <div className="flex items-center gap-2 text-xs sm:text-sm md:text-base text-zinc-400 font-medium mb-2 sm:mb-3 min-w-0">
+            <Calendar size={18} className="text-blue-400 shrink-0" /> <span className="truncate">Hoje</span>
           </div>
-          <div>
-            <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">
+          <div className="min-w-0">
+            <h3 className="text-lg min-[390px]:text-xl md:text-3xl font-black text-white tracking-tight truncate">
               {formatCurrency(summary?.today?.revenue || 0)}
             </h3>
             <p className="text-xs md:text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
-              <Receipt size={14}/> {summary?.today?.transactions || 0} transações
+              <Receipt size={14} className="shrink-0" /> {summary?.today?.transactions || 0} transações
             </p>
           </div>
         </div>
 
         {/* Card 3: Semana */}
-        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg">
-          <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
-            <TrendingUp size={20} className="text-purple-400" /> Semana
+        <div className="bg-zinc-900 border border-zinc-800 min-w-0 p-3 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg">
+          <div className="flex items-center gap-2 text-xs sm:text-sm md:text-base text-zinc-400 font-medium mb-2 sm:mb-3 min-w-0">
+            <TrendingUp size={18} className="text-purple-400 shrink-0" /> <span className="truncate">Semana</span>
           </div>
-          <div>
-            <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">
+          <div className="min-w-0">
+            <h3 className="text-lg min-[390px]:text-xl md:text-3xl font-black text-white tracking-tight truncate">
               {formatCurrency(summary?.week?.revenue || 0)}
             </h3>
             {summary?.week?.vsLastWeek !== null && summary?.week?.vsLastWeek !== undefined ? (
               <p className={`text-xs md:text-sm mt-2 flex items-center gap-1 font-medium ${summary.week.vsLastWeek >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {summary.week.vsLastWeek >= 0 ? <ArrowUpRight size={16}/> : <ArrowDownRight size={16}/>}
+                {summary.week.vsLastWeek >= 0 ? <ArrowUpRight size={16} className="shrink-0" /> : <ArrowDownRight size={16} className="shrink-0" />}
                 {Math.abs(summary.week.vsLastWeek).toFixed(1)}% vs. ant.
               </p>
             ) : (
@@ -800,29 +800,29 @@ export default function SalesDashboard() {
         </div>
 
         {/* Card 4: Mês / Personalizado */}
-        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg relative overflow-hidden">
+        <div className="bg-zinc-900 border border-zinc-800 min-w-0 p-3 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl"></div>
-          <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3 relative z-10">
-            <Banknote size={20} className="text-amber-400" /> 
-            {preset === 'custom' ? 'Total do Período' : 'Este Mês'}
+          <div className="flex items-center gap-2 text-xs sm:text-sm md:text-base text-zinc-400 font-medium mb-2 sm:mb-3 relative z-10 min-w-0">
+            <Banknote size={18} className="text-amber-400 shrink-0" /> 
+            <span className="truncate">{preset === 'custom' ? 'Total do Período' : 'Este Mês'}</span>
           </div>
-          <div className="relative z-10">
-            <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">
+          <div className="relative z-10 min-w-0">
+            <h3 className="text-lg min-[390px]:text-xl md:text-3xl font-black text-white tracking-tight truncate">
               {formatCurrency(preset === 'custom' ? (summary?.period?.revenue || 0) : (summary?.month?.revenue || 0))}
             </h3>
              <p className="text-xs md:text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
-               <Receipt size={14}/> Visão macro
+               <Receipt size={14} className="shrink-0" /> Visão macro
             </p>
           </div>
         </div>
 
         {/* Card 5: Ticket Médio */}
-        <div className="bg-zinc-900 border border-zinc-800 p-4 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg">
-          <div className="flex items-center gap-3 text-zinc-400 font-medium mb-3">
-            <Package size={20} className="text-sky-400" /> Ticket Médio
+        <div className="bg-zinc-900 border border-zinc-800 min-w-0 p-3 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg">
+          <div className="flex items-center gap-2 text-xs sm:text-sm md:text-base text-zinc-400 font-medium mb-2 sm:mb-3 min-w-0">
+            <Package size={18} className="text-sky-400 shrink-0" /> <span className="truncate">Ticket Médio</span>
           </div>
-          <div>
-            <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">
+          <div className="min-w-0">
+            <h3 className="text-lg min-[390px]:text-xl md:text-3xl font-black text-white tracking-tight truncate">
               {formatCurrency(summary?.period?.avgTicket || 0)}
             </h3>
             <p className="text-xs md:text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
@@ -834,21 +834,21 @@ export default function SalesDashboard() {
       </div>
 
       {/* --- GRÁFICOS & TOP PRODUTOS --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid min-w-0 grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Gráfico: Vendas por Período */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl lg:col-span-2">
+        <div className="min-w-0 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl lg:col-span-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Clock size={20} className="text-amber-400"/> Vendas por {chartGrouping === 'hour' ? 'Hora' : chartGrouping === 'day' ? 'Dia' : chartGrouping === 'week' ? 'Semana' : 'Mês'} (Período Selecionado)
+            <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 min-w-0">
+              <Clock size={20} className="text-amber-400 shrink-0"/> <span className="truncate">Vendas por {chartGrouping === 'hour' ? 'Hora' : chartGrouping === 'day' ? 'Dia' : chartGrouping === 'week' ? 'Semana' : 'Mês'} (Período Selecionado)</span>
             </h3>
             
-            <div className="flex bg-zinc-950 border border-zinc-800 p-0.5 rounded-xl self-start sm:self-auto">
+            <div className="flex bg-zinc-950 border border-zinc-800 p-0.5 rounded-xl self-start sm:self-auto shrink-0">
               {(['hour', 'day', 'week', 'month'] as const).map((group) => (
                 <button
                   key={group}
                   onClick={() => setChartGrouping(group)}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     chartGrouping === group
                       ? 'bg-blue-600 text-white shadow'
                       : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
@@ -859,12 +859,13 @@ export default function SalesDashboard() {
               ))}
             </div>
           </div>
-          <div className="h-[200px] md:h-[300px] w-full">
+          <div className="h-[200px] md:h-[300px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <XAxis dataKey="name" stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#52525b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `R$${val}`} />
-                <Tooltip 
+                <Tooltip allowEscapeViewBox={{ x: false, y: false }}
+                  wrapperStyle={{ maxWidth: 'calc(100vw - 32px)', pointerEvents: 'none', zIndex: 40 }}
                   cursor={{ fill: '#27272a' }}
                   contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px', color: '#fff' }}
                   itemStyle={{ color: '#fff', fontWeight: 'bold' }}
@@ -881,13 +882,13 @@ export default function SalesDashboard() {
         </div>
 
         {/* Gráfico: Mix de Pagamentos */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col">
-          <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-            <CreditCard size={20} className="text-emerald-400"/> Mix de Pagamentos
+        <div className="min-w-0 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl flex flex-col">
+          <h3 className="text-base sm:text-lg font-bold text-white mb-2 flex items-center gap-2">
+            <CreditCard size={20} className="text-emerald-400 shrink-0"/> Mix de Pagamentos
           </h3>
           {chartDataPayment.length > 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center relative">
-              <div className="h-[220px] w-full">
+            <div className="flex-1 flex flex-col items-center justify-center relative min-w-0">
+              <div className="h-[220px] w-full min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -902,7 +903,8 @@ export default function SalesDashboard() {
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip 
+                    <Tooltip allowEscapeViewBox={{ x: false, y: false }}
+                      wrapperStyle={{ maxWidth: 'calc(100vw - 32px)', pointerEvents: 'none', zIndex: 40 }}
                       formatter={(value) => formatCurrency(Number(value ?? 0))}
                       contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px', color: '#fff' }}
                       itemStyle={{ color: '#fff', fontWeight: 'bold' }}
@@ -912,10 +914,10 @@ export default function SalesDashboard() {
               </div>
               <div className="w-full grid grid-cols-2 gap-3 mt-4">
                 {chartDataPayment.map((p, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }}></span>
-                    <span className="text-zinc-300 flex-1">{p.name}</span>
-                    <span className="font-bold text-white">{((p.value / summary!.period.revenue) * 100).toFixed(0)}%</span>
+                  <div key={i} className="flex items-center gap-2 text-xs sm:text-sm min-w-0">
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: p.color }}></span>
+                    <span className="text-zinc-300 flex-1 truncate">{p.name}</span>
+                    <span className="font-bold text-white shrink-0">{((p.value / summary!.period.revenue) * 100).toFixed(0)}%</span>
                   </div>
                 ))}
               </div>
@@ -929,22 +931,22 @@ export default function SalesDashboard() {
       </div>
 
       {/* --- TOP PRODUTOS E TABELA --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid min-w-0 grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Top Produtos */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl">
-          <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-            <Package size={20} className="text-indigo-400"/> Top Produtos (Receita)
+        <div className="min-w-0 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl">
+          <h3 className="text-base sm:text-lg font-bold text-white mb-6 flex items-center gap-2">
+            <Package size={20} className="text-indigo-400 shrink-0"/> Top Produtos (Receita)
           </h3>
           <div className="space-y-5">
             {summary?.period?.topProducts?.map((p, idx) => (
               <div key={idx} className="relative">
-                <div className="flex justify-between items-end mb-1 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-zinc-500 w-4">{idx + 1}.</span>
+                <div className="flex justify-between items-end gap-2 mb-1 text-sm min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="text-xs font-bold text-zinc-500 w-4 shrink-0">{idx + 1}.</span>
                     <span className="font-semibold text-zinc-200 line-clamp-1">{p.name}</span>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <span className="font-bold text-emerald-400">{formatCurrency(p.revenue)}</span>
                   </div>
                 </div>
@@ -964,10 +966,10 @@ export default function SalesDashboard() {
         </div>
 
         {/* Histórico de Transações */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl flex flex-col lg:col-span-2 overflow-hidden">
+        <div className="min-w-0 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl flex flex-col lg:col-span-2 overflow-hidden">
           <div className="p-4 md:p-6 border-b border-zinc-800 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2 whitespace-nowrap">
-              <Receipt size={20} className="text-blue-400"/> Histórico de Vendas
+            <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 min-w-0">
+              <Receipt size={20} className="text-blue-400 shrink-0"/> Histórico de Vendas
             </h3>
             
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full xl:w-auto">
@@ -1174,8 +1176,8 @@ export default function SalesDashboard() {
                     )}
                   </div>
 
-                  <div className="flex justify-between items-center">
-                    <div className="flex gap-1">
+                  <div className="flex flex-wrap justify-between items-center gap-2">
+                    <div className="flex flex-wrap gap-1">
                       {isCancelled ? (
                         <span className="inline-block text-[10px] uppercase font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded no-underline">
                           CANCELADA

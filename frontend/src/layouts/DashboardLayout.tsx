@@ -130,12 +130,14 @@ export function DashboardLayout() {
   const isStockistBlocked = isStockist && !stockistAllowedPaths.some(p => pathname.startsWith(p));
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-zinc-950 text-white font-sans overflow-hidden">
+    <div className="flex flex-col md:flex-row ios-viewport bg-zinc-950 text-white font-sans overflow-hidden">
       {/* Mobile Top Navigation Bar with Safe Area for iOS Dynamic Island / Notch */}
       <header
         className="md:hidden flex items-center justify-between px-3.5 pb-2.5 bg-zinc-900 border-b border-zinc-800 shrink-0 select-none z-30 shadow-sm"
         style={{
           paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.625rem)',
+          paddingLeft: 'calc(env(safe-area-inset-left, 0px) + 0.875rem)',
+          paddingRight: 'calc(env(safe-area-inset-right, 0px) + 0.875rem)',
         }}
       >
         <div className="flex items-center gap-2.5 min-w-0">
@@ -422,7 +424,7 @@ export function DashboardLayout() {
       )}
 
       {/* Main — pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] on mobile to clear BottomNav, p-3 on mobile */}
-      <main className="flex-1 overflow-y-auto bg-zinc-950 p-3 md:p-8 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 custom-scrollbar">
+      <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-zinc-950 p-3 md:p-8 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 custom-scrollbar">
         {isStockistBlocked ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 bg-zinc-900/50 border border-zinc-800 rounded-3xl backdrop-blur-md animate-[fadeIn_0.3s_ease]">
             <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-6 text-blue-500 shadow-lg shadow-blue-500/10">

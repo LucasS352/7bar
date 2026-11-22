@@ -608,7 +608,7 @@ export function GarcomPage() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   return (
-    <div className="fixed inset-0 bg-zinc-950 text-white flex flex-col items-center justify-start overflow-hidden select-none">
+    <div className="fixed inset-0 bg-zinc-950 text-white flex flex-col items-center justify-start overflow-hidden select-none pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]">
       
       {/* Container Centralizado para Desktop e 100% no Mobile */}
       <div className="w-full max-w-xl flex-1 flex flex-col h-full overflow-hidden bg-zinc-950 border-x border-zinc-800/50 shadow-2xl relative">
@@ -941,7 +941,7 @@ export function GarcomPage() {
 
       {/* ═══ Modal: Login de Garçom (Centralizado) ═════════════════════════ */}
       {showLoginModal && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 pt-[max(1rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
           <div className="relative bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
             <button
               type="button"
@@ -1028,7 +1028,7 @@ export function GarcomPage() {
 
       {/* ═══ Modal: Nova Comanda (Centralizado) ════════════════════════════ */}
       {showNewComanda && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 pt-[max(1rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
               <h3 className="font-bold text-white text-sm">Abrir Nova Mesa / Comanda</h3>
@@ -1086,7 +1086,7 @@ export function GarcomPage() {
       {/* ═══ Modal: Adicionar Item (Centralizado e Responsivo) ══════════════ */}
       {showAddItem && selectedComanda && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-0 sm:p-4">
-          <div className="w-full max-w-xl h-full sm:h-[85vh] sm:rounded-3xl flex flex-col bg-zinc-950 border border-zinc-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-xl h-full sm:h-[85dvh] sm:rounded-3xl flex flex-col bg-zinc-950 border border-zinc-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 pt-[env(safe-area-inset-top,0px)] sm:pt-0 pb-[env(safe-area-inset-bottom,0px)] sm:pb-0">
             {/* Header */}
             <div className="bg-zinc-900 border-b border-zinc-800 px-4 py-3 flex items-center gap-3 shrink-0">
 <button type="button" aria-label="Voltar à comanda" onClick={() => { productSelectionSeq.current++; setShowAddItem(false); setSelectedProduct(null); }} className="p-1.5 hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-white cursor-pointer">
@@ -1231,7 +1231,7 @@ export function GarcomPage() {
 
       {/* ═══ Modal: Solicitar Fechamento (Centralizado) ════════════════════ */}
       {showRequestPaymentModal && selectedComanda && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 pt-[max(1rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 duration-200 text-center">
             <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center mx-auto mb-4">
               <BellRing size={24} className="text-amber-400" />
@@ -1266,7 +1266,7 @@ export function GarcomPage() {
 
       {/* ═══ Modal: Reabrir Comanda (Centralizado) ═════════════════════════ */}
       {showReopenModal && selectedComanda && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 pt-[max(1rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 duration-200 text-center">
             <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mx-auto mb-4">
               <Unlock size={24} className="text-blue-400" />
@@ -1301,8 +1301,8 @@ export function GarcomPage() {
 
       {/* ═══ Modal: Extrato Visual (Centralizado) ══════════════════════════ */}
       {showExtrato && selectedComanda && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm max-h-[85vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 pt-[max(1rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm max-h-[85dvh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-zinc-800 flex items-center justify-between shrink-0">
               <div>
                 <h3 className="font-bold text-white flex items-center gap-2 text-sm">

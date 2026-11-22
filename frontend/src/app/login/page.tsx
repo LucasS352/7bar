@@ -29,7 +29,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 bg-gradient-to-br from-zinc-900 to-black text-white relative overflow-hidden">
+    <div className="ios-min-viewport flex items-center justify-center bg-zinc-950 bg-gradient-to-br from-zinc-900 to-black text-white relative overflow-hidden p-4 pt-[max(1.5rem,env(safe-area-inset-top,0px))] pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
       {/* Background decoration */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 opacity-20 pointer-events-none">
         <div className="absolute -top-[10%] -left-[10%] w-96 h-96 bg-blue-600 rounded-full blur-[120px]"></div>

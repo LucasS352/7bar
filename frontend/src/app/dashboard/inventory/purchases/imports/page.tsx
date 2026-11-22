@@ -946,7 +946,7 @@ export default function XmlImportPage() {
       {/* MODAL FULLSCREEN DE CONCILIAÇÃO & IMPORTAÇÃO */}
       {selectedNfe && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-center items-center p-4 overflow-y-auto">
-          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-6xl max-h-[90dvh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             
             {/* Header Modal */}
             <div className="px-6 py-5 border-b border-zinc-800 bg-zinc-900/60 flex justify-between items-start">

@@ -1041,7 +1041,7 @@ export default function VitrinePage() {
       {/* ── Modal de Criação / Edição de Grade por Categoria ── */}
       {isGridModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-indigo-500/40 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl shadow-indigo-500/20">
+          <div className="bg-zinc-900 border border-indigo-500/40 rounded-2xl w-full max-w-2xl max-h-[90dvh] flex flex-col overflow-hidden shadow-2xl shadow-indigo-500/20">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950">
               <div className="flex items-center gap-2.5">

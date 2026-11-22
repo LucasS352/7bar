@@ -426,8 +426,8 @@ export function CloseRegisterModal({
   };
 
   const modalBody = (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 lg:p-8 transition-all">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-[2rem] w-full max-w-6xl shadow-[0_0_100px_rgba(239,68,68,0.1)] overflow-hidden animate-in fade-in zoom-in-95 duration-300 flex flex-col h-full max-h-[95vh] lg:max-h-[90vh]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-3 sm:p-4 lg:p-8 pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] transition-all">
+      <div className="bg-zinc-950 border border-zinc-800 rounded-[2rem] w-full max-w-6xl shadow-[0_0_100px_rgba(239,68,68,0.1)] overflow-hidden animate-in fade-in zoom-in-95 duration-300 flex flex-col h-full max-h-[95dvh] lg:max-h-[90dvh]">
         <div className="flex justify-between items-center p-4 md:p-6 border-b border-zinc-800 bg-zinc-900/50 shrink-0">
           <h2 className="text-xl md:text-2xl font-bold flex items-center gap-3"><FileText className="text-red-500" /> Auditoria de Fechamento</h2>
           <button onClick={() => onClose(false)} className="p-2 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors"><X size={24}/></button>
@@ -872,7 +872,7 @@ export function CloseRegisterModal({
               </button>
             </div>
 
-            <div className="p-5 space-y-4 overflow-y-auto max-h-[80vh] custom-scrollbar">
+            <div className="p-5 space-y-4 overflow-y-auto max-h-[80dvh] custom-scrollbar">
 
               {/* Informação para operadores comuns: Auditoria Cega */}
               {!canSeeTotals && (
@@ -1199,8 +1199,8 @@ export function CloseRegisterModal({
 
       {/* ═══ Modal de Ajuste/Conferência Opcional de Recebimentos Digitais ═══ */}
       {adjustModalOpen && (
-        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 pt-[max(1rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))] animate-in fade-in duration-200">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90dvh]">
             
             {/* Header */}
             <div className="p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/60 shrink-0">

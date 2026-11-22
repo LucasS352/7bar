@@ -248,7 +248,7 @@ export function CompositeModifierModal({ product, isOpen, onClose, onConfirm, co
         </div>
 
         {/* Grupos */}
-        <div className="px-5 py-4 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+        <div className="px-5 py-4 space-y-4 max-h-[60dvh] overflow-y-auto custom-scrollbar">
           {product.modifierGroups.map((group, groupIdx) => (
             <div key={group.id}>
               <div className="flex items-center justify-between mb-2">

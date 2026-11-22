@@ -250,7 +250,7 @@ export default function OperatorsManagementModal({ onClose }: OperatorsManagemen
                 </button>
               </div>
             ) : (
-              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="space-y-2 max-h-[60dvh] overflow-y-auto pr-2 custom-scrollbar">
                 {operators.map(op => (
                   <div key={op.id} className="flex items-center justify-between p-3 bg-zinc-950 border border-zinc-800/50 rounded-xl hover:border-zinc-700 transition-colors">
                     <div 

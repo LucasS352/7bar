@@ -79,7 +79,7 @@ export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
           bg-zinc-900/95 backdrop-blur-xl
           border-t border-zinc-800
           flex items-center justify-around
-          h-16
+          min-h-16
           safe-area-bottom
         "
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
@@ -90,7 +90,7 @@ export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
             to={item.to}
             end={item.exact}
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-200 ${
+              `flex flex-col items-center justify-center gap-1 flex-1 min-h-[60px] py-1.5 transition-all duration-200 ${
                 isActive
                   ? 'text-blue-400'
                   : 'text-zinc-500 hover:text-zinc-300 active:scale-90'
@@ -116,7 +116,7 @@ export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
         {/* Menu / Mais Tab */}
         <button
           onClick={() => setProfileOpen(true)}
-          className={`flex flex-col items-center justify-center gap-1 flex-1 h-full active:scale-90 transition-all duration-200 cursor-pointer ${
+          className={`flex flex-col items-center justify-center gap-1 flex-1 min-h-[60px] py-1.5 active:scale-90 transition-all duration-200 cursor-pointer ${
             profileOpen ? 'text-blue-400' : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
@@ -144,7 +144,7 @@ export function BottomNavigation({ tenantConfig }: BottomNavigationProps) {
               bg-zinc-900 border-t border-zinc-800
               rounded-t-[2rem]
               p-5
-              max-h-[90vh] overflow-y-auto custom-scrollbar
+              max-h-[90dvh] overflow-y-auto custom-scrollbar
               shadow-2xl
               animate-in slide-in-from-bottom duration-300
             "

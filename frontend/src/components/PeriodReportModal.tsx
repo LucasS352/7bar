@@ -125,8 +125,8 @@ export function PeriodReportModal({ isOpen, onClose, startDate, endDate, summary
   const totalRevenue = summary?.period?.revenue || 0;
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] md:max-h-[85vh] mx-4">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-[max(12px,env(safe-area-inset-top,0px))] bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90dvh] md:max-h-[85dvh] mx-4">
         
         {/* Header */}
         <div className="flex justify-between items-center p-4 md:p-5 border-b border-zinc-800 bg-zinc-900">

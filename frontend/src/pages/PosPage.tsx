@@ -572,7 +572,7 @@ function PosPageContent() {
       <CapitaoGelada />
       {/* Esquerda */}
       <div
-        className="flex-1 flex flex-col p-3 lg:p-6 lg:pr-4 pb-[80px] lg:pb-6 relative h-full min-w-0"
+        className="flex-1 flex flex-col p-3 lg:p-6 lg:pr-4 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] lg:pb-6 relative h-full min-w-0"
         style={{
           paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)',
         }}
@@ -1259,7 +1259,7 @@ function PosPageContent() {
             onClick={() => setIsMobileMenuOpen(false)}
           />
           <div
-            className="fixed bottom-0 inset-x-0 z-[70] lg:hidden bg-zinc-900 border-t border-zinc-800 rounded-t-[2rem] p-5 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar"
+            className="fixed bottom-0 inset-x-0 z-[70] lg:hidden bg-zinc-900 border-t border-zinc-800 rounded-t-[2rem] p-5 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90dvh] overflow-y-auto custom-scrollbar"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.2rem)' }}
           >
             {/* Handle do topo */}

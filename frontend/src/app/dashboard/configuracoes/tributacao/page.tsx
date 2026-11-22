@@ -288,7 +288,7 @@ export default function TributacaoPage() {
       {/* Modal Criar/Editar */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-xl shadow-2xl max-h-[90dvh] overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b border-zinc-800">
               <h3 className="text-lg font-bold text-white">{editing ? 'Editar Grupo Tributário' : 'Novo Grupo Tributário'}</h3>
               <button onClick={() => setModalOpen(false)} className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full transition text-zinc-400 hover:text-white">

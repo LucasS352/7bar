@@ -731,7 +731,7 @@ export default function FiscalManagementPage() {
               </button>
             </div>
 
-            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar text-xs">
+            <div className="p-6 space-y-4 max-h-[75dvh] overflow-y-auto custom-scrollbar text-xs">
               {/* Grid de Resumo */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-zinc-950 p-4 rounded-xl border border-zinc-800">
                 <div>

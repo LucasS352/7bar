@@ -3,16 +3,35 @@
 /* Garçom: permite rolagem, sem zoom por toque duplo/pinça, inclusive nos portais. */
 body.garcom-touch-screen,
 body.garcom-touch-screen * {
-  touch-action: pan-x pan-y;
+  touch-action: manipulation;
 }
 
-/* Evita zoom automático ao focar campos pequenos no Safari mobile. */
-@media (pointer: coarse) {
-  body.garcom-touch-screen input,
-  body.garcom-touch-screen textarea,
-  body.garcom-touch-screen select {
-    font-size: max(1rem, 16px);
+/* iOS Safari / WebKit: mantém textos e campos em tamanho seguro sem zoom automático ou duplo-toque. */
+html, body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+@supports (overflow-x: clip) {
+  html, body {
+    overflow-x: clip;
   }
+}
+button, a, [role="button"], label, summary { touch-action: manipulation; }
+input, textarea, select { min-width: 0; max-width: 100%; }
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: max(16px, 1rem) !important;
+  }
+}
+.ios-viewport { height: 100vh; }
+.ios-min-viewport { min-height: 100vh; }
+@supports (height: 100dvh) {
+  .ios-viewport { height: 100dvh; }
+  .ios-min-viewport { min-height: 100dvh; }
 }
 
 /* Custom Scrollbar minimalista */

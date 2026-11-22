@@ -898,7 +898,7 @@ export default function SysInitPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col p-4 sm:p-8">
+    <div className="ios-min-viewport bg-zinc-950 text-white flex flex-col p-4 sm:p-8 pt-[max(1rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
       {imageOptimizationOpen && <Suspense fallback={<div className="fixed inset-0 z-[100] bg-zinc-950 p-8">Carregando manutenção de imagens…</div>}><ImageOptimizationPanel
         tenants={tenants.filter(t => selectedTenantIds.includes(t.id))}
         pin={pinDigits.join('')}
@@ -1820,7 +1820,7 @@ export default function SysInitPage() {
                 <div><h3 className="font-bold text-white mb-1">Rotina Automática Diária</h3><p className="text-xs text-zinc-400">Gere um backup geral automaticamente num horário fixo.</p></div>
                 <div className="flex items-center gap-4">
                   {backupSchedule.enabled && (
-                    <input type="time" value={backupSchedule.time} onChange={(e) => setBackupSchedule({ ...backupSchedule, time: e.target.value })} className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500" />
+                    <input type="time" value={backupSchedule.time} onChange={(e) => setBackupSchedule({ ...backupSchedule, time: e.target.value })} className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500 [color-scheme:dark]" />
                   )}
                   <button disabled={savingSchedule} onClick={async () => {
                     setSavingSchedule(true);
@@ -2455,7 +2455,7 @@ export default function SysInitPage() {
         {/* MODAL MIGRAÇÃO */}
         {migrationModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-[fadeIn_0.2s_ease]">
-            <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85dvh]">
               <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/40">
                 <div>
                   <h2 className="text-xl font-bold flex items-center gap-2 text-violet-400"><Database size={20} /> Migração de Bancos de Dados</h2>
@@ -2539,7 +2539,7 @@ export default function SysInitPage() {
         {/* MODAL GERENCIAR GRUPO */}
         {selectedGroup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-[fadeIn_0.2s_ease]">
-            <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[90dvh]">
               <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/40">
                 <h2 className="text-xl font-bold flex items-center gap-2 text-violet-400">Gerenciar Grupo: {selectedGroup.name}</h2>
                 <button onClick={() => { setSelectedGroup(null); loadGroups(); }} className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition"><X size={20} /></button>

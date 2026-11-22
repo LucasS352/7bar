@@ -220,7 +220,7 @@ export function UncostedProductsView({
         aria-modal="true"
         aria-labelledby="uncosted-modal-title"
         onClick={(e) => e.stopPropagation()}
-        className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
+        className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-3xl max-h-[90dvh] flex flex-col overflow-hidden shadow-2xl"
       >
         {/* Cabeçalho do Modal */}
         <div className="p-4 sm:p-5 border-b border-zinc-800 flex items-start justify-between gap-3 shrink-0">

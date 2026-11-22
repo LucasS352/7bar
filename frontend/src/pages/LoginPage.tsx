@@ -63,7 +63,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-white relative overflow-hidden py-12 px-4">
+    <div className="ios-min-viewport flex flex-col items-center justify-center bg-zinc-950 text-white relative overflow-hidden py-12 px-4 pt-[max(2rem,env(safe-area-inset-top,0px))] pb-[max(2rem,env(safe-area-inset-bottom,0px))]">
       {/* Animated background blobs */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-blue-600/20 blur-[120px] animate-pulse" style={{animationDuration:'8s'}} />

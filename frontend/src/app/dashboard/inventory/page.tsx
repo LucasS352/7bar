@@ -1326,7 +1326,7 @@ export default function InventoryDashboard() {
       {/* Modal de Detalhamento de Lotes (FIFO) */}
       {lotModalProduct && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 transition-all">
-          <div className="bg-zinc-950 border border-zinc-800 rounded-[2rem] w-full max-w-2xl shadow-[0_0_80px_rgba(59,130,246,0.08)] overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-[2rem] w-full max-w-2xl shadow-[0_0_80px_rgba(59,130,246,0.08)] overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85dvh]">
             <div className="flex justify-between items-center p-6 border-b border-zinc-800 bg-zinc-900/50">
               <div>
                 <h3 className="text-xl font-bold text-white tracking-tight">Rastreamento de Lotes PEPS</h3>
@@ -1599,7 +1599,7 @@ export default function InventoryDashboard() {
       {/* Modal de Revisão de Pedido Automático */}
       {isAutoOrderOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[90dvh] animate-in zoom-in-95">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-zinc-800 bg-zinc-900/50">
               <div>
