@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/auth';
 import { useCartStore, type Product, type CartItemModifier } from '@/store/cart';
 import { api, apiGet } from '@/lib/api';
 import { toast } from 'sonner';
-import { updateProductsCache, getCachedProducts, db } from '@/lib/db';
+import { updateProductsCache, patchCachedProductsStock, getCachedProducts, db } from '@/lib/db';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
 import { PaymentModal } from '@/components/PaymentModal';
@@ -335,6 +335,7 @@ function PosPageContent() {
   // Ref estável para isOnline — evita que loadProducts seja recriado a cada re-render do useOfflineSync
   const isOnlineRef = useRef<boolean>(syncState.isOnline);
   isOnlineRef.current = syncState.isOnline;
+  const lastFullCatalogSyncRef = useRef<number>(0);
 
   const loadProducts = useCallback((backgroundOnly = false) => {
     if (!token) { navigate('/login'); return; }
@@ -387,6 +388,7 @@ function PosPageContent() {
 
     api.get('/products?limit=2000')
       .then(async res => {
+        lastFullCatalogSyncRef.current = Date.now();
         const data = (res.data as any).data || [];
         const sorted = sortProducts(data);
         setProducts(sorted);
@@ -433,6 +435,36 @@ function PosPageContent() {
   // isOnlineRef é uma ref — não vai na dependency array
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, navigate, user?.tenant]);
+
+  const handleCheckoutSuccess = useCallback((soldItems?: Array<{ productId: string; quantity: number; fromComanda?: boolean; hasModifiers?: boolean }>) => {
+    if (soldItems && soldItems.length > 0) {
+      const directItems = soldItems.filter(i => !i.fromComanda);
+      if (directItems.length > 0) {
+        const qtyById = new Map<string, number>();
+        for (const item of directItems) {
+          qtyById.set(item.productId, (qtyById.get(item.productId) ?? 0) + Number(item.quantity || 0));
+        }
+        setProducts(prev => prev.map(p => {
+          const soldQty = qtyById.get(p.id);
+          if (!soldQty) return p;
+          return {
+            ...p,
+            stock: Number(p.stock || 0) - soldQty,
+            salesCount: Number(p.salesCount || 0) + Math.max(1, Math.round(Math.abs(soldQty))),
+          };
+        }));
+        void patchCachedProductsStock(directItems, user?.tenant).catch(() => {});
+      }
+      const needsImmediateCatalogRefresh =
+        soldItems.some(i => i.hasModifiers) ||
+        Date.now() - lastFullCatalogSyncRef.current > 30_000;
+      if (needsImmediateCatalogRefresh) {
+        loadProducts(true);
+      }
+      return;
+    }
+    loadProducts(true);
+  }, [loadProducts, user?.tenant]);
 
   useEffect(() => {
     loadProducts();
@@ -1473,7 +1505,7 @@ function PosPageContent() {
         isOnline={syncState.isOnline}
         onPendingCountChange={syncState.refreshPendingCount}
         tenantConfig={tenantConfig}
-        onSuccess={loadProducts}
+        onSuccess={handleCheckoutSuccess}
       />
       {cashRegister?.id && (
         <CashMovementModal

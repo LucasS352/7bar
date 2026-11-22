@@ -46,16 +46,36 @@ export class SalesService {
     return this.tenantManager.getTenantClient(tenantId, databaseUrl);
   }
 
+  private async preloadFifoLots(tx: any, productIds: string[]) {
+    const activeByProduct = new Map<string, any[]>();
+    const latestByProduct = new Map<string, any | null>();
+    if (!productIds.length) return { activeByProduct, latestByProduct };
+
+    const allActiveLots = await tx.stockLot.findMany({
+      where: { productId: { in: productIds }, remaining: { gt: 0 } },
+      orderBy: { createdAt: 'asc' },
+    });
+    for (const lot of allActiveLots) {
+      const list = activeByProduct.get(lot.productId);
+      if (list) list.push(lot);
+      else activeByProduct.set(lot.productId, [lot]);
+    }
+    return { activeByProduct, latestByProduct };
+  }
+
   private async consumeLotsFIFO(
     tx: any,
     productId: string,
     quantityToConsume: number,
-    fallbackCostPrice: any
+    fallbackCostPrice: any,
+    preloaded?: { activeByProduct: Map<string, any[]>; latestByProduct: Map<string, any | null> },
   ): Promise<{ lotId: string; quantity: Prisma.Decimal; costPrice: Prisma.Decimal }[]> {
-    const activeLots = await tx.stockLot.findMany({
-      where: { productId, remaining: { gt: 0 } },
-      orderBy: { createdAt: 'asc' }
-    });
+    const activeLots = preloaded
+      ? (preloaded.activeByProduct.get(productId) ?? [])
+      : await tx.stockLot.findMany({
+          where: { productId, remaining: { gt: 0 } },
+          orderBy: { createdAt: 'asc' },
+        });
 
     const consumptions: { lotId: string; quantity: Prisma.Decimal; costPrice: Prisma.Decimal }[] = [];
     let quantityNeeded = new Prisma.Decimal(quantityToConsume);
@@ -63,6 +83,7 @@ export class SalesService {
     for (const lot of activeLots) {
       if (quantityNeeded.lte(0)) break;
       const lotRemaining = new Prisma.Decimal(lot.remaining);
+      if (lotRemaining.lte(0)) continue;
       const consumed = Prisma.Decimal.min(quantityNeeded, lotRemaining);
 
       await tx.stockLot.update({
@@ -70,6 +91,7 @@ export class SalesService {
         data: { remaining: { decrement: consumed } }
       });
 
+      lot.remaining = lotRemaining.sub(consumed);
       consumptions.push({
         lotId: lot.id,
         quantity: consumed,
@@ -80,16 +102,19 @@ export class SalesService {
     }
 
     if (quantityNeeded.gt(0)) {
-      const latestLot = await tx.stockLot.findFirst({
-        where: { productId },
-        orderBy: { createdAt: 'desc' }
-      });
+      let latestLot = preloaded?.latestByProduct.has(productId)
+        ? preloaded.latestByProduct.get(productId)
+        : await tx.stockLot.findFirst({
+            where: { productId },
+            orderBy: { createdAt: 'desc' }
+          });
 
       if (latestLot) {
         await tx.stockLot.update({
           where: { id: latestLot.id },
           data: { remaining: { decrement: quantityNeeded } }
         });
+        if (preloaded) preloaded.latestByProduct.set(productId, latestLot);
         consumptions.push({
           lotId: latestLot.id,
           quantity: quantityNeeded,
@@ -104,6 +129,7 @@ export class SalesService {
             remaining: new Prisma.Decimal(0).sub(quantityNeeded)
           }
         });
+        if (preloaded) preloaded.latestByProduct.set(productId, fallbackLot);
         consumptions.push({
           lotId: fallbackLot.id,
           quantity: quantityNeeded,
@@ -319,6 +345,10 @@ export class SalesService {
       });
 
       const productMap = new Map(productsInDb.map((p: any) => [p.id, p]));
+      const preloadedLots =
+        (shouldMoveStock || Boolean(data.comandaId)) && allProductIds.length > 0
+          ? await this.preloadFifoLots(tx, allProductIds)
+          : undefined;
 
       const inventoryLogsToCreate: any[] = [];
 
@@ -401,23 +431,6 @@ export class SalesService {
         ...((tenantSettings?.paymentMethodsConfig as Record<string, any>) || {}),
       };
 
-      const customPaymentMethods = await tx.tenantPaymentMethod.findMany();
-      const customMethodMap = new Map(customPaymentMethods.map(m => [m.id, m]));
-
-      const isMethodFiscal = (methodKey: string) => {
-        const normKey = (methodKey || '').toLowerCase();
-        if (normKey in fixedConfig) {
-          return fixedConfig[normKey]?.emitirNfce === true;
-        }
-        const custom = customMethodMap.get(methodKey) as any;
-        if (custom) {
-          return custom.emitirNfce === true;
-        }
-        return false;
-      };
-
-      const hasAnyFiscalPayment = (data.payments || []).some((p: any) => isMethodFiscal(p.method));
-
       let nfceNumero: number | null = null;
       let emitirNfce = Boolean(data.emitirNfce);
       let initialNfceStatus: string | null = null;
@@ -429,21 +442,41 @@ export class SalesService {
           emitirNfce = false;
           initialNfceStatus = 'nao_emitida';
           initialNfceMotivo = 'Venda contém apenas produtos sem nota (SNF).';
-        } else if (!hasAnyFiscalPayment) {
-          // Venda 100% em formas não-fiscais (ex: 100% Dinheiro desmarcado)
-          emitirNfce = false;
-          initialNfceStatus = 'nao_emitida';
-          initialNfceMotivo = 'Forma de pagamento não fiscal (sem emissão).';
         } else {
-          // Série: preferência do frontend → configuração do tenant → padrão 1
-          const serie = data.nfceSerie ?? tenantSettings?.nfceSerie ?? 1;
-          const numeracao = await tx.numeracaoNfce.upsert({
-            where: { serie },
-            update: { ultimo: { increment: 1 } },
-            create: { serie, ultimo: 1 },
-          });
-          nfceNumero = numeracao.ultimo;
-          initialNfceStatus = 'pendente';
+          const paymentList = data.payments || [];
+          const needsCustomLookup = paymentList.some(
+            (p: any) => !((p.method || '').toLowerCase() in fixedConfig),
+          );
+          const customMethodMap = needsCustomLookup
+            ? new Map((await tx.tenantPaymentMethod.findMany()).map((m: any) => [m.id, m]))
+            : new Map();
+
+          const isMethodFiscal = (methodKey: string) => {
+            const normKey = (methodKey || '').toLowerCase();
+            if (normKey in fixedConfig) {
+              return fixedConfig[normKey]?.emitirNfce === true;
+            }
+            const custom = customMethodMap.get(methodKey) as any;
+            return custom?.emitirNfce === true;
+          };
+
+          const hasAnyFiscalPayment = paymentList.some((p: any) => isMethodFiscal(p.method));
+          if (!hasAnyFiscalPayment) {
+            // Venda 100% em formas não-fiscais (ex: 100% Dinheiro desmarcado)
+            emitirNfce = false;
+            initialNfceStatus = 'nao_emitida';
+            initialNfceMotivo = 'Forma de pagamento não fiscal (sem emissão).';
+          } else {
+            // Série: preferência do frontend → configuração do tenant → padrão 1
+            const serie = data.nfceSerie ?? tenantSettings?.nfceSerie ?? 1;
+            const numeracao = await tx.numeracaoNfce.upsert({
+              where: { serie },
+              update: { ultimo: { increment: 1 } },
+              create: { serie, ultimo: 1 },
+            });
+            nfceNumero = numeracao.ultimo;
+            initialNfceStatus = 'pendente';
+          }
         }
       }
 
@@ -486,8 +519,13 @@ export class SalesService {
           consumidorNome: data.customerName || null,
           ...(data.offlineContingency && data.offlineCreatedAt ? { createdAt: new Date(data.offlineCreatedAt) } : {}),
           payments: { create: paymentsData },
-        }
+        },
+        include: {
+          payments: true,
+          customer: true,
+        },
       });
+      const createdSaleItems: any[] = [];
 
       // ─── Processar itens da COMANDA (stockDeducted=true: sem baixa, apenas FIFO para custeio) ──
       if (data.comandaId && comandaToClose) {
@@ -511,7 +549,7 @@ export class SalesService {
 
               // Custeio FIFO — NÃO altera product.stock (já foi feito no addItems)
               const ingredientConsumptions = await this.consumeLotsFIFO(
-                tx, componentProduct.id, Number(mod.consumedQuantity), componentProduct.priceCost,
+                tx, componentProduct.id, Number(mod.consumedQuantity), componentProduct.priceCost, preloadedLots,
               );
               for (const cons of ingredientConsumptions) {
                 itemLotConsumptions.push({ lotId: cons.lotId, quantity: cons.quantity, costPrice: cons.costPrice });
@@ -528,7 +566,7 @@ export class SalesService {
           } else {
             // Sem adicionais no lançamento: estoque do próprio produto (mesmo se hoje estiver marcado composto).
             if (ci.stockDeducted && shouldMoveStock) {
-              const lotConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost);
+              const lotConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost, preloadedLots);
               for (const cons of lotConsumptions) {
                 itemLotConsumptions.push({ lotId: cons.lotId, quantity: cons.quantity, costPrice: cons.costPrice });
                 totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
@@ -555,7 +593,7 @@ export class SalesService {
                 quantity: qty,
                 reason: `Venda PDV (Comanda #${comandaToClose.number})`,
               });
-              const lotConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost);
+              const lotConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost, preloadedLots);
               for (const cons of lotConsumptions) {
                 itemLotConsumptions.push({ lotId: cons.lotId, quantity: cons.quantity, costPrice: cons.costPrice });
                 totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
@@ -600,8 +638,12 @@ export class SalesService {
                 },
               } : {}),
             },
+            include: {
+              modifiers: true,
+              lotConsumptions: true,
+            },
           });
-          void saleItem; // usado acima com create — referência evita lint
+          createdSaleItems.push(saleItem);
         }
 
         // Fechar comanda atomicamente na mesma transação
@@ -697,7 +739,7 @@ export class SalesService {
             });
 
             if (shouldMoveStock) {
-              const ingredientConsumptions = await this.consumeLotsFIFO(tx, componentProduct.id, fractionToDecrement, componentProduct.priceCost);
+              const ingredientConsumptions = await this.consumeLotsFIFO(tx, componentProduct.id, fractionToDecrement, componentProduct.priceCost, preloadedLots);
               for (const cons of ingredientConsumptions) {
                 itemLotConsumptions.push({
                   lotId: cons.lotId,
@@ -749,7 +791,7 @@ export class SalesService {
               reason: isAjusteFiscal ? 'Ajuste Fiscal' : 'Venda PDV',
             });
 
-            const productConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost);
+            const productConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost, preloadedLots);
             for (const cons of productConsumptions) {
               itemLotConsumptions.push({
                 lotId: cons.lotId,
@@ -772,7 +814,7 @@ export class SalesService {
         const gt = product.grupoTributacao || product.category?.grupoTributacao;
         const priceCost = qty > 0 ? totalCostOfLots.div(new Prisma.Decimal(qty)) : new Prisma.Decimal(0);
 
-        await tx.saleItem.create({
+        const createdItem = await tx.saleItem.create({
           data: {
             saleId:      sale.id,
             productId:   product.id,
@@ -806,8 +848,13 @@ export class SalesService {
                 quantity: lc.quantity
               }))
             }
-          }
+          },
+          include: {
+            modifiers: true,
+            lotConsumptions: true,
+          },
         });
+        createdSaleItems.push(createdItem);
       }
 
       if (inventoryLogsToCreate.length > 0) {
@@ -824,19 +871,10 @@ export class SalesService {
         });
       }
 
-      const fullSale = await tx.sale.findUnique({
-        where: { id: sale.id },
-        include: {
-          items: {
-            include: {
-              modifiers: true,
-              lotConsumptions: true
-            }
-          },
-          payments: true,
-          customer: true
-        }
-      });
+      const fullSale = {
+        ...sale,
+        items: createdSaleItems,
+      };
 
       // These intents cannot disappear between the sale commit and a process restart.
       if (data.comandaId) await releaseComandaAssets(tx, data.comandaId);
@@ -844,8 +882,10 @@ export class SalesService {
         ...(fullSale.emitirNfce ? [{ kind: 'NFCE', payload: '{}' }] : []),
         ...(allProductIdsToSync.length ? [{ kind: 'STOCK', payload: JSON.stringify({ productIds: allProductIdsToSync }) }] : []),
       ];
-      for (const job of jobs) {
-        await tx.saleDeliveryJob.create({ data: { saleId: fullSale.id, ...job } });
+      if (jobs.length > 0) {
+        await tx.saleDeliveryJob.createMany({
+          data: jobs.map(job => ({ saleId: fullSale.id, ...job })),
+        });
       }
       return fullSale;
     }, {
@@ -870,7 +910,7 @@ export class SalesService {
 
   // Disparo assíncrono direto da NFC-e quando solicitado pelo operador na venda
   if (sale?.emitirNfce) {
-    setTimeout(() => this.dispararNfce(tenantId, databaseUrl, sale), 300);
+    setImmediate(() => this.dispararNfce(tenantId, databaseUrl, sale));
   }
 
   return sale;

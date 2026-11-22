@@ -32,9 +32,27 @@ const BASE_METHOD_CONFIG = [
 
 const CUSTOM_COLOR = 'bg-purple-500/10 text-purple-400 border-purple-500/20 ring-purple-500 hover:border-purple-500';
 
+const PAYMENT_META_TTL_MS = 60_000;
+type PaymentModalMetaCacheEntry = {
+  operators?: { id: string; name: string }[];
+  customMethods?: { id: string; name: string; hasVariablePricing?: boolean; emitirNfce?: boolean }[];
+  fixedMethodsSettings?: Record<string, { emitirNfce: boolean }>;
+  operatorsAt?: number;
+  methodsAt?: number;
+  settingsAt?: number;
+};
+const paymentModalMetaCache = new Map<string, PaymentModalMetaCacheEntry>();
+
 const METHOD_NAMES: Record<string, string> = { dinheiro: 'Dinheiro', pix: 'Pix', credito: 'Crédito', debito: 'Débito', consumo_funcionario: 'Consumo Colaborador' };
 
 const TPAG_MAP: Record<string, string> = { dinheiro: '01', credito: '03', debito: '04', pix: '17', consumo_funcionario: '99', outros: '99' };
+
+export interface SoldCheckoutItemSummary {
+  productId: string;
+  quantity: number;
+  fromComanda?: boolean;
+  hasModifiers?: boolean;
+}
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -42,7 +60,7 @@ interface PaymentModalProps {
   isOnline: boolean;
   onPendingCountChange?: () => void;
   tenantConfig?: any;
-  onSuccess?: () => void;
+  onSuccess?: (soldItems?: SoldCheckoutItemSummary[]) => void;
   initialOpenComanda?: boolean;
 }
 
@@ -396,7 +414,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
       setTimeout(() => {
         printWin.print();
         setTimeout(() => printWin.close(), 800);
-      }, 300);
+      }, 50);
     };
   };
 
@@ -413,27 +431,53 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
       setDiscountValue(0); setDiscountPinInput(''); setPinVerified(false); setPendingDiscountStr('');
       setSelectedOperatorId(''); setAdvancedOpen(false);
       if (!isNfceEnabled) setAutoNfce(false);
-      
-      api.get('/operators')
-        .then(res => setOperatorsList(res.data || []))
-        .catch(console.error);
 
-      api.get('/payment-methods')
-        .then(res => {
-          const standardKeys = ['dinheiro', 'pix', 'crédito', 'credito', 'débito', 'debito', 'consumo colaborador', 'consumo_funcionario'];
-          setCustomMethods((res.data || []).filter((m: any) => 
-            m.active && 
-            !standardKeys.includes((m.name || '').toLowerCase().trim()) && 
-            !standardKeys.includes((m.id || '').toLowerCase().trim())
-          ));
-        })
-        .catch(console.error);
+      const tenantKey = user?.tenant || '__default__';
+      const cacheEntry = paymentModalMetaCache.get(tenantKey) || {};
+      const now = Date.now();
 
-      api.get('/payment-methods/settings')
-        .then(res => {
-          if (res.data) setFixedMethodsSettings(res.data);
-        })
-        .catch(console.error);
+      if (cacheEntry.operators) setOperatorsList(cacheEntry.operators);
+      if (cacheEntry.customMethods) setCustomMethods(cacheEntry.customMethods);
+      if (cacheEntry.fixedMethodsSettings) setFixedMethodsSettings(cacheEntry.fixedMethodsSettings);
+
+      if (!cacheEntry.operatorsAt || now - cacheEntry.operatorsAt > PAYMENT_META_TTL_MS) {
+        api.get('/operators')
+          .then(res => {
+            const list = res.data || [];
+            setOperatorsList(list);
+            const cur = paymentModalMetaCache.get(tenantKey) || {};
+            paymentModalMetaCache.set(tenantKey, { ...cur, operators: list, operatorsAt: Date.now() });
+          })
+          .catch(console.error);
+      }
+
+      if (!cacheEntry.methodsAt || now - cacheEntry.methodsAt > PAYMENT_META_TTL_MS) {
+        api.get('/payment-methods')
+          .then(res => {
+            const standardKeys = ['dinheiro', 'pix', 'crédito', 'credito', 'débito', 'debito', 'consumo colaborador', 'consumo_funcionario'];
+            const filtered = (res.data || []).filter((m: any) =>
+              m.active &&
+              !standardKeys.includes((m.name || '').toLowerCase().trim()) &&
+              !standardKeys.includes((m.id || '').toLowerCase().trim())
+            );
+            setCustomMethods(filtered);
+            const cur = paymentModalMetaCache.get(tenantKey) || {};
+            paymentModalMetaCache.set(tenantKey, { ...cur, customMethods: filtered, methodsAt: Date.now() });
+          })
+          .catch(console.error);
+      }
+
+      if (!cacheEntry.settingsAt || now - cacheEntry.settingsAt > PAYMENT_META_TTL_MS) {
+        api.get('/payment-methods/settings')
+          .then(res => {
+            if (res.data) {
+              setFixedMethodsSettings(res.data);
+              const cur = paymentModalMetaCache.get(tenantKey) || {};
+              paymentModalMetaCache.set(tenantKey, { ...cur, fixedMethodsSettings: res.data, settingsAt: Date.now() });
+            }
+          })
+          .catch(console.error);
+      }
 
       // Remove focus from the background search bar to prevent accidental typing
       setTimeout(() => {
@@ -557,7 +601,10 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     let destroyed = false;
     let isFinished = false;
     let nfceAbortController: AbortController | null = null;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
     let attempts = 0;
+
+    const POLL_DELAYS_MS = [650, 850, 1100, 1500, 2000];
 
     const pollNfce = async () => {
       if (destroyed || isFinished) return;
@@ -584,7 +631,8 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
       } finally {
         if (!destroyed && !isFinished) {
           if (attempts < 15) {
-            setTimeout(pollNfce, 2_000);
+            const delay = POLL_DELAYS_MS[Math.min(attempts, POLL_DELAYS_MS.length - 1)];
+            pollTimer = setTimeout(pollNfce, delay);
           } else {
             // Esgotou orçamento de tentativas (ex: oscilação de rede ou SEFAZ lenta)
             isFinished = true;
@@ -598,10 +646,11 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
       }
     };
 
-    pollNfce();
+    pollTimer = setTimeout(pollNfce, POLL_DELAYS_MS[0]);
     return () => {
       destroyed = true;
       isFinished = true;
+      if (pollTimer) clearTimeout(pollTimer);
       nfceAbortController?.abort();
     };
 
@@ -845,16 +894,23 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
 
 
+      const soldItemsSummary: SoldCheckoutItemSummary[] = items.map(i => ({
+        productId: i.id,
+        quantity: Number(i.quantity || 0),
+        fromComanda: Boolean(i.fromComanda),
+        hasModifiers: Boolean(i.modifiers?.length),
+      }));
+
       releaseOwnCart();
       setSaleResult(res.data);
       clearOwnCart();
-      onSuccess?.();
+      onSuccess?.(soldItemsSummary);
       useDemoMissionsStore.getState().completeMission('saleCompleted');
       if (actualMode === 'nfce') { toast.info('NFC-e em processamento...', { duration: 3000 }); setNfcePolling(true); }
       else toast.success('Venda finalizada!', { duration: 1500 });
       // Impressão automática do cupom
       if (autoPrint) {
-        setTimeout(() => printReceipt(res.data, finalPayments, Boolean(isVariablePricingActive)), 300);
+        setTimeout(() => printReceipt(res.data, finalPayments, Boolean(isVariablePricingActive)), 50);
       }
     } catch (err: unknown) {
       // Storage/lock/local failures are NOT successful contingency.

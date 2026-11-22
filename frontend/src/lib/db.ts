@@ -319,6 +319,35 @@ export async function updateProductsCache(
   });
 }
 
+/** Atualiza estoque/contador de vendas apenas dos itens vendidos sem reescrever o catálogo inteiro. */
+export async function patchCachedProductsStock(
+  updates: Array<{ productId: string; quantity: number }>,
+  tenantId?: string,
+): Promise<void> {
+  if (!updates.length) return;
+  const qtyById = new Map<string, number>();
+  for (const u of updates) {
+    qtyById.set(u.productId, (qtyById.get(u.productId) ?? 0) + Number(u.quantity || 0));
+  }
+  const ids = Array.from(qtyById.keys());
+  await db.transaction('rw', db.products_cache, async () => {
+    const existing = await db.products_cache.bulkGet(ids);
+    const toPut: CachedProduct[] = [];
+    for (const row of existing) {
+      if (!row || (tenantId && row.tenantId && row.tenantId !== tenantId)) continue;
+      const qty = qtyById.get(row.id) ?? 0;
+      toPut.push({
+        ...row,
+        stock: Number(row.stock || 0) - qty,
+        salesCount: Number(row.salesCount || 0) + Math.max(1, Math.round(Math.abs(qty))),
+      });
+    }
+    if (toPut.length > 0) {
+      await db.products_cache.bulkPut(toPut);
+    }
+  });
+}
+
 /** Retorna produtos do cache (para uso offline), isolados por loja quando informado */
 export async function getCachedProducts(tenantId?: string): Promise<CachedProduct[]> {
   const all = await db.products_cache.toArray();
