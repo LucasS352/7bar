@@ -30,6 +30,9 @@ model Tenant {
   // Gerado automaticamente na criação do tenant. Nunca muda mesmo que databaseName mude.
   tvPublicId    String?  @unique @map("tv_public_id")
 
+  // Identidade pública compartilhada do cardápio (compatibilidade multi-produto no banco Heart)
+  foodPublicId  String?  @unique @map("food_public_id")
+
   // Identificação
   razaoSocial   String?
   nomeFantasia  String?
@@ -349,6 +352,23 @@ model Lead {
   @@index([status])
   @@index([createdAt])
   @@map("leads")
+}
+
+// ------------------------------------------------------------
+//  Compatibilidade compartilhada no Heart (storefronts existentes)
+// ------------------------------------------------------------
+model DeliveryStorefront {
+  id               String    @id @default(uuid())
+  tenantId         String    @unique
+  slug             String    @unique
+  requestedDomain  String?
+  domainToken      String?
+  customDomain     String?   @unique
+  domainVerifiedAt DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@map("delivery_storefronts")
 }
 
 // ------------------------------------------------------------
