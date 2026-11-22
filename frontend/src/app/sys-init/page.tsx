@@ -15,7 +15,7 @@ import {
   Settings, ToggleLeft, ToggleRight, AlertTriangle, Upload, X, Terminal,
   ChevronDown, ChevronRight, Trash2, DollarSign, Users, Plus, Phone, FileText,
   Clock, CreditCard, History, Info, Copy, Check, Edit2, LockKeyhole, Sparkles, UserPlus,
-  Activity, CalendarDays, LayoutGrid
+  Activity, CalendarDays
 } from "lucide-react";
 import { exportTelemetry, clearTelemetry } from "@/lib/telemetry";
 import { db } from "@/lib/db";
@@ -194,7 +194,6 @@ export default function SysInitPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
   const [includeHeart, setIncludeHeart] = useState(false);
-  const [tenantView, setTenantView] = useState<"calendar" | "cards">("calendar");
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 
   // ── GROUPS LIST ───────────────────────────────────────────────────────
@@ -1067,39 +1066,48 @@ export default function SysInitPage() {
                   </div>
                 </div>
 
-                <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 sm:flex-row sm:flex-wrap sm:items-center">
+                {loadingTenants && !tenants.length ? (
+                  <div className="mb-5 flex items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8 text-sm text-zinc-400">
+                    <Loader2 className="mr-2 animate-spin" size={18} /> Carregando vencimentos...
+                  </div>
+                ) : (
+                  <TenantBillingCalendar
+                    tenants={tenants}
+                    month={calendarMonth}
+                    onMonthChange={setCalendarMonth}
+                    onEdit={openEdit}
+                    onRegisterPayment={handleRegistrarPagamento}
+                    registeringPayment={registeringPayment}
+                  />
+                )}
+
+                <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                   <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
-                    <input type="text" placeholder="Buscar por nome, CNPJ, telefone, e-mail..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-violet-500" />
+                    <input type="text" placeholder="Buscar por nome, CNPJ, telefone, e-mail..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 pl-10 pr-9 text-sm text-white focus:outline-none focus:border-violet-500" />
+                    {searchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                        title="Limpar busca"
+                        aria-label="Limpar busca"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
-                  <span className="text-sm text-zinc-500">{filteredTenants.length} cliente(s){selectedTenantIds.length > 0 ? ` · ${selectedTenantIds.length} selecionado(s)` : ''} </span>
-                  <button type="button" onClick={searchTerm ? toggleFilteredTenants : toggleSelectAllTenants} className="rounded-xl border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-300 hover:bg-zinc-800 transition flex items-center gap-1.5">
-                    <CheckCircle2 size={14} className={(searchTerm ? allFilteredSelected : allTenantsSelected) ? "text-violet-400" : "text-zinc-500"} />
-                    {searchTerm
-                      ? (allFilteredSelected ? 'Desmarcar resultados' : `Selecionar resultados (${filteredTenants.length})`)
-                      : (allTenantsSelected ? 'Desmarcar todos os bancos' : `Selecionar todos os bancos (${tenants.length})`)}
-                  </button>
-                  <div className="flex rounded-xl border border-zinc-700 bg-zinc-950 p-1">
-                    <button type="button" onClick={() => setTenantView('calendar')} className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition ${tenantView === 'calendar' ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}><CalendarDays size={15} /> Calendário</button>
-                    <button type="button" onClick={() => setTenantView('cards')} className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition ${tenantView === 'cards' ? 'bg-violet-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}><LayoutGrid size={15} /> Clientes</button>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-sm text-zinc-400">{filteredTenants.length} cliente(s){selectedTenantIds.length > 0 ? ` · ${selectedTenantIds.length} selecionado(s)` : ''}</span>
+                    {searchTerm && (
+                      <button type="button" onClick={toggleFilteredTenants} className="rounded-xl border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-300 hover:bg-zinc-800 transition flex items-center gap-1.5">
+                        <CheckCircle2 size={14} className={allFilteredSelected ? "text-violet-400" : "text-zinc-500"} />
+                        {allFilteredSelected ? 'Desmarcar resultados' : `Selecionar resultados (${filteredTenants.length})`}
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {tenantView === 'calendar' ? (
-                  loadingTenants ? (
-                    <div className="flex flex-1 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900/60 p-12 text-zinc-500"><Loader2 className="mr-2 animate-spin" /> Carregando clientes...</div>
-                  ) : (
-                    <TenantBillingCalendar
-                      tenants={filteredTenants}
-                      month={calendarMonth}
-                      onMonthChange={setCalendarMonth}
-                      selectedIds={selectedTenantIds}
-                      onToggleTenant={toggleTenant}
-                      onEdit={openEdit}
-                      onRegisterPayment={handleRegistrarPagamento}
-                    />
-                  )
-                ) : (
                 <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))]">
                   {loadingTenants ? <p className="p-8 text-zinc-400">Carregando clientes…</p> : !filteredTenants.length ? <p className="p-8 text-zinc-400">Nenhum cliente encontrado.</p> : filteredTenants.map(t => {
                     const selected = selectedTenantIds.includes(t.id);
@@ -1132,7 +1140,6 @@ export default function SysInitPage() {
                     </article>;
                   })}
                 </div>
-                )}
               </>
             ) : activeTab === 'groups' ? (
               <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl flex-1 flex flex-col overflow-hidden">
