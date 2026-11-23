@@ -110,6 +110,26 @@ describe('TenantsService', () => {
     }
   });
 
+  it('returns the Heart-only update result without reading tenants when Heart is unavailable', async () => {
+    const previousUrl = process.env.DATABASE_URL_HEART;
+    delete process.env.DATABASE_URL_HEART;
+    const findMany = jest.fn();
+    const svc = new TenantsService({ tenant: { findMany } } as any, {} as any, {} as any);
+
+    try {
+      const results = await svc.migrateTenants([], true);
+      expect(results).toEqual([expect.objectContaining({
+        tenantId: '__heart__',
+        status: 'error',
+        output: expect.stringContaining('DATABASE_URL_HEART'),
+      })]);
+      expect(findMany).not.toHaveBeenCalled();
+    } finally {
+      if (previousUrl === undefined) delete process.env.DATABASE_URL_HEART;
+      else process.env.DATABASE_URL_HEART = previousUrl;
+    }
+  });
+
   it('provisionTenant blocks reserved database names like heart or mysql', async () => {
     const prevSetup = process.env.SETUP_PIN;
     const prevHeart = process.env.DATABASE_URL_HEART;

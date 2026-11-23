@@ -354,9 +354,14 @@ export class TenantsService {
     }
 
     // ── 2. Migrar bancos dos tenants selecionados ─────────────────────────
-    const tenants = await this.heartPrisma.tenant.findMany({
-      where: { id: { in: tenantIds } }
-    });
+    // Heart-only updates must return the Heart result even if its schema push failed.
+    // A tenant query here would hide that result behind a second schema error.
+    const tenants = tenantIds.length > 0
+      ? await this.heartPrisma.tenant.findMany({
+          where: { id: { in: tenantIds } },
+          select: { id: true, name: true, databaseName: true, databaseUrl: true },
+        })
+      : [];
 
     for (const tenant of tenants) {
       this.logger.log(`[Migracao] Iniciando atualizacao de schema do tenant: ${tenant.name} (${tenant.databaseName})`);
