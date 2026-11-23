@@ -30,9 +30,6 @@ model Tenant {
   // Gerado automaticamente na criação do tenant. Nunca muda mesmo que databaseName mude.
   tvPublicId    String?  @unique @map("tv_public_id")
 
-  // Identidade pública compartilhada do cardápio (compatibilidade multi-produto no banco Heart)
-  foodPublicId  String?  @unique @map("food_public_id")
-
   // Identificação
   razaoSocial   String?
   nomeFantasia  String?

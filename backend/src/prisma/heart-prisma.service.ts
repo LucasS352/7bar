@@ -8,11 +8,6 @@ export class HeartPrismaService
 {
   private readonly logger = new Logger(HeartPrismaService.name);
 
-  constructor() {
-    // Keep existing tenant reads working while Heart awaits its Sys-Init schema update.
-    super({ omit: { tenant: { foodPublicId: true } } });
-  }
-
   async onModuleInit() {
     let retries = 5;
     let delay = 1000;
