@@ -3,8 +3,8 @@ import { SalesService } from '../sales/sales.service';
 
 describe('DashboardService SQL aggregation & cache', () => {
   const createPrismaMock = () => {
-    // Ordem das 6 $queryRaw no Promise.all do DashboardService.computeSummary:
-    // 1. openRegisters, 2. kpiAgg, 3. hourRows, 4. dayRows, 5. paymentRows, 6. productRows
+    // Ordem das 5 $queryRaw no Promise.all do DashboardService.computeSummary:
+    // 1. openRegisters, 2. kpiAgg, 3. hourDayRows, 4. paymentRows, 5. productRows
     const queue: any[] = [
       [{
         cashRegisterId: 'reg-1',
@@ -24,10 +24,7 @@ describe('DashboardService SQL aggregation & cache', () => {
         monthRevenue: 1200,
       }],
       [
-        { brHour: 15, revenue: 150, transactions: BigInt(3) },
-      ],
-      [
-        { dayKey: '2026-11-22', revenue: 150 },
+        { brHour: 15, dayKey: '2026-11-22', revenue: 150, transactions: BigInt(3) },
       ],
       [
         { method: 'dinheiro', label: 'Dinheiro', total: 100 },
@@ -53,7 +50,7 @@ describe('DashboardService SQL aggregation & cache', () => {
     const service = new DashboardService(tenantManager, tenantContext);
     const result = await service.getSummary('tenant-a', '2026-06-01', '2026-11-22');
 
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(6);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(5);
     expect(result.openRegisters[0]).toMatchObject({
       cashRegisterId: 'reg-1',
       operatorName: 'Lucas',
@@ -86,31 +83,31 @@ describe('DashboardService SQL aggregation & cache', () => {
 
     const service = new DashboardService(tenantManager, tenantContext);
 
-    // Leituras concorrentes idênticas usam a mesma promise em voo (1 conjunto de 6 queries)
+    // Leituras concorrentes idênticas usam a mesma promise em voo (1 conjunto de 5 queries)
     await Promise.all([
       service.getSummary('tenant-a', '2026-11-01', '2026-11-22'),
       service.getSummary('tenant-a', '2026-11-01', '2026-11-22'),
     ]);
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(6);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(5);
 
     // Nova chamada dentro do TTL vem do cache
     await service.getSummary('tenant-a', '2026-11-01', '2026-11-22');
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(6);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(5);
 
     // Tenant diferente nunca reutiliza cache do tenant-a
     await service.getSummary('tenant-b', '2026-11-01', '2026-11-22');
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(12);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(10);
 
     // forceRefresh fura cache e recalcula
     await service.getSummary('tenant-a', '2026-11-01', '2026-11-22', true);
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(18);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(15);
 
     // invalidateCache limpa apenas o tenant especificado
     service.invalidateCache('tenant-a');
     await service.getSummary('tenant-b', '2026-11-01', '2026-11-22');
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(18);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(15);
     await service.getSummary('tenant-a', '2026-11-01', '2026-11-22');
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(24);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(20);
   });
 
   it('SalesService.findAll com view=dashboard pula COUNT(*) e omite nfceXml/imageUrl pesados', async () => {

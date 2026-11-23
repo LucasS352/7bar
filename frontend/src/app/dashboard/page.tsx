@@ -2,6 +2,8 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { api } from '@/lib/api';
+import { fetchTenantMe } from '@/lib/tenant-client';
+import { useAuthStore } from '@/store/auth';
 import { escapeHtml } from '@/lib/escape-html';
 import { ReemitNfceModal } from '@/components/ReemitNfceModal';
 import { PeriodReportModal } from '@/components/PeriodReportModal';
@@ -186,7 +188,47 @@ function PanelLoadingOverlay({ visible, label }: { visible: boolean; label: stri
   );
 }
 
+type DashboardViewCacheEntry = {
+  summary: SummaryData;
+  sales: Sale[];
+  cachedAt: number;
+};
+
+const DASHBOARD_VIEW_CACHE_TTL_MS = 25_000;
+const DASHBOARD_VIEW_REVALIDATE_AFTER_MS = 5_000;
+const MAX_DASHBOARD_VIEW_CACHE_ENTRIES = 16;
+const dashboardViewCache = new Map<string, DashboardViewCacheEntry>();
+
+function readDashboardViewCache(key: string): DashboardViewCacheEntry | null {
+  const hit = dashboardViewCache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.cachedAt > DASHBOARD_VIEW_CACHE_TTL_MS) {
+    dashboardViewCache.delete(key);
+    return null;
+  }
+  return hit;
+}
+
+function writeDashboardViewCache(key: string, summary: SummaryData, sales: Sale[]) {
+  if (dashboardViewCache.size >= MAX_DASHBOARD_VIEW_CACHE_ENTRIES) {
+    const oldest = dashboardViewCache.keys().next().value;
+    if (oldest) dashboardViewCache.delete(oldest);
+  }
+  dashboardViewCache.set(key, { summary, sales, cachedAt: Date.now() });
+}
+
+function invalidateTenantDashboardCache(tenantKey: string) {
+  const prefix = `${tenantKey}:`;
+  for (const key of dashboardViewCache.keys()) {
+    if (key.startsWith(prefix)) {
+      dashboardViewCache.delete(key);
+    }
+  }
+}
+
 export default function SalesDashboard() {
+  const userTenant = useAuthStore((s) => s.user?.tenant);
+  const tenantKey = userTenant || 'default';
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -198,7 +240,7 @@ export default function SalesDashboard() {
   const [tenantConfig, setTenantConfig] = useState<any>(null);
 
   useEffect(() => {
-    api.get(`/tenants/me?_t=${Date.now()}`).then(res => setTenantConfig(res.data)).catch(console.error);
+    fetchTenantMe().then(data => setTenantConfig(data)).catch(console.error);
   }, []);
 
   // Filtros de data (YYYY-MM-DD no fuso local para evitar salto às 21h UTC)
@@ -252,8 +294,26 @@ export default function SalesDashboard() {
     const silent = options?.silent ?? false;
     const forceRefresh = options?.forceRefresh ?? false;
     const signal = options?.signal;
+    const viewKey = `${tenantKey}:${computedStartDate}:${computedEndDate}`;
 
-    if (!silent) {
+    let backgroundRevalidate = false;
+    if (forceRefresh) {
+      invalidateTenantDashboardCache(tenantKey);
+    } else if (!silent) {
+      const cached = readDashboardViewCache(viewKey);
+      if (cached) {
+        setSummary(cached.summary);
+        setSales(cached.sales);
+        setLoading(false);
+        setIsRefreshing(false);
+        if (Date.now() - cached.cachedAt <= DASHBOARD_VIEW_REVALIDATE_AFTER_MS) {
+          return;
+        }
+        backgroundRevalidate = true;
+      }
+    }
+
+    if (!silent && !backgroundRevalidate) {
       if (!summaryRef.current) {
         setLoading(true);
       } else {
@@ -265,7 +325,7 @@ export default function SalesDashboard() {
       const reqCfg: any = {
         signal,
         skipCancelTelemetry: true,
-        ...(silent ? { headers: { 'X-Silent-Poll': 'true' } } : {}),
+        ...((silent || backgroundRevalidate) ? { headers: { 'X-Silent-Poll': 'true' } } : {}),
       };
 
       const summaryUrl = `/dashboard/summary?startDate=${computedStartDate}&endDate=${computedEndDate}${forceRefresh ? '&refresh=1' : ''}`;
@@ -279,21 +339,23 @@ export default function SalesDashboard() {
 
       if (signal?.aborted) return;
 
+      const nextSales = salesRes.data?.data || [];
       setSummary(sumRes.data);
-      setSales(salesRes.data?.data || []);
+      setSales(nextSales);
+      writeDashboardViewCache(viewKey, sumRes.data, nextSales);
     } catch (error: any) {
       if (signal?.aborted || axios.isCancel(error) || error?.code === 'ERR_CANCELED') {
         return;
       }
       console.error("Erro ao buscar dados do dashboard", error);
-      if (!silent) toast.error('Erro ao carregar dados. Tente novamente.');
+      if (!silent && !backgroundRevalidate) toast.error('Erro ao carregar dados. Tente novamente.');
     } finally {
-      if (!signal?.aborted && !silent) {
+      if (!signal?.aborted && !silent && !backgroundRevalidate) {
         setLoading(false);
         setIsRefreshing(false);
       }
     }
-  }, [computedStartDate, computedEndDate]);
+  }, [tenantKey, computedStartDate, computedEndDate]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -747,7 +809,7 @@ export default function SalesDashboard() {
   );
 
   return (
-    <div className="min-w-0 space-y-6 animate-in fade-in duration-500 pb-12">
+    <div className="min-w-0 space-y-6 animate-in fade-in duration-150 pb-12">
       {/* --- HEADER & FILTROS --- */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>

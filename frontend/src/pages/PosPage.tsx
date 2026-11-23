@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { useCartStore, type Product, type CartItemModifier } from '@/store/cart';
 import { api, apiGet } from '@/lib/api';
+import { fetchTenantMe } from '@/lib/tenant-client';
 import { toast } from 'sonner';
 import { updateProductsCache, patchCachedProductsStock, getCachedProducts, db } from '@/lib/db';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
@@ -309,7 +310,7 @@ function PosPageContent() {
 
   useEffect(() => {
     if (token) {
-      api.get(`/tenants/me?_t=${Date.now()}`).then(res => setTenantConfig(res.data)).catch(console.error);
+      fetchTenantMe().then(setTenantConfig).catch(console.error);
     }
   }, [token]);
 

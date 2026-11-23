@@ -297,8 +297,9 @@ export class ProductsService {
       ];
     }
 
-    const [total, data] = await Promise.all([
-      prisma.product.count({ where: whereClause }),
+    const shouldCount = Boolean(search) || page > 1;
+    const [countedTotal, data] = await Promise.all([
+      shouldCount ? prisma.product.count({ where: whereClause }) : Promise.resolve<number | null>(null),
       prisma.product.findMany({
         where: whereClause,
         include: { 
@@ -311,7 +312,17 @@ export class ProductsService {
             include: {
               options: {
                 include: {
-                  componentProduct: true
+                  componentProduct: {
+                    select: {
+                      id: true,
+                      name: true,
+                      stock: true,
+                      unit: true,
+                      priceCost: true,
+                      volumeUnit: true,
+                      volumeCapacity: true,
+                    }
+                  }
                 }
               }
             }
@@ -322,6 +333,13 @@ export class ProductsService {
         take: limit,
       }),
     ]);
+
+    const total =
+      countedTotal !== null
+        ? countedTotal
+        : data.length < limit
+          ? data.length
+          : await prisma.product.count({ where: whereClause });
 
     const result = {
       data,

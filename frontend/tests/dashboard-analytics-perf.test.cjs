@@ -35,3 +35,23 @@ test('api.ts ignora telemetria quando aborto de requisição tem skipCancelTelem
   const api = readFrontend('src/lib/api.ts');
   assert.match(api, /skipCancelTelemetry/);
 });
+
+test('Deduplicação de /tenants/me e cache SWR de visão no Dashboard Analytics', () => {
+  const client = readFrontend('src/lib/tenant-client.ts');
+  const layout = readFrontend('src/layouts/DashboardLayout.tsx');
+  const page = readFrontend('src/app/dashboard/page.tsx');
+  const pos = readFrontend('src/pages/PosPage.tsx');
+  const empresa = readFrontend('src/app/dashboard/configuracoes/empresa/page.tsx');
+
+  assert.match(client, /export async function fetchTenantMe/);
+  assert.match(client, /export function invalidateTenantMeCache/);
+  assert.match(layout, /fetchTenantMe\(/);
+  assert.match(page, /fetchTenantMe\(/);
+  assert.match(pos, /fetchTenantMe\(/);
+  assert.match(empresa, /fetchTenantMe\(/);
+  assert.match(empresa, /invalidateTenantMeCache\(/);
+
+  assert.match(page, /dashboardViewCache/);
+  assert.match(page, /DASHBOARD_VIEW_CACHE_TTL_MS/);
+  assert.match(page, /animate-in fade-in duration-150/);
+});

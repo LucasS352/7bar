@@ -12,7 +12,7 @@ export class TenantConnectionManager implements OnModuleDestroy {
   private clients = new Map<string, CachedClient>();
   private connectionPromises = new Map<string, Promise<PrismaClient>>();
   private readonly MAX_CLIENTS = Math.max(1, Number(process.env.TENANT_DB_MAX_CLIENTS) || 80);
-  private readonly CONNECTION_LIMIT = Math.max(1, Number(process.env.TENANT_DB_CONNECTION_LIMIT) || 6);
+  private readonly CONNECTION_LIMIT = Math.max(1, Number(process.env.TENANT_DB_CONNECTION_LIMIT) || 8);
   /** Tempo de espera antes de desconectar um client removido do cache, para que requisicoes/transacoes em andamento terminem. */
   private readonly DISCONNECT_GRACE_MS = 2 * 60 * 1000;
   private readonly IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutos

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { StationAccessLinks } from '@/components/StationAccessLinks';
 import { api } from '@/lib/api';
+import { fetchTenantMe, invalidateTenantMeCache } from '@/lib/tenant-client';
 import { toast } from 'sonner';
 import { Building2, MapPin, Receipt, ShieldCheck, Save, Loader2, Upload, CheckCircle, AlertCircle, Zap, Eye, EyeOff, FlaskConical } from 'lucide-react';
 
@@ -47,9 +48,8 @@ export default function EmpresaConfigPage() {
   const [modules, setModules] = useState({ nfce: true, estoque: true, dashboardMobile: true });
 
   useEffect(() => {
-    api.get('/tenants/me')
-      .then(res => {
-        const d = res.data;
+    fetchTenantMe()
+      .then(d => {
         setForm(prev => ({
           ...prev,
           razaoSocial: d.razaoSocial ?? '', nomeFantasia: d.nomeFantasia ?? '',
@@ -107,8 +107,8 @@ export default function EmpresaConfigPage() {
 
       toast.success('Configurações salvas com sucesso!');
 
-      const res = await api.get('/tenants/me');
-      const d = res.data;
+      invalidateTenantMeCache();
+      const d = await fetchTenantMe(true);
       setForm(prev => ({
         ...prev,
         certValidade: d.certValidade ?? '',
@@ -143,6 +143,7 @@ export default function EmpresaConfigPage() {
     try {
       // Salva o token primeiro, depois testa
       await api.patch('/tenants/me', { cosmosApiKey: form.cosmosApiKey });
+      invalidateTenantMeCache();
       const res = await api.get('/master-products/lookup/7898438720078');
       if (res.data.found) {
         toast.success(`✅ Cosmos funcionando! Produto: ${res.data.product.name}`);

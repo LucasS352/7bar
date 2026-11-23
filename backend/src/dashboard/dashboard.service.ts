@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 
-const SUMMARY_CACHE_TTL_MS = 15_000;
+const SUMMARY_CACHE_TTL_MS = 20_000;
 const MAX_CACHE_ENTRIES = 128;
 
 interface SummaryCacheEntry {
@@ -139,12 +139,11 @@ export class DashboardService {
     const periodStart = new Date(`${startDate}T00:00:00-03:00`);
     const periodEnd = new Date(`${endDate}T23:59:59.999-03:00`);
 
-    // ── Todas as agregações direto no MySQL em PARALELO (zero ORM hydration de N mil linhas) ──
+    // ── Todas as agregações direto no MySQL em PARALELO (6 queries cabendo no pool) ──
     const [
       openRegisterRows,
       kpiAggRows,
-      hourRows,
-      dayRows,
+      hourDayRows,
       paymentRows,
       productRows,
       payablesAlerts,
@@ -169,8 +168,8 @@ export class DashboardService {
           cr.operatorId AS operatorId,
           cr.openingTime AS openedAt,
           COALESCE(cr.openingValue, 0) AS openingValue,
-          COALESCE(SUM(CASE WHEN s.id IS NOT NULL AND (s.status IS NULL OR s.status <> 'cancelled') AND (s.source IS NULL OR s.source <> 'ajuste_fiscal') THEN s.total ELSE 0 END), 0) AS total,
-          COALESCE(COUNT(CASE WHEN s.id IS NOT NULL AND (s.status IS NULL OR s.status <> 'cancelled') AND (s.source IS NULL OR s.source <> 'ajuste_fiscal') THEN 1 ELSE NULL END), 0) AS salesCount
+          COALESCE(SUM(CASE WHEN s.id IS NOT NULL AND s.status <> 'cancelled' AND s.source <> 'ajuste_fiscal' THEN s.total ELSE 0 END), 0) AS total,
+          COALESCE(COUNT(CASE WHEN s.id IS NOT NULL AND s.status <> 'cancelled' AND s.source <> 'ajuste_fiscal' THEN 1 ELSE NULL END), 0) AS salesCount
         FROM cash_registers cr
         LEFT JOIN operators op ON op.id = cr.operatorId
         LEFT JOIN sales s ON s.cashRegisterId = cr.id
@@ -197,48 +196,33 @@ export class DashboardService {
           COALESCE(SUM(CASE WHEN createdAt >= ${monthStart} THEN total ELSE 0 END), 0) AS monthRevenue
         FROM sales
         WHERE createdAt >= ${kpiMinStart} AND createdAt <= ${todayEnd}
-          AND (status IS NULL OR status <> 'cancelled')
-          AND (source IS NULL OR source <> 'ajuste_fiscal')
+          AND status <> 'cancelled'
+          AND source <> 'ajuste_fiscal'
       `),
 
-      // 3. Período agregado por hora (fuso BRT -03:00) -> máx 24 linhas
+      // 3. Período agregado por hora + dia em 1 única varredura (fuso BRT -03:00)
       prisma.$queryRaw<
         Array<{
           brHour: number;
+          dayKey: string;
           revenue: Prisma.Decimal | number | null;
           transactions: bigint | number | null;
         }>
       >(Prisma.sql`
         SELECT
           HOUR(DATE_SUB(createdAt, INTERVAL 3 HOUR)) AS brHour,
+          DATE_FORMAT(DATE_SUB(createdAt, INTERVAL 3 HOUR), '%Y-%m-%d') AS dayKey,
           COALESCE(SUM(total), 0) AS revenue,
           COUNT(*) AS transactions
         FROM sales
         WHERE createdAt >= ${periodStart} AND createdAt <= ${periodEnd}
-          AND (status IS NULL OR status <> 'cancelled')
-          AND (source IS NULL OR source <> 'ajuste_fiscal')
-        GROUP BY brHour
-      `),
-
-      // 4. Período agregado por dia (fuso BRT -03:00) -> 1 linha por dia com venda
-      prisma.$queryRaw<
-        Array<{
-          dayKey: string;
-          revenue: Prisma.Decimal | number | null;
-        }>
-      >(Prisma.sql`
-        SELECT
-          DATE_FORMAT(DATE_SUB(createdAt, INTERVAL 3 HOUR), '%Y-%m-%d') AS dayKey,
-          COALESCE(SUM(total), 0) AS revenue
-        FROM sales
-        WHERE createdAt >= ${periodStart} AND createdAt <= ${periodEnd}
-          AND (status IS NULL OR status <> 'cancelled')
-          AND (source IS NULL OR source <> 'ajuste_fiscal')
-        GROUP BY dayKey
+          AND status <> 'cancelled'
+          AND source <> 'ajuste_fiscal'
+        GROUP BY brHour, dayKey
         ORDER BY dayKey ASC
       `),
 
-      // 5. Mix de pagamentos do período agregado no MySQL
+      // 4. Mix de pagamentos do período agregado no MySQL
       prisma.$queryRaw<
         Array<{
           method: string | null;
@@ -253,12 +237,12 @@ export class DashboardService {
         FROM payments p
         INNER JOIN sales s ON s.id = p.saleId
         WHERE s.createdAt >= ${periodStart} AND s.createdAt <= ${periodEnd}
-          AND (s.status IS NULL OR s.status <> 'cancelled')
-          AND (s.source IS NULL OR s.source <> 'ajuste_fiscal')
+          AND s.status <> 'cancelled'
+          AND s.source <> 'ajuste_fiscal'
         GROUP BY p.method, p.label
       `),
 
-      // 6. Ranking de produtos vendidos no período agregado no MySQL
+      // 5. Ranking de produtos vendidos no período agregado no MySQL
       prisma.$queryRaw<
         Array<{
           productId: string;
@@ -275,13 +259,13 @@ export class DashboardService {
         FROM sale_items si
         INNER JOIN sales s ON s.id = si.saleId
         WHERE s.createdAt >= ${periodStart} AND s.createdAt <= ${periodEnd}
-          AND (s.status IS NULL OR s.status <> 'cancelled')
-          AND (s.source IS NULL OR s.source <> 'ajuste_fiscal')
+          AND s.status <> 'cancelled'
+          AND s.source <> 'ajuste_fiscal'
         GROUP BY si.productId
         ORDER BY revenue DESC
       `),
 
-      // 7. Alertas de contas a pagar (próximos 3 dias)
+      // 6. Alertas de contas a pagar (próximos 3 dias)
       prisma.payable.findMany({
         where: {
           status: 'PENDING',
@@ -334,38 +318,37 @@ export class DashboardService {
       byPaymentMethod[normKey] = (byPaymentMethod[normKey] ?? 0) + Number(p.total ?? 0);
     }
 
-    // Agrega Hora + totais do período
+    // Agrega Hora, Dia, Semana, Mês e totais do período a partir de 1 única query
     const byHour: Record<number, number> = {};
     for (let h = 0; h < 24; h++) byHour[h] = 0;
 
     let periodRevenue = 0;
     let periodTransactions = 0;
-    for (const row of hourRows) {
+    const byDay: Record<string, number> = {};
+    const byWeek: Record<string, number> = {};
+    const byMonth: Record<string, number> = {};
+
+    for (const row of hourDayRows) {
       const hour = Number(row.brHour);
+      const dayKey = String(row.dayKey ?? '');
       const rev = Number(row.revenue ?? 0);
       const txCount = Number(row.transactions ?? 0);
+
       if (hour >= 0 && hour <= 23) {
         byHour[hour] = (byHour[hour] ?? 0) + rev;
       }
       periodRevenue += rev;
       periodTransactions += txCount;
-    }
 
-    // Deriva Dia / Semana / Mês a partir das linhas agregadas por dia
-    const byDay: Record<string, number> = {};
-    const byWeek: Record<string, number> = {};
-    const byMonth: Record<string, number> = {};
+      if (dayKey) {
+        byDay[dayKey] = (byDay[dayKey] ?? 0) + rev;
 
-    for (const row of dayRows) {
-      const dayKey = String(row.dayKey);
-      const rev = Number(row.revenue ?? 0);
-      byDay[dayKey] = (byDay[dayKey] ?? 0) + rev;
+        const weekKey = getWeekMondayKey(dayKey);
+        byWeek[weekKey] = (byWeek[weekKey] ?? 0) + rev;
 
-      const weekKey = getWeekMondayKey(dayKey);
-      byWeek[weekKey] = (byWeek[weekKey] ?? 0) + rev;
-
-      const monthKey = dayKey.slice(0, 7);
-      byMonth[monthKey] = (byMonth[monthKey] ?? 0) + rev;
+        const monthKey = dayKey.slice(0, 7);
+        byMonth[monthKey] = (byMonth[monthKey] ?? 0) + rev;
+      }
     }
 
     const productsSold = productRows.map((p) => ({

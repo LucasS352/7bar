@@ -9,6 +9,7 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { useDemoMissionsStore } from '@/store/demoMissions';
 import { api } from '@/lib/api';
+import { fetchTenantMe } from '@/lib/tenant-client';
 import { getFullUrl } from '@/lib/getFullUrl';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { CapitaoGelada } from '@/components/CapitaoGelada';
@@ -43,7 +44,7 @@ export function DashboardLayout() {
 
   useEffect(() => {
     if (token) {
-      api.get(`/tenants/me?_t=${Date.now()}`).then(res => setTenantConfig(res.data)).catch(console.error);
+      fetchTenantMe().then(setTenantConfig).catch(console.error);
     }
   }, [token]);
 
