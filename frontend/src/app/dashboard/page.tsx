@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import axios from 'axios';
 import { api } from '@/lib/api';
 import { escapeHtml } from '@/lib/escape-html';
 import { ReemitNfceModal } from '@/components/ReemitNfceModal';
@@ -61,7 +62,8 @@ type SaleItem = {
   quantity: number;
   priceUnit: number;
   subtotal: number;
-  product: { name: string };
+  productName?: string;
+  product?: { name: string } | null;
 };
 
 type Payment = {
@@ -161,10 +163,35 @@ class ErrorBoundary extends React.Component<{ children?: React.ReactNode }, { ha
   }
 }
 
+const getLocalDateStr = () => new Date().toLocaleDateString('en-CA');
+
+const formatDateShort = (dateStr: string) => {
+  const parts = dateStr.split('-');
+  return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateStr;
+};
+
+function PanelLoadingOverlay({ visible, label }: { visible: boolean; label: string }) {
+  if (!visible) return null;
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="absolute inset-0 z-20 bg-zinc-950/60 backdrop-blur-[1px] rounded-2xl flex items-center justify-center p-4"
+    >
+      <div className="flex items-center gap-2.5 bg-zinc-900 border border-zinc-700/80 px-4 py-2 rounded-xl shadow-xl text-xs sm:text-sm font-semibold text-zinc-200">
+        <Loader2 size={16} className="animate-spin text-blue-400 shrink-0" />
+        <span>{label}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function SalesDashboard() {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
   const [emittingId, setEmittingId] = useState<string | null>(null);
   const [isReemitModalOpen, setIsReemitModalOpen] = useState(false);
   const [saleToReemit, setSaleToReemit] = useState<Sale | null>(null);
@@ -174,10 +201,10 @@ export default function SalesDashboard() {
     api.get(`/tenants/me?_t=${Date.now()}`).then(res => setTenantConfig(res.data)).catch(console.error);
   }, []);
 
-  // Filtros de data
+  // Filtros de data (YYYY-MM-DD no fuso local para evitar salto às 21h UTC)
   const [preset, setPreset] = useState<'today' | 'week' | 'month' | 'custom'>('today');
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(getLocalDateStr);
+  const [endDate, setEndDate] = useState(getLocalDateStr);
   const [chartGrouping, setChartGrouping] = useState<'hour' | 'day' | 'week' | 'month'>('hour');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
@@ -197,70 +224,154 @@ export default function SalesDashboard() {
     let eDate = preset === 'custom' ? appliedEndDate : endDate;
 
     if (preset === 'today') {
-      const localToday = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
+      const localToday = getLocalDateStr();
       sDate = localToday; eDate = localToday;
     } else if (preset === 'week') {
       const now = new Date();
       const start = new Date(now);
       start.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
       sDate = start.toLocaleDateString('en-CA');
-      eDate = new Date().toLocaleDateString('en-CA');
+      eDate = getLocalDateStr();
     } else if (preset === 'month') {
       const now = new Date();
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       sDate = start.toLocaleDateString('en-CA');
-      eDate = new Date().toLocaleDateString('en-CA');
+      eDate = getLocalDateStr();
     }
     return { computedStartDate: sDate, computedEndDate: eDate };
   }, [preset, appliedStartDate, appliedEndDate, startDate, endDate]);
 
   const salesRef = useRef<Sale[]>([]);
   salesRef.current = sales;
+  const summaryRef = useRef<SummaryData | null>(null);
+  summaryRef.current = summary;
+  const isRefreshingRef = useRef(false);
+  isRefreshingRef.current = isRefreshing;
 
-  const fetchDashboardData = async (silent = false) => {
+  const fetchDashboardData = useCallback(async (options?: { silent?: boolean; forceRefresh?: boolean; signal?: AbortSignal }) => {
+    const silent = options?.silent ?? false;
+    const forceRefresh = options?.forceRefresh ?? false;
+    const signal = options?.signal;
+
+    if (!silent) {
+      if (!summaryRef.current) {
+        setLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+    }
+
     try {
-      const silentCfg = silent ? { headers: { 'X-Silent-Poll': 'true' } } : undefined;
-      // Fetch summary
-      const sumRes = await api.get(`/dashboard/summary?startDate=${computedStartDate}&endDate=${computedEndDate}`, silentCfg);
-      setSummary(sumRes.data);
+      const reqCfg: any = {
+        signal,
+        skipCancelTelemetry: true,
+        ...(silent ? { headers: { 'X-Silent-Poll': 'true' } } : {}),
+      };
 
-      const { data } = await api.get(`/sales?startDate=${computedStartDate}&endDate=${computedEndDate}&limit=200`, silentCfg);
-      setSales(data.data || []);
-    } catch (error) {
+      const summaryUrl = `/dashboard/summary?startDate=${computedStartDate}&endDate=${computedEndDate}${forceRefresh ? '&refresh=1' : ''}`;
+      const salesUrl = `/sales?startDate=${computedStartDate}&endDate=${computedEndDate}&limit=200&view=dashboard`;
+
+      // Busca KPIs + últimas vendas em paralelo com payload leve
+      const [sumRes, salesRes] = await Promise.all([
+        api.get(summaryUrl, reqCfg),
+        api.get(salesUrl, reqCfg),
+      ]);
+
+      if (signal?.aborted) return;
+
+      setSummary(sumRes.data);
+      setSales(salesRes.data?.data || []);
+    } catch (error: any) {
+      if (signal?.aborted || axios.isCancel(error) || error?.code === 'ERR_CANCELED') {
+        return;
+      }
       console.error("Erro ao buscar dados do dashboard", error);
       if (!silent) toast.error('Erro ao carregar dados. Tente novamente.');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted && !silent) {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
     }
-  };
+  }, [computedStartDate, computedEndDate]);
 
   useEffect(() => {
-    setLoading(true);
-    fetchDashboardData();
+    const controller = new AbortController();
+    const shouldForceRefresh = refreshTick > 0;
+    setCurrentPage(1);
+    void fetchDashboardData({ signal: controller.signal, forceRefresh: shouldForceRefresh });
 
-    // Auto-refresh a cada 60 segundos
-    const intervalId = setInterval(() => fetchDashboardData(true), 60000);
-    
-    // Polling rápido para NFC-e pendente (sem side-effect dentro de state updater)
-    const pendingInterval = setInterval(() => {
-      const hasPending = salesRef.current.some(s => s.nfceStatus === 'pendente' || s.nfceStatus === 'em_processamento');
-      if (hasPending) {
-        void fetchDashboardData(true);
+    // Auto-refresh a cada 60 segundos apenas quando a aba está ativa e não há troca manual em curso
+    const intervalId = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      if (isRefreshingRef.current) return;
+      void fetchDashboardData({ silent: true });
+    }, 60000);
+
+    // Polling cirúrgico para NFC-e pendente: consulta apenas /nfce-status sem recarregar o período todo
+    const pendingInterval = setInterval(async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      const pendingSales = salesRef.current
+        .filter(s => s.nfceStatus === 'pendente' || s.nfceStatus === 'em_processamento')
+        .slice(0, 5);
+      if (pendingSales.length === 0) return;
+
+      try {
+        const updates = await Promise.all(
+          pendingSales.map(async (sale) => {
+            const res = await api.get(`/sales/${sale.id}/nfce-status`, {
+              headers: { 'X-Silent-Poll': 'true' },
+              signal: controller.signal,
+              skipCancelTelemetry: true,
+            } as any);
+            return res.data;
+          }),
+        );
+        if (controller.signal.aborted) return;
+
+        const statusMap = new Map<string, any>(
+          updates.filter(Boolean).map((u: any) => [u.id, u]),
+        );
+        if (statusMap.size > 0) {
+          setSales(prev => prev.map(s => {
+            const fresh = statusMap.get(s.id);
+            return fresh ? {
+              ...s,
+              nfceStatus: fresh.nfceStatus ?? s.nfceStatus,
+              nfceNumero: fresh.nfceNumero ?? s.nfceNumero,
+              nfceCodRejeicao: fresh.nfceCodRejeicao ?? s.nfceCodRejeicao,
+              nfceMotivoRejeicao: fresh.nfceMotivoRejeicao ?? s.nfceMotivoRejeicao,
+            } : s;
+          }));
+        }
+      } catch {
+        // Falha silenciosa no polling de status NFC-e
       }
     }, 5000);
 
     return () => {
+      controller.abort();
       clearInterval(intervalId);
       clearInterval(pendingInterval);
     };
-  }, [preset, computedStartDate, computedEndDate]);
+  }, [fetchDashboardData, refreshTick]);
+
+  const applyCustomDates = () => {
+    if (startDate && endDate && startDate > endDate) {
+      toast.warning('A data inicial não pode ser maior que a data final.');
+      return;
+    }
+    setAppliedStartDate(startDate);
+    setAppliedEndDate(endDate);
+    setRefreshTick(t => t + 1);
+  };
 
   const handleEmitNfce = async (saleId: string, forceNewNumber: boolean, manualNumber?: number) => {
     setEmittingId(saleId);
     try {
       await api.post(`/sales/${saleId}/emit-nfce`, { forceNewNumber, manualNumber });
       toast.success('Emissão solicitada com sucesso!');
-      fetchDashboardData();
+      void fetchDashboardData({ forceRefresh: true });
     } catch (err: unknown) {
       const msg = (err as any)?.response?.data?.message || 'Erro ao emitir NFC-e';
       toast.error(msg);
@@ -296,7 +407,7 @@ export default function SalesDashboard() {
       await api.post(`/sales/${sale.id}/cancel`, { reason });
       
       toast.success("Venda cancelada com sucesso!");
-      fetchDashboardData();
+      void fetchDashboardData({ forceRefresh: true });
     } catch (err: unknown) {
       const msg = (err as any)?.response?.data?.message || 'Erro ao cancelar venda.';
       toast.error(msg);
@@ -325,7 +436,7 @@ export default function SalesDashboard() {
       <div class="item">
         <div class="item-header">
           <span class="item-num">${String(idx + 1).padStart(2, '0')}</span>
-          <span class="item-name">${escapeHtml(item.product?.name || 'Desconhecido')}</span>
+          <span class="item-name">${escapeHtml(item.product?.name || item.productName || 'Desconhecido')}</span>
           <span class="item-total">R$ ${Number(item.subtotal || 0).toFixed(2)}</span>
         </div>
         <div class="item-detail">
@@ -518,7 +629,7 @@ export default function SalesDashboard() {
     // Aplica o filtro de data global do dashboard
     if (computedStartDate && computedEndDate) {
       const startObj = new Date(computedStartDate + 'T00:00:00');
-      const endObj = new Date(computedEndDate + 'T23:59:59');
+      const endObj = new Date(computedEndDate + 'T23:59:59.999');
       result = result.filter(s => {
         const saleDate = new Date(s.createdAt);
         return saleDate >= startObj && saleDate <= endObj;
@@ -535,7 +646,7 @@ export default function SalesDashboard() {
       const lower = searchTerm.toLowerCase();
       result = result.filter(s => 
         s.total.toString().includes(lower) || 
-        s.items.some(i => i.product?.name.toLowerCase().includes(lower)) ||
+        s.items.some(i => (i.product?.name || i.productName || '').toLowerCase().includes(lower)) ||
         s.payments.some(p => p.method.toLowerCase().includes(lower))
       );
     }
@@ -560,7 +671,7 @@ export default function SalesDashboard() {
       const dataToExport = filteredSales.map(sale => {
         return {
           'Data/Hora': new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(sale.createdAt)),
-          'Itens': sale.items.map(i => `${i.quantity}x ${i.product?.name || 'Produto'}`).join(', '),
+          'Itens': sale.items.map(i => `${i.quantity}x ${i.product?.name || i.productName || 'Produto'}`).join(', '),
           'Pagamento': sale.payments.map(p => `${p.label || getMethodName(p.method)} (R$ ${Number(p.value).toFixed(2)})`).join(', '),
           'Total (R$)': Number(sale.total).toFixed(2),
           'Desconto (R$)': sale.discount ? Number(sale.discount).toFixed(2) : '0.00',
@@ -594,7 +705,7 @@ export default function SalesDashboard() {
       
       const tableData = filteredSales.map(sale => [
         new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(sale.createdAt)),
-        sale.items.map(i => `${i.quantity}x ${i.product?.name || 'Produto'}`).join(', '),
+        sale.items.map(i => `${i.quantity}x ${i.product?.name || i.productName || 'Produto'}`).join(', '),
         sale.payments.map(p => `${p.label || getMethodName(p.method)} (R$ ${Number(p.value).toFixed(2)})`).join(', '),
         `R$ ${Number(sale.total).toFixed(2)}`
       ]);
@@ -620,7 +731,20 @@ export default function SalesDashboard() {
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
   const currentSales = filteredSales.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  if (loading && !summary) return <div className="flex h-full items-center justify-center"><Loader2 className="animate-spin text-blue-500" size={48} /></div>;
+  const periodLabel = preset === 'today'
+    ? 'Hoje'
+    : preset === 'week'
+      ? 'Esta semana'
+      : preset === 'month'
+        ? 'Este mês'
+        : `${formatDateShort(computedStartDate)} até ${formatDateShort(computedEndDate)}`;
+
+  if (loading && !summary) return (
+    <div className="flex flex-col h-full items-center justify-center gap-3 text-zinc-400">
+      <Loader2 className="animate-spin text-blue-500" size={48} />
+      <p className="text-sm font-medium">Carregando Analytics...</p>
+    </div>
+  );
 
   return (
     <div className="min-w-0 space-y-6 animate-in fade-in duration-500 pb-12">
@@ -638,9 +762,10 @@ export default function SalesDashboard() {
               <button 
                 key={p} 
                 onClick={() => setPreset(p)}
-                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors text-center truncate ${preset === p ? 'bg-blue-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 text-center truncate ${preset === p ? 'bg-blue-600 text-white shadow-sm' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
               >
-                {p === 'today' ? 'Hoje' : p === 'week' ? 'Semana' : p === 'month' ? 'Mês' : 'Personalizado'}
+                {preset === p && isRefreshing && <Loader2 size={14} className="animate-spin shrink-0" />}
+                <span className="truncate">{p === 'today' ? 'Hoje' : p === 'week' ? 'Semana' : p === 'month' ? 'Mês' : 'Personalizado'}</span>
               </button>
             ))}
           </div>
@@ -651,6 +776,7 @@ export default function SalesDashboard() {
                 type="date" 
                 value={startDate} 
                 onChange={e => setStartDate(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') applyCustomDates(); }}
                 className="flex-1 sm:flex-initial min-w-0 bg-zinc-950 border border-zinc-800 text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none [color-scheme:dark]"
               />
               <span className="text-zinc-500 text-xs sm:text-sm shrink-0">até</span>
@@ -658,17 +784,16 @@ export default function SalesDashboard() {
                 type="date" 
                 value={endDate} 
                 onChange={e => setEndDate(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') applyCustomDates(); }}
                 className="flex-1 sm:flex-initial min-w-0 bg-zinc-950 border border-zinc-800 text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none [color-scheme:dark]"
               />
               <button
-                onClick={() => {
-                  setAppliedStartDate(startDate);
-                  setAppliedEndDate(endDate);
-                }}
-                className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg transition-colors cursor-pointer shrink-0"
-                title="Procurar"
+                onClick={applyCustomDates}
+                disabled={isRefreshing}
+                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-75 text-white p-2 rounded-lg transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+                title={isRefreshing ? 'Carregando período...' : 'Procurar'}
               >
-                <Search size={18} />
+                {isRefreshing ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
               </button>
             </div>
           )}
@@ -686,6 +811,25 @@ export default function SalesDashboard() {
           )}
         </div>
       </div>
+
+      {/* --- INDICADOR DE CARREGAMENTO AO TROCAR FILTRO/PERÍODO --- */}
+      {isRefreshing && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded-2xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 flex items-center justify-between gap-3 text-sm text-blue-200 shadow-lg"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Loader2 size={18} className="animate-spin text-blue-400 shrink-0" />
+            <span className="font-medium truncate">
+              Carregando dados do período ({periodLabel})...
+            </span>
+          </div>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-blue-300/80 shrink-0 hidden sm:inline">
+            Carregando...
+          </span>
+        </div>
+      )}
       
       {/* --- ALERTAS --- */}
       {summary?.alerts && (summary.alerts.overduePayables.length > 0 || summary.alerts.upcomingPayables.length > 0) && (
@@ -799,19 +943,20 @@ export default function SalesDashboard() {
           </div>
         </div>
 
-        {/* Card 4: Mês / Personalizado */}
-        <div className="bg-zinc-900 border border-zinc-800 min-w-0 p-3 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg relative overflow-hidden">
+      {/* Card 4: Mês / Personalizado */}
+      <div className="bg-zinc-900 border border-zinc-800 min-w-0 p-3 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl"></div>
           <div className="flex items-center gap-2 text-xs sm:text-sm md:text-base text-zinc-400 font-medium mb-2 sm:mb-3 relative z-10 min-w-0">
             <Banknote size={18} className="text-amber-400 shrink-0" /> 
             <span className="truncate">{preset === 'custom' ? 'Total do Período' : 'Este Mês'}</span>
+            {isRefreshing && <Loader2 size={14} className="animate-spin text-blue-400 ml-auto shrink-0" />}
           </div>
-          <div className="relative z-10 min-w-0">
+          <div className={`relative z-10 min-w-0 transition-opacity ${isRefreshing ? 'opacity-50' : ''}`}>
             <h3 className="text-lg min-[390px]:text-xl md:text-3xl font-black text-white tracking-tight truncate">
               {formatCurrency(preset === 'custom' ? (summary?.period?.revenue || 0) : (summary?.month?.revenue || 0))}
             </h3>
              <p className="text-xs md:text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
-               <Receipt size={14} className="shrink-0" /> Visão macro
+               <Receipt size={14} className="shrink-0" /> {isRefreshing ? 'Atualizando...' : 'Visão macro'}
             </p>
           </div>
         </div>
@@ -820,13 +965,14 @@ export default function SalesDashboard() {
         <div className="bg-zinc-900 border border-zinc-800 min-w-0 p-3 md:p-6 rounded-2xl flex flex-col justify-between shadow-lg">
           <div className="flex items-center gap-2 text-xs sm:text-sm md:text-base text-zinc-400 font-medium mb-2 sm:mb-3 min-w-0">
             <Package size={18} className="text-sky-400 shrink-0" /> <span className="truncate">Ticket Médio</span>
+            {isRefreshing && <Loader2 size={14} className="animate-spin text-blue-400 ml-auto shrink-0" />}
           </div>
-          <div className="min-w-0">
+          <div className={`min-w-0 transition-opacity ${isRefreshing ? 'opacity-50' : ''}`}>
             <h3 className="text-lg min-[390px]:text-xl md:text-3xl font-black text-white tracking-tight truncate">
               {formatCurrency(summary?.period?.avgTicket || 0)}
             </h3>
             <p className="text-xs md:text-sm text-zinc-500 mt-2 flex items-center gap-1.5">
-              Média por venda
+              {isRefreshing ? 'Atualizando...' : 'Média por venda'}
             </p>
           </div>
         </div>
@@ -837,7 +983,8 @@ export default function SalesDashboard() {
       <div className="grid min-w-0 grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Gráfico: Vendas por Período */}
-        <div className="min-w-0 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl lg:col-span-2">
+        <div className="relative min-w-0 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl lg:col-span-2">
+          <PanelLoadingOverlay visible={isRefreshing} label="Carregando gráfico do período..." />
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 min-w-0">
               <Clock size={20} className="text-amber-400 shrink-0"/> <span className="truncate">Vendas por {chartGrouping === 'hour' ? 'Hora' : chartGrouping === 'day' ? 'Dia' : chartGrouping === 'week' ? 'Semana' : 'Mês'} (Período Selecionado)</span>
@@ -882,7 +1029,8 @@ export default function SalesDashboard() {
         </div>
 
         {/* Gráfico: Mix de Pagamentos */}
-        <div className="min-w-0 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl flex flex-col">
+        <div className="relative min-w-0 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl flex flex-col">
+          <PanelLoadingOverlay visible={isRefreshing} label="Atualizando pagamentos..." />
           <h3 className="text-base sm:text-lg font-bold text-white mb-2 flex items-center gap-2">
             <CreditCard size={20} className="text-emerald-400 shrink-0"/> Mix de Pagamentos
           </h3>
@@ -934,7 +1082,8 @@ export default function SalesDashboard() {
       <div className="grid min-w-0 grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Top Produtos */}
-        <div className="min-w-0 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl">
+        <div className="relative min-w-0 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 shadow-xl">
+          <PanelLoadingOverlay visible={isRefreshing} label="Carregando ranking..." />
           <h3 className="text-base sm:text-lg font-bold text-white mb-6 flex items-center gap-2">
             <Package size={20} className="text-indigo-400 shrink-0"/> Top Produtos (Receita)
           </h3>
@@ -966,7 +1115,8 @@ export default function SalesDashboard() {
         </div>
 
         {/* Histórico de Transações */}
-        <div className="min-w-0 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl flex flex-col lg:col-span-2 overflow-hidden">
+        <div className="relative min-w-0 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl flex flex-col lg:col-span-2 overflow-hidden">
+          <PanelLoadingOverlay visible={isRefreshing} label="Carregando vendas do período..." />
           <div className="p-4 md:p-6 border-b border-zinc-800 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
             <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 min-w-0">
               <Receipt size={20} className="text-blue-400 shrink-0"/> Histórico de Vendas
@@ -1051,7 +1201,7 @@ export default function SalesDashboard() {
                           {sale.items.map(i => (
                             <div key={i.id} className="text-xs flex gap-2 items-start">
                               <span className="font-bold text-blue-400 bg-blue-500/10 px-1 rounded">{i.quantity}x</span>
-                              <span className="text-zinc-300 line-clamp-1">{i.product?.name || 'Desconhecido'}</span>
+                              <span className="text-zinc-300 line-clamp-1">{i.product?.name || i.productName || 'Desconhecido'}</span>
                             </div>
                           ))}
                           {isCancelled && sale.cancelReason && (
@@ -1168,7 +1318,7 @@ export default function SalesDashboard() {
                   </div>
 
                   <div className="text-sm text-zinc-400 line-clamp-2">
-                    {sale.items.map(i => `${i.quantity}x ${i.product?.name || 'Item'}`).join(', ')}
+                    {sale.items.map(i => `${i.quantity}x ${i.product?.name || i.productName || 'Item'}`).join(', ')}
                     {isCancelled && sale.cancelReason && (
                       <div className="text-[10px] text-red-400 mt-1 italic font-medium no-underline">
                         Motivo: {sale.cancelReason}
@@ -1290,8 +1440,8 @@ export default function SalesDashboard() {
         <PeriodReportModal 
           isOpen={isReportModalOpen} 
           onClose={() => setIsReportModalOpen(false)} 
-          startDate={startDate} 
-          endDate={endDate} 
+          startDate={computedStartDate} 
+          endDate={computedEndDate} 
           summary={summary} 
         />
       )}

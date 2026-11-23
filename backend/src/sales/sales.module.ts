@@ -9,9 +9,10 @@ import { SalesCronService } from './sales-cron.service';
 import { SalesDeliveryService } from './sales-delivery.service';
 import { MailModule } from '../mail/mail.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
+import { DashboardModule } from '../dashboard/dashboard.module';
 
 @Module({
-  imports: [NfceModule, PrismaModule, ProductsModule, MailModule, IntegrationsModule],
+  imports: [NfceModule, PrismaModule, ProductsModule, MailModule, IntegrationsModule, DashboardModule],
   providers: [SalesService, SalesCronService, SalesDeliveryService],
   controllers: [SalesController],
 })

@@ -24,12 +24,14 @@ export class SalesController {
     @Query('limit') limit?: number,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('view') view?: string,
   ) {
     return this.salesService.findAll(
       Number(page || 1), 
       Number(limit || 50),
       startDate,
       endDate,
+      view,
     );
   }
 

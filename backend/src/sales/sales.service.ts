@@ -1,9 +1,10 @@
-import { Injectable, BadRequestException, ConflictException, Logger, NotFoundException, StreamableFile } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, Logger, NotFoundException, Optional, StreamableFile } from '@nestjs/common';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
 import { NfceService } from '../nfce/nfce.service';
 import { ProductsService } from '../products/products.service';
+import { DashboardService } from '../dashboard/dashboard.service';
 import { Prisma } from '@prisma/client';
 import { retryTransaction } from '../prisma/transaction-retry';
 import { lockProducts } from '../prisma/lock-products';
@@ -38,7 +39,8 @@ export class SalesService {
     private tenantContext: TenantContextService,
     private productsService: ProductsService,
     private mailService: MailService,
-    private integrationsService: IntegrationsService
+    private integrationsService: IntegrationsService,
+    @Optional() private dashboardService?: DashboardService,
   ) {}
 
   private async getPrisma() {
@@ -904,6 +906,7 @@ export class SalesService {
   // The durable worker, not an in-memory timer, delivers fiscal/integration jobs.
   try {
     this.productsService.invalidateCache(tenantId);
+    this.dashboardService?.invalidateCache(tenantId);
   } catch (err) {
     this.logger.error(`Erro ao invalidar cache de produtos do tenant ${tenantId}: ${err.message}`);
   }
@@ -1110,7 +1113,7 @@ export class SalesService {
     await prisma.sale.update({ where: { id: saleId }, data });
   }
 
-  async findAll(page = 1, limit = 50, startDate?: string, endDate?: string) {
+  async findAll(page = 1, limit = 50, startDate?: string, endDate?: string, view?: string) {
     const prisma = await this.getPrisma();
     const skip = (page - 1) * limit;
 
@@ -1120,7 +1123,53 @@ export class SalesService {
     if (startDate && endDate) {
       where.createdAt = {
         gte: new Date(`${startDate}T00:00:00-03:00`),
-        lte: new Date(`${endDate}T23:59:59-03:00`),
+        lte: new Date(`${endDate}T23:59:59.999-03:00`),
+      };
+    }
+
+    if (view === 'dashboard') {
+      const data = await prisma.sale.findMany({
+        where,
+        select: {
+          id: true,
+          subtotal: true,
+          discount: true,
+          status: true,
+          cancelReason: true,
+          total: true,
+          createdAt: true,
+          emitirNfce: true,
+          nfceStatus: true,
+          nfceNumero: true,
+          nfceCodRejeicao: true,
+          nfceMotivoRejeicao: true,
+          operatorId: true,
+          cashRegisterId: true,
+          operator: { select: { name: true } },
+          payments: { select: { method: true, label: true, value: true } },
+          items: {
+            select: {
+              id: true,
+              quantity: true,
+              priceUnit: true,
+              subtotal: true,
+              productName: true,
+              product: { select: { name: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      });
+
+      return {
+        data,
+        meta: {
+          total: data.length,
+          page,
+          lastPage: 1,
+        },
       };
     }
 
@@ -1546,6 +1595,7 @@ export class SalesService {
 
     try {
       this.productsService.invalidateCache(tenantId);
+      this.dashboardService?.invalidateCache(tenantId);
     } catch (err) {
       this.logger.error(`Erro ao invalidar cache de produtos do tenant ${tenantId}: ${err.message}`);
     }
@@ -1553,9 +1603,10 @@ export class SalesService {
     return sale;
   }
   async updatePayments(saleId: string, payments: { method: string; value: number; tPag?: string }[]) {
+    const { tenantId } = this.tenantContext.get();
     const prisma = await this.getPrisma();
 
-    return await prisma.$transaction(async (tx) => {
+    const updatedSale = await prisma.$transaction(async (tx) => {
       const sale = await tx.sale.findUnique({
         where: { id: saleId },
         include: { payments: true }
@@ -1617,11 +1668,20 @@ export class SalesService {
         data: newPaymentRecords
       });
 
-      return await tx.sale.findUnique({
+      const updatedSale = await tx.sale.findUnique({
         where: { id: saleId },
         include: { payments: true, items: true }
       });
+      return updatedSale;
     });
+
+    try {
+      this.dashboardService?.invalidateCache(tenantId);
+    } catch (err: any) {
+      this.logger.error(`Erro ao invalidar cache de dashboard do tenant ${tenantId}: ${err?.message}`);
+    }
+
+    return updatedSale;
   }
 
   // ── Helper para filtrar itens SNF e recalcular totais fiscais reais ──────────

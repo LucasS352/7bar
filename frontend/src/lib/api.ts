@@ -65,9 +65,10 @@ api.interceptors.response.use(
     if (isNetworkOrTimeout) {
       const isTimeout = error.code === 'ECONNABORTED' || Boolean(error.message?.includes('timeout'));
       const isCanceled = error.code === 'ERR_CANCELED' || axios.isCancel(error);
+      const skipCancelTelemetry = Boolean((error.config as any)?.skipCancelTelemetry);
 
-      // Cancelamento intencional de polling silencioso não é falha de rede
-      if (!isCanceled || !isSilentPoll) {
+      // Cancelamento intencional de polling silencioso ou troca rápida de filtro não é falha de rede
+      if (!isCanceled || (!isSilentPoll && !skipCancelTelemetry)) {
         recordTelemetry({
           type: isTimeout ? 'request_timeout' : 'request_network_error',
           path,

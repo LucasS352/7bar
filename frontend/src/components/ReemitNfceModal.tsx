@@ -6,7 +6,8 @@ interface SaleItem {
   quantity: number;
   priceUnit: number;
   subtotal: number;
-  product: { name: string };
+  productName?: string;
+  product?: { name: string } | null;
 }
 
 interface Sale {
@@ -97,7 +98,7 @@ export function ReemitNfceModal({ isOpen, onClose, sale, onConfirm }: ReemitNfce
               <div className="max-h-24 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
                 {sale.items.map((item, idx) => (
                   <div key={item.id} className="flex justify-between text-xs font-mono text-zinc-400">
-                    <span className="truncate max-w-[280px]">{String(idx + 1).padStart(2, '0')}. {item.product?.name || 'Item'}</span>
+                    <span className="truncate max-w-[280px]">{String(idx + 1).padStart(2, '0')}. {item.product?.name || item.productName || 'Item'}</span>
                     <span>{item.quantity} x R$ {Number(item.priceUnit || 0).toFixed(2)}</span>
                   </div>
                 ))}
