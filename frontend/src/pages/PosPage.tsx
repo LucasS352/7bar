@@ -495,7 +495,7 @@ function PosPageContent() {
         setIsPaymentOpen(true); 
       }
       if (e.key === 'Escape') {
-        setIsPaymentOpen(false);
+        if (!useCartStore.getState().isOperationLocked) setIsPaymentOpen(false);
         setInitialOpenComanda(false);
         setIsComandasModalOpen(false);
       }
@@ -1490,6 +1490,10 @@ function PosPageContent() {
         isOpen={isPaymentOpen}
         initialOpenComanda={initialOpenComanda}
         onClose={() => {
+          if (useCartStore.getState().isOperationLocked) {
+            toast.info('Aguarde a confirmação da cobrança antes de fechar.');
+            return;
+          }
           setIsPaymentOpen(false);
           setInitialOpenComanda(false);
           setSheetExpanded(false);
@@ -1594,7 +1598,9 @@ function PosPageContent() {
           onSelect={setSelectedComandaId}
           onClose={() => { setIsComandasModalOpen(false); setPendingRemoveComandaItemId(null); setPendingRemoveComandaQuantity(null); }}
           onCharge={handleChargeComandaFromPos}
-          onUpdated={updated => setOpenComandas(list => list.map(c => c.id === updated.id ? updated : c))}
+          onUpdated={updated => setOpenComandas(list => updated.status === 'cancelled'
+            ? list.filter(c => c.id !== updated.id)
+            : list.map(c => c.id === updated.id ? updated : c))}
         />
       )}
     </div>

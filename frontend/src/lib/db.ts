@@ -77,6 +77,7 @@ export type SyncStatus =
   | 'SYNCING'             // Em processo de envio
   | 'SYNCED'              // Confirmada no backend
   | 'REVIEW'              // Conflito/recusa: preservada, sem reenvio automático
+  | 'REJECTED'            // Comanda cancelada confirmada pelo servidor; tentativa preservada para auditoria
   | 'ERROR';              // Falhou ao sincronizar
 
 // ── Modelo principal da venda offline ────────────────────────────────────────
@@ -246,7 +247,7 @@ export async function saveOfflineSale(
     if (existing) throw new Error('Operação já registrada. Recupere a pendência existente; não recrie o pedido.');
     if (sale.comandaId) {
       const charged = await db.offline_sales.where('comandaId').equals(sale.comandaId)
-        .filter(row => row.tenantId === sale.tenantId && row.syncStatus !== 'REVIEW').first();
+        .filter(row => row.tenantId === sale.tenantId && !['REVIEW', 'REJECTED'].includes(row.syncStatus)).first();
       if (charged) throw new Error('Esta comanda já possui cobrança registrada neste aparelho. Confira as pendências; não cobre novamente.');
     }
     return db.offline_sales.add(sale);
@@ -303,6 +304,13 @@ export async function markSaleReview(localId: string, tenantId: string, message:
     .equals(localId)
     .filter(row => row.tenantId === tenantId)
     .modify({ syncStatus: 'REVIEW', syncError: message });
+}
+
+export async function markCancelledComandaSaleRejected(localId: string, tenantId: string): Promise<boolean> {
+  const changed = await db.offline_sales.where('localId').equals(localId)
+    .filter(row => row.tenantId === tenantId && row.syncStatus === 'REVIEW')
+    .modify({ syncStatus: 'REJECTED', syncError: 'Cobrança recusada: comanda cancelada no servidor.' });
+  return changed > 0;
 }
 
 /** Conta vendas pendentes — usado pelo badge de status */

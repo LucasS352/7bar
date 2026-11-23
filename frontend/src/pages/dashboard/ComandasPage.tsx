@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cart';
 import { syncLoadedComanda } from '@/lib/comanda-cart';
+import { removeCachedComanda } from '@/lib/comandas-offline';
 import { escapeHtml } from '@/lib/escape-html';
 import { useAuthStore } from '@/store/auth';
 import { 
@@ -98,6 +99,7 @@ export function ComandasPage() {
   const navigate = useNavigate();
   const { clearCart, addItem, setActiveComanda } = useCartStore();
   const token = useAuthStore((state) => state.token);
+  const tenantId = useAuthStore((state) => state.user?.tenant);
   const [isComandasEnabled, setIsComandasEnabled] = useState(false);
   useEffect(() => {
     let active = true;
@@ -337,13 +339,19 @@ export function ComandasPage() {
         ? await api.post(`/v1/comandas/${selectedComanda.id}/items/${sensitiveAction.item!.id}/remove`, { authorizationToken: authorization.data.authorizationToken, reason: sensitiveReason.trim() })
         : await api.post(`/v1/comandas/${selectedComanda.id}/cancel`, { authorizationToken: authorization.data.authorizationToken, reason: sensitiveReason.trim() });
       setSensitiveAction(null); setSensitivePin(''); setSensitiveReason('');
+      if (response.data.status === 'cancelled' && tenantId) {
+        void removeCachedComanda(tenantId, response.data.id).catch(() => {});
+      }
       if (sensitiveAction.type === 'cancel_comanda') {
         setSelectedComanda(response.data);
+        syncLoadedComanda(response.data);
         toast.success('Comanda cancelada e preservada no histórico.');
       } else {
         setSelectedComanda(response.data);
         syncLoadedComanda(response.data);
-        toast.success('Item removido com autorização.');
+        toast.success(response.data.status === 'cancelled'
+          ? 'Último item removido. Comanda encerrada e preservada no histórico.'
+          : 'Item removido com autorização.');
       }
       fetchComandas();
     } catch (err: any) {

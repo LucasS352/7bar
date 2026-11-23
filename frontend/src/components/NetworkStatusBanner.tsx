@@ -21,6 +21,7 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { countPendingSales, getReviewSales, type OfflineSale } from '@/lib/db';
 import { useAuthStore } from '@/store/auth';
 import { useOperatorTokenStore } from '@/store/operatorToken';
+import { reconcileCancelledComandaCheckout } from '@/lib/reconcile-comanda-checkout';
 
 export function NetworkStatusBanner() {
   const tenantId = useAuthStore(state => state.user?.tenant);
@@ -35,8 +36,13 @@ export function NetworkStatusBanner() {
 
     const refresh = async () => {
       try {
+        let review = await getReviewSales(tenantId, operatorId || undefined);
+        if (navigator.onLine) {
+          await Promise.all(review.filter(row => row.comandaId && /status:\s*["']cancelled["']/i.test(row.syncError || ''))
+            .map(row => reconcileCancelledComandaCheckout(row)));
+          review = await getReviewSales(tenantId, operatorId || undefined);
+        }
         const count = await countPendingSales(tenantId);
-        const review = await getReviewSales(tenantId, operatorId || undefined);
         if (!cancelled) { setPendingCount(count); setReviews(review); }
       } catch { /* silencioso */ }
     };

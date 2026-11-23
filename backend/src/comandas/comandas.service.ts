@@ -794,10 +794,35 @@ export class ComandasService {
       // Recalcular total
       const remaining = await tx.comandaItem.findMany({ where: { comandaId, status: 'active' } });
       const newTotal = remaining.reduce((acc: number, i: any) => acc + Number(i.totalPrice), 0);
-      await tx.comanda.update({
-        where: { id: comandaId },
-        data: { total: new Prisma.Decimal(Number(newTotal.toFixed(2))) },
-      });
+      if (remaining.length === 0) {
+        // A remoção do último item encerra a comanda na mesma transação do estorno.
+        // O registro e a autorização continuam disponíveis no histórico de auditoria.
+        const cancelledAt = new Date();
+        const cancellationReason = 'Todos os itens foram removidos da comanda.';
+        await releaseComandaAssets(tx, comandaId, cancelledAt);
+        await tx.comandaAuditEvent.create({ data: {
+          comandaId, action: 'comanda_cancelled', reason: cancellationReason,
+          requestedByOperatorId: actor.operatorId || actor.userId || null,
+          requestedByName: actor.name || null,
+          authorizationType: authorization.authorizationType,
+          authorizedByOperatorId: authorization.authorizedByOperatorId,
+          authorizedByName: authorization.authorizedByName,
+          snapshot: { automatic: true, lastRemovedItemId: itemId },
+        } });
+        await tx.comanda.update({ where: { id: comandaId }, data: {
+          total: new Prisma.Decimal(0), status: 'cancelled', cancelledAt, cancellationReason,
+          cancelledByOperatorId: actor.operatorId || actor.userId || null,
+          cancelledByName: actor.name || null,
+          cancellationAuthorizationType: authorization.authorizationType,
+          cancellationAuthorizedById: authorization.authorizedByOperatorId,
+          cancellationAuthorizedByName: authorization.authorizedByName,
+        } });
+      } else {
+        await tx.comanda.update({
+          where: { id: comandaId },
+          data: { total: new Prisma.Decimal(Number(newTotal.toFixed(2))) },
+        });
+      }
     }, { isolationLevel: 'ReadCommitted' }));
 
     // Pós-commit

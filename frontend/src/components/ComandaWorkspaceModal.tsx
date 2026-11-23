@@ -19,7 +19,7 @@ import {
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
-import { readComandas, readComanda } from '@/lib/comandas-offline';
+import { readComandas, readComanda, removeCachedComanda } from '@/lib/comandas-offline';
 import { useCartStore } from '@/store/cart';
 import { syncLoadedComanda } from '@/lib/comanda-cart';
 import { kdsLabels, type KdsStatus } from '@/lib/kds';
@@ -302,19 +302,21 @@ export function ComandaWorkspaceModal({
               `/v1/comandas/${action.comanda.id}/cancel`,
               { authorizationToken: authorization.data.authorizationToken, reason: authorizationReason.trim() },
             );
-        setDetail(res.data);
-        setComandas((list) => action.kind === 'cancel'
+        const closed = res.data.status === 'cancelled';
+        if (closed) void removeCachedComanda(tenantId, res.data.id).catch(() => {});
+        setDetail(closed ? null : res.data);
+        setComandas((list) => closed
           ? list.filter((c) => c.id !== res.data.id)
           : list.map((c) => (c.id === res.data.id ? res.data : c)));
-        if (action.kind !== 'cancel') syncLoadedComanda(res.data);
+        syncLoadedComanda(res.data);
         onUpdated(res.data);
         toast.success(
-          action.kind !== 'cancel'
-            ? action.kind === 'decrease' ? 'Uma unidade removida com autorização. Total da comanda atualizado.' : 'Item removido com autorização. Total da comanda atualizado.'
-            : 'Comanda cancelada e preservada no histórico.',
+          action.kind === 'cancel' ? 'Comanda cancelada e preservada no histórico.'
+            : closed ? 'Último item removido. Comanda encerrada e preservada no histórico.'
+              : action.kind === 'decrease' ? 'Uma unidade removida com autorização. Total da comanda atualizado.'
+                : 'Item removido com autorização. Total da comanda atualizado.',
         );
-        if (action.kind === 'cancel') {
-          setDetail(null);
+        if (closed) {
           onSelect(launch ? 'new' : '');
           setMobileDetail(false);
         }

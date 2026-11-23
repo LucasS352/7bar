@@ -15,6 +15,7 @@ describe('Remoção de itens da comanda pelo caixa', () => {
         findFirst: jest.fn().mockResolvedValue({ id: 'i', status: 'active', productId: 'p', quantity: 2, unitPrice: 3, totalPrice: 6, stockDeducted, modifiers,
           product: { id: 'p', name: 'Porção' } }),
         update: jest.fn(),
+        updateMany: jest.fn(),
         findMany: jest
           .fn()
           .mockResolvedValue([{ totalPrice: 12.5 }, { totalPrice: 7.25 }]),
@@ -79,6 +80,22 @@ describe('Remoção de itens da comanda pelo caixa', () => {
     expect(tx.comandaAuditEvent.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'item_removed', authorizedByName: 'Gerente' }) }));
     expect(Number(tx.comanda.update.mock.calls[0][0].data.total)).toBe(19.75);
     expect(tx.comanda.update.mock.calls[0][0].data.status).toBeUndefined();
+  });
+  it('encerra a comanda após remover o último item, preservando autorização e auditoria', async () => {
+    const { service, tx } = setup();
+    tx.comandaItem.findMany.mockResolvedValue([]);
+    jest.spyOn(service, 'findOne').mockResolvedValue({ id: 'c', status: 'cancelled', total: 0 } as any);
+
+    await expect(service.removeItem('c', 'i', 'a'.repeat(40), 'Último item lançado errado', { operatorId: 'waiter', name: 'João' }))
+      .resolves.toMatchObject({ status: 'cancelled', total: 0 });
+    expect(tx.comanda.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'c' }, data: expect.objectContaining({ status: 'cancelled', cancellationAuthorizedByName: 'Gerente' }),
+    }));
+    expect(Number(tx.comanda.update.mock.calls[0][0].data.total)).toBe(0);
+    expect(tx.comandaAuditEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ action: 'comanda_cancelled', snapshot: { automatic: true, lastRemovedItemId: 'i' } }),
+    }));
+    expect(tx.comandaItem.updateMany).toHaveBeenCalled();
   });
   it('estorna ingredientes pelo snapshot de consumo do produto composto', async () => {
     const { service, tx } = setup('open', [

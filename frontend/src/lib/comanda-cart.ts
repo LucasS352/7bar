@@ -1,10 +1,10 @@
 import { useCartStore, type CartItem } from '@/store/cart';
 
 /** Atualiza apenas os itens da comanda carregada, preservando acréscimos do caixa. */
-export function syncLoadedComanda(comanda: { id: string; items: any[] }) {
+export function syncLoadedComanda(comanda: { id: string; status?: string; items: any[] }) {
   const cart = useCartStore.getState();
   if (cart.activeComandaId !== comanda.id || cart.isOperationLocked) return;
-  const imported: CartItem[] = comanda.items.filter((item) => !item.status || item.status === 'active').map((item) => ({
+  const imported: CartItem[] = comanda.items.filter((item) => comanda.status !== 'cancelled' && (!item.status || item.status === 'active')).map((item) => ({
     ...item.product,
     id: item.productId || item.product.id,
     name: item.product?.name || 'Produto',
@@ -36,5 +36,8 @@ export function syncLoadedComanda(comanda: { id: string; items: any[] }) {
     items,
     total: items.reduce((sum, item) => sum + item.subtotal, 0),
     cartOperationId: crypto.randomUUID(),
+    ...(imported.length === 0 || comanda.status === 'cancelled'
+      ? { activeComandaId: null, activeComandaNumber: null }
+      : {}),
   });
 }

@@ -1,5 +1,6 @@
 import { ComandaWorkspaceModal } from './ComandaWorkspaceModal';
 import { syncLoadedComanda } from '@/lib/comanda-cart';
+import { removeCachedComanda } from '@/lib/comandas-offline';
 import { getComandaItemAttempt, clearComandaItemAttempt } from '@/lib/comanda-item-attempt';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useCartStore } from '@/store/cart';
@@ -759,6 +760,10 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     }
     isSubmittingRef.current = true;
 
+    // Uma comanda só acompanha o checkout se houver lançamentos dela no carrinho.
+    // Isso impede que uma venda de balcão herde uma comanda já retirada do pedido.
+    const chargeComandaId = activeComandaId && items.some(item => item.fromComanda) ? activeComandaId : undefined;
+    if (activeComandaId && !chargeComandaId) setActiveComanda(null, null);
     setLoading(true);
     setOperationLocked(true);
     const actualMode = isConsumo ? 'simple' : (isNfceEnabled ? mode : 'simple');
@@ -786,8 +791,8 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         emitirNfce: isConsumo ? false : (actualMode === 'nfce'),
         idempotencyKey: operationId, // Chave canônica estável do ciclo atual do carrinho
         // Quando há comanda ativa, separa os itens extras adicionados no balcão para baixa normal
-        ...(activeComandaId ? {
-          comandaId: activeComandaId,
+        ...(chargeComandaId ? {
+          comandaId: chargeComandaId,
           expectedComandaItems: items.filter(i => i.fromComanda).map(i => ({
             id: i.comandaItemId, quantity: Number(i.quantity), totalPrice: Number(i.subtotal),
           })),
@@ -819,7 +824,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
         operatorId:     operator?.id ?? user?.id ?? 'unknown',
         tenantId:       user?.tenant ?? 'unknown',
         cashRegisterId: cashRegister?.id,
-        comandaId:      activeComandaId || undefined,
+        comandaId:      chargeComandaId,
         consumedByOperatorId: isConsumo ? selectedOperatorId : undefined,
         subtotal:       Math.round(items.reduce((acc, i) => acc + i.subtotal, 0) * 100) / 100,
         discount:       discountValue,
@@ -873,6 +878,17 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
 
       const outcome = await submitDurableCheckout(localSale, () => sendCheckout(body, localSale.tenantId, localSale.operatorId));
       releaseOwnCart();
+      if (outcome.kind === 'rejected') {
+        const cart = useCartStore.getState();
+        if (localSale.comandaId && cart.cartOperationId === operationId && cart.scope === `7bar-cart-v2:${user?.tenant}:${operator?.id}`) {
+          syncLoadedComanda({ id: localSale.comandaId, status: 'cancelled', items: [] });
+          void removeCachedComanda(localSale.tenantId, localSale.comandaId).catch(() => {});
+        }
+        onPendingCountChange?.();
+        onClose();
+        toast.error(outcome.message);
+        return;
+      }
       if (outcome.kind === 'review') {
         toast.error(outcome.message || 'Operação exige conferência. Não reenvie como outra venda.');
         return;

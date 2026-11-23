@@ -19,7 +19,7 @@ function load(file, dependencies = {}, globals = {}) {
   }).outputText, context);
   return context.exports;
 }
-function checkoutHarness({ failSave = false, failAck = false } = {}) {
+function checkoutHarness({ failSave = false, failAck = false, cancelled = false } = {}) {
   const rows = [];
   const db = {
     saveOfflineSale: async sale => { if (failSave) throw new Error('QuotaExceededError'); rows.push({ ...sale }); },
@@ -29,6 +29,10 @@ function checkoutHarness({ failSave = false, failAck = false } = {}) {
   };
   const { submitDurableCheckout } = load('lib/durable-checkout.ts', {
     './db': db, './sale-operation-lock': { withSaleOperationLock: async (_t, _id, work) => work() },
+    './reconcile-comanda-checkout': { reconcileCancelledComandaCheckout: async () => {
+      if (cancelled) rows[0].syncStatus = 'REJECTED';
+      return cancelled;
+    } },
   });
   return { rows, submit: send => submitDurableCheckout({ tenantId: 'shop', localId: 'operation', syncStatus: 'SYNCING' }, send) };
 }
@@ -51,6 +55,31 @@ test('business refusal is retained for review, not automatic resend', async () =
   const h = checkoutHarness();
   const result = await h.submit(async () => { throw { response: { status: 409, data: { message: 'Comanda alterada' } } }; });
   assert.equal(result.kind, 'review'); assert.equal(h.rows[0].syncStatus, 'REVIEW');
+});
+
+test('confirmed cancelled comanda refusal releases the checkout from review', async () => {
+  const h = checkoutHarness({ cancelled: true });
+  const result = await h.submit(async () => { throw { response: { status: 400, data: { message: 'Comanda cancelada' } } }; });
+  assert.equal(result.kind, 'rejected');
+  assert.equal(h.rows.length, 1);
+  assert.equal(h.rows[0].syncStatus, 'REJECTED');
+});
+
+test('cancelled comanda reconciliation checks tenant and server identity', async () => {
+  const requests = []; let changed = 0;
+  const reconcile = load('lib/reconcile-comanda-checkout.ts', {
+    './api': { api: { get: async (url, config) => {
+      requests.push({ url, config });
+      return { data: { id: 'comanda-1', status: 'cancelled' } };
+    } } },
+    './db': { markCancelledComandaSaleRejected: async () => { changed++; return true; } },
+  }).reconcileCancelledComandaCheckout;
+  assert.equal(await reconcile({ localId: 'sale-1', tenantId: 'shop', comandaId: 'comanda-1' }), true);
+  assert.equal(requests[0].url, '/v1/comandas/comanda-1');
+  assert.equal(requests[0].config.expectedTenantId, 'shop');
+  assert.equal(changed, 1);
+  assert.equal(await reconcile({ localId: 'sale-2', tenantId: 'shop', comandaId: 'other' }), false);
+  assert.equal(changed, 1);
 });
 test('local programming error is not announced as a successful offline sale', async () => {
   const h = checkoutHarness();
@@ -83,6 +112,21 @@ test('F5 reload restores scoped draft identity and items; another operator gets 
   assert.equal(reloaded.getState().cartOperationId, key); assert.equal(reloaded.getState().items.length, 1);
   reloaded.getState().selectScope('shop', 'another-operator');
   assert.equal(reloaded.getState().items.length, 0); assert.notEqual(reloaded.getState().cartOperationId, key);
+});
+
+test('last comanda item removal detaches the cart and keeps counter extras as a new sale', () => {
+  const cart = { activeComandaId: 'comanda-1', activeComandaNumber: '12', isOperationLocked: false,
+    items: [{ cartKey: 'old', fromComanda: true, subtotal: 3.5 }, { cartKey: 'extra', fromComanda: false, subtotal: 4 }],
+    total: 7.5, cartOperationId: 'old-operation' };
+  const useCartStore = { getState: () => cart, setState: patch => Object.assign(cart, patch) };
+  const { syncLoadedComanda } = load('lib/comanda-cart.ts', { '@/store/cart': { useCartStore } });
+  syncLoadedComanda({ id: 'comanda-1', status: 'cancelled', items: [{ id: 'old', status: 'removed' }] });
+  assert.equal(cart.activeComandaId, null);
+  assert.equal(cart.activeComandaNumber, null);
+  assert.equal(cart.items.length, 1);
+  assert.equal(cart.items[0].cartKey, 'extra');
+  assert.equal(cart.total, 4);
+  assert.notEqual(cart.cartOperationId, 'old-operation');
 });
 test('recovery query includes interrupted SYNCING but excludes other shops/operators and REVIEW', async () => {
   const source = fs.readFileSync(path.join(root, 'lib/db.ts'), 'utf8');

@@ -19,7 +19,7 @@ async function excludeCharged(tenantId: string, items: any[]) {
   const sales = await db.offline_sales
     .where('tenantId')
     .equals(tenantId)
-    .filter(s => s.syncStatus !== 'REVIEW')
+    .filter(s => s.syncStatus !== 'REVIEW' && s.syncStatus !== 'REJECTED')
     .toArray();
   const charged = new Set(sales.map(s => s.comandaId).filter(Boolean));
   return items.filter(item => !charged.has(item.id));
@@ -64,7 +64,7 @@ export async function readComanda(tenantId: string, id: string) {
   const charged = await db.offline_sales
     .where('tenantId')
     .equals(tenantId)
-    .filter(s => s.comandaId === id && s.syncStatus !== 'REVIEW')
+    .filter(s => s.comandaId === id && s.syncStatus !== 'REVIEW' && s.syncStatus !== 'REJECTED')
     .first();
   if (charged) throw new Error('Comanda já possui cobrança neste aparelho. Confira as pendências.');
   // Offline detectado imediatamente — vai direto ao cache sem esperar timeout
@@ -86,4 +86,14 @@ export async function readComanda(tenantId: string, id: string) {
     if (!data) throw new Error('Esta comanda não está disponível na cópia local.');
     return { data, offline: true, savedAt: cached!.savedAt };
   }
+}
+
+/** Remove uma comanda encerrada da cópia usada quando o caixa fica offline. */
+export async function removeCachedComanda(tenantId: string, comandaId: string): Promise<void> {
+  assertScope(tenantId);
+  await db.transaction('rw', db.comandas_cache, async () => {
+    const cached = await db.comandas_cache.get(tenantId);
+    if (!cached) return;
+    await db.comandas_cache.put({ ...cached, items: cached.items.filter(item => item.id !== comandaId) });
+  });
 }

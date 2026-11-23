@@ -20,6 +20,7 @@ import { useAuthStore } from '@/store/auth';
 import { useOperatorTokenStore } from '@/store/operatorToken';
 import { withSaleOperationLock } from '@/lib/sale-operation-lock';
 import { sendCheckout } from '@/lib/checkout-api';
+import { reconcileCancelledComandaCheckout } from '@/lib/reconcile-comanda-checkout';
 import {
   getPendingSales,
   markSaleSynced,
@@ -196,6 +197,7 @@ export function useOfflineSync(): OfflineSyncState {
               const message = String(err?.response?.data?.message || err?.message || 'Resultado desconhecido');
               if (err?.response?.status >= 400 && err.response.status < 500 && ![401, 429].includes(err.response.status)) {
                 await markSaleReview(sale.localId, tenantId, message);
+                if (err.response.status === 400 && await reconcileCancelledComandaCheckout(current)) return;
               } else await markSaleError(sale.localId, message, tenantId);
               errorCount++;
             }

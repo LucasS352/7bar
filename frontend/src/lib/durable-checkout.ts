@@ -1,10 +1,11 @@
 import { saveOfflineSale, markSaleSynced, markSaleError, markSaleReview, type OfflineSale } from './db';
 import { withSaleOperationLock } from './sale-operation-lock';
+import { reconcileCancelledComandaCheckout } from './reconcile-comanda-checkout';
 
 export async function submitDurableCheckout(
   sale: Omit<OfflineSale, 'id'>,
   send: () => Promise<{ data: any }>,
-): Promise<{ kind: 'confirmed' | 'pending' | 'review'; data?: any; message?: string }> {
+): Promise<{ kind: 'confirmed' | 'pending' | 'review' | 'rejected'; data?: any; message?: string }> {
   return withSaleOperationLock(sale.tenantId, sale.localId, async () => {
     // This is deliberately OUTSIDE the network catch. Failure means NO POST and NO success notification.
     await saveOfflineSale(sale);
@@ -17,6 +18,9 @@ export async function submitDurableCheckout(
       const unknown = ['ECONNABORTED', 'ERR_NETWORK', 'ETIMEDOUT', 'CHECKOUT_PROTOCOL_UNAVAILABLE'].includes(error?.code) || status >= 500 || status === 401 || status === 429;
       if (!unknown) {
         await markSaleReview(sale.localId, sale.tenantId, String(message));
+        if (status === 400 && await reconcileCancelledComandaCheckout(sale)) {
+          return { kind: 'rejected', message: 'A comanda foi cancelada. O carrinho foi liberado para outra venda.' };
+        }
         return { kind: 'review', message: String(message) };
       }
       await markSaleError(sale.localId, 'Resultado desconhecido. Recuperar esta mesma operação.', sale.tenantId);
