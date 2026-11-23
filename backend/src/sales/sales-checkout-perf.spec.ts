@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { SalesService } from './sales.service';
+import { computeSaleFingerprint } from './sales-idempotency.helper';
 
 describe('SalesService checkout query batching', () => {
   it('preloads FIFO lots, batches product/lot updates and creates saleItems via createMany', async () => {
@@ -97,6 +98,10 @@ describe('SalesService checkout query batching', () => {
     });
 
     expect(res.items).toHaveLength(2);
+    expect(db.sale.findUnique).toHaveBeenCalledWith({
+      where: { id: '11111111-1111-4111-8111-111111111111' },
+      select: { id: true },
+    });
     expect(tx.$queryRaw).toHaveBeenCalledTimes(1); // apenas lockProducts em batch
     expect(tx.stockLot.findMany).toHaveBeenCalledTimes(1);
     expect(tx.stockLot.findFirst).not.toHaveBeenCalled();
@@ -169,5 +174,48 @@ describe('SalesService checkout query batching', () => {
 
     expect(tx.sale.create).not.toHaveBeenCalled();
     expect(tx.numeracaoNfce.upsert).not.toHaveBeenCalled();
+  });
+
+  it('carrega detalhes completos apenas quando o pre-check por select id encontra replay', async () => {
+    const payload = {
+      idempotencyKey: '33333333-3333-4333-8333-333333333333',
+      operatorId: 'op-1',
+      emitirNfce: false,
+      items: [{ productId: 'p-a', quantity: 1, priceUnit: 5 }],
+      payments: [{ method: 'dinheiro', value: 5 }],
+    };
+    const fullExisting = {
+      id: payload.idempotencyKey,
+      requestFingerprint: computeSaleFingerprint(payload),
+      total: 5,
+      items: [],
+      payments: [{ method: 'dinheiro', value: 5 }],
+      customer: null,
+    };
+
+    const db = {
+      sale: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValueOnce({ id: payload.idempotencyKey })
+          .mockResolvedValueOnce(fullExisting),
+      },
+      $transaction: jest.fn(),
+    };
+
+    const svc = new SalesService(
+      { getTenantClient: async () => db } as any,
+      {} as any,
+      {} as any,
+      { get: () => ({ userId: 'op-1', tenantId: 'tenant-1', databaseUrl: 'mysql://localhost/db' }) } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const res = await svc.checkout(payload);
+    expect(res).toBe(fullExisting);
+    expect(db.sale.findUnique).toHaveBeenCalledTimes(2);
+    expect(db.$transaction).not.toHaveBeenCalled();
   });
 });

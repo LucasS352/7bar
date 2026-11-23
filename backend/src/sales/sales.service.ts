@@ -211,8 +211,17 @@ export class SalesService {
       }
       return existing;
     };
-    const existing = await prisma.sale.findUnique({ where: { id: canonicalId }, include: includeSale });
-    if (existing) return validateReplay(existing);
+    const existingHead = await prisma.sale.findUnique({
+      where: { id: canonicalId },
+      select: { id: true },
+    });
+    if (existingHead) {
+      const existing =
+        'total' in existingHead || 'requestFingerprint' in existingHead
+          ? existingHead
+          : await prisma.sale.findUnique({ where: { id: canonicalId }, include: includeSale });
+      if (existing) return validateReplay(existing);
+    }
 
     let allProductIdsToSync: string[] = [];
     let sale: any;

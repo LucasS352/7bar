@@ -4,7 +4,7 @@ services:
     image: mysql:8.0
     container_name: 7bar_mysql
     restart: unless-stopped
-    command: --innodb-redo-log-capacity=536870912 --max-connections=1000
+    command: --innodb-redo-log-capacity=536870912 --innodb-buffer-pool-size=536870912 --max-connections=1000
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Defina MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: 7bar
