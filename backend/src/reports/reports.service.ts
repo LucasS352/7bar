@@ -1,3 +1,4 @@
+import { demandForecast, forecastWindow, type DemandRow } from './demand-forecast';
 import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
@@ -781,6 +782,80 @@ export class ReportsService {
     };
   }
 
+  async forecast(includeStock = false) {
+    const prisma = await this.getClient();
+    const window = forecastWindow(new Date());
+    const rows = await prisma.$queryRaw<DemandRow[]>(Prisma.sql`
+      SELECT DATE_FORMAT(DATE_SUB(s.createdAt, INTERVAL 3 HOUR), '%Y-%m-%d') AS day,
+             si.productId, p.name, p.unit, SUM(si.quantity) AS quantity
+      FROM sales s JOIN sale_items si ON si.saleId = s.id
+      JOIN products p ON p.id = si.productId AND p.active = 1
+      WHERE s.createdAt >= ${window.start} AND s.createdAt < ${window.end}
+        AND s.status = 'completed' AND (s.source IS NULL OR s.source <> 'ajuste_fiscal')
+      GROUP BY day, si.productId, p.name, p.unit
+      HAVING SUM(si.quantity) > 0
+    `);
+    const forecast = demandForecast(rows, window.today);
+    const planner = new Map<string, { id: string; name: string; unit: string; sold30: number }>();
+    for (const row of rows) {
+      if (row.day < new Date(window.end.getTime() - 30 * 86_400_000).toISOString().slice(0, 10)) continue;
+      const item = planner.get(row.productId) ?? { id: row.productId, name: row.name, unit: row.unit, sold30: 0 };
+      item.sold30 += Number(row.quantity);
+      planner.set(row.productId, item);
+    }
+    const ids = [...planner.keys()];
+    const inventory = includeStock && ids.length ? await prisma.$queryRaw<{
+      id: string; stock: Prisma.Decimal; minimum: Prisma.Decimal | null; pending: Prisma.Decimal;
+    }[]>(Prisma.sql`
+      SELECT p.id, p.stock, p.minStock AS minimum,
+        COALESCE((SELECT SUM(i.quantity * i.unitMultiplier) FROM purchase_order_items i
+          JOIN purchase_orders o ON o.id = i.purchaseOrderId
+          WHERE i.productId = p.id AND o.status = 'SENT'), 0) AS pending
+      FROM products p WHERE p.id IN (${Prisma.join(ids)}) AND p.isComposite = 0
+        AND (p.stock > 0 OR p.minStock > 0 OR EXISTS
+          (SELECT 1 FROM stock_lots lot WHERE lot.productId = p.id AND lot.quantity > 0))
+    `) : [];
+    const byId = new Map(inventory.map(row => [row.id, row]));
+    return { ...forecast, planner: [...planner.values()].sort((a, b) => b.sold30 - a.sold30).map(item => ({
+      ...item,
+      inventory: byId.has(item.id) ? { stock: Number(byId.get(item.id)!.stock), minimum: Number(byId.get(item.id)!.minimum ?? 0), pending: Number(byId.get(item.id)!.pending) } : null,
+    })), projections: forecast.projections.map(projection => ({
+      ...projection,
+      items: projection.items.map(item => {
+        const row = byId.get(item.id);
+        return { ...item, inventory: row ? {
+          stock: Number(row.stock), minimum: Number(row.minimum ?? 0), pending: Number(row.pending),
+          required: Math.max(0, item.demandBeforeStart + item.estimate + Number(row.minimum ?? 0) - Math.max(0, Number(row.stock)) - Number(row.pending)),
+        } : null };
+      }),
+    })) };
+  }
+
+  async insightsHistory() {
+    const prisma = await this.getClient();
+    const rows = await prisma.$queryRaw<{
+      month: string; revenue: Prisma.Decimal; cost: Prisma.Decimal; transactions: bigint; missing: bigint;
+    }[]>(Prisma.sql`
+      SELECT month, SUM(revenue) AS revenue, SUM(cost) AS cost,
+             SUM(transactions) AS transactions, SUM(missing) AS missing
+      FROM (
+        SELECT DATE_FORMAT(DATE_SUB(s.createdAt, INTERVAL 3 HOUR), '%Y-%m') AS month,
+               SUM(s.total) AS revenue, 0 AS cost, COUNT(*) AS transactions, 0 AS missing
+        FROM sales s WHERE s.status = 'completed' AND (s.source IS NULL OR s.source <> 'ajuste_fiscal')
+        GROUP BY month
+        UNION ALL
+        SELECT DATE_FORMAT(DATE_SUB(s.createdAt, INTERVAL 3 HOUR), '%Y-%m') AS month,
+               0, SUM(si.quantity * CASE WHEN si.priceCost > 0 THEN si.priceCost WHEN p.priceCost > 0 THEN p.priceCost ELSE 0 END),
+               0, SUM(CASE WHEN COALESCE(si.priceCost,0) <= 0 AND COALESCE(p.priceCost,0) <= 0 THEN 1 ELSE 0 END)
+        FROM sales s JOIN sale_items si ON si.saleId = s.id LEFT JOIN products p ON p.id = si.productId
+        WHERE s.status = 'completed' AND (s.source IS NULL OR s.source <> 'ajuste_fiscal')
+        GROUP BY month
+      ) totals GROUP BY month ORDER BY month DESC
+    `);
+    return rows.map(r => ({ month: r.month, revenue: toDec(r.revenue).toFixed(2),
+      profit: toDec(r.revenue).minus(toDec(r.cost)).toFixed(2), transactions: Number(r.transactions), partial: Number(r.missing) > 0 }));
+  }
+
   async adegaInsights(startDate: unknown, endDate: unknown): Promise<AdegaInsightsResponse> {
     const period = reportPeriod(startDate, endDate);
     const prisma = await this.getClient();
@@ -912,7 +987,7 @@ export class ReportsService {
             COALESCE(SUM(CASE WHEN si.priceCost > 0 THEN si.subtotal ELSE 0 END), 0) AS historicalRev,
             COALESCE(SUM(CASE WHEN (si.priceCost IS NULL OR si.priceCost <= 0) AND p.priceCost > 0 THEN si.subtotal ELSE 0 END), 0) AS fallbackRev,
             COALESCE(SUM(CASE WHEN (si.priceCost IS NULL OR si.priceCost <= 0) AND (p.priceCost IS NULL OR p.priceCost <= 0) THEN si.subtotal ELSE 0 END), 0) AS uncostedRev,
-            p.stock AS currentStock,
+            CASE WHEN p.stock > 0 OR p.minStock > 0 OR EXISTS (SELECT 1 FROM stock_lots lot WHERE lot.productId = si.productId AND lot.quantity > 0) THEN p.stock ELSE NULL END AS currentStock,
             p.minStock AS minStock,
             COALESCE(p.isComposite, 0) AS isComposite
           FROM sale_items si
@@ -923,7 +998,7 @@ export class ReportsService {
             AND s.status = 'completed' AND (s.source IS NULL OR s.source <> 'ajuste_fiscal')
           GROUP BY si.productId, p.name, p.unit, p.categoryId, c.name, p.stock, p.minStock, p.isComposite
           ORDER BY itemSubtotal DESC
-          LIMIT 250
+
         `),
         prisma.$queryRaw<
           {
@@ -936,6 +1011,7 @@ export class ReportsService {
             unitCost: Prisma.Decimal;
             unitPrice: Prisma.Decimal;
             tiedCapital: Prisma.Decimal;
+            lastSaleAt: Date | null;
           }[]
         >(Prisma.sql`
           SELECT
@@ -947,7 +1023,11 @@ export class ReportsService {
             p.stock AS currentStock,
             p.priceCost AS unitCost,
             p.priceSell AS unitPrice,
-            (p.stock * p.priceCost) AS tiedCapital
+            (p.stock * p.priceCost) AS tiedCapital,
+            (SELECT MAX(s.createdAt) FROM sale_items si
+              JOIN sales s ON s.id = si.saleId
+              WHERE si.productId = p.id AND s.status = 'completed'
+                AND (s.source IS NULL OR s.source <> 'ajuste_fiscal')) AS lastSaleAt
           FROM products p
           LEFT JOIN categories c ON c.id = p.categoryId
           WHERE p.active = 1
@@ -963,7 +1043,7 @@ export class ReportsService {
                 AND s.status = 'completed' AND (s.source IS NULL OR s.source <> 'ajuste_fiscal')
             )
           ORDER BY tiedCapital DESC, p.stock DESC
-          LIMIT 15
+
         `),
       ],
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
@@ -1089,7 +1169,7 @@ export class ReportsService {
     );
 
     const topProfitDrivers = [...mappedProducts]
-      .filter((p) => Number(p.grossProfit) > 0)
+      .filter((p) => p.costSource !== 'untracked' && Number(p.costCoveragePercent) === 100 && Number(p.grossProfit) > 0)
       .sort((a, b) => Number(b.grossProfit) - Number(a.grossProfit))
       .slice(0, 8)
       .map((p, idx) => ({ ...p, rank: idx + 1 }));
@@ -1099,7 +1179,7 @@ export class ReportsService {
         (p) =>
           p.marginPercent !== null &&
           Number(p.marginPercent) >= 35 &&
-          p.costSource !== 'untracked' &&
+          p.costSource !== 'untracked' && Number(p.costCoveragePercent) === 100 &&
           Number(p.quantity) >= 2,
       )
       .sort((a, b) => Number(b.marginPercent ?? 0) - Number(a.marginPercent ?? 0))
@@ -1160,6 +1240,7 @@ export class ReportsService {
       unitCost: toDec(row.unitCost).toFixed(2),
       unitPrice: toDec(row.unitPrice).toFixed(2),
       tiedCapital: toDec(row.tiedCapital).toFixed(2),
+      lastSaleAt: row.lastSaleAt ? new Date(row.lastSaleAt.getTime() - 3 * 3_600_000).toISOString().slice(0, 10) : null,
     }));
     const totalTiedCapital = slowMovingRows.reduce((acc, r) => acc.plus(toDec(r.tiedCapital)), new Prisma.Decimal(0));
 
@@ -1176,7 +1257,7 @@ export class ReportsService {
       weekendRevenueSharePercent,
       topProfitDrivers,
       categoryMix,
-      stockoutRisks: stockoutRisks.slice(0, 12),
+      stockoutRisks,
       slowMovingProducts,
       totalTiedCapital,
       paymentMix,
@@ -1209,6 +1290,11 @@ export class ReportsService {
           : null,
         totalTiedCapitalSlowMoving: totalTiedCapital.toFixed(2),
         stockoutRisksCount: stockoutRisks.length,
+        slowMovingCount: slowMovingRows.length,
+        transactions,
+        averageTicket: transactions ? revenue.div(transactions).toFixed(2) : '0.00',
+        costCoveragePercent: itemsTotalRev.gt(0) ? itemsTotalRev.minus(uncostedRevenue).div(itemsTotalRev).mul(100).toFixed(2) : null,
+        uncostedItemsCount,
       },
       byHour,
       byWeekday,
@@ -1218,7 +1304,7 @@ export class ReportsService {
       highMarginOpportunities,
       uncostedTopSellers,
       stockoutRisks: stockoutRisks.slice(0, 15),
-      slowMovingProducts,
+      slowMovingProducts: slowMovingProducts.slice(0, 15),
       insights,
     };
   }
@@ -1280,7 +1366,7 @@ export class ReportsService {
         metricLabel: 'Itens em alerta',
         metricValue: `${params.stockoutRisks.length}`,
         actionHint: 'Gere pedido de compra antes do pico do fim de semana para não perder vendas.',
-        productIds: params.stockoutRisks.map((r) => r.productId),
+        productIds: params.stockoutRisks.slice(0, 12).map((r) => r.productId),
       });
     }
 
@@ -1290,7 +1376,7 @@ export class ReportsService {
         id: 'top-profit-driver',
         category: 'profit',
         severity: 'positive',
-        title: `Campeão de lucro real: ${leader.name}`,
+        title: `Maior lucro bruto com custo conhecido: ${leader.name}`,
         description: `Gerou ${formatBrl(leader.grossProfit)} de lucro bruto (${leader.marginPercent ?? '0'}% de margem) com ${Number(leader.quantity).toLocaleString('pt-BR')} ${leader.unit} vendidos.`,
         metricLabel: 'Lucro do líder',
         metricValue: formatBrl(leader.grossProfit),

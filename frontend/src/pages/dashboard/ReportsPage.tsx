@@ -1,3 +1,5 @@
+import { DemandForecast } from './DemandForecast';
+import { InsightsHistory } from './InsightsHistory';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
@@ -27,17 +29,8 @@ import { useAuthStore } from '@/store/auth';
 import { InfoBalloon } from '@/components/InfoBalloon';
 import { ProductThumb } from '@/components/ProductThumb';
 import { UncostedProductsView } from './UncostedProductsView';
-import {
-  FinancialEvolutionChart,
-  PeriodComparisonBar,
-  type DailySales,
-  type SalesComparison,
-} from './SalesEvolution';
-import {
-  AdegaInsightsPanel,
-  type AdegaInsightsData,
-  type ProductRankingRow,
-} from './AdegaInsightsPanel';
+import { FinancialEvolutionChart, PeriodComparisonBar, type DailySales, type SalesComparison } from './SalesEvolution';
+import { AdegaInsightsPanel, type AdegaInsightsData, type ProductRankingRow } from './AdegaInsightsPanel';
 
 interface UncostedProduct {
   productId: string;
@@ -49,7 +42,13 @@ interface UncostedProduct {
 }
 
 interface SalesReport {
-  period: { startDate: string; endDate: string; days: number; timezone: string; includesOpenDays?: boolean };
+  period: {
+    startDate: string;
+    endDate: string;
+    days: number;
+    timezone: string;
+    includesOpenDays?: boolean;
+  };
   daily: DailySales[];
   comparison: SalesComparison;
   summary: {
@@ -86,7 +85,12 @@ interface SalesReport {
 }
 
 interface ProductRankingResponse {
-  period: { startDate: string; endDate: string; days: number; timezone: string };
+  period: {
+    startDate: string;
+    endDate: string;
+    days: number;
+    timezone: string;
+  };
   filters: {
     sortBy: SortOption;
     categoryId: string | null;
@@ -108,12 +112,15 @@ interface ProductRankingResponse {
   items: ProductRankingRow[];
 }
 
-type ReportTab = 'overview' | 'ranking' | 'insights';
+type ReportTab = 'overview' | 'ranking' | 'insights' | 'forecast';
 type SortOption = 'profit' | 'revenue' | 'quantity' | 'margin' | 'cost';
-type PresetKey = 'today' | 'yesterday' | '7d' | '15d' | '30d' | 'month';
+type PresetKey = 'today' | 'yesterday' | '7d' | '15d' | '30d' | '90d' | 'month';
 
 const money = (value: string | number | null | undefined) =>
-  Number(value ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  Number(value ?? 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
 
 const formatQty = (value: string | number | null | undefined) =>
   Number(value ?? 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
@@ -126,8 +133,7 @@ const formatPct = (value: string | number | null | undefined, digits = 2) =>
 
 const dateLabel = (value: string) => value.split('-').reverse().join('/');
 
-const toIsoBrt = (date: Date) =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo' }).format(date);
+const toIsoBrt = (date: Date) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo' }).format(date);
 
 const shiftDaysBrt = (daysOffset: number) => {
   const base = toIsoBrt(new Date());
@@ -144,6 +150,7 @@ function resolvePresetDates(preset: PresetKey): { start: string; end: string } {
   }
   if (preset === '7d') return { start: shiftDaysBrt(-6), end: todayStr };
   if (preset === '15d') return { start: shiftDaysBrt(-14), end: todayStr };
+  if (preset === '90d') return { start: shiftDaysBrt(-89), end: todayStr };
   if (preset === '30d') return { start: shiftDaysBrt(-29), end: todayStr };
   return { start: `${todayStr.slice(0, 8)}01`, end: todayStr };
 }
@@ -210,10 +217,22 @@ function downloadRankingCsv(items: ProductRankingRow[], startDate: string, endDa
 }
 
 const costBadge: Record<ProductRankingRow['costSource'], { label: string; cls: string }> = {
-  historical: { label: 'Lote/FIFO', cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
-  catalog_fallback: { label: 'Catálogo', cls: 'bg-sky-500/15 text-sky-300 border-sky-500/30' },
-  mixed: { label: 'Misto', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
-  untracked: { label: 'Sem custo', cls: 'bg-rose-500/15 text-rose-300 border-rose-500/30' },
+  historical: {
+    label: 'Lote/FIFO',
+    cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  },
+  catalog_fallback: {
+    label: 'Catálogo',
+    cls: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+  },
+  mixed: {
+    label: 'Misto',
+    cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+  },
+  untracked: {
+    label: 'Sem custo',
+    cls: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+  },
 };
 
 const stockBadge: Record<ProductRankingRow['stockAlert'], { label: string; cls: string }> = {
@@ -229,6 +248,7 @@ const PRESETS: { id: PresetKey; label: string }[] = [
   { id: '7d', label: '7 dias' },
   { id: '15d', label: '15 dias' },
   { id: '30d', label: '30 dias' },
+  { id: '90d', label: '90 dias' },
   { id: 'month', label: 'Este mês' },
 ];
 
@@ -272,7 +292,9 @@ function SalesReports() {
 
   const [loading, setLoading] = useState(true);
   const [rankingLoading, setRankingLoading] = useState(false);
+  const [includeStock, setIncludeStock] = useState(false);
   const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState('');
   const [error, setError] = useState('');
   const [validation, setValidation] = useState('');
 
@@ -360,21 +382,22 @@ function SalesReports() {
   useEffect(() => {
     if (activeTab !== 'insights') return;
     const controller = new AbortController();
+    setInsights(null);
     setInsightsLoading(true);
-    setError('');
+    setInsightsError('');
     apiGet<AdegaInsightsData>('/reports/adega-insights', {
       params: { startDate: query.startDate, endDate: query.endDate },
       signal: controller.signal,
     })
       .then(({ data }) => {
         if (!controller.signal.aborted) {
-          setError('');
+          setInsightsError('');
           setInsights(data);
         }
       })
       .catch(() => {
         if (!controller.signal.aborted) {
-          setError('Não foi possível carregar os insights da adega.');
+          setInsightsError('Não foi possível carregar os insights da adega.');
         }
       })
       .finally(() => {
@@ -401,7 +424,11 @@ function SalesReports() {
     setStartDate(nextStart);
     setEndDate(nextEnd);
     setDateMenuOpen(false);
-    setQuery((prev) => ({ startDate: nextStart, endDate: nextEnd, version: prev.version + 1 }));
+    setQuery((prev) => ({
+      startDate: nextStart,
+      endDate: nextEnd,
+      version: prev.version + 1,
+    }));
   }
 
   function applyPreset(preset: PresetKey) {
@@ -412,8 +439,7 @@ function SalesReports() {
   const coveragePct = Number(report?.summary.costCoveragePercent ?? 100);
   const profitPositive = Number(report?.summary.grossProfit ?? 0) >= 0;
   const profitCompPct =
-    report?.comparison.grossProfitChangePercent !== null &&
-    report?.comparison.grossProfitChangePercent !== undefined
+    report?.comparison.grossProfitChangePercent !== null && report?.comparison.grossProfitChangePercent !== undefined
       ? Number(report.comparison.grossProfitChangePercent)
       : null;
   const profitCompDiff = Number(report?.comparison.grossProfitDifference ?? 0);
@@ -423,9 +449,13 @@ function SalesReports() {
       {/* Breadcrumb + Título + Abas (100% fluido sem margens laterais vazias) */}
       <div className="space-y-2">
         <nav aria-label="Navegação estrutural" className="flex items-center gap-1.5 text-xs text-zinc-500">
-          <Link to="/" className="hover:text-zinc-300 transition">PDV</Link>
+          <Link to="/" className="hover:text-zinc-300 transition">
+            PDV
+          </Link>
           <span>/</span>
-          <Link to="/dashboard" className="hover:text-zinc-300 transition">Analytics</Link>
+          <Link to="/dashboard" className="hover:text-zinc-300 transition">
+            Analytics
+          </Link>
           <span>/</span>
           <span className="text-zinc-300 font-medium">Relatórios</span>
         </nav>
@@ -438,16 +468,37 @@ function SalesReports() {
             <span className="truncate">Relatórios Financeiros &amp; Adega</span>
           </h1>
 
-          {/* Abas responsivas: grid de 3 colunas no celular, inline-flex no desktop */}
+          {/* Abas responsivas */}
           <div
             role="tablist"
             aria-label="Seções do relatório"
-            className="grid grid-cols-3 sm:inline-flex bg-zinc-900/90 border border-zinc-800 p-1 rounded-xl gap-1 w-full lg:w-auto"
+            className="grid grid-cols-2 sm:inline-flex bg-zinc-900/90 border border-zinc-800 p-1 rounded-xl gap-1 w-full lg:w-auto"
           >
             {[
-              { id: 'overview', label: 'Lucro & Evolução', shortLabel: 'Lucro', icon: TrendingUp },
-              { id: 'ranking', label: 'Ranking de Produtos', shortLabel: 'Ranking', icon: Award },
-              { id: 'insights', label: 'Insights da Adega', shortLabel: 'Insights', icon: Lightbulb },
+              {
+                id: 'overview',
+                label: 'Lucro & Evolução',
+                shortLabel: 'Lucro',
+                icon: TrendingUp,
+              },
+              {
+                id: 'ranking',
+                label: 'Ranking de Produtos',
+                shortLabel: 'Ranking',
+                icon: Award,
+              },
+              {
+                id: 'insights',
+                label: 'Insights da Adega',
+                shortLabel: 'Insights',
+                icon: Lightbulb,
+              },
+              {
+                id: 'forecast',
+                label: 'Previsão de Compras',
+                shortLabel: 'Compras',
+                icon: ShoppingCart,
+              },
             ].map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -478,7 +529,7 @@ function SalesReports() {
       </div>
 
       {/* Barra Unificada de Filtro de Período (otimizada p/ mobile e desktop widescreen) */}
-      <form
+      {activeTab !== 'forecast' && <form
         onSubmit={(event) => {
           event.preventDefault();
           applyRange();
@@ -488,7 +539,7 @@ function SalesReports() {
         <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 flex-1">
           {/* No mobile, grade 3x2 ultra limpa; no desktop, pílulas em linha */}
           <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5">
-            {PRESETS.map((preset) => {
+            {PRESETS.filter((p) => p.id !== '90d' || activeTab === 'insights').map((preset) => {
               const isSelected = activePreset === preset.id;
               return (
                 <button
@@ -591,17 +642,20 @@ function SalesReports() {
           <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           Consultar
         </button>
-      </form>
+      </form>}
 
       {validation && (
-        <p role="alert" className="text-amber-300 text-sm bg-amber-500/10 border border-amber-500/25 rounded-xl px-4 py-2.5">
+        <p
+          role="alert"
+          className="text-amber-300 text-sm bg-amber-500/10 border border-amber-500/25 rounded-xl px-4 py-2.5"
+        >
           {validation}
         </p>
       )}
 
-      {error && (
+      {activeTab !== 'forecast' && (error || (activeTab === 'insights' && insightsError)) && (
         <div role="alert" className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 text-rose-300">
-          <p>{error}</p>
+          <p>{(activeTab === 'insights' && insightsError) || error}</p>
           <button
             type="button"
             onClick={() => setQuery((q) => ({ ...q, version: q.version + 1 }))}
@@ -672,7 +726,8 @@ function SalesReports() {
                     {money(report.summary.revenue)}
                   </p>
                   <p className="text-[11px] sm:text-xs text-zinc-400 mt-1 leading-snug">
-                    {report.summary.transactions.toLocaleString('pt-BR')} vendas · Ticket {money(report.summary.averageTicket)}
+                    {report.summary.transactions.toLocaleString('pt-BR')} vendas · Ticket{' '}
+                    {money(report.summary.averageTicket)}
                   </p>
                 </div>
 
@@ -719,7 +774,9 @@ function SalesReports() {
                   </p>
                   <p className="text-[11px] sm:text-xs text-zinc-400 mt-1 leading-snug">
                     Resultado líquido
-                    {report.summary.markupPercent !== null ? ` · Markup ${formatPct(report.summary.markupPercent)}%` : ''}
+                    {report.summary.markupPercent !== null
+                      ? ` · Markup ${formatPct(report.summary.markupPercent)}%`
+                      : ''}
                   </p>
                 </div>
 
@@ -893,9 +950,7 @@ function SalesReports() {
                           description="Destaca automaticamente falhas no cadastro de custos que distorcem seu lucro e resume o ganho ou queda frente ao período anterior."
                         />
                       </div>
-                      <p className="text-xs text-zinc-400 mt-1">
-                        Pontos que merecem sua atenção neste período.
-                      </p>
+                      <p className="text-xs text-zinc-400 mt-1">Pontos que merecem sua atenção neste período.</p>
                     </div>
 
                     {Number(report.summary.uncostedRevenue) > 0 || report.summary.uncostedItemsCount > 0 ? (
@@ -917,7 +972,11 @@ function SalesReports() {
                         <button
                           type="button"
                           onClick={() =>
-                            setCostEditor({ open: true, scope: 'period', search: '' })
+                            setCostEditor({
+                              open: true,
+                              scope: 'period',
+                              search: '',
+                            })
                           }
                           className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300 pl-6 cursor-pointer"
                         >
@@ -1012,8 +1071,7 @@ function SalesReports() {
                     <div className="md:hidden divide-y divide-zinc-800/70">
                       {report.products.map((p) => {
                         const marginVal = p.marginPercent !== null ? Number(p.marginPercent) : null;
-                        const barWidth =
-                          marginVal !== null ? Math.max(4, Math.min(100, Math.abs(marginVal))) : 0;
+                        const barWidth = marginVal !== null ? Math.max(4, Math.min(100, Math.abs(marginVal))) : 0;
                         const profitPos = Number(p.grossProfit) >= 0;
                         return (
                           <div key={`${p.productId}-${p.name}-${p.unit}`} className="p-3.5 space-y-2">
@@ -1021,8 +1079,7 @@ function SalesReports() {
                               <div className="flex items-center gap-2.5 min-w-0">
                                 <ProductThumb src={p.imageUrl} alt={p.name} size="sm" />
                                 <p className="font-semibold text-white text-sm leading-snug min-w-0">
-                                  {p.name}{' '}
-                                  <span className="text-xs font-normal text-zinc-400">({p.unit})</span>
+                                  {p.name} <span className="text-xs font-normal text-zinc-400">({p.unit})</span>
                                 </p>
                               </div>
                               <span
@@ -1089,8 +1146,7 @@ function SalesReports() {
                         <tbody>
                           {report.products.map((p) => {
                             const marginVal = p.marginPercent !== null ? Number(p.marginPercent) : null;
-                            const barWidth =
-                              marginVal !== null ? Math.max(4, Math.min(100, Math.abs(marginVal))) : 0;
+                            const barWidth = marginVal !== null ? Math.max(4, Math.min(100, Math.abs(marginVal))) : 0;
                             const profitPos = Number(p.grossProfit) >= 0;
                             return (
                               <tr
@@ -1101,8 +1157,7 @@ function SalesReports() {
                                   <div className="flex items-center gap-3 min-w-0">
                                     <ProductThumb src={p.imageUrl} alt={p.name} size="sm" />
                                     <span className="truncate">
-                                      {p.name}{' '}
-                                      <span className="text-xs font-normal text-zinc-400">({p.unit})</span>
+                                      {p.name} <span className="text-xs font-normal text-zinc-400">({p.unit})</span>
                                     </span>
                                   </div>
                                 </td>
@@ -1125,9 +1180,7 @@ function SalesReports() {
                                 <td className="py-3 px-4 sm:px-5 text-right tabular-nums">
                                   {marginVal !== null ? (
                                     <div className="inline-flex items-center justify-end gap-2.5">
-                                      <span className="text-zinc-200 font-medium">
-                                        {formatPct(marginVal)}%
-                                      </span>
+                                      <span className="text-zinc-200 font-medium">{formatPct(marginVal)}%</span>
                                       <span
                                         aria-hidden="true"
                                         className="w-16 h-2 rounded-full bg-zinc-800 overflow-hidden"
@@ -1450,11 +1503,7 @@ function SalesReports() {
                                 ? 'Catálogo ativo'
                                 : 'Tudo preenchido'}
                           </span>
-                          <span
-                            className={`font-bold shrink-0 ${
-                              hasPending ? 'text-amber-300' : 'text-emerald-300'
-                            }`}
-                          >
+                          <span className={`font-bold shrink-0 ${hasPending ? 'text-amber-300' : 'text-emerald-300'}`}>
                             {hasPending ? 'Inserir \u2192' : 'Ver \u2192'}
                           </span>
                         </p>
@@ -1470,14 +1519,21 @@ function SalesReports() {
                   <div>
                     <h2 className="text-sm sm:text-base font-bold text-white">Ranking de produtos</h2>
                     <p className="text-xs text-zinc-400 mt-0.5">
-                      Produtos ordenados no período selecionado · clique em <strong>Sem custo</strong> para preencher direto.
+                      Produtos ordenados no período selecionado · clique em <strong>Sem custo</strong> para preencher
+                      direto.
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     {(ranking.totals.uncostedInPeriodCount ?? 0) > 0 && (
                       <button
                         type="button"
-                        onClick={() => setCostEditor({ open: true, scope: 'period', search: '' })}
+                        onClick={() =>
+                          setCostEditor({
+                            open: true,
+                            scope: 'period',
+                            search: '',
+                          })
+                        }
                         className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-300 text-xs font-semibold cursor-pointer transition"
                       >
                         + Inserir custos ({ranking.totals.uncostedInPeriodCount})
@@ -1597,8 +1653,7 @@ function SalesReports() {
                             const cBadge = costBadge[item.costSource];
                             const isUntracked = item.costSource === 'untracked';
                             const marginVal = item.marginPercent !== null ? Number(item.marginPercent) : null;
-                            const barWidth =
-                              marginVal !== null ? Math.max(4, Math.min(100, Math.abs(marginVal))) : 0;
+                            const barWidth = marginVal !== null ? Math.max(4, Math.min(100, Math.abs(marginVal))) : 0;
                             const stockNum = item.currentStock !== null ? Number(item.currentStock) : null;
                             return (
                               <tr key={item.productId} className="border-t border-zinc-800/80 hover:bg-zinc-800/30">
@@ -1637,8 +1692,7 @@ function SalesReports() {
                                   </div>
                                 </td>
                                 <td className="p-3 text-right whitespace-nowrap text-zinc-200 tabular-nums">
-                                  {formatQty(item.quantity)}{' '}
-                                  <span className="text-xs text-zinc-500">{item.unit}</span>
+                                  {formatQty(item.quantity)} <span className="text-xs text-zinc-500">{item.unit}</span>
                                 </td>
                                 <td className="p-3 text-right whitespace-nowrap text-zinc-300 tabular-nums">
                                   {money(item.avgSalePrice)}
@@ -1649,7 +1703,9 @@ function SalesReports() {
                                 <td className="p-3 text-right whitespace-nowrap tabular-nums">
                                   <p className="font-semibold text-white">{money(item.itemSubtotal)}</p>
                                   {item.revenueSharePercent && (
-                                    <p className="text-[11px] text-zinc-500">{formatPct(item.revenueSharePercent)}% rec.</p>
+                                    <p className="text-[11px] text-zinc-500">
+                                      {formatPct(item.revenueSharePercent)}% rec.
+                                    </p>
                                   )}
                                 </td>
                                 <td className="p-3 text-right whitespace-nowrap text-amber-300 tabular-nums">
@@ -1664,15 +1720,15 @@ function SalesReports() {
                                     {money(item.grossProfit)}
                                   </p>
                                   {item.profitSharePercent && (
-                                    <p className="text-[11px] text-zinc-500">{formatPct(item.profitSharePercent)}% luc.</p>
+                                    <p className="text-[11px] text-zinc-500">
+                                      {formatPct(item.profitSharePercent)}% luc.
+                                    </p>
                                   )}
                                 </td>
                                 <td className="p-3 text-right whitespace-nowrap tabular-nums">
                                   {marginVal !== null ? (
                                     <div className="inline-flex items-center justify-end gap-2">
-                                      <span className="text-zinc-200 font-medium">
-                                        {formatPct(marginVal)}%
-                                      </span>
+                                      <span className="text-zinc-200 font-medium">{formatPct(marginVal)}%</span>
                                       <span
                                         aria-hidden="true"
                                         className="w-14 h-2 rounded-full bg-zinc-800 overflow-hidden"
@@ -1740,8 +1796,20 @@ function SalesReports() {
           {insights && (
             <AdegaInsightsPanel
               data={insights}
+              includeStock={includeStock}
+              onStockChange={setIncludeStock}
+              financial={
+                report?.period.startDate === insights.period.startDate &&
+                report.period.endDate === insights.period.endDate
+                  ? report
+                  : null
+              }
               onOpenCostEditor={(search) =>
-                setCostEditor({ open: true, scope: 'period', search: search ?? '' })
+                setCostEditor({
+                  open: true,
+                  scope: 'period',
+                  search: search ?? '',
+                })
               }
               onGoToRanking={(sort) => {
                 if (sort) {
@@ -1752,6 +1820,13 @@ function SalesReports() {
               }}
             />
           )}
+          <InsightsHistory />
+        </section>
+      )}
+
+      {activeTab === 'forecast' && (
+        <section aria-label="Previsão de Compras">
+          <DemandForecast includeStock={includeStock} onStockChange={setIncludeStock} />
         </section>
       )}
 

@@ -246,6 +246,7 @@ export interface StockoutRiskItem {
 }
 
 export interface SlowMovingProductItem {
+  lastSaleAt: string | null;
   productId: string;
   name: string;
   unit: string;
@@ -282,6 +283,11 @@ export interface AdegaInsightsResponse {
     bestWeekday: { dayOfWeek: number; label: string; revenue: string; grossProfit: string } | null;
     totalTiedCapitalSlowMoving: string;
     stockoutRisksCount: number;
+    slowMovingCount: number;
+    transactions: number;
+    averageTicket: string;
+    costCoveragePercent: string | null;
+    uncostedItemsCount: number;
   };
   byHour: HourlyMovementBucket[];
   byWeekday: WeekdayMovementBucket[];

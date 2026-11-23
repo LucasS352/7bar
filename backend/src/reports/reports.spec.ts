@@ -367,6 +367,7 @@ describe('Reports read model (sales, profit, ranking & adega insights)', () => {
     expect(result.kpis.nightRevenueSharePercent).toBe('70.00');
     expect(result.kpis.bestWeekday).toMatchObject({ dayOfWeek: 7, label: 'Sábado', revenue: '800.00' });
     expect(result.kpis.totalTiedCapitalSlowMoving).toBe('320.00');
+    expect(result.slowMovingProducts[0].lastSaleAt).toBeNull();
     expect(result.stockoutRisks).toHaveLength(1);
     expect(result.stockoutRisks[0]).toMatchObject({
       productId: 'p1',

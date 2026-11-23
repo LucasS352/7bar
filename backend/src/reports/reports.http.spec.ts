@@ -43,7 +43,7 @@ describe('Reports HTTP authorization and tenant context', () => {
         { provide: JwtService, useValue: jwt },
         {
           provide: ReportsService,
-          useValue: { sales, productsRanking, adegaInsights, uncostedProducts, updateProductCosts },
+          useValue: { sales, forecast: adegaInsights, insightsHistory: adegaInsights, productsRanking, adegaInsights, uncostedProducts, updateProductCosts },
         },
         { provide: TenantContextService, useValue: context },
         {
@@ -83,6 +83,8 @@ describe('Reports HTTP authorization and tenant context', () => {
     '/api/reports/sales?startDate=2026-01-01&endDate=2026-01-02',
     '/api/reports/products-ranking?startDate=2026-01-01&endDate=2026-01-02&sortBy=profit',
     '/api/reports/adega-insights?startDate=2026-01-01&endDate=2026-01-02',
+    '/api/reports/adega-insights/forecast',
+    '/api/reports/adega-insights/history',
     '/api/reports/uncosted-products?startDate=2026-01-01&endDate=2026-01-02&scope=period',
   ];
 

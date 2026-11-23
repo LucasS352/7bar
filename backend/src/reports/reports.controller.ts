@@ -47,6 +47,20 @@ export class ReportsController {
     });
   }
 
+  @Get('adega-insights/history')
+  @Header('Cache-Control', 'private, no-store')
+  history(@CurrentUser() user: { role?: string; type?: string }) {
+    this.assertAuthorized(user);
+    return this.reports.insightsHistory();
+  }
+
+  @Get('adega-insights/forecast')
+  @Header('Cache-Control', 'private, no-store')
+  forecast(@CurrentUser() user: { role?: string; type?: string }, @Query('includeStock') includeStock?: string) {
+    this.assertAuthorized(user);
+    return this.reports.forecast(includeStock === 'true');
+  }
+
   @Get('adega-insights')
   @Header('Cache-Control', 'private, no-store')
   adegaInsights(
