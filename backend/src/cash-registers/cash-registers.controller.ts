@@ -14,8 +14,18 @@ export class CashRegistersController {
   }
 
   @Get()
-  findAll() {
-    return this.cashRegistersService.findAll();
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.cashRegistersService.findAll({
+      page: page !== undefined ? Number(page) : undefined,
+      limit: limit !== undefined ? Number(limit) : undefined,
+      status,
+      search,
+    });
   }
 
   @Post(':id/close')

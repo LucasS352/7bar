@@ -382,25 +382,118 @@ export class CashRegistersService {
     });
   }
 
-  async findAll() {
+  async findAll(query?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+  }) {
     const prisma = await this.getPrisma();
-    const registers = await prisma.cashRegister.findMany({
-      orderBy: { openingTime: 'desc' },
-      include: {
-        operator: { select: { id: true, name: true, isManager: true } },
-        sales: {
-          where: { NOT: [{ status: 'cancelled' }, { source: 'ajuste_fiscal' }] },
-          select: { total: true }
-        }
-      }
-    });
 
-    return registers.map(reg => {
-      let totalSales = reg.sales.reduce((acc, s) => acc + Number(s.total || 0), 0);
+    const rawPage = Number(query?.page);
+    const rawLimit = Number(query?.limit);
+    const limit =
+      Number.isFinite(rawLimit) && rawLimit >= 1
+        ? Math.min(100, Math.floor(rawLimit))
+        : 15;
+    let page =
+      Number.isFinite(rawPage) && rawPage >= 1 ? Math.floor(rawPage) : 1;
+
+    const where: Prisma.CashRegisterWhereInput = {};
+    const statusFilter = query?.status?.trim();
+    if (statusFilter === 'open') {
+      where.status = 'open';
+    } else if (statusFilter === 'closed') {
+      where.status = 'closed';
+    } else if (statusFilter === 'pending_audit') {
+      where.status = 'closed';
+      where.closingValue = null;
+    }
+
+    const cleanSearch = query?.search?.trim();
+    if (cleanSearch) {
+      const codeCandidate = cleanSearch.replace(/^#/, '');
+      const parsedCode = /^\d+$/.test(codeCandidate)
+        ? Number(codeCandidate)
+        : null;
+      const orConditions: Prisma.CashRegisterWhereInput[] = [
+        { operator: { name: { contains: cleanSearch } } },
+      ];
+      if (parsedCode !== null && Number.isSafeInteger(parsedCode)) {
+        orConditions.push({ code: parsedCode });
+      }
+      where.OR = orConditions;
+    }
+
+    const selectFields: Prisma.CashRegisterSelect = {
+      id: true,
+      operatorId: true,
+      code: true,
+      openingTime: true,
+      closingTime: true,
+      openingValue: true,
+      closingValue: true,
+      closingDetails: true,
+      status: true,
+      operator: { select: { id: true, name: true, isManager: true } },
+    };
+
+    const [total, firstPageRows] = await Promise.all([
+      prisma.cashRegister.count({ where }),
+      prisma.cashRegister.findMany({
+        where,
+        orderBy: { openingTime: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        select: selectFields,
+      }),
+    ]);
+
+    const lastPage = Math.max(1, Math.ceil(total / limit));
+    let registers = firstPageRows;
+    if (registers.length === 0 && total > 0 && page > lastPage) {
+      page = lastPage;
+      registers = await prisma.cashRegister.findMany({
+        where,
+        orderBy: { openingTime: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        select: selectFields,
+      });
+    }
+
+    const registerIds = registers.map((r) => r.id);
+    const salesTotals = registerIds.length
+      ? await prisma.sale.groupBy({
+          by: ['cashRegisterId'],
+          where: {
+            cashRegisterId: { in: registerIds },
+            status: { not: 'cancelled' },
+            source: { not: 'ajuste_fiscal' },
+          },
+          _sum: { total: true },
+        })
+      : [];
+
+    const salesSumByRegister = new Map<string, number>();
+    for (const row of salesTotals) {
+      if (row.cashRegisterId) {
+        salesSumByRegister.set(
+          row.cashRegisterId,
+          Number(row._sum?.total || 0),
+        );
+      }
+    }
+
+    const data = registers.map((reg) => {
+      let totalSales = salesSumByRegister.get(reg.id) ?? 0;
       let closingDetailsParsed: any = null;
       if (reg.closingDetails) {
         try {
-          closingDetailsParsed = typeof reg.closingDetails === 'string' ? JSON.parse(reg.closingDetails) : reg.closingDetails;
+          closingDetailsParsed =
+            typeof reg.closingDetails === 'string'
+              ? JSON.parse(reg.closingDetails)
+              : reg.closingDetails;
           if (closingDetailsParsed?.totalVendasAjustado != null) {
             totalSales = Number(closingDetailsParsed.totalVendasAjustado);
           }
@@ -409,13 +502,23 @@ export class CashRegistersService {
         }
       }
 
-      const { sales, ...rest } = reg;
       return {
-        ...rest,
+        ...reg,
         totalSales,
         closingDetails: closingDetailsParsed,
       };
     });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        lastPage,
+        totalPages: lastPage,
+      },
+    };
   }
 
   async getReport(id: string) {
