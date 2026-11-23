@@ -24,6 +24,12 @@ test('PosPage e db.ts atualizam apenas os itens vendidos em vez de reescrever 20
   assert.match(posPage, /lastFullCatalogSyncRef/);
 });
 
+test('db.ts indexa comandaId em offline_sales para evitar full scan na finalização', () => {
+  const dbTs = readFrontend('src/lib/db.ts');
+  assert.match(dbTs, /this\.version\(4\)\.stores/);
+  assert.match(dbTs, /where\('comandaId'\)\.equals\(sale\.comandaId\)/);
+});
+
 test('PaymentModal cacheia metadados por loja e usa polling escalonado de NFC-e', () => {
   const modal = readFrontend('src/components/PaymentModal.tsx');
   assert.match(modal, /paymentModalMetaCache/);

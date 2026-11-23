@@ -1,7 +1,8 @@
+import { BadRequestException } from '@nestjs/common';
 import { SalesService } from './sales.service';
 
 describe('SalesService checkout query batching', () => {
-  it('preloads active FIFO stock lots in a single batch query and avoids redundant trailing queries', async () => {
+  it('preloads FIFO lots, batches product/lot updates and creates saleItems via createMany', async () => {
     const productA = {
       id: 'p-a',
       name: 'Cerveja A',
@@ -28,6 +29,7 @@ describe('SalesService checkout query batching', () => {
       product: {
         findMany: jest.fn().mockResolvedValue([productA, productB]),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        update: jest.fn().mockResolvedValue({}),
       },
       stockLot: {
         findMany: jest.fn().mockResolvedValue([
@@ -53,9 +55,14 @@ describe('SalesService checkout query batching', () => {
         findUnique: jest.fn(),
       },
       saleItem: {
-        create: jest.fn().mockImplementation(({ data }: any) =>
-          Promise.resolve({ id: `si-${data.productId}`, ...data, modifiers: [], lotConsumptions: [] }),
-        ),
+        create: jest.fn(),
+        createMany: jest.fn().mockResolvedValue({ count: 2 }),
+      },
+      saleItemModifier: {
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      stockLotConsumption: {
+        createMany: jest.fn().mockResolvedValue({ count: 2 }),
       },
       inventoryLog: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
       saleDeliveryJob: { createMany: jest.fn().mockResolvedValue({ count: 1 }), create: jest.fn() },
@@ -90,13 +97,77 @@ describe('SalesService checkout query batching', () => {
     });
 
     expect(res.items).toHaveLength(2);
-    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1); // apenas lockProducts em batch
     expect(tx.stockLot.findMany).toHaveBeenCalledTimes(1);
     expect(tx.stockLot.findFirst).not.toHaveBeenCalled();
+    expect(tx.stockLot.update).not.toHaveBeenCalled(); // batched em $executeRaw
+    expect(tx.product.updateMany).not.toHaveBeenCalled(); // batched em $executeRaw
+    expect(tx.saleItem.create).not.toHaveBeenCalled();
+    expect(tx.saleItem.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.stockLotConsumption.createMany).toHaveBeenCalledTimes(1);
     expect(tx.sale.findUnique).not.toHaveBeenCalled();
     expect(tx.tenantPaymentMethod.findMany).not.toHaveBeenCalled();
     expect(tx.saleDeliveryJob.createMany).toHaveBeenCalledTimes(1);
     expect(tx.saleDeliveryJob.create).not.toHaveBeenCalled();
     expect(productsService.invalidateCache).toHaveBeenCalledWith('tenant-1');
+  });
+
+  it('rejeita falta de estoque antes de gravar venda ou consumir numeração de NFC-e', async () => {
+    const productLow = {
+      id: 'p-low',
+      name: 'Gelo 5kg',
+      unit: 'UN',
+      isComposite: false,
+      ncm: null,
+      cest: null,
+      origem: 0,
+      priceCost: 5,
+      priceSell: 10,
+      stock: 1,
+      grupoTributacao: null,
+      category: null,
+      modifierGroups: [],
+    };
+
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      $executeRawUnsafe: jest.fn().mockResolvedValue(1),
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      cashRegister: { findUnique: jest.fn().mockResolvedValue({ id: 'reg-1', status: 'open' }) },
+      tenantSettings: { findUnique: jest.fn().mockResolvedValue({ allowNegativeStock: false }) },
+      product: { findMany: jest.fn().mockResolvedValue([productLow]), updateMany: jest.fn(), update: jest.fn() },
+      stockLot: { findMany: jest.fn().mockResolvedValue([]) },
+      numeracaoNfce: { upsert: jest.fn() },
+      sale: { create: jest.fn(), findFirst: jest.fn() },
+    };
+
+    const db = {
+      sale: { findUnique: jest.fn().mockResolvedValue(null) },
+      $transaction: jest.fn((cb: any) => cb(tx)),
+    };
+
+    const svc = new SalesService(
+      { getTenantClient: async () => db } as any,
+      {} as any,
+      {} as any,
+      { get: () => ({ userId: 'op-1', tenantId: 'tenant-1', databaseUrl: 'mysql://localhost/db' }) } as any,
+      { invalidateCache: jest.fn() } as any,
+      {} as any,
+      {} as any,
+    );
+
+    await expect(
+      svc.checkout({
+        idempotencyKey: '22222222-2222-4222-8222-222222222222',
+        cashRegisterId: 'reg-1',
+        operatorId: 'op-1',
+        emitirNfce: false,
+        items: [{ productId: 'p-low', quantity: 2, priceUnit: 10 }],
+        payments: [{ method: 'dinheiro', value: 20 }],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(tx.sale.create).not.toHaveBeenCalled();
+    expect(tx.numeracaoNfce.upsert).not.toHaveBeenCalled();
   });
 });

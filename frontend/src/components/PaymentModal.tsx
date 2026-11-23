@@ -32,7 +32,7 @@ const BASE_METHOD_CONFIG = [
 
 const CUSTOM_COLOR = 'bg-purple-500/10 text-purple-400 border-purple-500/20 ring-purple-500 hover:border-purple-500';
 
-const PAYMENT_META_TTL_MS = 60_000;
+const PAYMENT_META_TTL_MS = 5 * 60_000;
 type PaymentModalMetaCacheEntry = {
   operators?: { id: string; name: string }[];
   customMethods?: { id: string; name: string; hasVariablePricing?: boolean; emitirNfce?: boolean }[];

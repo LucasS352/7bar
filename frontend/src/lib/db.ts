@@ -207,6 +207,14 @@ class SevenBarDatabase extends Dexie {
       telemetry_events: '++id, type, createdAt, sessionId',
       comandas_cache: 'tenantId',
     });
+
+    // ── v4: indexa comandaId em offline_sales para evitar full scan na finalização de comanda ──
+    this.version(4).stores({
+      offline_sales: '++id, localId, syncStatus, createdAt, tenantId, comandaId',
+      products_cache: 'id, name, barcode, shortCode',
+      telemetry_events: '++id, type, createdAt, sessionId',
+      comandas_cache: 'tenantId',
+    });
   }
 }
 
@@ -237,8 +245,8 @@ export async function saveOfflineSale(
       .filter(row => row.tenantId === sale.tenantId).first();
     if (existing) throw new Error('Operação já registrada. Recupere a pendência existente; não recrie o pedido.');
     if (sale.comandaId) {
-      const charged = await db.offline_sales.where('tenantId').equals(sale.tenantId)
-        .filter(row => row.comandaId === sale.comandaId && row.syncStatus !== 'REVIEW').first();
+      const charged = await db.offline_sales.where('comandaId').equals(sale.comandaId)
+        .filter(row => row.tenantId === sale.tenantId && row.syncStatus !== 'REVIEW').first();
       if (charged) throw new Error('Esta comanda já possui cobrança registrada neste aparelho. Confira as pendências; não cobre novamente.');
     }
     return db.offline_sales.add(sale);

@@ -74,8 +74,8 @@ export class StationAccessService {
     return { access_token: this.jwt.sign({ sub: link.id, tenantId: link.tenantId, role: 'station', type: 'station-session', linkId: link.id, station: link.station }), user };
   }
 
-  async assertOperator(tenantId: string, operatorId: string, context: string) {
-    const config = await this.config(tenantId);
+  async assertOperator(tenantId: string, operatorId: string, context: string, cachedConfig?: Awaited<ReturnType<StationAccessService['config']>>) {
+    const config = cachedConfig ?? await this.config(tenantId);
     if (context === 'waiter' && !config.waiter) throw new ForbiddenException('Modo Garçom não está ativo.');
     const tenant = await this.heart.tenant.findUnique({ where: { id: tenantId }, select: { databaseUrl: true } });
     if (!tenant) throw new UnauthorizedException();
@@ -109,13 +109,14 @@ export class StationAccessService {
     }
     // Apply the new cashier policy only to establishments using operational modules.
     if (req.method === 'POST' && ['/cash-registers/open', '/sales/checkout'].includes(path)) {
-      if ((await this.config(user.tenantId)).isolated) {
+      const cfg = await this.config(user.tenantId);
+      if (cfg.isolated) {
         let cashier: any;
         try { cashier = this.jwt.verify(req.headers['x-operator-token']); }
         catch { throw new UnauthorizedException({ message: 'Entre com o PIN do caixa.', errorSource: 'operator_token' }); }
         if (cashier.type !== 'op' || cashier.tenantId !== user.tenantId || cashier.context === 'waiter') throw new ForbiddenException('Credencial de caixa inválida.');
         if (req.body?.operatorId && req.body.operatorId !== cashier.opId) throw new ForbiddenException('Operador diferente da sessão autenticada.');
-        const op = await this.assertOperator(user.tenantId, cashier.opId, 'cashier');
+        const op = await this.assertOperator(user.tenantId, cashier.opId, 'cashier', cfg);
         if (cashier.pinVersion && cashier.pinVersion !== pinVersion(op.pin || '', process.env.JWT_SECRET!)) {
           throw new UnauthorizedException({ message: 'PIN alterado pelo administrador. Entre com o novo PIN.', errorSource: 'operator_token' });
         }

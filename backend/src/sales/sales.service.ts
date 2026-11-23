@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, ConflictException, Logger, NotFoundException, Optional, StreamableFile } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { TenantConnectionManager } from '../prisma/tenant-prisma.service';
 import { TenantContextService } from '../prisma/tenant-context.service';
 import { HeartPrismaService } from '../prisma/heart-prisma.service';
@@ -56,12 +57,34 @@ export class SalesService {
     const allActiveLots = await tx.stockLot.findMany({
       where: { productId: { in: productIds }, remaining: { gt: 0 } },
       orderBy: { createdAt: 'asc' },
+      select: { id: true, productId: true, remaining: true, costPrice: true },
     });
     for (const lot of allActiveLots) {
       const list = activeByProduct.get(lot.productId);
       if (list) list.push(lot);
       else activeByProduct.set(lot.productId, [lot]);
     }
+
+    const missingActive = productIds.filter(id => !activeByProduct.has(id));
+    if (missingActive.length > 0 && typeof tx.stockLot.findMany === 'function') {
+      const fallbackLots = await tx.stockLot.findMany({
+        where: { productId: { in: missingActive } },
+        orderBy: { createdAt: 'desc' },
+        distinct: ['productId'],
+        select: { id: true, productId: true, remaining: true, costPrice: true },
+      });
+      for (const lot of fallbackLots) {
+        if (!latestByProduct.has(lot.productId)) {
+          latestByProduct.set(lot.productId, lot);
+        }
+      }
+      for (const id of missingActive) {
+        if (!latestByProduct.has(id)) {
+          latestByProduct.set(id, null);
+        }
+      }
+    }
+
     return { activeByProduct, latestByProduct };
   }
 
@@ -71,6 +94,7 @@ export class SalesService {
     quantityToConsume: number,
     fallbackCostPrice: any,
     preloaded?: { activeByProduct: Map<string, any[]>; latestByProduct: Map<string, any | null> },
+    lotDecrements?: Map<string, Prisma.Decimal>,
   ): Promise<{ lotId: string; quantity: Prisma.Decimal; costPrice: Prisma.Decimal }[]> {
     const activeLots = preloaded
       ? (preloaded.activeByProduct.get(productId) ?? [])
@@ -78,6 +102,17 @@ export class SalesService {
           where: { productId, remaining: { gt: 0 } },
           orderBy: { createdAt: 'asc' },
         });
+
+    const recordDecrement = async (lotId: string, amount: Prisma.Decimal) => {
+      if (lotDecrements) {
+        lotDecrements.set(lotId, (lotDecrements.get(lotId) ?? new Prisma.Decimal(0)).add(amount));
+        return;
+      }
+      await tx.stockLot.update({
+        where: { id: lotId },
+        data: { remaining: { decrement: amount } },
+      });
+    };
 
     const consumptions: { lotId: string; quantity: Prisma.Decimal; costPrice: Prisma.Decimal }[] = [];
     let quantityNeeded = new Prisma.Decimal(quantityToConsume);
@@ -88,12 +123,12 @@ export class SalesService {
       if (lotRemaining.lte(0)) continue;
       const consumed = Prisma.Decimal.min(quantityNeeded, lotRemaining);
 
-      await tx.stockLot.update({
-        where: { id: lot.id },
-        data: { remaining: { decrement: consumed } }
-      });
+      await recordDecrement(lot.id, consumed);
 
       lot.remaining = lotRemaining.sub(consumed);
+      if (preloaded) {
+        preloaded.latestByProduct.set(productId, lot);
+      }
       consumptions.push({
         lotId: lot.id,
         quantity: consumed,
@@ -112,10 +147,7 @@ export class SalesService {
           });
 
       if (latestLot) {
-        await tx.stockLot.update({
-          where: { id: latestLot.id },
-          data: { remaining: { decrement: quantityNeeded } }
-        });
+        await recordDecrement(latestLot.id, quantityNeeded);
         if (preloaded) preloaded.latestByProduct.set(productId, latestLot);
         consumptions.push({
           lotId: latestLot.id,
@@ -329,20 +361,51 @@ export class SalesService {
 
       await lockProducts(tx, allProductIds);
 
+      const hasModifiersOrComposite =
+        itemsForProcessing.some((i: any) => Boolean(i.modifiers?.length)) || Boolean(comandaToClose);
+
       const productsInDb = await tx.product.findMany({
         where: { id: { in: allProductIds } },
-        include: { 
-          grupoTributacao: true,
-          category: {
-            include: {
-              grupoTributacao: true
-            }
+        select: {
+          id: true,
+          name: true,
+          unit: true,
+          isComposite: true,
+          volumeCapacity: true,
+          priceCost: true,
+          priceSell: true,
+          stock: true,
+          ncm: true,
+          cest: true,
+          origem: true,
+          grupoTributacao: {
+            select: {
+              cfop: true, csosn: true, cstIcms: true, aliqIcms: true,
+              cstPis: true, aliqPis: true, cstCofins: true, aliqCofins: true, nome: true,
+            },
           },
-          modifierGroups: {
-            include: {
-              options: true
-            }
-          }
+          category: {
+            select: {
+              grupoTributacao: {
+                select: {
+                  cfop: true, csosn: true, cstIcms: true, aliqIcms: true,
+                  cstPis: true, aliqPis: true, cstCofins: true, aliqCofins: true, nome: true,
+                },
+              },
+            },
+          },
+          modifierGroups: hasModifiersOrComposite
+            ? {
+                select: {
+                  id: true,
+                  options: {
+                    select: {
+                      id: true, componentProductId: true, name: true, quantity: true, priceAdjustment: true,
+                    },
+                  },
+                },
+              }
+            : { select: { id: true } },
         },
       });
 
@@ -438,6 +501,7 @@ export class SalesService {
       let initialNfceStatus: string | null = null;
       let initialNfceMotivo: string | null = null;
 
+      let nfceSerieToPersist: number | null = null;
       if (emitirNfce) {
         if (allItemsAreSnf) {
           // Venda 100% SNF: NÃO consome número de série e NÃO transmite para SEFAZ
@@ -469,22 +533,131 @@ export class SalesService {
             initialNfceStatus = 'nao_emitida';
             initialNfceMotivo = 'Forma de pagamento não fiscal (sem emissão).';
           } else {
-            // Série: preferência do frontend → configuração do tenant → padrão 1
-            const serie = data.nfceSerie ?? tenantSettings?.nfceSerie ?? 1;
-            const numeracao = await tx.numeracaoNfce.upsert({
-              where: { serie },
-              update: { ultimo: { increment: 1 } },
-              create: { serie, ultimo: 1 },
-            });
-            nfceNumero = numeracao.ultimo;
+            nfceSerieToPersist = data.nfceSerie ?? tenantSettings?.nfceSerie ?? 1;
             initialNfceStatus = 'pendente';
           }
         }
       }
 
-      // ─── 4. Criar a venda ────────────────────────────────────────────────────
+      // ─── 3b. Pré-validar produtos, modificadores e estoque antes de gravar a venda ─
+      const productStockDecrements = new Map<string, Prisma.Decimal>();
+      const productSalesCountIncrements = new Map<string, number>();
+      const addStockDecrement = (prodId: string, amount: number, errorMsg: string) => {
+        const dec = new Prisma.Decimal(amount);
+        const nextTotal = (productStockDecrements.get(prodId) ?? new Prisma.Decimal(0)).add(dec);
+        if (!allowNegativeStock) {
+          const targetProd = productMap.get(prodId) as any;
+          if (!targetProd || new Prisma.Decimal(targetProd.stock).lt(nextTotal)) {
+            throw new BadRequestException(errorMsg);
+          }
+        }
+        productStockDecrements.set(prodId, nextTotal);
+      };
+      const addSalesCount = (prodId: string, inc: number) => {
+        if (!inc) return;
+        productSalesCountIncrements.set(prodId, (productSalesCountIncrements.get(prodId) ?? 0) + inc);
+      };
+
+      if (data.comandaId && comandaToClose) {
+        for (const ci of comandaToClose.items) {
+          const product = ci.product;
+          const qty = Number(ci.quantity);
+          addSalesCount(product.id, qty);
+          if (!(product.isComposite && ci.modifiers && ci.modifiers.length > 0)) {
+            if (!ci.stockDeducted && shouldMoveStock) {
+              addStockDecrement(product.id, qty, `Estoque insuficiente para "${product.name}" na comanda.`);
+            }
+          }
+        }
+      }
+
+      const resolvedProcessingItems: Array<{
+        item: any;
+        product: any;
+        qty: number;
+        isCompositeFlow: boolean;
+        resolvedModifiers: Array<{ foundOption: any; componentProduct: any; optionQty: number; fractionToDecrement: number }>;
+      }> = [];
+
+      for (const item of itemsForProcessing) {
+        const product = productMap.get(item.productId) as any;
+        if (!product) {
+          throw new BadRequestException(`Produto ${item.productId} não encontrado no banco de dados.`);
+        }
+        const qty = Number(item.quantity);
+        const isCompositeFlow = Boolean(product.isComposite && product.modifierGroups?.length > 0);
+        const resolvedModifiers: Array<{ foundOption: any; componentProduct: any; optionQty: number; fractionToDecrement: number }> = [];
+
+        if (isCompositeFlow) {
+          if (!item.modifiers?.length) {
+            throw new BadRequestException(
+              `O produto composto "${product.name}" requer adicionais. Remova-o do carrinho e adicione-o novamente.`,
+            );
+          }
+          addSalesCount(item.productId, qty);
+
+          for (const chosenMod of item.modifiers || []) {
+            let foundOption: any = null;
+            for (const group of product.modifierGroups || []) {
+              foundOption = (group.options || []).find(
+                (opt: any) => opt.id === chosenMod.optionId || opt.componentProductId === chosenMod.componentProductId,
+              );
+              if (foundOption) break;
+            }
+            if (!foundOption) {
+              throw new BadRequestException(`Opção de adicional inválida para o produto composto: ${product.name}`);
+            }
+            const componentProduct = productMap.get(foundOption.componentProductId) as any;
+            if (!componentProduct) {
+              throw new BadRequestException(`Produto ingrediente ${foundOption.name} não encontrado.`);
+            }
+            const optionQty = Number(foundOption.quantity);
+            const capacity = Number(componentProduct.volumeCapacity) || 1;
+            const fractionToDecrement = qty * (optionQty / capacity);
+
+            if (shouldMoveStock) {
+              addStockDecrement(
+                componentProduct.id,
+                fractionToDecrement,
+                `Estoque insuficiente para o ingrediente: ${componentProduct.name} (disponível: ${componentProduct.stock}, necessário: ${fractionToDecrement.toFixed(3)})`,
+              );
+            }
+            resolvedModifiers.push({ foundOption, componentProduct, optionQty, fractionToDecrement });
+          }
+        } else {
+          if (item.modifiers?.length) {
+            throw new BadRequestException(
+              `Os adicionais de "${product.name}" mudaram. Remova o item do carrinho e adicione-o novamente.`,
+            );
+          }
+          if (shouldMoveStock) {
+            const salesCountIncrement = Math.max(1, Math.round(Math.abs(qty)));
+            addSalesCount(item.productId, salesCountIncrement);
+            addStockDecrement(
+              item.productId,
+              qty,
+              `Estoque insuficiente para o produto: ${product.name} (disponível: ${product.stock}, tentado: ${qty})`,
+            );
+          } else {
+            addSalesCount(item.productId, qty);
+          }
+        }
+
+        resolvedProcessingItems.push({ item, product, qty, isCompositeFlow, resolvedModifiers });
+      }
+
+      // ─── 4. Criar a venda (somente após validar estoque/modificadores) ────────
+      if (emitirNfce && nfceSerieToPersist !== null) {
+        const numeracao = await tx.numeracaoNfce.upsert({
+          where: { serie: nfceSerieToPersist },
+          update: { ultimo: { increment: 1 } },
+          create: { serie: nfceSerieToPersist, ultimo: 1 },
+        });
+        nfceNumero = numeracao.ultimo;
+      }
+
       if (operatorId) {
-        const opExists = await tx.operator.findUnique({ where: { id: operatorId } });
+        const opExists = await tx.operator.findUnique({ where: { id: operatorId }, select: { id: true } });
         if (!opExists) {
           this.logger.warn(`Operador ${operatorId} não encontrado no banco — venda será criada sem operador.`);
           operatorId = null;
@@ -524,10 +697,28 @@ export class SalesService {
         },
         include: {
           payments: true,
-          customer: true,
+          ...(data.customerId ? { customer: true } : {}),
         },
       });
+
       const createdSaleItems: any[] = [];
+      const saleItemsToCreate: any[] = [];
+      const saleItemModifiersToCreate: any[] = [];
+      const lotConsumptionsToCreate: any[] = [];
+      const lotDecrements = new Map<string, Prisma.Decimal>();
+
+      const pushSaleItemRow = (
+        row: any,
+        itemModifiers: any[],
+        itemLots: Array<{ lotId: string; quantity: Prisma.Decimal }>,
+      ) => {
+        saleItemsToCreate.push(row);
+        const modRows = itemModifiers.map((m) => ({ id: randomUUID(), saleItemId: row.id, ...m }));
+        const lotRows = itemLots.map((lc) => ({ id: randomUUID(), saleItemId: row.id, lotId: lc.lotId, quantity: lc.quantity }));
+        if (modRows.length > 0) saleItemModifiersToCreate.push(...modRows);
+        if (lotRows.length > 0) lotConsumptionsToCreate.push(...lotRows);
+        createdSaleItems.push({ ...row, modifiers: modRows, lotConsumptions: lotRows });
+      };
 
       // ─── Processar itens da COMANDA (stockDeducted=true: sem baixa, apenas FIFO para custeio) ──
       if (data.comandaId && comandaToClose) {
@@ -538,20 +729,13 @@ export class SalesService {
           const itemLotConsumptions: any[] = [];
           let totalCostOfLots = new Prisma.Decimal(0);
 
-          await tx.product.update({
-            where: { id: product.id },
-            data: { salesCount: { increment: qty } },
-          });
-
           if (product.isComposite && ci.modifiers && ci.modifiers.length > 0) {
-            // Composto com snapshot — consumir FIFO dos ingredientes para custeio
             for (const mod of ci.modifiers) {
-              const componentProduct = productMap.get(mod.componentProductId) as any || mod.componentProduct;
+              const componentProduct = (productMap.get(mod.componentProductId) as any) || mod.componentProduct;
               if (!componentProduct) continue;
 
-              // Custeio FIFO — NÃO altera product.stock (já foi feito no addItems)
               const ingredientConsumptions = await this.consumeLotsFIFO(
-                tx, componentProduct.id, Number(mod.consumedQuantity), componentProduct.priceCost, preloadedLots,
+                tx, componentProduct.id, Number(mod.consumedQuantity), componentProduct.priceCost, preloadedLots, lotDecrements,
               );
               for (const cons of ingredientConsumptions) {
                 itemLotConsumptions.push({ lotId: cons.lotId, quantity: cons.quantity, costPrice: cons.costPrice });
@@ -565,49 +749,28 @@ export class SalesService {
                 priceAdjustment: new Prisma.Decimal(mod.priceAdjustment),
               });
             }
-          } else {
-            // Sem adicionais no lançamento: estoque do próprio produto (mesmo se hoje estiver marcado composto).
-            if (ci.stockDeducted && shouldMoveStock) {
-              const lotConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost, preloadedLots);
-              for (const cons of lotConsumptions) {
-                itemLotConsumptions.push({ lotId: cons.lotId, quantity: cons.quantity, costPrice: cons.costPrice });
-                totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
-              }
-            } else if (!ci.stockDeducted && shouldMoveStock) {
-              // Simples legado (stockDeducted=false): baixa normal + FIFO
-              if (!allowNegativeStock) {
-                const result = await tx.product.updateMany({
-                  where: { id: product.id, stock: { gte: new Prisma.Decimal(qty) } },
-                  data: { stock: { decrement: new Prisma.Decimal(qty) } },
-                });
-                if (result.count === 0) {
-                  throw new BadRequestException(`Estoque insuficiente para "${product.name}" na comanda.`);
-                }
-              } else {
-                await tx.product.update({
-                  where: { id: product.id },
-                  data: { stock: { decrement: new Prisma.Decimal(qty) } },
-                });
-              }
+          } else if (shouldMoveStock) {
+            if (!ci.stockDeducted) {
               inventoryLogsToCreate.push({
                 productId: product.id,
                 type: 'SALE',
                 quantity: qty,
                 reason: `Venda PDV (Comanda #${comandaToClose.number})`,
               });
-              const lotConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost, preloadedLots);
-              for (const cons of lotConsumptions) {
-                itemLotConsumptions.push({ lotId: cons.lotId, quantity: cons.quantity, costPrice: cons.costPrice });
-                totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
-              }
+            }
+            const lotConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost, preloadedLots, lotDecrements);
+            for (const cons of lotConsumptions) {
+              itemLotConsumptions.push({ lotId: cons.lotId, quantity: cons.quantity, costPrice: cons.costPrice });
+              totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
             }
           }
 
           const gt = product.grupoTributacao || product.category?.grupoTributacao;
           const priceCostFinal = qty > 0 ? totalCostOfLots.div(new Prisma.Decimal(qty)) : new Prisma.Decimal(0);
 
-          const saleItem = await tx.saleItem.create({
-            data: {
+          pushSaleItemRow(
+            {
+              id:          randomUUID(),
               saleId:      sale.id,
               productId:   product.id,
               productName: product.name,
@@ -631,106 +794,35 @@ export class SalesService {
               aliqCofins:  Number(gt?.aliqCofins ?? 0),
               valorCofins: 0,
               priceCost:   priceCostFinal,
-              ...(itemModifiersDataToCreate.length > 0 ? {
-                modifiers: { create: itemModifiersDataToCreate },
-              } : {}),
-              ...(itemLotConsumptions.length > 0 ? {
-                lotConsumptions: {
-                  create: itemLotConsumptions.map(lc => ({ lotId: lc.lotId, quantity: lc.quantity })),
-                },
-              } : {}),
             },
-            include: {
-              modifiers: true,
-              lotConsumptions: true,
-            },
-          });
-          createdSaleItems.push(saleItem);
+            itemModifiersDataToCreate,
+            itemLotConsumptions,
+          );
         }
-
-        // Fechar comanda atomicamente na mesma transação
-        await tx.comanda.update({
-          where: { id: data.comandaId },
-          data: { status: 'closed', saleId: sale.id },
-        });
       }
 
-      for (const item of itemsForProcessing) {
-        const product = productMap.get(item.productId) as any;
-        if (!product) {
-          throw new BadRequestException(`Produto ${item.productId} não encontrado no banco de dados.`);
-        }
-
-        const qty = Number(item.quantity);
-
+      for (const { item, product, qty, isCompositeFlow, resolvedModifiers } of resolvedProcessingItems) {
         const itemModifiersDataToCreate: any[] = [];
         const itemLotConsumptions: any[] = [];
         let totalCostOfLots = new Prisma.Decimal(0);
 
-        if (product.isComposite && product.modifierGroups?.length > 0) {
-          if (!item.modifiers?.length) {
-            throw new BadRequestException(
-              `O produto composto "${product.name}" requer adicionais. Remova-o do carrinho e adicione-o novamente.`,
-            );
-          }
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { salesCount: { increment: qty } },
-          });
-
-          const chosenModifiers = item.modifiers || [];
-          for (const chosenMod of chosenModifiers) {
-            let foundOption: any = null;
-            for (const group of product.modifierGroups || []) {
-              foundOption = (group.options || []).find(
-                (opt: any) => opt.id === chosenMod.optionId || opt.componentProductId === chosenMod.componentProductId
-              );
-              if (foundOption) break;
-            }
-
-            if (!foundOption) {
-              throw new BadRequestException(`Opção de adicional inválida para o produto composto: ${product.name}`);
-            }
-
-            const componentProduct = productMap.get(foundOption.componentProductId) as any;
-            if (!componentProduct) {
-              throw new BadRequestException(`Produto ingrediente ${foundOption.name} não encontrado.`);
-            }
-
-            const optionQty = Number(foundOption.quantity);
-            const capacity = Number(componentProduct.volumeCapacity) || 1;
-            const fractionToDecrement = qty * (optionQty / capacity);
-
-            // ─── Movimentação de estoque (desabilitada em Ajuste Fiscal sem estoque) ───
+        if (isCompositeFlow) {
+          for (const { foundOption, componentProduct, optionQty, fractionToDecrement } of resolvedModifiers) {
             if (shouldMoveStock) {
-              if (!allowNegativeStock) {
-                const updateResult = await tx.product.updateMany({
-                  where: {
-                    id: componentProduct.id,
-                    stock: { gte: new Prisma.Decimal(fractionToDecrement) }
-                  },
-                  data: {
-                    stock: { decrement: new Prisma.Decimal(fractionToDecrement) }
-                  }
-                });
-                if (updateResult.count === 0) {
-                  throw new BadRequestException(`Estoque insuficiente para o ingrediente: ${componentProduct.name} (disponível: ${componentProduct.stock}, necessário: ${fractionToDecrement.toFixed(3)})`);
-                }
-              } else {
-                await tx.product.update({
-                  where: { id: componentProduct.id },
-                  data: {
-                    stock: { decrement: new Prisma.Decimal(fractionToDecrement) }
-                  }
-                });
-              }
-
               inventoryLogsToCreate.push({
                 productId: componentProduct.id,
                 type: 'OUT',
                 quantity: fractionToDecrement,
                 reason: isAjusteFiscal ? `Ajuste Fiscal (Combo: ${product.name})` : `Venda PDV (Combo: ${product.name})`,
               });
+
+              const ingredientConsumptions = await this.consumeLotsFIFO(
+                tx, componentProduct.id, fractionToDecrement, componentProduct.priceCost, preloadedLots, lotDecrements,
+              );
+              for (const cons of ingredientConsumptions) {
+                itemLotConsumptions.push({ lotId: cons.lotId, quantity: cons.quantity, costPrice: cons.costPrice });
+                totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
+              }
             }
 
             itemModifiersDataToCreate.push({
@@ -739,75 +831,21 @@ export class SalesService {
               quantity: new Prisma.Decimal(optionQty),
               priceAdjustment: new Prisma.Decimal(foundOption.priceAdjustment),
             });
-
-            if (shouldMoveStock) {
-              const ingredientConsumptions = await this.consumeLotsFIFO(tx, componentProduct.id, fractionToDecrement, componentProduct.priceCost, preloadedLots);
-              for (const cons of ingredientConsumptions) {
-                itemLotConsumptions.push({
-                  lotId: cons.lotId,
-                  quantity: cons.quantity,
-                  costPrice: cons.costPrice
-                });
-                totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
-              }
-            }
           }
-        } else {
-          if (item.modifiers?.length) {
-            throw new BadRequestException(
-              `Os adicionais de "${product.name}" mudaram. Remova o item do carrinho e adicione-o novamente.`,
-            );
-          }
-          // ─── Movimentação de estoque (desabilitada em Ajuste Fiscal sem estoque) ───
-          if (shouldMoveStock) {
-            // salesCount é Int no banco: converter quantidade fracionada (ex: 1.5kg) para inteiro seguro
-            const salesCountIncrement = Math.max(1, Math.round(Math.abs(qty)));
-            if (!allowNegativeStock) {
-              const updateResult = await tx.product.updateMany({
-                where: {
-                  id: item.productId,
-                  stock: { gte: new Prisma.Decimal(qty) }
-                },
-                data: {
-                  stock: { decrement: new Prisma.Decimal(qty) },
-                  salesCount: { increment: salesCountIncrement }
-                }
-              });
-              if (updateResult.count === 0) {
-                throw new BadRequestException(`Estoque insuficiente para o produto: ${product.name} (disponível: ${product.stock}, tentado: ${qty})`);
-              }
-            } else {
-              await tx.product.update({
-                where: { id: item.productId },
-                data: { 
-                  stock: { decrement: new Prisma.Decimal(qty) },
-                  salesCount: { increment: salesCountIncrement }
-                },
-              });
-            }
+        } else if (shouldMoveStock) {
+          inventoryLogsToCreate.push({
+            productId: product.id,
+            type: 'SALE',
+            quantity: qty,
+            reason: isAjusteFiscal ? 'Ajuste Fiscal' : 'Venda PDV',
+          });
 
-            inventoryLogsToCreate.push({
-              productId: product.id,
-              type: 'SALE',
-              quantity: qty,
-              reason: isAjusteFiscal ? 'Ajuste Fiscal' : 'Venda PDV',
-            });
-
-            const productConsumptions = await this.consumeLotsFIFO(tx, product.id, qty, product.priceCost, preloadedLots);
-            for (const cons of productConsumptions) {
-              itemLotConsumptions.push({
-                lotId: cons.lotId,
-                quantity: cons.quantity,
-                costPrice: cons.costPrice
-              });
-              totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
-            }
-          } else {
-            // Sem movimentação de estoque — apenas incrementa contador de vendas
-            await tx.product.update({
-              where: { id: item.productId },
-              data: { salesCount: { increment: qty } },
-            });
+          const productConsumptions = await this.consumeLotsFIFO(
+            tx, product.id, qty, product.priceCost, preloadedLots, lotDecrements,
+          );
+          for (const cons of productConsumptions) {
+            itemLotConsumptions.push({ lotId: cons.lotId, quantity: cons.quantity, costPrice: cons.costPrice });
+            totalCostOfLots = totalCostOfLots.add(cons.quantity.mul(cons.costPrice));
           }
         }
 
@@ -816,8 +854,9 @@ export class SalesService {
         const gt = product.grupoTributacao || product.category?.grupoTributacao;
         const priceCost = qty > 0 ? totalCostOfLots.div(new Prisma.Decimal(qty)) : new Prisma.Decimal(0);
 
-        const createdItem = await tx.saleItem.create({
-          data: {
+        pushSaleItemRow(
+          {
+            id:          randomUUID(),
             saleId:      sale.id,
             productId:   product.id,
             productName: item.fiscalSnapshot?.productName ?? product.name,
@@ -841,22 +880,93 @@ export class SalesService {
             aliqCofins:  item.fiscalSnapshot?.aliqCofins ?? Number(gt?.aliqCofins ?? 0),
             valorCofins: 0,
             priceCost,
-            modifiers: {
-              create: itemModifiersDataToCreate
+          },
+          itemModifiersDataToCreate,
+          itemLotConsumptions,
+        );
+      }
+
+      // ─── Flush em LOTE: Products, StockLots, SaleItems, Modifiers, Consumptions, Logs ─
+      const allProductUpdateIds = Array.from(
+        new Set([...productStockDecrements.keys(), ...productSalesCountIncrements.keys()]),
+      );
+      if (allProductUpdateIds.length === 1) {
+        const prodId = allProductUpdateIds[0];
+        const stockDec = productStockDecrements.get(prodId) ?? new Prisma.Decimal(0);
+        const salesInc = productSalesCountIncrements.get(prodId) ?? 0;
+        if (shouldMoveStock && !allowNegativeStock && stockDec.gt(0)) {
+          const updateResult = await tx.product.updateMany({
+            where: { id: prodId, stock: { gte: stockDec } },
+            data: {
+              stock: { decrement: stockDec },
+              ...(salesInc > 0 ? { salesCount: { increment: salesInc } } : {}),
             },
-            lotConsumptions: {
-              create: itemLotConsumptions.map(lc => ({
-                lotId: lc.lotId,
-                quantity: lc.quantity
-              }))
-            }
-          },
-          include: {
-            modifiers: true,
-            lotConsumptions: true,
-          },
+          });
+          if (updateResult.count === 0) {
+            const p = productMap.get(prodId) as any;
+            throw new BadRequestException(`Estoque insuficiente para o produto: ${p?.name ?? prodId}`);
+          }
+        } else {
+          await tx.product.update({
+            where: { id: prodId },
+            data: {
+              ...(stockDec.gt(0) ? { stock: { decrement: stockDec } } : {}),
+              ...(salesInc > 0 ? { salesCount: { increment: salesInc } } : {}),
+            },
+          });
+        }
+      } else if (allProductUpdateIds.length > 1) {
+        const stockCases = allProductUpdateIds.map((id) => {
+          const dec = productStockDecrements.get(id);
+          return Prisma.sql`WHEN ${id} THEN ${dec ? Number(dec.toFixed(3)) : 0}`;
         });
-        createdSaleItems.push(createdItem);
+        const salesCases = allProductUpdateIds.map((id) =>
+          Prisma.sql`WHEN ${id} THEN ${productSalesCountIncrements.get(id) ?? 0}`,
+        );
+        await tx.$executeRaw(Prisma.sql`
+          UPDATE products
+          SET
+            stock = stock - (CASE id ${Prisma.join(stockCases, ' ')} ELSE 0 END),
+            salesCount = salesCount + (CASE id ${Prisma.join(salesCases, ' ')} ELSE 0 END),
+            updatedAt = NOW(3)
+          WHERE id IN (${Prisma.join(allProductUpdateIds)})
+        `);
+      }
+
+      if (lotDecrements.size === 1) {
+        const [[lotId, dec]] = Array.from(lotDecrements.entries());
+        await tx.stockLot.update({
+          where: { id: lotId },
+          data: { remaining: { decrement: dec } },
+        });
+      } else if (lotDecrements.size > 1) {
+        const lotEntries = Array.from(lotDecrements.entries());
+        const lotCases = lotEntries.map(([id, dec]) => Prisma.sql`WHEN ${id} THEN ${Number(dec.toFixed(3))}`);
+        const lotIds = lotEntries.map(([id]) => id);
+        await tx.$executeRaw(Prisma.sql`
+          UPDATE stock_lots
+          SET
+            remaining = remaining - (CASE id ${Prisma.join(lotCases, ' ')} ELSE 0 END),
+            updatedAt = NOW(3)
+          WHERE id IN (${Prisma.join(lotIds)})
+        `);
+      }
+
+      if (saleItemsToCreate.length > 0) {
+        await tx.saleItem.createMany({ data: saleItemsToCreate });
+      }
+      if (saleItemModifiersToCreate.length > 0) {
+        await tx.saleItemModifier.createMany({ data: saleItemModifiersToCreate });
+      }
+      if (lotConsumptionsToCreate.length > 0) {
+        await tx.stockLotConsumption.createMany({ data: lotConsumptionsToCreate });
+      }
+
+      if (data.comandaId && comandaToClose) {
+        await tx.comanda.update({
+          where: { id: data.comandaId },
+          data: { status: 'closed', saleId: sale.id },
+        });
       }
 
       if (inventoryLogsToCreate.length > 0) {
@@ -875,6 +985,7 @@ export class SalesService {
 
       const fullSale = {
         ...sale,
+        customer: (sale as any).customer ?? null,
         items: createdSaleItems,
       };
 
