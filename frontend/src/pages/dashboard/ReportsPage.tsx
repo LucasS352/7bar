@@ -293,6 +293,7 @@ function SalesReports() {
   const [loading, setLoading] = useState(true);
   const [rankingLoading, setRankingLoading] = useState(false);
   const [includeStock, setIncludeStock] = useState(false);
+  const [forecastIncludeStock, setForecastIncludeStock] = useState(true);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState('');
   const [error, setError] = useState('');
@@ -773,7 +774,7 @@ function SalesReports() {
                     {money(report.summary.grossProfit)}
                   </p>
                   <p className="text-[11px] sm:text-xs text-zinc-400 mt-1 leading-snug">
-                    Resultado líquido
+                    Lucro bruto
                     {report.summary.markupPercent !== null
                       ? ` · Markup ${formatPct(report.summary.markupPercent)}%`
                       : ''}
@@ -1826,7 +1827,7 @@ function SalesReports() {
 
       {activeTab === 'forecast' && (
         <section aria-label="Previsão de Compras">
-          <DemandForecast includeStock={includeStock} onStockChange={setIncludeStock} />
+          <DemandForecast includeStock={forecastIncludeStock} onStockChange={setForecastIncludeStock} />
         </section>
       )}
 
