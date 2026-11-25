@@ -58,6 +58,7 @@ export interface SoldCheckoutItemSummary {
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onLeaveComanda?: () => void;
   isOnline: boolean;
   onPendingCountChange?: () => void;
   tenantConfig?: any;
@@ -65,7 +66,7 @@ interface PaymentModalProps {
   initialOpenComanda?: boolean;
 }
 
-export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, tenantConfig, onSuccess, initialOpenComanda }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, onLeaveComanda, isOnline, onPendingCountChange, tenantConfig, onSuccess, initialOpenComanda }: PaymentModalProps) {
   const {
     total,
     items,
@@ -76,6 +77,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
     cartOperationId,
     getOrCreateOperationId,
     setOperationLocked,
+    isOperationLocked,
   } = useCartStore();
   const { user } = useAuthStore();
   const { cashRegister, operator } = useShift();
@@ -710,6 +712,7 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
   };
 
   const handleConfirm = async (mode: PayMode, offlineOnly = false) => {
+    if (useCartStore.getState().isOperationLocked) return;
     const releaseOwnCart = () => {
       const cart = useCartStore.getState();
       if (cart.cartOperationId === operationId && cart.scope === `7bar-cart-v2:${user?.tenant}:${operator?.id}`) cart.setOperationLocked(false);
@@ -1167,6 +1170,11 @@ export function PaymentModal({ isOpen, onClose, isOnline, onPendingCountChange, 
           </div>
         </div>
 
+        {activeComandaId && onLeaveComanda && <div className="px-4 py-3 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm text-amber-200">Comanda #{activeComandaNumber} · cobrar depois</span>
+          <button type="button" onClick={onLeaveComanda} disabled={loading || isOperationLocked || launchingComanda}
+            className="rounded-lg border border-amber-500/40 px-3 py-2 text-sm font-semibold text-amber-300 hover:bg-amber-500/10 disabled:opacity-50">Sair da cobrança</button>
+        </div>}
         <div className="p-4 md:p-6 flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-8 flex-1 overflow-y-auto custom-scrollbar">
           {/* Painel Esquerdo */}
           <div className="space-y-5">

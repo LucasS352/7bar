@@ -128,6 +128,70 @@ test('last comanda item removal detaches the cart and keeps counter extras as a 
   assert.equal(cart.total, 4);
   assert.notEqual(cart.cartOperationId, 'old-operation');
 });
+function leaveHarness(readSale = async () => undefined) {
+  const memory = new Map();
+  const sessionStorage = { getItem: k => memory.get(k), setItem: (k, v) => memory.set(k, v) };
+  const store = load('store/cart.ts', {}, { sessionStorage }).useCartStore;
+  store.getState().selectScope('shop', 'operator');
+  store.getState().setActiveComanda('table-1', '12');
+  store.getState().addItem({ id: 'drink', name: 'Drink', priceSell: 5 }, 2, undefined, true);
+  const leave = load('lib/leave-comanda-checkout.ts', {
+    '@/store/cart': { useCartStore: store }, './db': { getOfflineSale: readSale },
+  }).leaveComandaCheckout;
+  return { store, leave, sessionStorage };
+}
+
+test('leaving unsubmitted comanda keeps extras as counter sale and persists detachment after reload', async () => {
+  const h = leaveHarness(async (tenant, operation) => {
+    assert.equal(tenant, 'shop'); assert.equal(operation, oldId); return undefined;
+  });
+  const oldId = h.store.getState().cartOperationId;
+  h.store.getState().addItem({ id: 'extra', name: 'Extra', priceSell: 3.5 }, 2);
+  await h.leave('shop', 'operator');
+  const cart = h.store.getState();
+  assert.equal(cart.activeComandaId, null); assert.equal(cart.activeComandaNumber, null);
+  assert.equal(cart.items.length, 1); assert.equal(cart.items[0].id, 'extra'); assert.equal(cart.total, 7);
+  assert.notEqual(cart.cartOperationId, oldId); assert.equal(cart.isOperationLocked, false);
+  const restored = load('store/cart.ts', {}, { sessionStorage: h.sessionStorage }).useCartStore;
+  restored.getState().selectScope('shop', 'operator');
+  assert.equal(restored.getState().activeComandaId, null);
+  assert.equal(restored.getState().items.length, 1);
+});
+
+test('leaving comanda without extras releases an empty cart for a new sale', async () => {
+  const h = leaveHarness(); await h.leave('shop', 'operator');
+  assert.equal(h.store.getState().total, 0); assert.equal(h.store.getState().items.length, 0);
+  h.store.getState().addItem({ id: 'new', name: 'New', priceSell: 2 });
+  assert.equal(h.store.getState().items[0].fromComanda, false);
+  assert.equal(h.store.getState().activeComandaId, null);
+});
+
+test('submitted operations, storage errors and active checkout cannot be detached', async () => {
+  for (const syncStatus of ['PENDING', 'SYNCING', 'ERROR', 'REVIEW', 'SYNCED']) {
+    const h = leaveHarness(async () => ({ syncStatus })); const id = h.store.getState().cartOperationId;
+    await assert.rejects(h.leave('shop', 'operator'), /já foi enviada/);
+    assert.equal(h.store.getState().activeComandaId, 'table-1'); assert.equal(h.store.getState().cartOperationId, id);
+  }
+  const h = leaveHarness(async () => { throw new Error('Storage unavailable'); });
+  await assert.rejects(h.leave('shop', 'operator'), /Storage unavailable/);
+  assert.equal(h.store.getState().isOperationLocked, false); assert.equal(h.store.getState().items.length, 1);
+  h.store.getState().setOperationLocked(true);
+  await assert.rejects(h.leave('shop', 'operator'), /Aguarde/);
+  assert.equal(h.store.getState().isOperationLocked, true);
+});
+
+test('operator change during leave verification cannot clear the new operator cart', async () => {
+  let finish; const h = leaveHarness(() => new Promise(resolve => { finish = resolve; }));
+  const pending = h.leave('shop', 'operator');
+  assert.equal(h.store.getState().isOperationLocked, true);
+  h.store.getState().selectScope('shop', 'other');
+  h.store.getState().addItem({ id: 'other-item', name: 'Other', priceSell: 8 });
+  finish(undefined);
+  await assert.rejects(pending, /carrinho mudou/);
+  assert.equal(h.store.getState().total, 8);
+  await assert.rejects(h.leave('shop', 'operator'), /Operador alterado/);
+});
+
 test('recovery query includes interrupted SYNCING but excludes other shops/operators and REVIEW', async () => {
   const source = fs.readFileSync(path.join(root, 'lib/db.ts'), 'utf8');
   const ast = ts.createSourceFile('db.ts', source, ts.ScriptTarget.Latest, true);
